@@ -1,241 +1,122 @@
+@php
+    $authOwner     = Auth::guard('owner')->user();
+    $currentLocale = app()->getLocale();
+    $hour          = now()->hour;
+    $greeting      = $hour < 12 ? __('Good morning') : ($hour < 18 ? __('Good afternoon') : __('Good evening'));
+    $isAr          = $currentLocale === 'ar';
+@endphp
+
 <nav class="navbar">
+
     <a href="#" class="sidebar-toggler">
         <i data-feather="menu"></i>
     </a>
+
     <div class="navbar-content">
-        <form class="search-form">
-            <div class="input-group">
-  <div class="input-group-text">
-    <i data-feather="search"></i>
-  </div>
-                <input type="text" class="form-control" id="navbarForm" placeholder="{{ __('Search here…') }}">
+
+        {{-- Greeting --}}
+        <div class="me-auto d-none d-xl-flex flex-column justify-content-center" style="line-height:1.3;">
+            <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.4;">
+                {{ $greeting }} 👋
             </div>
-        </form>
+            <div style="font-size:.88rem;font-weight:700;color:#C9A227;">
+                {{ $authOwner?->name ?? 'Admin' }}
+            </div>
+        </div>
+
+        {{-- Action Buttons --}}
+        <div class="d-none d-lg-flex align-items-center gap-2 me-2">
+            <a href="{{ route('owner.companies.index') }}"
+               class="btn btn-primary btn-sm rounded-pill d-flex align-items-center gap-1 px-3">
+                <i class="feather icon-briefcase" style="font-size:12px;line-height:1;"></i>
+                {{ __('Companies') }}
+            </a>
+            <a href="{{ route('owner.appointments.index') }}"
+               class="btn btn-outline-secondary btn-sm rounded-pill d-flex align-items-center gap-1 px-3">
+                <i class="feather icon-calendar" style="font-size:12px;line-height:1;"></i>
+                {{ __('Appointments') }}
+            </a>
+        </div>
+
         <ul class="navbar-nav">
-            @php($currentLocale = app()->getLocale())
+
+            {{-- Language --}}
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    @if($currentLocale === 'ar')
-                        <i class="flag-icon flag-icon-sa mt-1" title="sa"></i> <span class="ms-1 me-1 d-none d-md-inline-block">{{ __('Arabic') }}</span>
+                <a class="nav-link dropdown-toggle d-flex align-items-center gap-1" href="#"
+                   data-bs-toggle="dropdown" style="font-size:.78rem;font-weight:600;padding:0 8px;">
+                    @if($isAr)
+                        <i class="flag-icon flag-icon-sa" style="border-radius:2px;font-size:14px;"></i>
+                        <span class="d-none d-md-inline">AR</span>
                     @else
-                        <i class="flag-icon flag-icon-us mt-1" title="us"></i> <span class="ms-1 me-1 d-none d-md-inline-block">{{ __('English') }}</span>
+                        <i class="flag-icon flag-icon-us" style="border-radius:2px;font-size:14px;"></i>
+                        <span class="d-none d-md-inline">EN</span>
                     @endif
                 </a>
-                <div class="dropdown-menu" aria-labelledby="languageDropdown">
-                    <a href="{{ route('locale.switch', ['locale' => 'en']) }}" class="dropdown-item py-2"><i class="flag-icon flag-icon-us" title="us"></i> <span class="ms-1">{{ __('English') }}</span></a>
-                    <a href="{{ route('locale.switch', ['locale' => 'ar']) }}" class="dropdown-item py-2"><i class="flag-icon flag-icon-sa" title="sa"></i> <span class="ms-1">{{ __('Arabic') }}</span></a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a href="{{ route('locale.switch','en') }}" class="dropdown-item {{ $currentLocale==='en'?'active':'' }}">
+                        <i class="flag-icon flag-icon-us me-2" style="border-radius:2px;"></i> English
+                    </a>
+                    <a href="{{ route('locale.switch','ar') }}" class="dropdown-item {{ $currentLocale==='ar'?'active':'' }}">
+                        <i class="flag-icon flag-icon-sa me-2" style="border-radius:2px;"></i> العربية
+                    </a>
                 </div>
             </li>
+
+            {{-- Profile --}}
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="appsDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <i data-feather="grid"></i>
-                </a>
-                <div class="dropdown-menu p-0" aria-labelledby="appsDropdown">
-    <div class="px-3 py-2 d-flex align-items-center justify-content-between border-bottom">
-                        <p class="mb-0 fw-bold">Web Apps</p>
-                        <a href="javascript:;" class="text-muted">Edit</a>
-                    </div>
-    <div class="row g-0 p-1">
-      <div class="col-3 text-center">
-        <a href="pages/apps/chat.html" class="dropdown-item d-flex flex-column align-items-center justify-content-center wd-70 ht-70"><i data-feather="message-square" class="icon-lg mb-1"></i><p class="tx-12">Chat</p></a>
-      </div>
-      <div class="col-3 text-center">
-        <a href="pages/apps/calendar.html" class="dropdown-item d-flex flex-column align-items-center justify-content-center wd-70 ht-70"><i data-feather="calendar" class="icon-lg mb-1"></i><p class="tx-12">Calendar</p></a>
-      </div>
-      <div class="col-3 text-center">
-        <a href="pages/email/inbox.html" class="dropdown-item d-flex flex-column align-items-center justify-content-center wd-70 ht-70"><i data-feather="mail" class="icon-lg mb-1"></i><p class="tx-12">Email</p></a>
-      </div>
-      <div class="col-3 text-center">
-        <a href="pages/general/profile.html" class="dropdown-item d-flex flex-column align-items-center justify-content-center wd-70 ht-70"><i data-feather="instagram" class="icon-lg mb-1"></i><p class="tx-12">Profile</p></a>
-      </div>
-    </div>
-                    <div class="px-3 py-2 d-flex align-items-center justify-content-center border-top">
-                        <a href="javascript:;">View all</a>
-                    </div>
-                </div>
-            </li>
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="messageDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <i data-feather="mail"></i>
-                </a>
-                <div class="dropdown-menu p-0" aria-labelledby="messageDropdown">
-                    <div class="px-3 py-2 d-flex align-items-center justify-content-between border-bottom">
-                        <p>9 New Messages</p>
-                        <a href="javascript:;" class="text-muted">Clear all</a>
-                    </div>
-    <div class="p-1">
-      <a href="javascript:;" class="dropdown-item d-flex align-items-center py-2">
-        <div class="me-3">
-          <img class="wd-30 ht-30 rounded-circle" src="https://via.placeholder.com/30x30" alt="userr">
-        </div>
-        <div class="d-flex justify-content-between flex-grow-1">
-          <div class="me-4">
-            <p>Leonardo Payne</p>
-            <p class="tx-12 text-muted">Project status</p>
-          </div>
-          <p class="tx-12 text-muted">2 min ago</p>
-        </div>	
-      </a>
-      <a href="javascript:;" class="dropdown-item d-flex align-items-center py-2">
-        <div class="me-3">
-          <img class="wd-30 ht-30 rounded-circle" src="https://via.placeholder.com/30x30" alt="userr">
-        </div>
-        <div class="d-flex justify-content-between flex-grow-1">
-          <div class="me-4">
-            <p>Carl Henson</p>
-            <p class="tx-12 text-muted">Client meeting</p>
-          </div>
-          <p class="tx-12 text-muted">30 min ago</p>
-        </div>	
-      </a>
-      <a href="javascript:;" class="dropdown-item d-flex align-items-center py-2">
-        <div class="me-3">
-          <img class="wd-30 ht-30 rounded-circle" src="https://via.placeholder.com/30x30" alt="userr">
-        </div>
-        <div class="d-flex justify-content-between flex-grow-1">
-          <div class="me-4">
-            <p>Jensen Combs</p>
-            <p class="tx-12 text-muted">Project updates</p>
-          </div>
-          <p class="tx-12 text-muted">1 hrs ago</p>
-        </div>	
-      </a>
-      <a href="javascript:;" class="dropdown-item d-flex align-items-center py-2">
-        <div class="me-3">
-          <img class="wd-30 ht-30 rounded-circle" src="https://via.placeholder.com/30x30" alt="userr">
-        </div>
-        <div class="d-flex justify-content-between flex-grow-1">
-          <div class="me-4">
-            <p>Amiah Burton</p>
-            <p class="tx-12 text-muted">Project deatline</p>
-          </div>
-          <p class="tx-12 text-muted">2 hrs ago</p>
-        </div>	
-      </a>
-      <a href="javascript:;" class="dropdown-item d-flex align-items-center py-2">
-        <div class="me-3">
-          <img class="wd-30 ht-30 rounded-circle" src="https://via.placeholder.com/30x30" alt="userr">
-        </div>
-        <div class="d-flex justify-content-between flex-grow-1">
-          <div class="me-4">
-            <p>Yaretzi Mayo</p>
-            <p class="tx-12 text-muted">New record</p>
-          </div>
-          <p class="tx-12 text-muted">5 hrs ago</p>
-        </div>	
-      </a>
-    </div>
-                    <div class="px-3 py-2 d-flex align-items-center justify-content-center border-top">
-                        <a href="javascript:;">View all</a>
-                    </div>
-                </div>
-            </li>
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <i data-feather="bell"></i>
-                    <div class="indicator">
-                        <div class="circle"></div>
-                    </div>
-                </a>
-                <div class="dropdown-menu p-0" aria-labelledby="notificationDropdown">
-                    <div class="px-3 py-2 d-flex align-items-center justify-content-between border-bottom">
-                        <p>6 New Notifications</p>
-                        <a href="javascript:;" class="text-muted">Clear all</a>
-                    </div>
-    <div class="p-1">
-      <a href="javascript:;" class="dropdown-item d-flex align-items-center py-2">
-        <div class="wd-30 ht-30 d-flex align-items-center justify-content-center bg-primary rounded-circle me-3">
-                                <i class="icon-sm text-white" data-feather="gift"></i>
-        </div>
-        <div class="flex-grow-1 me-2">
-                                <p>New Order Recieved</p>
-                                <p class="tx-12 text-muted">30 min ago</p>
-        </div>	
-      </a>
-      <a href="javascript:;" class="dropdown-item d-flex align-items-center py-2">
-        <div class="wd-30 ht-30 d-flex align-items-center justify-content-center bg-primary rounded-circle me-3">
-                                <i class="icon-sm text-white" data-feather="alert-circle"></i>
-        </div>
-        <div class="flex-grow-1 me-2">
-                                <p>Server Limit Reached!</p>
-                                <p class="tx-12 text-muted">1 hrs ago</p>
-        </div>	
-      </a>
-      <a href="javascript:;" class="dropdown-item d-flex align-items-center py-2">
-        <div class="wd-30 ht-30 d-flex align-items-center justify-content-center bg-primary rounded-circle me-3">
-          <img class="wd-30 ht-30 rounded-circle" src="https://via.placeholder.com/30x30" alt="userr">
-        </div>
-        <div class="flex-grow-1 me-2">
-                                <p>New customer registered</p>
-                                <p class="tx-12 text-muted">2 sec ago</p>
-        </div>	
-      </a>
-      <a href="javascript:;" class="dropdown-item d-flex align-items-center py-2">
-        <div class="wd-30 ht-30 d-flex align-items-center justify-content-center bg-primary rounded-circle me-3">
-                                <i class="icon-sm text-white" data-feather="layers"></i>
-        </div>
-        <div class="flex-grow-1 me-2">
-                                <p>Apps are ready for update</p>
-                                <p class="tx-12 text-muted">5 hrs ago</p>
-        </div>	
-      </a>
-      <a href="javascript:;" class="dropdown-item d-flex align-items-center py-2">
-        <div class="wd-30 ht-30 d-flex align-items-center justify-content-center bg-primary rounded-circle me-3">
-                                <i class="icon-sm text-white" data-feather="download"></i>
-        </div>
-        <div class="flex-grow-1 me-2">
-                                <p>Download completed</p>
-                                <p class="tx-12 text-muted">6 hrs ago</p>
-        </div>	
-      </a>
-    </div>
-                    <div class="px-3 py-2 d-flex align-items-center justify-content-center border-top">
-                        <a href="javascript:;">View all</a>
-                    </div>
-                </div>
-            </li>
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <img class="wd-30 ht-30 rounded-circle" src="https://via.placeholder.com/30x30" alt="profile">
-                </a>
-                <div class="dropdown-menu p-0" aria-labelledby="profileDropdown">
-                    <div class="d-flex flex-column align-items-center border-bottom px-5 py-3">
-                        <div class="mb-3">
-                            <img class="wd-80 ht-80 rounded-circle" src="https://via.placeholder.com/80x80" alt="">
+                <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
+                    <img src="https://ui-avatars.com/api/?name={{ urlencode($authOwner?->name ?? 'Owner') }}&size=32&background=C9A227&color=000&bold=true"
+                         class="wd-32 ht-32 rounded-circle" style="border:2px solid rgba(201,162,39,.3);" alt="">
+                    <div class="d-none d-md-block" style="line-height:1.2;text-align:{{ $isAr?'right':'left' }};">
+                        <div style="font-size:.78rem;font-weight:700;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                            {{ $authOwner?->name ?? 'Admin' }}
                         </div>
-                        <div class="text-center">
-                            <p class="tx-16 fw-bolder">Amiah Burton</p>
-                            <p class="tx-12 text-muted">amiahburton@gmail.com</p>
+                        <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.6px;opacity:.4;">Platform Owner</div>
+                    </div>
+                </a>
+
+                <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:220px;border-radius:12px;overflow:hidden;">
+                    <div class="px-4 py-3 border-bottom" style="background:rgba(201,162,39,.07);">
+                        <div class="d-flex align-items-center gap-3">
+                            <img src="https://ui-avatars.com/api/?name={{ urlencode($authOwner?->name ?? 'Owner') }}&size=42&background=C9A227&color=000&bold=true"
+                                 style="width:42px;height:42px;border-radius:50%;flex-shrink:0;" alt="">
+                            <div style="min-width:0;">
+                                <div style="font-size:.84rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $authOwner?->name }}</div>
+                                <div style="font-size:.7rem;margin-top:3px;">
+                                    <span style="background:#C9A227;color:#000;border-radius:20px;padding:1px 8px;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">
+                                        Platform Owner
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-    <ul class="list-unstyled p-1">
-      <li class="dropdown-item py-2">
-        <a href="pages/general/profile.html" class="text-body ms-0">
-          <i class="me-2 icon-md" data-feather="user"></i>
-          <span>Profile</span>
-        </a>
-      </li>
-      <li class="dropdown-item py-2">
-        <a href="javascript:;" class="text-body ms-0">
-          <i class="me-2 icon-md" data-feather="edit"></i>
-          <span>Edit Profile</span>
-        </a>
-      </li>
-      <li class="dropdown-item py-2">
-        <a href="javascript:;" class="text-body ms-0">
-          <i class="me-2 icon-md" data-feather="repeat"></i>
-          <span>Switch User</span>
-        </a>
-      </li>
-      <li class="dropdown-item py-2">
-        <a href="javascript:;" class="text-body ms-0">
-          <i class="me-2 icon-md" data-feather="log-out"></i>
-          <span>Log Out</span>
-        </a>
-      </li>
-    </ul>
+                    <ul class="list-unstyled p-2 mb-0">
+                        <li>
+                            <a href="{{ route('owner.profile') }}"
+                               class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
+                                <i class="icon-sm feather icon-user"></i> {{ __('Profile') }}
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('front.index') }}" target="_blank"
+                               class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
+                                <i class="icon-sm feather icon-globe"></i> {{ __('View website') }}
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <form method="POST" action="{{ route('owner.logout') }}">
+                                @csrf
+                                <button type="submit"
+                                    class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2 text-danger w-100 border-0 bg-transparent">
+                                    <i class="icon-sm feather icon-log-out"></i> {{ __('Sign out') }}
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
                 </div>
             </li>
+
         </ul>
     </div>
 </nav>

@@ -1,6 +1,10 @@
 <?php
 
 use Illuminate\Foundation\Application;
+use App\Http\Middleware\AuthenticateCompany;
+use App\Http\Middleware\AuthenticateOwner;
+use App\Http\Middleware\RedirectIfCompanyAuthenticated;
+use App\Http\Middleware\RedirectIfOwnerAuthenticated;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,6 +18,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             SetLocale::class,
+        ]);
+        $middleware->alias([
+            'owner.auth'    => AuthenticateOwner::class,
+            'owner.guest'   => RedirectIfOwnerAuthenticated::class,
+            'company.auth'  => AuthenticateCompany::class,
+            'company.guest' => RedirectIfCompanyAuthenticated::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -24,15 +24,21 @@ class Appointment extends Model
         'rejection_reason',
         'handled_by_employee_id',
         'handled_at',
+        'status_changed_by_type',
+        'status_changed_by_id',
+        'status_changed_by_name',
+        'status_changed_at',
+        'status_previous',
     ];
 
     protected function casts(): array
     {
         return [
-            'start_time' => 'datetime',
-            'end_time' => 'datetime',
-            'total_price' => 'decimal:2',
-            'handled_at' => 'datetime',
+            'start_time'        => 'datetime',
+            'end_time'          => 'datetime',
+            'total_price'       => 'decimal:2',
+            'handled_at'        => 'datetime',
+            'status_changed_at' => 'datetime',
         ];
     }
 

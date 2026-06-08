@@ -1,0 +1,63 @@
+<?php
+
+use App\Http\Controllers\Company\AppointmentController;
+use App\Http\Controllers\Company\Auth\LoginController;
+use App\Http\Controllers\Company\Auth\RegisterController;
+use App\Http\Controllers\Company\BranchController;
+use App\Http\Controllers\Company\DashboardController;
+use App\Http\Controllers\Company\EmployeeController;
+use App\Http\Controllers\Company\ServiceCategoryController;
+use App\Http\Controllers\Company\ServiceController;
+use App\Http\Controllers\Company\WorkingHoursController;
+use Illuminate\Support\Facades\Route;
+
+Route::prefix('company')->name('company.')->group(function () {
+
+    // Guest-only routes
+    Route::middleware('company.guest')->group(function () {
+        Route::get('/login',    [LoginController::class, 'showLogin'])->name('login');
+        Route::post('/login',   [LoginController::class, 'login'])->name('login.attempt');
+        Route::get('/register', [RegisterController::class, 'showRegister'])->name('register');
+        Route::post('/register',[RegisterController::class, 'register'])->name('register.attempt');
+    });
+
+    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    // Protected routes
+    Route::middleware('company.auth')->group(function () {
+
+        // Theme switcher
+        Route::get('/theme/{mode}', function (string $mode) {
+            return redirect()->back()->cookie('company_theme', $mode === 'light' ? 'light' : 'dark', 60 * 24 * 365);
+        })->whereIn('mode', ['light', 'dark'])->name('theme');
+
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Service categories
+        Route::resource('service-categories', ServiceCategoryController::class)
+            ->except(['create', 'edit', 'show']);
+
+        // Branches
+        Route::resource('branches', BranchController::class)->except(['show']);
+        Route::patch('branches/{branch}/status', [BranchController::class, 'updateStatus'])->name('branches.status');
+
+        // Working hours (per branch)
+        Route::get( 'branches/{branch}/working-hours', [WorkingHoursController::class, 'edit'])->name('branches.working-hours.edit');
+        Route::post('branches/{branch}/working-hours', [WorkingHoursController::class, 'update'])->name('branches.working-hours.update');
+
+        // Services (nested under branch, shallow)
+        Route::patch('services/{service}/toggle-active', [ServiceController::class, 'toggleActive'])->name('services.toggle-active');
+        Route::resource('branches.services', ServiceController::class)->shallow()->except(['show']);
+
+        // Employees (nested under branch, shallow)
+        Route::resource('branches.employees', EmployeeController::class)->shallow()->except(['show']);
+
+        // Appointments
+        Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.update-status');
+        Route::get('appointments/branch-data',    [AppointmentController::class, 'branchData'])->name('appointments.branch-data');
+        Route::get('appointments/calendar-events',[AppointmentController::class, 'calendarEvents'])->name('appointments.calendar-events');
+        Route::get('appointments/staff-events',   [AppointmentController::class, 'staffEvents'])->name('appointments.staff-events');
+        Route::resource('appointments', AppointmentController::class)->only(['index', 'show', 'create', 'store']);
+    });
+});

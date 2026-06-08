@@ -2,14 +2,19 @@
 
 namespace App\Services\Owner;
 
-/**
- * Platform owner panel — full access to all companies, branches, and services.
- * Not scoped to a single company account.
- */
+use App\Models\Owner;
+use Illuminate\Support\Facades\Auth;
+
 final class OwnerContext
 {
     public function isPlatformOwner(): bool
     {
-        return true;
+        return Auth::guard('owner')->check();
+    }
+
+    public function owner(): ?Owner
+    {
+        /** @var Owner|null */
+        return Auth::guard('owner')->user();
     }
 }

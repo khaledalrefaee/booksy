@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Company;
+use App\Models\Owner;
 use App\Models\User;
 
 return [
@@ -42,6 +44,14 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        'owner' => [
+            'driver' => 'session',
+            'provider' => 'owners',
+        ],
+        'company' => [
+            'driver' => 'session',
+            'provider' => 'companies',
+        ],
     ],
 
     /*
@@ -66,11 +76,14 @@ return [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
         ],
-
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'owners' => [
+            'driver' => 'eloquent',
+            'model' => Owner::class,
+        ],
+        'companies' => [
+            'driver' => 'eloquent',
+            'model' => Company::class,
+        ],
     ],
 
     /*
@@ -95,6 +108,12 @@ return [
     'passwords' => [
         'users' => [
             'provider' => 'users',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+        'owners' => [
+            'provider' => 'owners',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
             'throttle' => 60,

@@ -18,6 +18,7 @@ class Branch extends Model
         'name_ar',
         'sort_order',
         'is_head_office',
+        'status',
         'phone',
         'address',
         'latitude',
@@ -25,13 +26,38 @@ class Branch extends Model
         'landline_phone',
     ];
 
+    // Convenience helpers
+    public function isActive(): bool    { return $this->status === 'active'; }
+    public function isInactive(): bool  { return $this->status === 'inactive'; }
+    public function isMaintenance(): bool { return $this->status === 'maintenance'; }
+
+    public function statusLabel(): string
+    {
+        return match($this->status) {
+            'active'      => 'Active',
+            'inactive'    => 'Inactive',
+            'maintenance' => 'Maintenance',
+            default       => 'Unknown',
+        };
+    }
+
+    public function statusColor(): string
+    {
+        return match($this->status) {
+            'active'      => 'success',
+            'inactive'    => 'secondary',
+            'maintenance' => 'warning',
+            default       => 'secondary',
+        };
+    }
+
     protected function casts(): array
     {
         return [
-            'sort_order' => 'integer',
+            'sort_order'     => 'integer',
             'is_head_office' => 'boolean',
-            'latitude' => 'decimal:8',
-            'longitude' => 'decimal:8',
+            'latitude'       => 'decimal:8',
+            'longitude'      => 'decimal:8',
         ];
     }
 
@@ -83,5 +109,10 @@ class Branch extends Model
     public function socialLinks(): MorphMany
     {
         return $this->morphMany(SocialLink::class, 'linkable');
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(BranchImage::class)->orderBy('sort_order');
     }
 }

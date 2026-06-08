@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasLocalizedNames;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ServiceCategory extends Model
@@ -11,6 +12,7 @@ class ServiceCategory extends Model
     use HasLocalizedNames;
 
     protected $fillable = [
+        'company_id',
         'slug',
         'sort_order',
         'name_en',
@@ -22,6 +24,11 @@ class ServiceCategory extends Model
         return [
             'sort_order' => 'integer',
         ];
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function services(): HasMany

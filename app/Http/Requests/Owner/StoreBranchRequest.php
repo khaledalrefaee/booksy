@@ -27,6 +27,10 @@ class StoreBranchRequest extends FormRequest
             'address' => ['nullable', 'string', 'max:5000'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'images' => ['nullable', 'array', 'max:20'],
+            'images.*' => ['image', 'max:4096'],
+            'image_sort_orders' => ['nullable', 'array'],
+            'image_sort_orders.*' => ['integer', 'min:0', 'max:65535'],
         ];
     }
 }

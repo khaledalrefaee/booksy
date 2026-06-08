@@ -25,6 +25,6 @@ class AppServiceProvider extends ServiceProvider
     {
         \Illuminate\Pagination\Paginator::useBootstrapFive();
 
-        Route::bind('campania', fn (string $value) => Company::query()->findOrFail($value));
+        Route::bind('company', fn (string $value) => Company::query()->findOrFail($value));
     }
 }

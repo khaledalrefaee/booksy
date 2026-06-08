@@ -1,18 +1,14 @@
 <?php
 
-use App\Http\Controllers\Owner\AppointmentController;
-use App\Http\Controllers\Owner\BranchController;
-use App\Http\Controllers\Owner\CampaniasController;
-use App\Http\Controllers\Owner\CategoryController;
-use App\Http\Controllers\Owner\DashboardController;
-use App\Http\Controllers\Owner\EmployeeController;
-use App\Http\Controllers\Owner\ServiceCategoryController;
-use App\Http\Controllers\Owner\ServiceController;
+use App\Http\Controllers\FrontController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [FrontController::class, 'index'])->name('front.index');
+Route::get('/business/{company}', [FrontController::class, 'show'])->name('front.show');
+Route::get('/category/{slug}', [FrontController::class, 'categoryPage'])->name('front.category');
+Route::get('/about', [FrontController::class, 'about'])->name('front.about');
+Route::get('/contact', [FrontController::class, 'contact'])->name('front.contact');
+Route::post('/contact', [FrontController::class, 'contactSend'])->name('front.contact.send');
 
 Route::redirect('/dashboard', '/owner/dashboard');
 
@@ -25,48 +21,5 @@ Route::get('/locale/{locale}', function (string $locale) {
     return redirect()->back();
 })->name('locale.switch');
 
-Route::prefix('owner')->name('owner.')->group(function () {
-    Route::get('/theme/{mode}', function (string $mode) {
-        $theme = $mode === 'light' ? 'light' : 'dark';
-
-        return redirect()
-            ->back()
-            ->cookie('owner_theme', $theme, 60 * 24 * 365);
-    })->whereIn('mode', ['light', 'dark'])->name('theme');
-
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-    Route::resource('categories', CategoryController::class);
-    Route::resource('service-categories', ServiceCategoryController::class)->except(['create', 'edit', 'show']);
-
-    Route::patch('campanias/{campania}/status', [CampaniasController::class, 'updateStatus'])
-        ->name('campanias.update-status');
-    Route::resource('campanias', CampaniasController::class)->except(['create', 'edit']);
-
-    Route::get('branches/{branch}/working-hours', [BranchController::class, 'createWorkingHours'])
-        ->name('branches.working-hours.create');
-    Route::post('branches/{branch}/working-hours', [BranchController::class, 'storeWorkingHours'])
-        ->name('branches.working-hours.store');
-    Route::post('branches/{branch}/working-hours/skip', [BranchController::class, 'skipWorkingHours'])
-        ->name('branches.working-hours.skip');
-
-    Route::post('branches/{branch}/employees/skip', [EmployeeController::class, 'skipEmployees'])
-        ->name('branches.employees.skip');
-
-    Route::resource('branches', BranchController::class)->except(['show']);
-
-
-    
-    Route::patch('services/{service}/toggle-active', [ServiceController::class, 'toggleActive'])
-        ->name('services.toggle-active');
-
-    Route::resource('branches.services', ServiceController::class)
-        ->shallow()
-        ->except(['show']);
-
-    Route::resource('branches.employees', EmployeeController::class)
-        ->shallow()
-        ->except(['show']);
-
-    Route::resource('appointments', AppointmentController::class)->only(['index', 'show']);
-});
+require __DIR__.'/owner.php';
+require __DIR__.'/company.php';

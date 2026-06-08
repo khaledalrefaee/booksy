@@ -37,28 +37,61 @@
                     <tbody>
                         @forelse ($branches as $branch)
                             <tr>
-                                <td class="ps-4 text-muted">{{ $branch->company?->localizedName() ?? '—' }}</td>
+                                <td class="ps-4">
+                                    <span class="text-muted tx-13">{{ $branch->company?->localizedName() ?? '—' }}</span>
+                                </td>
                                 <td class="fw-medium">{{ $branch->name_en ?: '—' }}</td>
                                 <td lang="ar" dir="rtl">{{ $branch->name_ar ?: '—' }}</td>
                                 <td class="text-muted">{{ $branch->phone ?: '—' }}</td>
                                 <td>
                                     @if ($branch->is_head_office)
-                                        <span class="badge rounded-pill bg-primary">{{ __('Yes') }}</span>
+                                        <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle">{{ __('Yes') }}</span>
                                     @else
                                         <span class="badge rounded-pill bg-light text-muted border">{{ __('No') }}</span>
                                     @endif
                                 </td>
-                                <td>{{ $branch->sort_order }}</td>
+                                <td class="text-muted">{{ $branch->sort_order }}</td>
                                 <td class="text-end pe-4 text-nowrap">
-                                    <a href="{{ route('owner.branches.working-hours.create', $branch) }}" class="btn btn-sm btn-outline-secondary rounded-pill me-1">{{ __('Hours') }}</a>
-                                    <a href="{{ route('owner.branches.services.index', $branch) }}" class="btn btn-sm btn-outline-secondary rounded-pill me-1">{{ __('Services') }}</a>
-                                    <a href="{{ route('owner.branches.employees.index', $branch) }}" class="btn btn-sm btn-outline-secondary rounded-pill me-1">{{ __('Employees') }}</a>
-                                    <a href="{{ route('owner.branches.edit', $branch) }}" class="btn btn-sm btn-outline-primary rounded-pill me-1">{{ __('Edit') }}</a>
-                                    <form action="{{ route('owner.branches.destroy', $branch) }}" method="post" class="d-inline" onsubmit="return confirm('{{ __('Delete this branch?') }}');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill">{{ __('Delete') }}</button>
-                                    </form>
+                                    <a href="{{ route('owner.branches.edit', $branch) }}" class="btn btn-sm btn-outline-primary rounded-pill me-1">
+                                        <i data-feather="edit-2" style="width:13px;height:13px;"></i>
+                                        {{ __('Edit') }}
+                                    </a>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                            {{ __('More') }}
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                            <li>
+                                                <a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('owner.branches.working-hours.create', $branch) }}">
+                                                    <i data-feather="clock" style="width:14px;height:14px;"></i>
+                                                    {{ __('Working hours') }}
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('owner.branches.services.index', $branch) }}">
+                                                    <i data-feather="package" style="width:14px;height:14px;"></i>
+                                                    {{ __('Services') }}
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('owner.branches.employees.index', $branch) }}">
+                                                    <i data-feather="users" style="width:14px;height:14px;"></i>
+                                                    {{ __('Employees') }}
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form action="{{ route('owner.branches.destroy', $branch) }}" method="post" onsubmit="return confirm('{{ __('Delete this branch?') }}');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-danger">
+                                                        <i data-feather="trash-2" style="width:14px;height:14px;"></i>
+                                                        {{ __('Delete') }}
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </td>
                             </tr>
                         @empty

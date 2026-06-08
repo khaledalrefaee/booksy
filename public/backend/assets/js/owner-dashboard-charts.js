@@ -1,5 +1,5 @@
 /**
- * Owner dashboard charts — real Booksy data via window.booksyDashboard.
+ * Owner / Company dashboard charts — real Booksy data via window.booksyDashboard.
  */
 (function () {
   'use strict';
@@ -51,9 +51,7 @@
 
   function initDatePicker() {
     var el = document.getElementById('dashboardDate');
-    if (!el || typeof flatpickr === 'undefined') {
-      return;
-    }
+    if (!el || typeof flatpickr === 'undefined') return;
     flatpickr('#dashboardDate', {
       wrap: true,
       dateFormat: 'd-M-Y',
@@ -61,121 +59,123 @@
     });
   }
 
+  /* ── Sparklines (stat cards) ── */
   function renderSparkline(selector, data, type) {
     var node = document.querySelector(selector);
-    if (!node || typeof ApexCharts === 'undefined' || !data || !data.length) {
-      return;
-    }
+    if (!node || typeof ApexCharts === 'undefined' || !data || !data.length) return;
 
-    var options = Object.assign({}, baseChartOptions(60), {
-      chart: Object.assign({}, baseChartOptions(60).chart, {
+    var base = baseChartOptions(60);
+    var options = {
+      chart: Object.assign({}, base.chart, {
         type: type === 'bar' ? 'bar' : 'line',
         sparkline: { enabled: true },
       }),
+      theme: base.theme,
+      tooltip: base.tooltip,
+      dataLabels: { enabled: false },
       colors: [colors.primary],
       series: [{ name: '', data: data }],
       stroke: type === 'bar' ? undefined : { width: 2, curve: 'smooth' },
-      plotOptions:
-        type === 'bar'
-          ? {
-              bar: {
-                borderRadius: 2,
-                columnWidth: '60%',
-              },
-            }
-          : undefined,
+      plotOptions: type === 'bar' ? { bar: { borderRadius: 2, columnWidth: '60%' } } : undefined,
       markers: { size: 0 },
-    });
+    };
 
     new ApexCharts(node, options).render();
   }
 
+  /* ── Daily appointments chart (#revenueChart) ── */
   function renderRevenueChart() {
     var node = document.querySelector('#revenueChart');
-    var daily = payload.charts && payload.charts.daily;
-    if (!node || typeof ApexCharts === 'undefined' || !daily) {
-      return;
-    }
+    if (!node || typeof ApexCharts === 'undefined') return;
 
-    var options = Object.assign({}, baseChartOptions(400), {
-      chart: Object.assign({}, baseChartOptions(400).chart, {
-        type: 'area',
+    var daily = payload.charts && payload.charts.daily;
+    if (!daily) return;
+
+    var base = baseChartOptions(350);
+    var options = {
+      chart: Object.assign({}, base.chart, { type: 'area' }),
+      theme: base.theme,
+      tooltip: Object.assign({}, base.tooltip, {
+        y: {
+          formatter: function (val) {
+            return Math.round(val) + ' ' + (labels.appointments || 'Appointments');
+          },
+        },
       }),
+      dataLabels: { enabled: false },
       colors: [colors.primary],
       fill: {
         type: 'gradient',
-        gradient: {
-          shadeIntensity: 1,
-          opacityFrom: 0.35,
-          opacityTo: 0.05,
-        },
+        gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05 },
       },
       grid: {
         padding: { bottom: -4 },
         borderColor: colors.gridBorder,
-        xaxis: { lines: { show: true } },
+        xaxis: { lines: { show: false } },
       },
-      series: [
-        {
-          name: labels.appointments || 'Appointments',
-          data: daily.total,
-        },
-      ],
+      series: [{ name: labels.appointments || 'Appointments', data: daily.total }],
       xaxis: {
         categories: daily.labels,
         labels: {
           rotate: isRtl ? 45 : -45,
-          rotateAlways: daily.labels.length > 14,
+          rotateAlways: daily.labels.length > 8,
+          style: { fontSize: '11px' },
         },
         axisBorder: { color: colors.gridBorder },
         axisTicks: { color: colors.gridBorder },
       },
       yaxis: {
-        labels: {
-          formatter: function (val) {
-            return Math.round(val);
-          },
-        },
-        title: {
-          text: labels.count || 'Count',
-          style: { fontSize: '11px', color: colors.muted },
-        },
         min: 0,
         forceNiceScale: true,
+        labels: {
+          formatter: function (val) { return Math.round(val); },
+        },
+        title: { text: labels.count || 'Count', style: { fontSize: '11px', color: colors.muted } },
       },
       stroke: { width: 2, curve: 'smooth' },
       markers: { size: 0 },
-    });
+    };
 
     new ApexCharts(node, options).render();
   }
 
+  /* ── Monthly appointments bar chart (#monthlySalesChart or #appointmentsChart) ── */
   function renderMonthlyChart() {
-    var node = document.querySelector('#monthlySalesChart');
-    var monthly = payload.charts && payload.charts.monthly;
-    if (!node || typeof ApexCharts === 'undefined' || !monthly) {
-      return;
-    }
+    /* Use whichever monthly-appointments node exists */
+    var selector = document.querySelector('#appointmentsChart') ? '#appointmentsChart' : '#monthlySalesChart';
+    var node = document.querySelector(selector);
+    if (!node || typeof ApexCharts === 'undefined') return;
 
-    var options = Object.assign({}, baseChartOptions(318), {
-      chart: Object.assign({}, baseChartOptions(318).chart, {
-        type: 'bar',
+    var monthly = payload.charts && payload.charts.monthly;
+    if (!monthly) return;
+
+    var base = baseChartOptions(300);
+    var options = {
+      chart: Object.assign({}, base.chart, { type: 'bar' }),
+      theme: base.theme,
+      tooltip: Object.assign({}, base.tooltip, {
+        y: {
+          formatter: function (val) {
+            return Math.round(val) + ' ' + (labels.appointments || 'Appointments');
+          },
+        },
       }),
+      dataLabels: { enabled: false },
       colors: [colors.primary],
       fill: { opacity: 0.9 },
       grid: {
         padding: { bottom: -4 },
         borderColor: colors.gridBorder,
-        xaxis: { lines: { show: true } },
+        xaxis: { lines: { show: false } },
       },
-      series: [
-        {
-          name: labels.appointments || 'Appointments',
-          data: monthly.total,
-        },
-      ],
+      series: [{ name: labels.appointments || 'Appointments', data: monthly.total }],
       xaxis: {
         categories: monthly.labels,
+        labels: {
+          rotate: isRtl ? 45 : -45,
+          rotateAlways: monthly.labels.length > 8,
+          style: { fontSize: '11px' },
+        },
         axisBorder: { color: colors.gridBorder },
         axisTicks: { color: colors.gridBorder },
       },
@@ -183,35 +183,26 @@
         min: 0,
         forceNiceScale: true,
         labels: {
-          formatter: function (val) {
-            return Math.round(val);
-          },
+          formatter: function (val) { return Math.round(val); },
         },
-        title: {
-          text: labels.count || 'Count',
-          style: { fontSize: '11px', color: colors.muted },
-        },
+        title: { text: labels.count || 'Count', style: { fontSize: '11px', color: colors.muted } },
       },
-      plotOptions: {
-        bar: {
-          columnWidth: '50%',
-          borderRadius: 4,
-        },
-      },
+      plotOptions: { bar: { columnWidth: '50%', borderRadius: 4 } },
       stroke: { width: 0 },
-    });
+    };
 
     new ApexCharts(node, options).render();
   }
 
+  /* ── Status donut (#storageChart) ── */
   function renderStatusDonut() {
     var node = document.querySelector('#storageChart');
-    var status = payload.charts && payload.charts.status;
-    if (!node || typeof ApexCharts === 'undefined' || !status) {
-      return;
-    }
+    if (!node || typeof ApexCharts === 'undefined') return;
 
-    if (!status.values.length) {
+    var status = payload.charts && payload.charts.status;
+    if (!status) return;
+
+    if (!status.values || !status.values.length) {
       node.innerHTML =
         '<p class="text-muted text-center py-5 mb-0">' +
         (labels.noData || 'No appointment data yet.') +
@@ -219,17 +210,16 @@
       return;
     }
 
-    var options = Object.assign({}, baseChartOptions(260), {
-      chart: Object.assign({}, baseChartOptions(260).chart, {
-        type: 'donut',
-      }),
+    var base = baseChartOptions(260);
+    var options = {
+      chart: Object.assign({}, base.chart, { type: 'donut' }),
+      theme: base.theme,
+      tooltip: base.tooltip,
+      dataLabels: { enabled: false },
       labels: status.labels,
       series: status.values,
       colors: [colors.primary, colors.success, colors.warning, colors.danger, colors.muted, '#66d1d1'],
-      legend: {
-        position: 'bottom',
-        fontFamily: fontFamily,
-      },
+      legend: { position: 'bottom', fontFamily: fontFamily },
       plotOptions: {
         pie: {
           donut: {
@@ -241,24 +231,21 @@
                 label: labels.total || 'Total',
                 color: colors.bodyColor,
                 formatter: function (w) {
-                  return w.globals.seriesTotals.reduce(function (a, b) {
-                    return a + b;
-                  }, 0);
+                  return w.globals.seriesTotals.reduce(function (a, b) { return a + b; }, 0);
                 },
               },
             },
           },
         },
       },
-    });
+    };
 
     new ApexCharts(node, options).render();
   }
 
+  /* ── Init ── */
   function init() {
-    if (typeof ApexCharts === 'undefined') {
-      return;
-    }
+    if (typeof ApexCharts === 'undefined') return;
 
     initDatePicker();
 
@@ -269,8 +256,8 @@
       renderSparkline('#growthChart', spark.completed, 'line');
     }
 
-    renderRevenueChart();
     renderMonthlyChart();
+    renderRevenueChart();
     renderStatusDonut();
   }
 

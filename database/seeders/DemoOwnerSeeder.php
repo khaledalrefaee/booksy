@@ -43,8 +43,9 @@ class DemoOwnerSeeder extends Seeder
         );
 
         $hairCategory = ServiceCategory::query()->firstOrCreate(
-            ['slug' => 'hair'],
+            ['slug' => 'hair-' . $company->id],
             [
+                'company_id' => $company->id,
                 'name_en' => 'Hair',
                 'name_ar' => 'شعر',
                 'sort_order' => 1,
@@ -52,8 +53,9 @@ class DemoOwnerSeeder extends Seeder
         );
 
         $groomingCategory = ServiceCategory::query()->firstOrCreate(
-            ['slug' => 'grooming'],
+            ['slug' => 'grooming-' . $company->id],
             [
+                'company_id' => $company->id,
                 'name_en' => 'Grooming',
                 'name_ar' => 'عناية',
                 'sort_order' => 2,

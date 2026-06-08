@@ -44,6 +44,8 @@
   <!-- End layout styles -->
 
   <link rel="shortcut icon" href="{{asset('backend/assets/images/favicon.png')}}" />
+  <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-custom.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
 
 
   	<!-- Plugin css for this page form -->

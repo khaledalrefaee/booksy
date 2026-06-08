@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 
 
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
-@php($ownerTheme = request()->cookie('owner_theme', 'dark'))
+@php $ownerTheme = request()->cookie('owner_theme', 'dark'); @endphp
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"
+      dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}"
+      data-bk-theme="{{ $ownerTheme }}"
+      class="bk-theme-{{ $ownerTheme }}">
 <head>
 	@include('owner.partials.css')
 	@stack('owner-styles')

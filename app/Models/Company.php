@@ -3,13 +3,15 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasLocalizedNames;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
-class Company extends Model
+class Company extends Authenticatable
 {
+    use Notifiable;
     use HasLocalizedNames;
 
     protected $fillable = [
@@ -75,5 +77,10 @@ class Company extends Model
     public function socialLinks(): MorphMany
     {
         return $this->morphMany(SocialLink::class, 'linkable');
+    }
+
+    public function serviceCategories(): HasMany
+    {
+        return $this->hasMany(ServiceCategory::class);
     }
 }

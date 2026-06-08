@@ -7,9 +7,11 @@ use App\Http\Requests\Owner\StoreBranchRequest;
 use App\Http\Requests\Owner\StoreBranchWorkingHoursRequest;
 use App\Http\Requests\Owner\UpdateBranchRequest;
 use App\Models\Branch;
+use App\Models\BranchImage;
 use App\Models\BranchWorkingHour;
 use App\Models\Company;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class BranchController extends Controller
@@ -48,6 +50,8 @@ class BranchController extends Controller
                 ->update(['is_head_office' => false]);
         }
 
+        $this->syncImages($branch, $request->file('images', []), $request->input('image_sort_orders', []));
+
         return redirect()
             ->route('owner.branches.working-hours.create', $branch)
             ->with('success', __('Branch created. Now set working hours.'));
@@ -58,7 +62,12 @@ class BranchController extends Controller
         $branch->load(['company', 'workingHours']);
 
         $weekDays = $this->weekDayLabels();
-        $existingHours = $branch->workingHours->keyBy('day_of_week');
+
+        // Key by day_of_week → shift_number for easy lookup in the view
+        $existingHours = [];
+        foreach ($branch->workingHours as $wh) {
+            $existingHours[$wh->day_of_week][$wh->shift_number] = $wh;
+        }
 
         return view('owner.branches.working-hours', compact('branch', 'weekDays', 'existingHours'));
     }
@@ -67,19 +76,38 @@ class BranchController extends Controller
     {
         foreach ($request->validated('hours') as $hour) {
             $isOpen = ! empty($hour['is_open']);
+            $day = $hour['day_of_week'];
 
+            // Shift 1
             BranchWorkingHour::query()->updateOrCreate(
-                [
-                    'branch_id' => $branch->id,
-                    'day_of_week' => $hour['day_of_week'],
-                    'shift_number' => 1,
-                ],
+                ['branch_id' => $branch->id, 'day_of_week' => $day, 'shift_number' => 1],
                 [
                     'is_open' => $isOpen,
                     'open_time' => $isOpen ? ($hour['open_time'] ?? '09:00') : null,
                     'close_time' => $isOpen ? ($hour['close_time'] ?? '18:00') : null,
                 ]
             );
+
+            // Shift 2 — only when day is open and shift 2 is enabled
+            $shift2Enabled = $isOpen && ! empty($hour['shift2_enabled']);
+
+            if ($shift2Enabled) {
+                BranchWorkingHour::query()->updateOrCreate(
+                    ['branch_id' => $branch->id, 'day_of_week' => $day, 'shift_number' => 2],
+                    [
+                        'is_open' => true,
+                        'open_time' => $hour['shift2_open_time'] ?? '14:00',
+                        'close_time' => $hour['shift2_close_time'] ?? '22:00',
+                    ]
+                );
+            } else {
+                // Remove shift 2 if it was previously saved but now disabled
+                BranchWorkingHour::query()
+                    ->where('branch_id', $branch->id)
+                    ->where('day_of_week', $day)
+                    ->where('shift_number', 2)
+                    ->delete();
+            }
         }
 
         return redirect()
@@ -96,7 +124,7 @@ class BranchController extends Controller
 
     public function edit(Branch $branch): View
     {
-        $branch->load('company');
+        $branch->load(['company', 'images']);
         $companies = Company::query()->orderByLocalizedName()->get();
 
         return view('owner.branches.edit', compact('branch', 'companies'));
@@ -117,6 +145,30 @@ class BranchController extends Controller
                 ->update(['is_head_office' => false]);
         }
 
+        // Update sort orders for existing images
+        foreach ($request->input('existing_sort_orders', []) as $imageId => $sortOrder) {
+            BranchImage::query()
+                ->where('id', $imageId)
+                ->where('branch_id', $branch->id)
+                ->update(['sort_order' => (int) $sortOrder]);
+        }
+
+        // Delete removed images
+        foreach ($request->input('delete_images', []) as $imageId) {
+            $image = BranchImage::query()
+                ->where('id', $imageId)
+                ->where('branch_id', $branch->id)
+                ->first();
+
+            if ($image) {
+                Storage::disk('public')->delete($image->path);
+                $image->delete();
+            }
+        }
+
+        // Add new images
+        $this->syncImages($branch, $request->file('images', []), $request->input('image_sort_orders', []));
+
         return redirect()
             ->route('owner.branches.index')
             ->with('success', __('Branch updated successfully.'));
@@ -124,11 +176,30 @@ class BranchController extends Controller
 
     public function destroy(Branch $branch): RedirectResponse
     {
+        foreach ($branch->images as $image) {
+            Storage::disk('public')->delete($image->path);
+        }
+
         $branch->delete();
 
         return redirect()
             ->route('owner.branches.index')
             ->with('success', __('Branch deleted successfully.'));
+    }
+
+    /**
+     * @param  array<int, \Illuminate\Http\UploadedFile>  $files
+     * @param  array<int, int>  $sortOrders
+     */
+    private function syncImages(Branch $branch, array $files, array $sortOrders): void
+    {
+        foreach ($files as $index => $file) {
+            $path = $file->store('branches/images', 'public');
+            $branch->images()->create([
+                'path' => $path,
+                'sort_order' => (int) ($sortOrders[$index] ?? $index),
+            ]);
+        }
     }
 
     /**

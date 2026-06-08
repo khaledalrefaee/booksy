@@ -1,7 +1,7 @@
 @extends('owner.dashboard')
 @section('content')
 <div class="page-content">
-    <div class="d-flex justify-content-between align-items-center flex-wrap grid-margin gap-3">
+    <div class="d-flex justify-content-between align-items-start flex-wrap grid-margin gap-3">
         <div>
             <h4 class="mb-2">{{ __('Appointments') }}</h4>
             <nav aria-label="breadcrumb">
@@ -24,6 +24,12 @@
                     <option value="{{ $st }}" @selected($filterStatus === $st)>{{ __($st) }}</option>
                 @endforeach
             </select>
+            @if(request()->hasAny(['company_id', 'status']) && array_filter([request('company_id'), request('status')]))
+                <a href="{{ route('owner.appointments.index') }}" class="btn btn-outline-secondary rounded-pill" title="{{ __('Clear filters') }}">
+                    <i data-feather="x" style="width:14px;height:14px;"></i>
+                    {{ __('Clear') }}
+                </a>
+            @endif
         </form>
     </div>
 
@@ -70,7 +76,12 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-5">{{ __('No appointments found.') }}</td>
+                                <td colspan="7" class="text-center text-muted py-5">
+                                    <div class="d-flex flex-column align-items-center gap-2">
+                                        <i data-feather="calendar" style="width:40px;height:40px;" class="text-muted opacity-50"></i>
+                                        <p class="mb-0">{{ __('No appointments found.') }}</p>
+                                    </div>
+                                </td>
                             </tr>
                         @endforelse
                     </tbody>

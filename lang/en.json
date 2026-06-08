@@ -1,4 +1,21 @@
 {
+    "Profile": "Profile",
+    "Personal information": "Personal information",
+    "Change password": "Change password",
+    "Leave blank to keep your current password.": "Leave blank to keep your current password.",
+    "New password": "New password",
+    "Confirm password": "Confirm password",
+    "Save changes": "Save changes",
+    "Change avatar": "Change avatar",
+    "Profile updated successfully.": "Profile updated successfully.",
+
+    "Sign in": "Sign in",
+    "Sign out": "Sign out",
+    "Welcome back! Sign in to continue.": "Welcome back! Sign in to continue.",
+    "Remember me": "Remember me",
+    "Forgot your password?": "Forgot your password?",
+    "These credentials do not match our records.": "These credentials do not match our records.",
+
     "Main": "Main",
     "Dashboard": "Dashboard",
     "Categories": "Categories",
@@ -294,5 +311,15 @@
     "Classify branch services (e.g. hair, nails). Each service must belong to one category.": "Classify branch services (e.g. hair, nails). Each service must belong to one category.",
     "Select service category": "Select service category",
     "All companies": "All companies",
-    "Daily appointments for the last 30 days across the platform.": "Daily appointments for the last 30 days across the platform."
+    "Daily appointments for the last 30 days across the platform.": "Daily appointments for the last 30 days across the platform.",
+    "All rights reserved.": "All rights reserved.",
+    "Clear": "Clear",
+    "Clear filters": "Clear filters",
+    "More": "More",
+    "Working hours": "Working hours",
+    "Management": "Management",
+    "Configuration": "Configuration",
+    "View all": "View all",
+    "View branches": "View branches",
+    "Filter pending": "Filter pending"
 }

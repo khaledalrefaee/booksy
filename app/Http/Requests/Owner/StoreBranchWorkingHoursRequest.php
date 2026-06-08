@@ -22,6 +22,9 @@ class StoreBranchWorkingHoursRequest extends FormRequest
             'hours.*.is_open' => ['sometimes', 'boolean'],
             'hours.*.open_time' => ['nullable', 'date_format:H:i'],
             'hours.*.close_time' => ['nullable', 'date_format:H:i'],
+            'hours.*.shift2_enabled' => ['nullable', 'boolean'],
+            'hours.*.shift2_open_time' => ['nullable', 'date_format:H:i'],
+            'hours.*.shift2_close_time' => ['nullable', 'date_format:H:i'],
         ];
     }
 }
