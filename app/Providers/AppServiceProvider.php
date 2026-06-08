@@ -7,9 +7,13 @@ use App\Models\Company;
 use App\Repositories\EloquentBranchRepository;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
+    
+
+
     /**
      * Register any application services.
      */
@@ -26,5 +30,9 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Pagination\Paginator::useBootstrapFive();
 
         Route::bind('company', fn (string $value) => Company::query()->findOrFail($value));
+
+          if (app()->environment('production')) {
+        URL::forceScheme('https');
+    }
     }
 }
