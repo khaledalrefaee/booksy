@@ -16,15 +16,31 @@ use Illuminate\View\View;
 
 class BranchController extends Controller
 {
-    public function index(): View
+    public function index(\Illuminate\Http\Request $request): View
     {
-        $branches = Branch::query()
-            ->with('company')
-            ->orderBy('sort_order')
-            ->orderByLocalizedName()
-            ->get();
+        $search = trim($request->input('q', ''));
+        $perPage = 15;
 
-        return view('owner.branches.index', compact('branches'));
+        $query = Branch::query()
+            ->with(['company', 'services', 'employees', 'workingHours'])
+            ->orderBy('sort_order')
+            ->orderByLocalizedName();
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name_en', 'like', "%{$search}%")
+                  ->orWhere('name_ar', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhereHas('company', function ($cq) use ($search) {
+                      $cq->where('name_en', 'like', "%{$search}%")
+                         ->orWhere('name_ar', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $branches = $query->paginate($perPage)->withQueryString();
+
+        return view('owner.branches.index', compact('branches', 'search'));
     }
 
     public function create(): View

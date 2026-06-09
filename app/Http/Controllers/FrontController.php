@@ -38,6 +38,31 @@ class FrontController extends Controller
         ));
     }
 
+    public function branchShow(\App\Models\Branch $branch)
+    {
+        $branch->load([
+            'company.category',
+            'company.socialLinks',
+            'images',
+            'workingHours',
+            'services' => fn($q) => $q->where('is_active', true)->with('serviceCategory'),
+            'employees' => fn($q) => $q->where('is_active', true)->with(['role', 'serviceCategories']),
+            'reviews.customer',
+        ]);
+        $company = $branch->company;
+        $allImages = $branch->images;
+        $servicesByCategory = $branch->services->groupBy('service_category_id');
+        $employees = $branch->employees;
+        $reviews = $branch->reviews->sortByDesc('created_at');
+        $avgRating = $reviews->avg('rating') ?? 0;
+        $stars = round($avgRating * 2) / 2;
+        $totalRev = $reviews->count();
+        return view('front.branch', compact(
+            'branch', 'company', 'allImages', 'servicesByCategory',
+            'employees', 'reviews', 'avgRating', 'stars', 'totalRev'
+        ));
+    }
+
     public function about()
     {
         return view('front.about');
@@ -63,23 +88,30 @@ class FrontController extends Controller
     public function categoryPage(string $slug, Request $request)
     {
         $category   = Category::where('slug', $slug)->firstOrFail();
-        $categories = Category::withCount('companies')->orderBy('sort_order')->get();
+        $categories = Category::orderBy('sort_order')->get();
 
-        $query = Company::with(['category', 'branches.images', 'branches.reviews'])
-            ->where('status', 'active')
-            ->whereHas('category', fn($q) => $q->where('slug', $slug));
+        $query = \App\Models\Branch::with([
+            'company.category',
+            'images',
+            'services' => fn($q) => $q->where('is_active', true),
+            'employees' => fn($q) => $q->where('is_active', true),
+            'workingHours',
+            'reviews',
+        ])->whereHas('company', fn($q) => $q->where('status', 'active')
+            ->whereHas('category', fn($q2) => $q2->where('slug', $slug)));
 
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name_en', 'like', "%$search%")
-                  ->orWhere('name_ar', 'like', "%$search%");
+                  ->orWhere('name_ar', 'like', "%$search%")
+                  ->orWhere('address', 'like', "%$search%")
+                  ->orWhereHas('company', fn($cq) => $cq->where('name_en', 'like', "%$search%")->orWhere('name_ar', 'like', "%$search%"));
             });
         }
 
-        $companies = $query->paginate(12)->withQueryString();
-
-        return view('front.category', compact('category', 'categories', 'companies'));
+        $branches = $query->paginate(12)->withQueryString();
+        return view('front.category', compact('category', 'categories', 'branches'));
     }
 
     public function index(Request $request)

@@ -140,7 +140,140 @@ html{scroll-behavior:smooth;}
 }
 .bk-logo-item:hover .bk-logo-text{color:#C9A227;}
 
-/* ── Navbar ── */
+/* ═══════════════════════════════
+   COMPANY CARDS — premium style
+═══════════════════════════════ */
+
+/* section divider */
+.bk-section-divider{
+    height:1px;
+    background:linear-gradient(90deg,transparent,rgba(201,162,39,.2) 30%,rgba(201,162,39,.2) 70%,transparent);
+    margin:0;
+}
+
+/* card wrapper */
+.bk-company-card{
+    border-radius:18px;overflow:hidden;
+    background:#141414;
+    border:1px solid rgba(255,255,255,.06);
+    display:flex;flex-direction:column;
+    transition:transform .38s cubic-bezier(.22,1,.36,1),
+               box-shadow .38s,border-color .38s;
+    position:relative;cursor:pointer;
+    height:100%;
+}
+.bk-company-card:hover{
+    transform:translateY(-10px);
+    border-color:rgba(201,162,39,.45);
+    box-shadow:0 28px 60px rgba(0,0,0,.55),0 0 0 1px rgba(201,162,39,.2);
+}
+
+/* image area */
+.bk-cc-img{
+    height:220px;position:relative;overflow:hidden;
+    background:#1a1a1a;
+}
+.bk-cc-img img{
+    width:100%;height:100%;object-fit:cover;
+    transition:transform .5s cubic-bezier(.22,1,.36,1);
+}
+.bk-company-card:hover .bk-cc-img img{transform:scale(1.08);}
+.bk-cc-img::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(0,0,0,.05) 0%,rgba(0,0,0,.55) 100%);
+    pointer-events:none;
+}
+.bk-cc-img-placeholder{
+    width:100%;height:100%;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#1a1a1a,#111);
+    font-size:3.5rem;color:rgba(201,162,39,.15);
+}
+
+/* badge top-left */
+.bk-cc-badge{
+    position:absolute;top:12px;{{ $isAr ? 'right' : 'left' }}:12px;z-index:3;
+    background:rgba(10,10,10,.85);color:#C9A227;
+    font-size:.65rem;font-weight:700;padding:4px 12px;
+    border-radius:20px;border:1px solid rgba(201,162,39,.3);
+    backdrop-filter:blur(8px);letter-spacing:.2px;
+    font-family:'Poppins',sans-serif;
+}
+
+/* rating badge top-right */
+.bk-cc-rating{
+    position:absolute;top:12px;{{ $isAr ? 'left' : 'right' }}:12px;z-index:3;
+    background:rgba(10,10,10,.85);
+    font-size:.72rem;font-weight:700;padding:4px 10px;
+    border-radius:20px;border:1px solid rgba(201,162,39,.25);
+    backdrop-filter:blur(8px);
+    display:flex;align-items:center;gap:4px;color:#fff;
+    font-family:'Poppins',sans-serif;
+}
+.bk-cc-rating i{color:#C9A227;font-size:.65rem;}
+
+/* like btn */
+.bk-cc-like{
+    position:absolute;bottom:12px;{{ $isAr ? 'left' : 'right' }}:12px;z-index:3;
+    width:36px;height:36px;border-radius:50%;border:none;
+    background:rgba(10,10,10,.75);backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:all .25s;
+}
+.bk-cc-like:hover{background:rgba(231,76,60,.2);border:1px solid rgba(231,76,60,.4);}
+
+/* card body */
+.bk-cc-body{
+    padding:16px;flex:1;display:flex;flex-direction:column;gap:8px;
+}
+.bk-cc-name{
+    font-size:.97rem;font-weight:700;color:#ffffff;
+    font-family:'Poppins',sans-serif;line-height:1.25;
+    overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;
+}
+.bk-cc-location{
+    font-size:.74rem;color:rgba(255,255,255,.4);
+    display:flex;align-items:center;gap:5px;
+}
+.bk-cc-location i{color:#C9A227;font-size:.68rem;flex-shrink:0;}
+.bk-cc-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.bk-cc-chip{
+    background:rgba(201,162,39,.07);
+    border:1px solid rgba(201,162,39,.18);
+    border-radius:20px;padding:3px 10px;
+    font-size:.65rem;font-weight:600;color:rgba(201,162,39,.9);
+    font-family:'Poppins',sans-serif;
+    display:inline-flex;align-items:center;gap:4px;
+}
+.bk-cc-chip i{font-size:.6rem;}
+.bk-cc-stars{display:flex;align-items:center;gap:3px;}
+.bk-cc-stars i{font-size:.62rem;color:#C9A227;}
+.bk-cc-stars span{font-size:.7rem;color:rgba(255,255,255,.35);margin-{{ $isAr?'right':'left' }}:3px;}
+
+/* book button — always visible, gold fill on hover */
+.bk-cc-book{
+    display:flex;align-items:center;justify-content:center;gap:7px;
+    width:100%;padding:11px;border-radius:10px;
+    border:1.5px solid rgba(201,162,39,.35);
+    background:rgba(201,162,39,.05);
+    color:#C9A227;font-size:.83rem;font-weight:700;
+    font-family:'Poppins',sans-serif;text-decoration:none;
+    transition:all .28s;margin-top:auto;
+}
+.bk-cc-book:hover,
+.bk-company-card:hover .bk-cc-book{
+    background:#C9A227;color:#0a0a0a;
+    border-color:#C9A227;
+    box-shadow:0 6px 20px rgba(201,162,39,.35);
+    text-decoration:none;
+}
+
+/* empty state */
+.bk-empty{text-align:center;padding:70px 20px;color:rgba(255,255,255,.3);}
+.bk-empty i{font-size:3.5rem;color:rgba(201,162,39,.15);display:block;margin-bottom:16px;}
+.bk-empty h5{color:rgba(255,255,255,.5);font-family:'Poppins',sans-serif;}
+
+/* Navbar ── */
 #bk-navbar{
     background:#0a0a0a;border-bottom:1px solid rgba(201,162,39,.15);
     padding:0 0;height:68px;z-index:1050;transition:box-shadow .3s;
@@ -198,52 +331,120 @@ html{scroll-behavior:smooth;}
     font-size:.74rem;font-weight:900;display:flex;align-items:center;justify-content:center;
     font-family:'Poppins',sans-serif;}
 
-/* ── Category Strip ── */
-.bk-cats-strip{
-    background:#0d0d0d;
-    border-top:1px solid rgba(255,255,255,.05);
-    border-bottom:1px solid rgba(255,255,255,.05);
-    padding:14px 0 10px;
+/* ═══════════════════════════════
+   CATEGORIES — gradient cards
+═══════════════════════════════ */
+#bk-cats{padding:80px 0 60px;background:#080808;}
+.bk-cats-heading{
+    font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:#fff;
+    margin-bottom:6px;
 }
-.bk-cats-scroll{
-    display:flex;align-items:flex-start;gap:4px;overflow-x:auto;
-    padding:0 12px 4px;scroll-snap-type:x mandatory;
-    -webkit-overflow-scrolling:touch;scrollbar-width:none;
+.bk-cats-heading span{color:#C9A227;}
+.bk-cats-scroll-outer{
+    overflow-x:auto;padding-bottom:12px;
+    scrollbar-width:thin;scrollbar-color:rgba(201,162,39,.3) transparent;
 }
-.bk-cats-scroll::-webkit-scrollbar{display:none;}
-.bk-cat2{
-    display:flex;flex-direction:column;align-items:center;
-    text-decoration:none!important;flex-shrink:0;scroll-snap-align:start;
-    width:66px;padding:4px 2px;border-radius:10px;transition:background .2s;
-    cursor:pointer;border:2px solid transparent;
+.bk-cats-scroll-outer::-webkit-scrollbar{height:4px;}
+.bk-cats-scroll-outer::-webkit-scrollbar-track{background:transparent;}
+.bk-cats-scroll-outer::-webkit-scrollbar-thumb{background:rgba(201,162,39,.3);border-radius:2px;}
+.bk-cats-row{
+    display:flex;gap:14px;
+    width:max-content;padding:6px 0 4px;
 }
-.bk-cat2:hover{background:rgba(255,255,255,.04);}
-.bk-cat2.active{border-color:rgba(201,162,39,.5);}
-.bk-cat2-circle{
-    width:50px;height:50px;border-radius:50%;overflow:hidden;
-    background:#1e2a28;border:1.5px solid rgba(255,255,255,.1);
+/* individual card */
+.bk-cat-card{
+    position:relative;
+    width:140px;height:180px;
+    border-radius:20px;overflow:hidden;
+    text-decoration:none!important;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    flex-shrink:0;cursor:pointer;
+    border:1.5px solid rgba(255,255,255,.07);
+    transition:transform .35s cubic-bezier(.22,1,.36,1),
+               box-shadow .35s,border-color .35s;
+}
+.bk-cat-card::before{
+    content:'';position:absolute;inset:0;
+    background:var(--cg,linear-gradient(135deg,#1a1a1a,#111));
+    transition:opacity .35s;
+}
+.bk-cat-card::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(0,0,0,.18) 0%,rgba(0,0,0,.65) 100%);
+}
+.bk-cat-card>*{position:relative;z-index:3;}
+.bk-cat-card:hover{
+    transform:translateY(-8px) scale(1.02);
+    box-shadow:0 24px 48px rgba(0,0,0,.6),0 0 0 1.5px rgba(201,162,39,.5);
+    border-color:rgba(201,162,39,.5);
+}
+.bk-cat-card.active{
+    border-color:#C9A227;
+    box-shadow:0 0 0 3px rgba(201,162,39,.2),0 16px 40px rgba(0,0,0,.5);
+}
+/* icon circle inside card */
+.bk-cat-card-icon{
+    width:64px;height:64px;border-radius:50%;
+    background:rgba(255,255,255,.12);
+    backdrop-filter:blur(6px);
+    border:1.5px solid rgba(255,255,255,.2);
     display:flex;align-items:center;justify-content:center;
-    margin-bottom:6px;transition:border-color .2s, transform .2s;flex-shrink:0;
+    font-size:1.6rem;color:#fff;
+    margin-bottom:12px;
+    transition:all .3s;
+    box-shadow:0 4px 20px rgba(0,0,0,.3);
 }
-.bk-cat2:hover .bk-cat2-circle{border-color:rgba(201,162,39,.6);transform:scale(1.05);}
-.bk-cat2.active .bk-cat2-circle{border-color:#C9A227;box-shadow:0 0 0 2px rgba(201,162,39,.2);}
-.bk-cat2-circle img{width:100%;height:100%;object-fit:cover;}
-.bk-cat2-circle i{font-size:1.1rem;color:rgba(255,255,255,.55);}
-.bk-cat2.active .bk-cat2-circle i{color:#C9A227;}
-.bk-cat2-label{
-    font-size:.64rem;font-weight:500;color:rgba(255,255,255,.6);
-    text-align:center;line-height:1.2;white-space:nowrap;
-    overflow:hidden;text-overflow:ellipsis;max-width:64px;font-family:'Poppins',sans-serif;
+.bk-cat-card:hover .bk-cat-card-icon,
+.bk-cat-card.active .bk-cat-card-icon{
+    background:#C9A227;color:#0a0a0a;
+    border-color:#C9A227;
+    box-shadow:0 6px 24px rgba(201,162,39,.45);
+    transform:scale(1.1);
 }
-.bk-cat2.active .bk-cat2-label{color:#C9A227;font-weight:700;}
-@media(min-width:768px){
-    .bk-cats-strip{padding:20px 0 16px;}
-    .bk-cats-scroll{gap:8px;padding:0 24px 4px;}
-    .bk-cat2{width:72px;}
-    .bk-cat2-circle{width:54px;height:54px;}
-    .bk-cat2-label{font-size:.68rem;max-width:70px;}
+.bk-cat-card-img-icon{
+    width:64px;height:64px;border-radius:50%;
+    overflow:hidden;margin-bottom:12px;
+    border:2px solid rgba(255,255,255,.2);
+    box-shadow:0 4px 20px rgba(0,0,0,.4);
+    transition:transform .3s;
 }
-@media(min-width:1200px){.bk-cats-scroll{padding:0 48px 4px;}}
+.bk-cat-card:hover .bk-cat-card-img-icon{transform:scale(1.1);}
+.bk-cat-card-img-icon img{width:100%;height:100%;object-fit:cover;}
+.bk-cat-card-name{
+    font-size:.82rem;font-weight:700;color:#fff;
+    font-family:'Poppins',sans-serif;text-align:center;
+    line-height:1.3;padding:0 8px;
+    text-shadow:0 1px 6px rgba(0,0,0,.6);
+}
+.bk-cat-card-count{
+    font-size:.66rem;color:rgba(255,255,255,.6);
+    font-family:'Poppins',sans-serif;margin-top:3px;
+}
+.bk-cat-card.active .bk-cat-card-name{color:#C9A227;}
+@media(max-width:767px){
+    .bk-cat-card{width:120px;height:156px;}
+    .bk-cat-card-icon,.bk-cat-card-img-icon{width:54px;height:54px;font-size:1.3rem;}
+}
+
+/* "All" pill */
+.bk-cat-all{
+    --cg:linear-gradient(135deg,#1c1c1c,#111);
+}
+
+/* category gradient presets */
+.bk-cg-salon  { --cg:linear-gradient(135deg,#7f1d52,#4a0f30); }
+.bk-cg-spa    { --cg:linear-gradient(135deg,#064e3b,#022c22); }
+.bk-cg-clinic { --cg:linear-gradient(135deg,#1e3a5f,#0c1f36); }
+.bk-cg-beauty { --cg:linear-gradient(135deg,#5b21b6,#2e1065); }
+.bk-cg-nail   { --cg:linear-gradient(135deg,#9d174d,#500724); }
+.bk-cg-gym    { --cg:linear-gradient(135deg,#92400e,#451a03); }
+.bk-cg-dental { --cg:linear-gradient(135deg,#155e75,#083344); }
+.bk-cg-laser  { --cg:linear-gradient(135deg,#1e3a5f,#172554); }
+.bk-cg-tattoo { --cg:linear-gradient(135deg,#1f2937,#030712); }
+.bk-cg-wedding{ --cg:linear-gradient(135deg,#7c2d12,#431407); }
+.bk-cg-lash   { --cg:linear-gradient(135deg,#831843,#4a044e); }
+.bk-cg-barber { --cg:linear-gradient(135deg,#1c1917,#0c0a09); }
+.bk-cg-default{ --cg:linear-gradient(135deg,#713f12,#3f1f07); }
 </style>
 </head>
 <body data-plugin-scroll-spy data-plugin-options="{'target': '#header'}">
@@ -359,35 +560,57 @@ html{scroll-behavior:smooth;}
 
 
 {{-- ========== CATEGORIES ========== --}}
-<section id="bk-cats" class="bk-cats-strip">
+<section id="bk-cats">
     @if($categories->isNotEmpty())
-    <div class="bk-cats-scroll">
-        <a href="{{ route('front.index', request()->except('category','page')) }}"
-           class="bk-cat2 {{ !request('category') ? 'active' : '' }}">
-            <div class="bk-cat2-circle"><i class="fas fa-th-large"></i></div>
-            <span class="bk-cat2-label">{{ $isAr ? 'الكل' : 'All' }}</span>
-        </a>
-        @foreach($categories as $cat)
-        @php
-            $sl2 = strtolower($cat->slug ?? '');
-            $ic2 = 'fas fa-store';
-            foreach($catIcons as $k => $v){ if(str_contains($sl2,$k)){$ic2=$v;break;} }
-        @endphp
-        <a href="{{ route('front.index', array_merge(request()->except('category','page'), ['category' => $cat->slug])) }}"
-           class="bk-cat2 {{ request('category') === $cat->slug ? 'active' : '' }}">
-            <div class="bk-cat2-circle">
-                @if($cat->image)
-                    <img src="{{ asset('storage/'.$cat->image) }}" alt="{{ $isAr ? $cat->name_ar : $cat->name_en }}">
-                @else
-                    <i class="{{ $ic2 }}"></i>
-                @endif
+    <div class="container">
+        {{-- Section header --}}
+        <div class="d-flex align-items-end justify-content-between mb-4 flex-wrap gap-3">
+            <div>
+                <span class="section-label appear-animation" data-appear-animation="fadeInDown" data-plugin-options="{'minWindowWidth':0}">
+                    {{ $isAr ? 'تصفح حسب التصنيف' : 'Browse by Category' }}
+                </span>
+                <h2 class="bk-cats-heading appear-animation" data-appear-animation="maskUp" data-plugin-options="{'minWindowWidth':0}">
+                    {{ $isAr ? 'كل ' : 'All ' }}<span>{{ $isAr ? 'التصنيفات' : 'Categories' }}</span>
+                </h2>
             </div>
-            <span class="bk-cat2-label">{{ $isAr ? $cat->name_ar : $cat->name_en }}</span>
-        </a>
-        @endforeach
+        </div>
+
+        <div class="bk-cats-scroll-outer">
+            <div class="bk-cats-row">
+                @foreach($categories as $cat)
+                @php
+                    $sl = strtolower($cat->slug ?? $cat->name_en ?? '');
+                    $catIcon = 'fas fa-store';
+                    foreach($catIcons as $k => $v){ if(str_contains($sl,$k)){$catIcon=$v;break;} }
+                    // gradient class
+                    $cgClass = 'bk-cg-default';
+                    $cgMap = ['salon'=>'salon','hair'=>'salon','barber'=>'barber','spa'=>'spa','massage'=>'spa',
+                              'clinic'=>'clinic','dental'=>'dental','laser'=>'laser','beauty'=>'beauty',
+                              'makeup'=>'beauty','lash'=>'lash','brow'=>'lash','nail'=>'nail','gym'=>'gym',
+                              'tattoo'=>'tattoo','wedding'=>'wedding'];
+                    foreach($cgMap as $k=>$v){ if(str_contains($sl,$k)){$cgClass='bk-cg-'.$v;break;} }
+                @endphp
+                <a href="{{ route('front.category', $cat->slug) }}"
+                   class="bk-cat-card {{ $cgClass }}">
+
+                    @if($cat->image)
+                        <div class="bk-cat-card-img-icon">
+                            <img src="{{ asset('storage/'.$cat->image) }}" alt="">
+                        </div>
+                    @else
+                        <div class="bk-cat-card-icon"><i class="{{ $catIcon }}"></i></div>
+                    @endif
+
+                    <div class="bk-cat-card-name">{{ $isAr ? $cat->name_ar : $cat->name_en }}</div>
+                </a>
+                @endforeach
+            </div>
+        </div>
     </div>
     @else
-    <div class="bk-empty"><i class="fas fa-th"></i><p>{{ $isAr ? 'لا توجد تصنيفات.' : 'No categories yet.' }}</p></div>
+    <div class="container">
+        <div class="bk-empty"><i class="fas fa-th"></i><p>{{ $isAr ? 'لا توجد تصنيفات.' : 'No categories yet.' }}</p></div>
+    </div>
     @endif
 </section>
 
@@ -396,34 +619,49 @@ html{scroll-behavior:smooth;}
 
 
 
+{{-- ── Divider ── --}}
+<div class="bk-section-divider"></div>
+
 {{-- ========== COMPANIES ========== --}}
-<section id="bk-companies" class="section border-0 m-0" style="padding:70px 0;background:#0d0d0d;">
+<section id="bk-companies" class="section border-0 m-0" style="padding:80px 0;background:#0a0a0a;">
     <div class="container">
+
+        {{-- Header --}}
         <div class="row align-items-end mb-5">
-            <div class="col-lg-7">
-                <p class="section-label appear-animation" data-appear-animation="fadeInDown" data-plugin-options="{'minWindowWidth':0}">
-                    {{ $isAr ? 'الأماكن المميزة' : 'Featured Places' }}
-                </p>
-                <h2 class="section-heading appear-animation" data-appear-animation="maskUp" data-plugin-options="{'minWindowWidth':0}">
+            <div class="col-lg-7 appear-animation" data-appear-animation="fadeInLeft" data-plugin-options="{'minWindowWidth':0}">
+                <span class="section-label">
+                    @if(request('search')) {{ $isAr ? 'نتائج البحث' : 'Search Results' }}
+                    @elseif(request('category')) {{ $isAr ? 'تصنيف' : 'Category' }}
+                    @else {{ $isAr ? 'الأماكن المميزة' : 'Featured Places' }}
+                    @endif
+                </span>
+                <h2 class="section-heading" style="font-size:2.4rem;">
                     @if(request('search'))
-                        {{ $isAr ? 'نتائج: ' : 'Results for: ' }}<span>{{ request('search') }}</span>
+                        <span>"{{ request('search') }}"</span>
                     @elseif(request('category'))
-                        {{ $isAr ? 'تصنيف: ' : 'Category: ' }}<span>{{ request('category') }}</span>
+                        <span>{{ request('category') }}</span>
                     @else
                         {{ $isAr ? 'اكتشف ' : 'Discover ' }}<span>{{ $isAr ? 'أفضل الأماكن' : 'Top Places' }}</span>
                     @endif
                 </h2>
                 <div class="divider-gold"></div>
             </div>
-            <div class="col-lg-5 text-lg-end appear-animation" data-appear-animation="fadeInRight" data-plugin-options="{'minWindowWidth':0}">
-                <span style="background:rgba(201,162,39,.1);color:#C9A227;border:1px solid rgba(201,162,39,.3);border-radius:25px;padding:7px 18px;font-size:.86rem;font-weight:700;font-family:'Poppins',sans-serif;">
-                    {{ $companies->total() }} {{ $isAr ? 'نتيجة' : 'results' }}
-                </span>
-                @if(request('search') || request('category'))
-                <a href="{{ route('front.index') }}" style="display:inline-block;margin-{{ $isAr ? 'right' : 'left' }}:10px;font-size:.82rem;color:#C9A227;text-decoration:none;">
-                    <i class="fas fa-times-circle {{ $isAr ? 'ms-1' : 'me-1' }}"></i>{{ $isAr ? 'مسح' : 'Clear' }}
-                </a>
-                @endif
+            <div class="col-lg-5 appear-animation" data-appear-animation="fadeInRight" data-plugin-options="{'minWindowWidth':0}">
+                <div class="d-flex align-items-center justify-content-lg-end gap-3 flex-wrap">
+                    <div style="background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.2);border-radius:30px;padding:8px 20px;display:inline-flex;align-items:center;gap:8px;">
+                        <i class="fas fa-store" style="color:#C9A227;font-size:.85rem;"></i>
+                        <span style="font-size:.9rem;font-weight:700;color:#C9A227;font-family:'Poppins',sans-serif;">{{ $companies->total() }}</span>
+                        <span style="font-size:.8rem;color:rgba(255,255,255,.45);font-family:'Poppins',sans-serif;">{{ $isAr ? 'مكان' : 'places' }}</span>
+                    </div>
+                    @if(request('search') || request('category'))
+                    <a href="{{ route('front.index') }}"
+                       style="font-size:.8rem;color:rgba(255,255,255,.45);text-decoration:none;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:7px 14px;transition:all .2s;display:inline-flex;align-items:center;gap:5px;"
+                       onmouseover="this.style.color='#C9A227';this.style.borderColor='rgba(201,162,39,.3)'"
+                       onmouseout="this.style.color='rgba(255,255,255,.45)';this.style.borderColor='rgba(255,255,255,.1)'">
+                        <i class="fas fa-times"></i> {{ $isAr ? 'مسح' : 'Clear' }}
+                    </a>
+                    @endif
+                </div>
             </div>
         </div>
 
@@ -431,97 +669,108 @@ html{scroll-behavior:smooth;}
         <div class="row g-4">
             @foreach($companies as $company)
             @php
-                $firstBranch  = $company->branches->first();
-                $branchImg    = $firstBranch?->images?->first();
-                $allReviews   = $company->branches->flatMap(fn($b) => $b->reviews);
-                $reviewCount  = $allReviews->count();
-                $avgRating    = $reviewCount ? round($allReviews->avg('rating'), 1) : null;
+                $firstBranch = $company->branches->first();
+                $branchImg   = $firstBranch?->images?->first();
+                $allReviews  = $company->branches->flatMap(fn($b) => $b->reviews);
+                $reviewCount = $allReviews->count();
+                $avgRating   = $reviewCount ? round($allReviews->avg('rating'),1) : null;
+                $svcCount    = $company->branches->sum(fn($b) => $b->services->count());
+                $branchCount = $company->branches->count();
             @endphp
             <div class="col-sm-6 col-lg-4 col-xl-3 appear-animation"
                  data-appear-animation="fadeInUpShorter"
-                 data-appear-animation-delay="{{ ($loop->index % 4) * 100 }}"
+                 data-appear-animation-delay="{{ ($loop->index % 4) * 80 }}"
                  data-plugin-options="{'minWindowWidth':0}">
-                <div class="bk-card-dark" style="border-radius:14px;background:#161616;border:1px solid rgba(201,162,39,.12);">
 
-                    <div class="bk-co-img" style="position:relative;">
+                <div class="bk-company-card">
+                    {{-- Image --}}
+                    <div class="bk-cc-img">
                         @if($branchImg)
                             <img src="{{ asset('storage/'.$branchImg->path) }}" alt="{{ $isAr ? $company->name_ar : $company->name_en }}" loading="lazy">
                         @elseif($company->logo)
-                            <img src="{{ asset('storage/'.$company->logo) }}" alt="" loading="lazy" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid rgba(201,162,39,.4);">
+                            <img src="{{ asset('storage/'.$company->logo) }}" alt="" loading="lazy">
                         @else
-                            <div class="bk-logo-fallback"><i class="fas fa-store"></i></div>
+                            <div class="bk-cc-img-placeholder"><i class="fas fa-store"></i></div>
                         @endif
 
                         @if($company->category)
-                        <span class="bk-co-badge">{{ $isAr ? $company->category->name_ar : $company->category->name_en }}</span>
+                        <span class="bk-cc-badge">{{ $isAr ? $company->category->name_ar : $company->category->name_en }}</span>
                         @endif
 
                         @if($avgRating)
-                        <span style="position:absolute;top:10px;{{ $isAr ? 'left' : 'right' }}:10px;
-                              background:rgba(10,10,10,.88);color:#fff;font-size:.72rem;font-weight:700;
-                              padding:4px 10px;border-radius:20px;border:1px solid rgba(201,162,39,.3);
-                              backdrop-filter:blur(6px);display:flex;align-items:center;gap:4px;z-index:3;">
-                            <i class="fas fa-star" style="color:#C9A227;font-size:.65rem;"></i>
+                        <span class="bk-cc-rating">
+                            <i class="fas fa-star"></i>
                             {{ $avgRating }}
-                            <span style="color:rgba(255,255,255,.45);font-weight:400;">· {{ $reviewCount }}</span>
+                            <span style="color:rgba(255,255,255,.4);font-weight:400;font-size:.65rem;">· {{ $reviewCount }}</span>
                         </span>
                         @endif
 
-                        <button class="bk-like-btn" data-id="{{ $company->id }}"
-                                onclick="bkToggleLike(this, {{ $company->id }})"
-                                style="position:absolute;bottom:10px;{{ $isAr ? 'left' : 'right' }}:10px;
-                                       width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;
-                                       background:rgba(10,10,10,.8);display:flex;align-items:center;justify-content:center;
-                                       z-index:3;transition:all .22s;backdrop-filter:blur(4px);">
-                            <i class="far fa-heart" style="font-size:.85rem;color:rgba(255,255,255,.7);pointer-events:none;"></i>
+                        <button class="bk-cc-like bk-like-btn" data-id="{{ $company->id }}"
+                                onclick="bkToggleLike(this,{{ $company->id }})">
+                            <i class="far fa-heart" style="font-size:.9rem;color:rgba(255,255,255,.7);pointer-events:none;"></i>
                         </button>
                     </div>
 
-                    <div class="bk-co-body">
-                        <div class="bk-co-name mb-1">{{ $isAr ? $company->name_ar : $company->name_en }}</div>
+                    {{-- Body --}}
+                    <div class="bk-cc-body">
+                        <div class="bk-cc-name">{{ $isAr ? $company->name_ar : $company->name_en }}</div>
 
-                        <div class="bk-co-meta mb-2">
-                            <i class="fas fa-map-marker-alt {{ $isAr ? 'ms-1' : 'me-1' }}"></i>
+                        <div class="bk-cc-location">
+                            <i class="fas fa-map-marker-alt"></i>
                             @if($firstBranch?->address)
-                                {{ Str::limit($firstBranch->address, 30) }}
+                                {{ Str::limit($firstBranch->address, 32) }}
                             @else
-                                {{ $company->branches->count() }} {{ $isAr ? 'فرع' : 'branches' }}
+                                {{ $branchCount }} {{ $isAr ? ($branchCount>1?'فروع':'فرع') : 'branch'.($branchCount>1?'es':'') }}
                             @endif
                         </div>
 
                         @if($avgRating)
-                        <div class="d-flex align-items-center gap-1 mb-2">
-                            @for($s = 1; $s <= 5; $s++)
-                                <i class="{{ $s <= round($avgRating) ? 'fas' : 'far' }} fa-star" style="color:#C9A227;font-size:.6rem;"></i>
+                        <div class="bk-cc-stars">
+                            @for($s=1;$s<=5;$s++)
+                                <i class="{{ $s<=round($avgRating)?'fas':'far' }} fa-star"></i>
                             @endfor
-                            <span style="font-size:.68rem;color:rgba(255,255,255,.45);margin-{{ $isAr?'right':'left' }}:2px;">
-                                {{ $avgRating }} ({{ $reviewCount }})
-                            </span>
+                            <span>({{ $reviewCount }})</span>
                         </div>
                         @endif
 
-                        <a href="{{ route('front.show', $company) }}#bk-services-tab" class="bk-btn-book mt-auto">
-                            <i class="far fa-calendar-check {{ $isAr ? 'ms-1' : 'me-1' }}"></i>
+                        <div class="bk-cc-chips">
+                            @if($svcCount>0)
+                            <span class="bk-cc-chip"><i class="fas fa-cut"></i> {{ $svcCount }} {{ $isAr?'خدمة':'svcs' }}</span>
+                            @endif
+                            @if($branchCount>1)
+                            <span class="bk-cc-chip"><i class="fas fa-map-marker-alt"></i> {{ $branchCount }} {{ $isAr?'فرع':'branches' }}</span>
+                            @endif
+                        </div>
+
+                        <a href="{{ route('front.show', $company) }}#bk-services-tab" class="bk-cc-book">
+                            <i class="far fa-calendar-check"></i>
                             {{ $isAr ? 'احجز الآن' : 'Book Now' }}
+                            <i class="fas fa-arrow-{{ $isAr?'left':'right' }}" style="font-size:.7rem;opacity:.7;margin-{{ $isAr?'right':'left' }}:auto;"></i>
                         </a>
                     </div>
                 </div>
+
             </div>
             @endforeach
         </div>
 
         @if($companies->hasPages())
-        <div class="d-flex justify-content-center mt-5">{{ $companies->links() }}</div>
+        <div class="d-flex justify-content-center mt-6" style="margin-top:56px;">
+            {{ $companies->links() }}
+        </div>
         @endif
 
         @else
         <div class="bk-empty appear-animation" data-appear-animation="fadeInUp" data-plugin-options="{'minWindowWidth':0}">
             <i class="fas fa-store-slash"></i>
             <h5>{{ $isAr ? 'لا توجد نتائج' : 'No Results Found' }}</h5>
-            <p>{{ $isAr ? 'جرّب بحثاً آخر أو تصفّح تصنيفاً مختلفاً.' : 'Try a different search or browse another category.' }}</p>
-            <a href="{{ route('front.index') }}" class="bk-btn-book d-inline-block mt-2" style="width:auto;padding:10px 28px;">{{ $isAr ? 'عرض الكل' : 'View All' }}</a>
+            <p>{{ $isAr ? 'جرّب بحثاً مختلفاً أو تصفّح تصنيفاً آخر.' : 'Try a different search or browse another category.' }}</p>
+            <a href="{{ route('front.index') }}" class="bk-cc-book d-inline-flex mt-3" style="width:auto;padding:11px 32px;border-radius:12px;">
+                {{ $isAr ? 'عرض الكل' : 'View All' }}
+            </a>
         </div>
         @endif
+
     </div>
 </section>
 

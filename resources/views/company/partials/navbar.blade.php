@@ -72,10 +72,10 @@
                    data-bs-toggle="dropdown">
                     @if($authCompany?->logo)
                         <img src="{{ asset('storage/'.$authCompany->logo) }}"
-                             class="wd-32 ht-32 rounded-circle" style="object-fit:cover;border:2px solid rgba(201,162,39,.35);" alt="">
+                             class="rounded-circle" style="width:34px;height:34px;object-fit:cover;flex-shrink:0;border:2px solid rgba(201,162,39,.35);" alt="">
                     @else
-                        <img src="https://ui-avatars.com/api/?name={{ urlencode($authCompany?->localizedName() ?? 'Co') }}&size=32&background=C9A227&color=000&bold=true"
-                             class="wd-32 ht-32 rounded-circle" style="border:2px solid rgba(201,162,39,.25);" alt="">
+                        <img src="https://ui-avatars.com/api/?name={{ urlencode($authCompany?->localizedName() ?? 'Co') }}&size=34&background=C9A227&color=000&bold=true"
+                             class="rounded-circle" style="width:34px;height:34px;flex-shrink:0;border:2px solid rgba(201,162,39,.25);" alt="">
                     @endif
                     <div class="d-none d-md-block" style="line-height:1.2;text-align:{{ $isAr?'right':'left' }};">
                         <div style="font-size:.78rem;font-weight:700;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">

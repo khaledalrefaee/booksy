@@ -13,23 +13,28 @@
 
 <div class="page-content">
 
-{{-- ════ HEADER ════ --}}
-<div class="d-flex align-items-center justify-content-between flex-wrap gap-3 grid-margin bk-a1">
-    <div>
-        <h4 class="mb-1" style="font-weight:800;">{{ __('Platform Dashboard') }}</h4>
-        <p class="text-muted tx-13 mb-0">{{ __('Manage all companies, branches, and bookings from one place.') }}</p>
-    </div>
-    <div class="d-flex gap-2 flex-wrap">
-        <a href="{{ route('owner.companies.index') }}"
-           class="btn btn-sm btn-outline-secondary rounded-pill d-flex align-items-center gap-1">
-            <i data-feather="briefcase" style="width:13px;height:13px;"></i>
-            {{ __('Companies') }}
-        </a>
-        <a href="{{ route('owner.appointments.index') }}"
-           class="btn btn-primary rounded-pill px-4 fw-bold d-flex align-items-center gap-1">
-            <i data-feather="calendar" style="width:14px;height:14px;"></i>
-            {{ __('Appointments') }}
-        </a>
+{{-- ════ HERO HEADER ════ --}}
+<div class="bk-hero bk-a1">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+            <h2 class="bk-hero-title">{{ __('Platform') }} <span>{{ __('Dashboard') }}</span></h2>
+            <p class="bk-hero-sub">
+                <i data-feather="activity" style="width:13px;height:13px;display:inline;margin-right:5px;"></i>
+                {{ __('Manage all companies, branches, and bookings from one place.') }}
+            </p>
+        </div>
+        <div class="bk-hero-actions">
+            <a href="{{ route('owner.companies.index') }}"
+               class="bk-navbar-action bk-navbar-action-ghost d-flex align-items-center gap-2">
+                <i data-feather="briefcase" style="width:14px;height:14px;"></i>
+                {{ __('Companies') }}
+            </a>
+            <a href="{{ route('owner.appointments.index') }}"
+               class="bk-navbar-action bk-navbar-action-primary d-flex align-items-center gap-2">
+                <i data-feather="calendar" style="width:14px;height:14px;"></i>
+                {{ __('Appointments') }}
+            </a>
+        </div>
     </div>
 </div>
 

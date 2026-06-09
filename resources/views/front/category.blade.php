@@ -12,9 +12,46 @@
         'brow'=>'fas fa-smile','tattoo'=>'fas fa-pen-nib','wedding'=>'fas fa-ring',
         'laser'=>'fas fa-bolt',
     ];
+    $catGradients = [
+        'salon'  => 'linear-gradient(135deg,#7f1d52,#4a0f30)',
+        'hair'   => 'linear-gradient(135deg,#7f1d52,#4a0f30)',
+        'barber' => 'linear-gradient(135deg,#1c1917,#0c0a09)',
+        'spa'    => 'linear-gradient(135deg,#064e3b,#022c22)',
+        'massage'=> 'linear-gradient(135deg,#064e3b,#022c22)',
+        'clinic' => 'linear-gradient(135deg,#1e3a5f,#0c1f36)',
+        'dental' => 'linear-gradient(135deg,#155e75,#083344)',
+        'laser'  => 'linear-gradient(135deg,#1e3a5f,#172554)',
+        'beauty' => 'linear-gradient(135deg,#5b21b6,#2e1065)',
+        'makeup' => 'linear-gradient(135deg,#5b21b6,#2e1065)',
+        'lash'   => 'linear-gradient(135deg,#831843,#4a044e)',
+        'brow'   => 'linear-gradient(135deg,#831843,#4a044e)',
+        'nail'   => 'linear-gradient(135deg,#9d174d,#500724)',
+        'gym'    => 'linear-gradient(135deg,#92400e,#451a03)',
+        'tattoo' => 'linear-gradient(135deg,#1f2937,#030712)',
+        'wedding'=> 'linear-gradient(135deg,#7c2d12,#431407)',
+    ];
     $sl  = strtolower($category->slug ?? '');
     $catIcon = $category->icon ?: 'fas fa-store';
-    foreach($catIcons as $k=>$v){ if(str_contains($sl,$k)){$catIcon=$v;break;} }
+    $catGradient = 'linear-gradient(135deg,#713f12,#3f1f07)';
+    foreach($catIcons as $k=>$v){ if(str_contains($sl,$k)){ $catIcon=$v; break; } }
+    foreach($catGradients as $k=>$v){ if(str_contains($sl,$k)){ $catGradient=$v; break; } }
+
+    // Helper: is branch open now?
+    function isBranchOpen($branch): bool {
+        $now = \Carbon\Carbon::now();
+        $dow = (int)$now->dayOfWeek; // 0=Sun..6=Sat
+        $time = $now->format('H:i');
+        foreach($branch->workingHours as $wh) {
+            if((int)$wh->day_of_week === $dow && $wh->is_open) {
+                if($wh->open_time && $wh->close_time) {
+                    if($time >= $wh->open_time && $time <= $wh->close_time) return true;
+                } else {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 @endphp
 <html lang="{{ $lang }}" dir="{{ $dir }}">
 <head>
@@ -22,6 +59,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, shrink-to-fit=no">
 <title>{{ $catName }} — Booksy</title>
+<meta name="description" content="{{ $isAr ? 'تصفح '.$catName.' على بوكسي واحجز موعدك الآن.' : 'Browse '.$catName.' on Booksy and book your appointment.' }}">
 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Poppins:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('frontend/vendor/bootstrap/css/bootstrap' . ($isAr ? '.rtl' : '') . '.min.css') }}">
@@ -43,7 +81,7 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
 .section{background-color:transparent!important;}
 .main,.body{background:#0a0a0a!important;}
 
-/* ── Navbar (same as index) ── */
+/* ── Navbar ── */
 #bk-navbar{background:#0a0a0a;border-bottom:1px solid rgba(201,162,39,.15);height:68px;z-index:1050;transition:box-shadow .3s;}
 #bk-navbar.scrolled{box-shadow:0 4px 30px rgba(0,0,0,.6);border-bottom-color:rgba(201,162,39,.25);}
 #bk-navbar .navbar-brand{font-family:'Poppins',sans-serif;font-size:1.75rem;font-weight:900;color:#fff;letter-spacing:-1px;text-decoration:none;}
@@ -51,7 +89,7 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
 #bk-navbar .navbar-toggler{border:1px solid rgba(201,162,39,.35);padding:6px 10px;color:#C9A227;background:transparent;}
 #bk-navbar .navbar-toggler:focus{box-shadow:none;}
 #bk-navbar .nav-link{color:rgba(255,255,255,.7)!important;font-family:'Poppins',sans-serif;font-size:.86rem;font-weight:500;padding:.5rem .9rem!important;border-radius:6px;transition:all .2s;}
-#bk-navbar .nav-link:hover,#bk-navbar .nav-link.active-link{color:#C9A227!important;background:rgba(201,162,39,.07);}
+#bk-navbar .nav-link:hover{color:#C9A227!important;background:rgba(201,162,39,.07);}
 .bk-lang{color:#C9A227;border:1px solid rgba(201,162,39,.4);border-radius:20px;padding:5px 14px;font-size:.8rem;font-weight:700;font-family:'Poppins',sans-serif;text-decoration:none;transition:all .2s;white-space:nowrap;}
 .bk-lang:hover{background:#C9A227;color:#0a0a0a;}
 .bk-login-link{color:rgba(255,255,255,.65);font-family:'Poppins',sans-serif;font-size:.84rem;font-weight:500;text-decoration:none;transition:color .2s;white-space:nowrap;}
@@ -60,77 +98,120 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
 .bk-register-btn:hover{background:#e8c84a;box-shadow:0 4px 18px rgba(201,162,39,.35);}
 @media(max-width:991px){#bk-navbar .navbar-collapse{background:#111;border:1px solid rgba(201,162,39,.12);border-radius:12px;padding:16px;margin-top:10px;}}
 
-/* ── Category Header Band ── */
-.cat-hero-band{
-    background:linear-gradient(135deg,#0f1a12 0%,#0a0a0a 60%,#1a100a 100%);
-    border-bottom:1px solid rgba(201,162,39,.15);
-    padding:52px 0 40px;
-    margin-top:68px;
+/* ── Hero band ── */
+.bk-cat-hero{
+    padding:120px 0 60px;
+    background: {{ $catGradient }};
+    position:relative;overflow:hidden;
 }
-.cat-hero-icon-wrap{
-    width:80px;height:80px;border-radius:20px;
-    overflow:hidden;background:rgba(201,162,39,.07);
-    border:2px solid rgba(201,162,39,.3);
-    display:flex;align-items:center;justify-content:center;
-    flex-shrink:0;
+.bk-cat-hero::before{
+    content:'';position:absolute;inset:0;
+    background:radial-gradient(ellipse at 60% 40%,rgba(201,162,39,.12) 0%,transparent 65%),
+               radial-gradient(ellipse at 20% 70%,rgba(255,255,255,.04) 0%,transparent 50%);
 }
-.cat-hero-icon-wrap img{width:100%;height:100%;object-fit:cover;}
-.cat-hero-icon-wrap i{font-size:2rem;color:#C9A227;}
+.bk-cat-hero::after{
+    content:'';position:absolute;bottom:0;left:0;right:0;height:80px;
+    background:linear-gradient(0deg,#0a0a0a,transparent);
+}
 
-/* ── Category Sub-strip ── */
-.bk-cats-strip{background:#0d0d0d;border-top:1px solid rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.05);padding:14px 0 10px;}
-.bk-cats-scroll{display:flex;align-items:flex-start;gap:4px;overflow-x:auto;padding:0 12px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
-.bk-cats-scroll::-webkit-scrollbar{display:none;}
-.bk-cat2{display:flex;flex-direction:column;align-items:center;text-decoration:none!important;flex-shrink:0;width:66px;padding:4px 2px;border-radius:10px;transition:background .2s;cursor:pointer;border:2px solid transparent;}
-.bk-cat2:hover{background:rgba(255,255,255,.04);}
-.bk-cat2.active{border-color:rgba(201,162,39,.5);}
-.bk-cat2-circle{width:50px;height:50px;border-radius:50%;overflow:hidden;background:#1e2a28;border:1.5px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;margin-bottom:6px;transition:border-color .2s,transform .2s;flex-shrink:0;}
-.bk-cat2:hover .bk-cat2-circle,.bk-cat2.active .bk-cat2-circle{border-color:#C9A227;transform:scale(1.05);}
-.bk-cat2-circle img{width:100%;height:100%;object-fit:cover;}
-.bk-cat2-circle i{font-size:1.1rem;color:rgba(255,255,255,.55);}
-.bk-cat2.active .bk-cat2-circle i{color:#C9A227;}
-.bk-cat2-label{font-size:.64rem;font-weight:500;color:rgba(255,255,255,.6);text-align:center;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:64px;font-family:'Poppins',sans-serif;}
-.bk-cat2.active .bk-cat2-label{color:#C9A227;font-weight:700;}
-@media(min-width:768px){.bk-cats-strip{padding:20px 0 16px;}.bk-cats-scroll{gap:8px;padding:0 24px 4px;}.bk-cat2{width:72px;}.bk-cat2-circle{width:54px;height:54px;}.bk-cat2-label{font-size:.68rem;}}
+/* ── Quick category strip ── */
+.bk-qcat-strip{
+    background:#111;border-bottom:1px solid rgba(201,162,39,.1);
+    padding:16px 0;overflow-x:auto;
+    scrollbar-width:thin;scrollbar-color:rgba(201,162,39,.2) transparent;
+}
+.bk-qcat-strip::-webkit-scrollbar{height:3px;}
+.bk-qcat-strip::-webkit-scrollbar-thumb{background:rgba(201,162,39,.25);border-radius:2px;}
+.bk-qcat-inner{display:flex;gap:10px;width:max-content;padding:0 16px;}
+.bk-qcat-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 16px;border-radius:20px;white-space:nowrap;text-decoration:none;
+    font-size:.78rem;font-weight:600;font-family:'Poppins',sans-serif;
+    border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);
+    background:rgba(255,255,255,.04);transition:all .22s;
+}
+.bk-qcat-pill:hover,.bk-qcat-pill.active{
+    background:rgba(201,162,39,.12);border-color:rgba(201,162,39,.4);color:#C9A227;
+}
 
-/* ── Cards (same as index) ── */
-.bk-card-dark{position:relative;overflow:hidden;border-radius:14px;background:#161616;border:1px solid rgba(201,162,39,.12);transition:transform .32s cubic-bezier(.25,.8,.25,1),box-shadow .32s,border-color .32s;}
-.bk-card-dark:hover{transform:translateY(-9px);border-color:rgba(201,162,39,.55)!important;box-shadow:0 18px 50px rgba(0,0,0,.55),0 0 0 1px rgba(201,162,39,.2)!important;}
-.bk-co-img{overflow:hidden;height:155px;position:relative;background:#222;display:flex;align-items:center;justify-content:center;}
-.bk-co-img img{width:100%;height:100%;object-fit:cover;transition:transform .45s;}
-.bk-card-dark:hover .bk-co-img img{transform:scale(1.07);}
-.bk-co-img::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05) 0%,rgba(0,0,0,.45) 100%);pointer-events:none;}
-.bk-co-badge{position:absolute;top:8px;{{ $isAr?'right':'left' }}:8px;z-index:3;background:rgba(10,10,10,.88);color:#C9A227;font-size:.65rem;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid rgba(201,162,39,.3);backdrop-filter:blur(6px);}
-.bk-co-body{padding:11px 13px 13px;background:#161616;flex:1;display:flex;flex-direction:column;border-top:1px solid rgba(201,162,39,.07);}
-.bk-co-name{font-size:.84rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;font-family:'Poppins',sans-serif;}
-.bk-co-meta{font-size:.72rem;color:rgba(255,255,255,.38);margin-bottom:6px;}
-.bk-co-meta i{color:#C9A227;font-size:.65rem;}
-.bk-btn-book{background:transparent;color:#C9A227;border:1px solid rgba(201,162,39,.4);border-radius:8px;padding:7px 0;font-size:.78rem;font-weight:600;text-align:center;display:block;width:100%;text-decoration:none;transition:all .2s;font-family:'Poppins',sans-serif;margin-top:auto;}
-.bk-btn-book:hover{background:#C9A227;color:#0a0a0a;border-color:#C9A227;text-decoration:none;}
-.bk-logo-fallback{width:52px;height:52px;border-radius:50%;background:rgba(201,162,39,.07);border:1px solid rgba(201,162,39,.2);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#C9A227;}
-.bk-empty{text-align:center;padding:60px 20px;color:rgba(255,255,255,.35);}
-.bk-empty i{font-size:3rem;color:rgba(201,162,39,.2);display:block;margin-bottom:14px;}
-.bk-empty h5{color:rgba(255,255,255,.55);}
+/* ── Search bar ── */
+.bk-search-bar{
+    display:flex;gap:0;
+    background:#161616;border:1px solid rgba(201,162,39,.25);border-radius:12px;overflow:hidden;
+    transition:border-color .2s;
+}
+.bk-search-bar:focus-within{border-color:#C9A227;}
+.bk-search-bar input{
+    flex:1;background:transparent;border:none;outline:none;padding:13px 18px;
+    color:#fff;font-size:.9rem;font-family:'Poppins',sans-serif;
+}
+.bk-search-bar input::placeholder{color:rgba(255,255,255,.3);}
+.bk-search-bar button{
+    background:#C9A227;border:none;padding:0 24px;color:#0a0a0a;font-weight:700;
+    font-size:.85rem;font-family:'Poppins',sans-serif;cursor:pointer;transition:background .2s;
+    display:flex;align-items:center;gap:7px;white-space:nowrap;
+}
+.bk-search-bar button:hover{background:#e8c84a;}
 
-/* Like button */
-.bk-like-btn{position:absolute;bottom:8px;{{ $isAr?'left':'right' }}:8px;width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;background:rgba(10,10,10,.8);display:flex;align-items:center;justify-content:center;z-index:3;transition:all .22s;backdrop-filter:blur(4px);}
-.bk-like-btn:hover{background:rgba(231,76,60,.2);}
-
-/* Rating badge */
-.bk-rating-badge{position:absolute;top:8px;{{ $isAr?'left':'right' }}:8px;background:rgba(10,10,10,.88);color:#fff;font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid rgba(201,162,39,.3);backdrop-filter:blur(6px);display:flex;align-items:center;gap:3px;z-index:3;}
-.bk-rating-badge i{color:#C9A227;font-size:.62rem;}
-
-/* Pagination */
-.pagination .page-link{background:#1a1a1a;border-color:rgba(201,162,39,.25);color:#C9A227;border-radius:8px;}
-.pagination .page-link:hover{background:#C9A227;color:#0a0a0a;border-color:#C9A227;}
-.pagination .page-item.active .page-link{background:#C9A227!important;border-color:#C9A227!important;color:#0a0a0a!important;font-weight:700;}
-.pagination .page-item.disabled .page-link{background:#111;border-color:#222;color:#555;}
+/* ── Branch card ── */
+.bk-branch-card{
+    border-radius:16px;overflow:hidden;
+    background:#141414;border:1px solid rgba(255,255,255,.06);
+    display:flex;flex-direction:column;height:100%;
+    transition:transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s,border-color .35s;
+    position:relative;
+}
+.bk-branch-card:hover{
+    transform:translateY(-8px);
+    border-color:rgba(201,162,39,.4);
+    box-shadow:0 24px 56px rgba(0,0,0,.55),0 0 0 1px rgba(201,162,39,.18);
+}
+.bk-bc-img{height:200px;overflow:hidden;position:relative;background:#1a1a1a;}
+.bk-bc-img img{width:100%;height:100%;object-fit:cover;transition:transform .45s cubic-bezier(.22,1,.36,1);}
+.bk-branch-card:hover .bk-bc-img img{transform:scale(1.07);}
+.bk-bc-img::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.6) 100%);}
+.bk-bc-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3.5rem;color:rgba(201,162,39,.15);}
+.bk-bc-badge{
+    position:absolute;top:10px;{{ $isAr ? 'right' : 'left' }}:10px;z-index:3;
+    background:rgba(10,10,10,.88);color:#C9A227;font-size:.65rem;font-weight:700;
+    padding:3px 11px;border-radius:20px;border:1px solid rgba(201,162,39,.3);backdrop-filter:blur(6px);
+}
+.bk-bc-open{
+    position:absolute;top:10px;{{ $isAr ? 'left' : 'right' }}:10px;z-index:3;
+    font-size:.65rem;font-weight:700;padding:4px 11px;border-radius:20px;backdrop-filter:blur(6px);
+}
+.bk-bc-open.open{background:rgba(5,150,105,.85);color:#d1fae5;border:1px solid rgba(5,150,105,.5);}
+.bk-bc-open.closed{background:rgba(185,28,28,.85);color:#fee2e2;border:1px solid rgba(185,28,28,.5);}
+.bk-bc-body{padding:15px;flex:1;display:flex;flex-direction:column;gap:7px;}
+.bk-bc-name{font-size:.94rem;font-weight:700;color:#fff;font-family:'Poppins',sans-serif;line-height:1.3;}
+.bk-bc-company{font-size:.74rem;color:rgba(255,255,255,.4);font-family:'Poppins',sans-serif;}
+.bk-bc-loc{font-size:.73rem;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:5px;}
+.bk-bc-loc i{color:#C9A227;font-size:.66rem;}
+.bk-bc-chips{display:flex;flex-wrap:wrap;gap:4px;}
+.bk-bc-chip{background:rgba(201,162,39,.07);border:1px solid rgba(201,162,39,.15);border-radius:20px;padding:3px 9px;font-size:.63rem;font-weight:600;color:rgba(201,162,39,.85);font-family:'Poppins',sans-serif;}
+.bk-bc-stars{display:flex;align-items:center;gap:3px;}
+.bk-bc-stars i{font-size:.6rem;color:#C9A227;}
+.bk-bc-stars span{font-size:.68rem;color:rgba(255,255,255,.35);margin-{{ $isAr?'right':'left' }}:4px;}
+.bk-bc-book{
+    display:flex;align-items:center;justify-content:center;gap:7px;
+    width:100%;padding:10px;border-radius:10px;
+    border:1.5px solid rgba(201,162,39,.35);background:rgba(201,162,39,.05);
+    color:#C9A227;font-size:.82rem;font-weight:700;font-family:'Poppins',sans-serif;
+    text-decoration:none;transition:all .25s;margin-top:auto;
+}
+.bk-bc-book:hover,.bk-branch-card:hover .bk-bc-book{
+    background:#C9A227;color:#0a0a0a;border-color:#C9A227;
+    box-shadow:0 5px 18px rgba(201,162,39,.3);text-decoration:none;
+}
+.bk-empty{text-align:center;padding:70px 20px;color:rgba(255,255,255,.3);}
+.bk-empty i{font-size:3.5rem;color:rgba(201,162,39,.15);display:block;margin-bottom:16px;}
+.bk-empty h5{color:rgba(255,255,255,.5);font-family:'Poppins',sans-serif;}
 </style>
 </head>
-<body>
+<body data-plugin-scroll-spy data-plugin-options="{'target': '#header'}">
 <div class="body">
 
-{{-- ══ NAVBAR ══ --}}
+{{-- ========== NAVBAR ========== --}}
 <nav id="bk-navbar" class="navbar navbar-expand-lg fixed-top">
     <div class="container-fluid px-4">
         <a href="{{ route('front.index') }}" class="navbar-brand">Booksy<span>.</span></a>
@@ -139,9 +220,9 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
         </button>
         <div class="collapse navbar-collapse" id="bkNavMenu">
             <ul class="navbar-nav mx-auto gap-lg-1">
-                <li class="nav-item"><a class="nav-link" href="{{ route('front.index') }}">{{ $isAr?'الرئيسية':'Home' }}</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ route('front.about') }}">{{ $isAr?'من نحن':'About' }}</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ route('front.contact') }}">{{ $isAr?'تواصل':'Contact' }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ route('front.index') }}">{{ $isAr ? 'الرئيسية' : 'Home' }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ route('front.about') }}">{{ $isAr ? 'من نحن' : 'About' }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ route('front.contact') }}">{{ $isAr ? 'تواصل' : 'Contact' }}</a></li>
             </ul>
             <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
                 @if($isAr)
@@ -149,9 +230,12 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
                 @else
                     <a href="{{ route('locale.switch','ar') }}" class="bk-lang">عربي</a>
                 @endif
-                <a href="{{ route('company.login') }}" class="bk-login-link d-none d-lg-inline">{{ $isAr?'دخول الأعمال':'Business Login' }}</a>
+                <a href="{{ route('company.login') }}" class="bk-login-link d-none d-lg-inline">
+                    {{ $isAr ? 'دخول الأعمال' : 'Business Login' }}
+                </a>
                 <a href="{{ route('company.register') }}" class="bk-register-btn">
-                    <i class="fas fa-store"></i>{{ $isAr?'سجّل نشاطك':'List Business' }}
+                    <i class="fas fa-store"></i>
+                    {{ $isAr ? 'سجّل نشاطك' : 'List Business' }}
                 </a>
             </div>
         </div>
@@ -160,180 +244,164 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
 
 <div role="main" class="main">
 
-{{-- ══ CATEGORY HERO ══ --}}
-<div class="cat-hero-band">
-    <div class="container">
-        <div class="d-flex align-items-center gap-4">
-            {{-- Back --}}
+{{-- ========== HERO BAND ========== --}}
+<div class="bk-cat-hero">
+    <div class="container position-relative" style="z-index:2;">
+        <div class="d-flex align-items-center gap-3 mb-3">
             <a href="{{ route('front.index') }}"
-               style="width:40px;height:40px;border-radius:10px;background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.25);display:flex;align-items:center;justify-content:center;color:#C9A227;flex-shrink:0;transition:all .2s;"
-               onmouseover="this.style.background='rgba(201,162,39,.18)'" onmouseout="this.style.background='rgba(201,162,39,.08)'">
-                <i class="fas fa-arrow-{{ $isAr?'right':'left' }}"></i>
+               style="color:rgba(255,255,255,.5);font-size:.8rem;text-decoration:none;display:flex;align-items:center;gap:5px;">
+                <i class="fas fa-home"></i> {{ $isAr ? 'الرئيسية' : 'Home' }}
             </a>
-
-            {{-- Icon + Name --}}
-            <div class="cat-hero-icon-wrap">
+            <i class="fas fa-chevron-{{ $isAr ? 'left' : 'right' }}" style="font-size:.65rem;color:rgba(255,255,255,.3);"></i>
+            <span style="color:#C9A227;font-size:.8rem;font-weight:600;">{{ $catName }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-4 flex-wrap">
+            <div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:2rem;color:#fff;backdrop-filter:blur(8px);flex-shrink:0;">
                 @if($category->image)
-                    <img src="{{ asset('storage/'.$category->image) }}" alt="{{ $catName }}">
+                    <img src="{{ asset('storage/'.$category->image) }}" alt="" style="width:52px;height:52px;object-fit:cover;border-radius:12px;">
                 @else
                     <i class="{{ $catIcon }}"></i>
                 @endif
             </div>
             <div>
-                <p class="section-label mb-1">{{ $isAr?'تصنيف':'Category' }}</p>
-                <h1 style="font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;color:#fff;line-height:1.15;margin:0;">
+                <h1 style="font-family:'Playfair Display',serif;font-size:2.4rem;font-weight:900;color:#fff;margin:0;line-height:1.1;">
                     {{ $catName }}
                 </h1>
-                <div style="font-size:.82rem;color:rgba(255,255,255,.45);margin-top:4px;font-family:'Poppins',sans-serif;">
-                    {{ $companies->total() }}
-                    {{ $isAr?'مكان متاح':'places available' }}
-                </div>
-            </div>
-
-            {{-- Search --}}
-            <div class="{{ $isAr?'me-auto':'ms-auto' }} d-none d-md-block" style="max-width:320px;width:100%;">
-                <form action="{{ route('front.category',$category->slug) }}" method="GET">
-                    <div class="bk-search" style="max-width:100%;">
-                        <i class="fas fa-search" style="color:#C9A227;font-size:.85rem;flex-shrink:0;"></i>
-                        <input type="text" name="search" value="{{ request('search') }}"
-                               placeholder="{{ $isAr?'ابحث في '.$catName.'...':'Search in '.$catName.'...' }}">
-                        <button type="submit">{{ $isAr?'بحث':'Go' }}</button>
-                    </div>
-                </form>
+                <p style="color:rgba(255,255,255,.7);margin:6px 0 0;font-family:'Poppins',sans-serif;font-size:.92rem;">
+                    {{ $branches->total() }} {{ $isAr ? 'فرع متاح' : 'branches available' }}
+                </p>
             </div>
         </div>
     </div>
 </div>
 
-{{-- ══ OTHER CATEGORIES STRIP ══ --}}
-<div class="bk-cats-strip">
-    <div class="bk-cats-scroll">
-        <a href="{{ route('front.index') }}" class="bk-cat2">
-            <div class="bk-cat2-circle"><i class="fas fa-th-large"></i></div>
-            <span class="bk-cat2-label">{{ $isAr?'الكل':'All' }}</span>
-        </a>
-        @foreach($categories as $cat)
+{{-- ========== QUICK CAT STRIP ========== --}}
+<div class="bk-qcat-strip">
+    <div class="bk-qcat-inner">
+        @foreach($categories as $qc)
         @php
-            $sl2=$cat->icon ?: 'fas fa-store';
-            if(!$cat->icon){
-                $sl3=strtolower($cat->slug??'');
-                foreach($catIcons as $k=>$v){if(str_contains($sl3,$k)){$sl2=$v;break;}}
-            }
+            $qsl  = strtolower($qc->slug ?? '');
+            $qico = 'fas fa-store';
+            foreach($catIcons as $k=>$v){ if(str_contains($qsl,$k)){ $qico=$v; break; } }
         @endphp
-        <a href="{{ route('front.category',$cat->slug) }}"
-           class="bk-cat2 {{ $cat->slug===$category->slug?'active':'' }}">
-            <div class="bk-cat2-circle">
-                @if($cat->image)
-                    <img src="{{ asset('storage/'.$cat->image) }}" alt="{{ $isAr?$cat->name_ar:$cat->name_en }}">
-                @else
-                    <i class="{{ $sl2 }}"></i>
-                @endif
-            </div>
-            <span class="bk-cat2-label">{{ $isAr?$cat->name_ar:$cat->name_en }}</span>
+        <a href="{{ route('front.category', $qc->slug) }}"
+           class="bk-qcat-pill {{ $qc->slug === $category->slug ? 'active' : '' }}">
+            <i class="{{ $qico }}"></i>
+            {{ $isAr ? $qc->name_ar : $qc->name_en }}
         </a>
         @endforeach
     </div>
 </div>
 
-{{-- ══ COMPANIES GRID ══ --}}
-<section class="section border-0 m-0" style="padding:50px 0 70px;background:#0d0d0d;">
+{{-- ========== SEARCH + RESULTS ========== --}}
+<section style="padding:48px 0 80px;background:#0a0a0a;">
     <div class="container">
 
-        {{-- Header row --}}
-        <div class="row align-items-end mb-4">
-            <div class="col-lg-7">
-                <p class="section-label appear-animation" data-appear-animation="fadeInDown" data-plugin-options="{'minWindowWidth':0}">
-                    {{ $isAr?'الأماكن المميزة':'Featured Places' }}
-                </p>
-                <h2 class="section-heading appear-animation" data-appear-animation="maskUp" data-plugin-options="{'minWindowWidth':0}">
-                    @if(request('search'))
-                        {{ $isAr?'نتائج: ':'Results: ' }}<span>{{ request('search') }}</span>
-                    @else
-                        {{ $isAr?'في تصنيف: ':'In Category: ' }}<span>{{ $catName }}</span>
-                    @endif
-                </h2>
-                <div class="divider-gold"></div>
-            </div>
-            <div class="col-lg-5 text-lg-end">
-                <span style="background:rgba(201,162,39,.1);color:#C9A227;border:1px solid rgba(201,162,39,.3);border-radius:25px;padding:7px 18px;font-size:.86rem;font-weight:700;font-family:'Poppins',sans-serif;">
-                    {{ $companies->total() }} {{ $isAr?'نتيجة':'results' }}
-                </span>
-                @if(request('search'))
-                <a href="{{ route('front.category',$category->slug) }}" style="display:inline-block;margin-{{ $isAr?'right':'left' }}:10px;font-size:.82rem;color:#C9A227;text-decoration:none;">
-                    <i class="fas fa-times-circle {{ $isAr?'ms-1':'me-1' }}"></i>{{ $isAr?'مسح':'Clear' }}
-                </a>
-                @endif
-            </div>
-        </div>
-
-        {{-- Mobile search --}}
-        <div class="d-md-none mb-4">
-            <form action="{{ route('front.category',$category->slug) }}" method="GET">
-                <div class="bk-search">
-                    <i class="fas fa-search" style="color:#C9A227;font-size:.85rem;flex-shrink:0;"></i>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ $isAr?'ابحث...':'Search...' }}">
-                    <button type="submit">{{ $isAr?'بحث':'Go' }}</button>
-                </div>
-            </form>
-        </div>
-
-        @if($companies->isNotEmpty())
-        <div class="row g-3">
-            @foreach($companies as $company)
-            @php
-                $firstBranch = $company->branches->first();
-                $branchImg   = $firstBranch?->images?->first();
-                $allReviews  = $company->branches->flatMap(fn($b) => $b->reviews);
-                $reviewCount = $allReviews->count();
-                $avgRating   = $reviewCount ? round($allReviews->avg('rating'),1) : null;
-            @endphp
-            <div class="col-6 col-md-4 col-lg-3 appear-animation"
-                 data-appear-animation="fadeInUpShorter"
-                 data-appear-animation-delay="{{ ($loop->index % 4) * 80 }}"
-                 data-plugin-options="{'minWindowWidth':0}">
-                <div class="bk-card-dark d-flex flex-column h-100">
-
-                    {{-- Image --}}
-                    <div class="bk-co-img">
-                        @if($branchImg)
-                            <img src="{{ asset('storage/'.$branchImg->path) }}" alt="{{ $isAr?$company->name_ar:$company->name_en }}" loading="lazy">
-                        @elseif($company->logo)
-                            <img src="{{ asset('storage/'.$company->logo) }}" alt="" loading="lazy" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid rgba(201,162,39,.4);">
-                        @else
-                            <div class="bk-logo-fallback"><i class="fas fa-store"></i></div>
-                        @endif
-
-                        @if($company->category)
-                        <span class="bk-co-badge">{{ $isAr?$company->category->name_ar:$company->category->name_en }}</span>
-                        @endif
-
-                        @if($avgRating)
-                        <span class="bk-rating-badge">
-                            <i class="fas fa-star"></i>{{ $avgRating }}
-                            <span style="color:rgba(255,255,255,.42);font-weight:400;">· {{ $reviewCount }}</span>
-                        </span>
-                        @endif
-
-                        <button class="bk-like-btn" data-id="{{ $company->id }}" onclick="bkToggleLike(this,{{ $company->id }})">
-                            <i class="far fa-heart" style="font-size:.8rem;color:rgba(255,255,255,.7);pointer-events:none;"></i>
+        {{-- Search --}}
+        <form method="GET" action="{{ route('front.category', $category->slug) }}" class="mb-5">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-8 col-lg-7">
+                    <div class="bk-search-bar">
+                        <input type="text" name="search" value="{{ request('search') }}"
+                               placeholder="{{ $isAr ? 'ابحث عن فرع أو خدمة أو موقع...' : 'Search branch, service or location...' }}">
+                        <button type="submit">
+                            <i class="fas fa-search"></i>
+                            {{ $isAr ? 'بحث' : 'Search' }}
                         </button>
                     </div>
+                </div>
+                @if(request('search'))
+                <div class="col-auto">
+                    <a href="{{ route('front.category', $category->slug) }}"
+                       style="color:rgba(255,255,255,.45);font-size:.83rem;text-decoration:none;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 16px;display:inline-flex;align-items:center;gap:6px;transition:all .2s;"
+                       onmouseover="this.style.color='#C9A227'" onmouseout="this.style.color='rgba(255,255,255,.45)'">
+                        <i class="fas fa-times"></i> {{ $isAr ? 'مسح' : 'Clear' }}
+                    </a>
+                </div>
+                @endif
+            </div>
+            @if(request('search'))
+            <p style="margin-top:12px;font-size:.82rem;color:rgba(255,255,255,.4);">
+                {{ $isAr ? 'نتائج البحث عن:' : 'Results for:' }}
+                <strong style="color:#C9A227;">"{{ request('search') }}"</strong>
+                — {{ $branches->total() }} {{ $isAr ? 'نتيجة' : 'results' }}
+            </p>
+            @endif
+        </form>
 
-                    {{-- Body --}}
-                    <div class="bk-co-body">
-                        <div class="bk-co-name mb-1">{{ $isAr?$company->name_ar:$company->name_en }}</div>
-                        <div class="bk-co-meta mb-2">
-                            <i class="fas fa-map-marker-alt {{ $isAr?'ms-1':'me-1' }}"></i>
-                            {{ $firstBranch?->address ? Str::limit($firstBranch->address,28) : ($company->branches->count().' '.($isAr?'فرع':'branches')) }}
-                        </div>
-                        @if($avgRating)
-                        <div class="d-flex align-items-center gap-1 mb-2">
-                            @for($s=1;$s<=5;$s++)<i class="{{ $s<=round($avgRating)?'fas':'far' }} fa-star" style="color:#C9A227;font-size:.58rem;"></i>@endfor
-                            <span style="font-size:.65rem;color:rgba(255,255,255,.42);margin-{{ $isAr?'right':'left' }}:2px;">{{ $avgRating }} ({{ $reviewCount }})</span>
+        {{-- Results heading --}}
+        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+            <h2 style="font-family:'Playfair Display',serif;font-size:1.75rem;color:#fff;margin:0;">
+                {{ $isAr ? 'الفروع المتاحة' : 'Available Branches' }}
+                <span style="color:#C9A227;font-size:1.1rem;font-weight:400;"> ({{ $branches->total() }})</span>
+            </h2>
+        </div>
+
+        {{-- Branch cards grid --}}
+        @if($branches->isNotEmpty())
+        <div class="row g-4">
+            @foreach($branches as $branch)
+            @php
+                $brImg     = $branch->images->first();
+                $revCount  = $branch->reviews->count();
+                $avgRev    = $revCount ? round($branch->reviews->avg('rating'),1) : null;
+                $svcCount  = $branch->services->count();
+                $empCount  = $branch->employees->count();
+                $isOpen    = isBranchOpen($branch);
+                $compName  = $isAr ? ($branch->company->name_ar ?? $branch->company->name_en) : $branch->company->name_en;
+                $brName    = $isAr ? ($branch->name_ar ?: $branch->name_en) : $branch->name_en;
+            @endphp
+            <div class="col-sm-6 col-lg-4 appear-animation"
+                 data-appear-animation="fadeInUpShorter"
+                 data-appear-animation-delay="{{ ($loop->index % 3) * 80 }}"
+                 data-plugin-options="{'minWindowWidth':0}">
+                <div class="bk-branch-card">
+                    <div class="bk-bc-img">
+                        @if($brImg)
+                            <img src="{{ asset('storage/'.$brImg->path) }}" alt="{{ $brName }}" loading="lazy">
+                        @elseif($branch->company->logo)
+                            <img src="{{ asset('storage/'.$branch->company->logo) }}" alt="" loading="lazy">
+                        @else
+                            <div class="bk-bc-img-placeholder"><i class="{{ $catIcon }}"></i></div>
+                        @endif
+
+                        <span class="bk-bc-badge">{{ $catName }}</span>
+                        <span class="bk-bc-open {{ $isOpen ? 'open' : 'closed' }}">
+                            <i class="fas fa-circle" style="font-size:.45rem;vertical-align:middle;margin-{{ $isAr?'left':'right' }}:4px;"></i>
+                            {{ $isOpen ? ($isAr ? 'مفتوح' : 'Open') : ($isAr ? 'مغلق' : 'Closed') }}
+                        </span>
+                    </div>
+                    <div class="bk-bc-body">
+                        <div class="bk-bc-name">{{ $brName }}</div>
+                        @if($compName)
+                        <div class="bk-bc-company"><i class="fas fa-building {{ $isAr?'ms-1':'me-1' }}" style="color:#C9A227;font-size:.6rem;"></i>{{ $compName }}</div>
+                        @endif
+                        @if($branch->address)
+                        <div class="bk-bc-loc">
+                            <i class="fas fa-map-marker-alt"></i>
+                            {{ Str::limit($branch->address, 36) }}
                         </div>
                         @endif
-                        <a href="{{ route('front.show',$company) }}#bk-services-tab" class="bk-btn-book">
-                            <i class="far fa-calendar-check {{ $isAr?'ms-1':'me-1' }}"></i>{{ $isAr?'احجز الآن':'Book Now' }}
+                        @if($avgRev)
+                        <div class="bk-bc-stars">
+                            @for($s=1;$s<=5;$s++)
+                                <i class="{{ $s<=$avgRev?'fas':'far' }} fa-star"></i>
+                            @endfor
+                            <span>({{ $revCount }})</span>
+                        </div>
+                        @endif
+                        <div class="bk-bc-chips">
+                            @if($svcCount)
+                            <span class="bk-bc-chip"><i class="fas fa-cut {{ $isAr?'ms-1':'me-1' }}"></i>{{ $svcCount }} {{ $isAr?'خدمة':'services' }}</span>
+                            @endif
+                            @if($empCount)
+                            <span class="bk-bc-chip"><i class="fas fa-user {{ $isAr?'ms-1':'me-1' }}"></i>{{ $empCount }} {{ $isAr?'موظف':'staff' }}</span>
+                            @endif
+                        </div>
+                        <a href="{{ route('front.branch', $branch) }}" class="bk-bc-book">
+                            <i class="far fa-calendar-check"></i>
+                            {{ $isAr ? 'عرض وحجز' : 'View & Book' }}
+                            <i class="fas fa-arrow-{{ $isAr?'left':'right' }}" style="font-size:.65rem;opacity:.7;margin-{{ $isAr?'right':'left' }}:auto;"></i>
                         </a>
                     </div>
                 </div>
@@ -341,66 +409,50 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
             @endforeach
         </div>
 
-        @if($companies->hasPages())
-        <div class="d-flex justify-content-center mt-5">{{ $companies->links() }}</div>
-        @endif
-
-        @else
-        <div class="bk-empty appear-animation" data-appear-animation="fadeInUp" data-plugin-options="{'minWindowWidth':0}">
-            <i class="fas fa-store-slash"></i>
-            <h5>{{ $isAr?'لا توجد أماكن في هذا التصنيف بعد':'No places in this category yet' }}</h5>
-            <p style="margin-bottom:16px;">{{ $isAr?'جرّب تصنيفاً آخر.':'Try browsing another category.' }}</p>
-            <a href="{{ route('front.index') }}" class="bk-btn-book d-inline-block" style="width:auto;padding:10px 28px;">
-                {{ $isAr?'عرض جميع الأماكن':'Browse All Places' }}
-            </a>
+        @if($branches->hasPages())
+        <div class="d-flex justify-content-center mt-5">
+            {{ $branches->links() }}
         </div>
         @endif
 
+        @else
+        <div class="bk-empty">
+            <i class="{{ $catIcon }}"></i>
+            <h5>{{ $isAr ? 'لا توجد نتائج' : 'No Results Found' }}</h5>
+            <p>{{ $isAr ? 'جرّب بحثاً مختلفاً أو تصفّح تصنيفاً آخر.' : 'Try a different search or browse another category.' }}</p>
+            <a href="{{ route('front.index') }}"
+               style="display:inline-flex;align-items:center;gap:7px;margin-top:16px;padding:10px 28px;border-radius:10px;border:1.5px solid rgba(201,162,39,.4);color:#C9A227;text-decoration:none;font-family:'Poppins',sans-serif;font-weight:700;font-size:.85rem;transition:all .2s;"
+               onmouseover="this.style.background='#C9A227';this.style.color='#0a0a0a'"
+               onmouseout="this.style.background='transparent';this.style.color='#C9A227'">
+                <i class="fas fa-home"></i> {{ $isAr ? 'العودة للرئيسية' : 'Back to Home' }}
+            </a>
+        </div>
+        @endif
     </div>
 </section>
 
 @include('front.partials.footer')
 
-{{-- Scripts --}}
 <script src="{{ asset('frontend/vendor/jquery/jquery.min.js') }}"></script>
 <script src="{{ asset('frontend/vendor/jquery.appear/jquery.appear.min.js') }}"></script>
 <script src="{{ asset('frontend/vendor/jquery.easing/jquery.easing.min.js') }}"></script>
+<script src="{{ asset('frontend/vendor/jquery.cookie/jquery.cookie.min.js') }}"></script>
 <script src="{{ asset('frontend/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ asset('frontend/vendor/owl.carousel/owl.carousel.min.js') }}"></script>
 <script src="{{ asset('frontend/js/theme.js') }}"></script>
 <script src="{{ asset('frontend/js/custom.js') }}"></script>
 <script src="{{ asset('frontend/js/theme.init.js') }}"></script>
-
 <script>
 (function($){
     'use strict';
     $(document).ready(function(){
         $(window).on('scroll',function(){
-            if($(this).scrollTop()>30)$('#bk-navbar').addClass('scrolled');
-            else $('#bk-navbar').removeClass('scrolled');
-        });
-        var liked=JSON.parse(localStorage.getItem('bk_liked')||'[]');
-        liked.forEach(function(id){
-            var btn=document.querySelector('.bk-like-btn[data-id="'+id+'"]');
-            if(btn) bkSetLiked(btn,true);
+            if($(this).scrollTop()>30){$('#bk-navbar').addClass('scrolled');}
+            else{$('#bk-navbar').removeClass('scrolled');}
         });
     });
 })(jQuery);
-
-function bkToggleLike(btn,id){
-    var liked=JSON.parse(localStorage.getItem('bk_liked')||'[]');
-    var idx=liked.indexOf(id);
-    if(idx===-1){liked.push(id);bkSetLiked(btn,true);}
-    else{liked.splice(idx,1);bkSetLiked(btn,false);}
-    localStorage.setItem('bk_liked',JSON.stringify(liked));
-}
-function bkSetLiked(btn,on){
-    var i=btn.querySelector('i');
-    if(on){i.className='fas fa-heart';i.style.color='#e74c3c';btn.style.background='rgba(231,76,60,.15)';btn.style.border='1px solid rgba(231,76,60,.4)';}
-    else{i.className='far fa-heart';i.style.color='rgba(255,255,255,.7)';btn.style.background='rgba(10,10,10,.8)';btn.style.border='none';}
-}
 </script>
-
 </div>
 </body>
 </html>

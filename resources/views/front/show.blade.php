@@ -55,13 +55,14 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;scr
    COVER HERO
 ════════════════════════ */
 #bk-cover{
-    height:420px;position:relative;overflow:hidden;
+    height:520px;position:relative;overflow:hidden;
     background:#111 url('') center/cover no-repeat;
     margin-top:68px;
 }
+@media(max-width:767px){#bk-cover{height:340px;}}
 #bk-cover::after{
     content:'';position:absolute;inset:0;
-    background:linear-gradient(180deg,rgba(10,10,10,.3) 0%,rgba(10,10,10,.92) 100%);
+    background:linear-gradient(180deg,rgba(10,10,10,.1) 0%,rgba(10,10,10,.4) 50%,rgba(10,10,10,.97) 100%);
 }
 .bk-cover-slides{position:absolute;inset:0;z-index:0;}
 .bk-cover-slides img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;opacity:0;transition:opacity 1s;}
@@ -104,23 +105,80 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;scr
    STICKY TABS
 ════════════════════════ */
 #bk-tabs-bar{
-    background:#0d0d0d;border-bottom:1px solid rgba(201,162,39,.1);
+    background:rgba(10,10,10,.96);
+    border-bottom:1px solid rgba(201,162,39,.12);
     position:sticky;top:68px;z-index:100;
+    backdrop-filter:blur(16px);
 }
 .bk-tab-link{
     display:inline-flex;align-items:center;gap:7px;
-    padding:14px 20px;color:rgba(255,255,255,.5);
+    padding:15px 22px;color:rgba(255,255,255,.45);
     font-size:.84rem;font-weight:600;font-family:'Poppins',sans-serif;
     text-decoration:none;border-bottom:2px solid transparent;
-    transition:all .22s;white-space:nowrap;
+    transition:all .22s;white-space:nowrap;position:relative;
 }
 .bk-tab-link i{font-size:.85rem;}
-.bk-tab-link:hover{color:#C9A227;}
-.bk-tab-link.active{color:#C9A227;border-bottom-color:#C9A227;}
+.bk-tab-link:hover{color:rgba(255,255,255,.8);}
+.bk-tab-link.active{
+    color:#C9A227;border-bottom-color:#C9A227;
+}
+.bk-tab-link.active::after{
+    content:'';position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);
+    width:30px;height:2px;background:#C9A227;
+    box-shadow:0 0 8px rgba(201,162,39,.7),0 0 18px rgba(201,162,39,.35);
+    border-radius:2px;
+}
+
+/* open/closed badge */
+.bk-open-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    border-radius:20px;padding:4px 12px;font-size:.74rem;font-weight:700;
+    font-family:'Poppins',sans-serif;border:1px solid;
+}
+.bk-open-badge.open{background:rgba(34,197,94,.1);color:#22c55e;border-color:rgba(34,197,94,.3);}
+.bk-open-badge.open::before{content:'';width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.25);animation:bkGreenPulse 2s infinite;}
+@keyframes bkGreenPulse{0%,100%{box-shadow:0 0 0 2px rgba(34,197,94,.25);}50%{box-shadow:0 0 0 5px rgba(34,197,94,.08);}}
+.bk-open-badge.closed{background:rgba(239,68,68,.08);color:rgba(239,68,68,.8);border-color:rgba(239,68,68,.2);}
+.bk-open-badge.closed::before{content:'';width:7px;height:7px;border-radius:50%;background:rgba(239,68,68,.8);}
+
+/* book btn pulse */
+@keyframes bkBookPulse{
+    0%{box-shadow:0 6px 24px rgba(201,162,39,.35);}
+    50%{box-shadow:0 6px 30px rgba(201,162,39,.55),0 0 0 8px rgba(201,162,39,.06);}
+    100%{box-shadow:0 6px 24px rgba(201,162,39,.35);}
+}
+.bk-btn-book-big{animation:bkBookPulse 3s ease-in-out infinite;}
+.bk-btn-book-big:hover{animation:none!important;}
 
 /* ════════════════════════
    SERVICES SECTION
 ════════════════════════ */
+.bk-popular-badge{
+    position:absolute;top:10px;{{ $isAr ? 'left' : 'right' }}:10px;
+    background:linear-gradient(135deg,#C9A227,#e8c84a);color:#0a0a0a;
+    font-size:.62rem;font-weight:800;padding:3px 10px;border-radius:20px;
+    font-family:'Poppins',sans-serif;letter-spacing:.3px;z-index:2;
+    box-shadow:0 2px 10px rgba(201,162,39,.4);
+}
+
+/* Redesigned service card */
+.bk-service-card{
+    background:linear-gradient(135deg,#141414,#111)!important;
+    border:1px solid rgba(201,162,39,.1)!important;
+    border-radius:16px!important;
+    transition:all .32s cubic-bezier(.22,1,.36,1)!important;
+}
+.bk-service-card:hover{
+    border-color:rgba(201,162,39,.45)!important;
+    box-shadow:0 12px 40px rgba(0,0,0,.45),0 0 0 1px rgba(201,162,39,.15)!important;
+    transform:translateX({{ $isAr ? '-' : '' }}5px)!important;
+}
+/* price highlight */
+.bk-svc-price{
+    font-size:1.1rem!important;font-weight:900!important;
+    background:linear-gradient(90deg,#C9A227,#e8c84a);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
 .bk-cat-header{
     display:flex;align-items:center;justify-content:space-between;
     padding:16px 0;cursor:pointer;border-bottom:1px solid rgba(201,162,39,.1);
@@ -297,8 +355,10 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;scr
    SIDEBAR sticky card
 ════════════════════════ */
 .bk-book-sidebar{
-    background:#111;border:1px solid rgba(201,162,39,.15);border-radius:18px;
-    padding:24px;position:sticky;top:130px;
+    background:linear-gradient(180deg,#151515,#111);
+    border:1px solid rgba(201,162,39,.18);border-radius:20px;
+    padding:26px;position:sticky;top:130px;
+    box-shadow:0 8px 40px rgba(0,0,0,.45);
 }
 .bk-book-sidebar h5{font-size:1rem;font-weight:700;color:#fff;margin-bottom:16px;font-family:'Poppins',sans-serif;}
 .bk-info-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;}
@@ -400,6 +460,17 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
 </div>
 
 {{-- ════ PROFILE BAR ════ --}}
+@php
+    /* Determine open/closed status from today's working hours */
+    $isOpenNow = false;
+    if ($branch && $branch->workingHours->isNotEmpty()) {
+        $todayWh = $branch->workingHours->where('day_of_week', now()->dayOfWeek)->first();
+        if ($todayWh && $todayWh->is_open && $todayWh->open_time && $todayWh->close_time) {
+            $nowTime  = now()->format('H:i:s');
+            $isOpenNow = $nowTime >= $todayWh->open_time && $nowTime <= $todayWh->close_time;
+        }
+    }
+@endphp
 <div id="bk-profile-bar">
     <div class="container py-3">
         <div class="d-flex align-items-end gap-4 flex-wrap">
@@ -416,6 +487,11 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
                 <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
                     <h1 class="bk-biz-name mb-0">{{ $name }}</h1>
                     @if($catName)<span class="bk-biz-cat">{{ $catName }}</span>@endif
+                    @if($branch && $branch->workingHours->isNotEmpty())
+                    <span class="bk-open-badge {{ $isOpenNow ? 'open' : 'closed' }}">
+                        {{ $isOpenNow ? ($isAr ? 'مفتوح الآن' : 'Open Now') : ($isAr ? 'مغلق حالياً' : 'Closed') }}
+                    </span>
+                    @endif
                 </div>
                 <div class="d-flex align-items-center gap-3 flex-wrap">
                     @if($totalRev > 0)
@@ -516,6 +592,12 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
                         <div class="bk-cat-body">
                             @foreach($services as $svc)
                             <div class="bk-service-card appear-animation" data-appear-animation="fadeInLeft" data-appear-animation-delay="{{ $loop->index * 60 }}" data-plugin-options="{'minWindowWidth':0}">
+                                @if($loop->first)
+                                <span class="bk-popular-badge">
+                                    <i class="fas fa-fire {{ $isAr ? 'ms-1' : 'me-1' }}" style="font-size:.58rem;"></i>
+                                    {{ $isAr ? 'الأكثر طلباً' : 'Popular' }}
+                                </span>
+                                @endif
 
                                 {{-- Service Image --}}
                                 <div class="bk-svc-img">
@@ -718,11 +800,38 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
         {{-- ── SIDEBAR ── --}}
         <div class="col-lg-4" id="bk-info-tab">
             <div class="bk-book-sidebar">
+                {{-- Pricing teaser --}}
+                @php
+                    $minPrice = $branch?->services?->where('is_active',true)?->min('price');
+                @endphp
+                @if($minPrice)
+                <div style="text-align:center;margin-bottom:16px;">
+                    <span style="font-size:.74rem;color:rgba(255,255,255,.35);font-family:'Poppins',sans-serif;">{{ $isAr?'تبدأ الأسعار من':'Starting from' }}</span>
+                    <div style="font-size:1.7rem;font-weight:900;color:#C9A227;font-family:'Poppins',sans-serif;line-height:1;text-shadow:0 0 24px rgba(201,162,39,.3);">
+                        {{ number_format($minPrice,0) }}
+                        <span style="font-size:.8rem;font-weight:500;color:rgba(201,162,39,.7);">{{ $isAr?'ر.س':'SAR' }}</span>
+                    </div>
+                </div>
+                @endif
+
                 {{-- Book button --}}
                 <a href="{{ route('company.appointments.create') }}" class="bk-btn-book-big mb-4">
                     <i class="far fa-calendar-check"></i>
                     {{ $isAr ? 'احجز موعداً الآن' : 'Book an Appointment' }}
                 </a>
+
+                {{-- Open/Closed badge --}}
+                @if($branch && $branch->workingHours->isNotEmpty())
+                <div class="text-center mb-3">
+                    <span class="bk-open-badge {{ isset($isOpenNow) && $isOpenNow ? 'open' : 'closed' }}"
+                          style="font-size:.78rem;">
+                        {{ isset($isOpenNow) && $isOpenNow ? ($isAr?'مفتوح الآن':'Open Now') : ($isAr?'مغلق حالياً':'Currently Closed') }}
+                    </span>
+                </div>
+                @endif
+
+                {{-- Divider --}}
+                <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(201,162,39,.2),transparent);margin:4px 0 16px;"></div>
 
                 {{-- Info --}}
                 <h5>{{ $isAr ? 'معلومات المكان' : 'Business Info' }}</h5>
