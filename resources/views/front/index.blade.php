@@ -141,8 +141,30 @@ html{scroll-behavior:smooth;}
 .bk-logo-item:hover .bk-logo-text{color:#C9A227;}
 
 /* ═══════════════════════════════
-   COMPANY CARDS — premium style
+   BRANCH CARDS — premium style
 ═══════════════════════════════ */
+
+/* company badge row inside card */
+.bk-cc-company{
+    display:flex;align-items:center;gap:8px;
+    padding:10px 14px 0;
+}
+.bk-cc-company-logo{
+    width:30px;height:30px;border-radius:8px;overflow:hidden;
+    background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.2);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.bk-cc-company-logo img{width:100%;height:100%;object-fit:cover;}
+.bk-cc-company-logo i{font-size:.75rem;color:#C9A227;}
+.bk-cc-company-name{
+    font-size:.7rem;font-weight:600;color:rgba(255,255,255,.45);
+    font-family:'Poppins',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    transition:color .2s;
+}
+.bk-company-card:hover .bk-cc-company-name{color:#C9A227;}
+.bk-cc-company-dot{
+    width:3px;height:3px;border-radius:50%;background:rgba(201,162,39,.3);flex-shrink:0;
+}
 
 /* section divider */
 .bk-section-divider{
@@ -622,7 +644,7 @@ html{scroll-behavior:smooth;}
 {{-- ── Divider ── --}}
 <div class="bk-section-divider"></div>
 
-{{-- ========== COMPANIES ========== --}}
+{{-- ========== BRANCHES ========== --}}
 <section id="bk-companies" class="section border-0 m-0" style="padding:80px 0;background:#0a0a0a;">
     <div class="container">
 
@@ -632,7 +654,7 @@ html{scroll-behavior:smooth;}
                 <span class="section-label">
                     @if(request('search')) {{ $isAr ? 'نتائج البحث' : 'Search Results' }}
                     @elseif(request('category')) {{ $isAr ? 'تصنيف' : 'Category' }}
-                    @else {{ $isAr ? 'الأماكن المميزة' : 'Featured Places' }}
+                    @else {{ $isAr ? 'الفروع المميزة' : 'Featured Branches' }}
                     @endif
                 </span>
                 <h2 class="section-heading" style="font-size:2.4rem;">
@@ -641,7 +663,7 @@ html{scroll-behavior:smooth;}
                     @elseif(request('category'))
                         <span>{{ request('category') }}</span>
                     @else
-                        {{ $isAr ? 'اكتشف ' : 'Discover ' }}<span>{{ $isAr ? 'أفضل الأماكن' : 'Top Places' }}</span>
+                        {{ $isAr ? 'اكتشف ' : 'Discover ' }}<span>{{ $isAr ? 'أقرب الفروع' : 'Nearby Branches' }}</span>
                     @endif
                 </h2>
                 <div class="divider-gold"></div>
@@ -649,9 +671,9 @@ html{scroll-behavior:smooth;}
             <div class="col-lg-5 appear-animation" data-appear-animation="fadeInRight" data-plugin-options="{'minWindowWidth':0}">
                 <div class="d-flex align-items-center justify-content-lg-end gap-3 flex-wrap">
                     <div style="background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.2);border-radius:30px;padding:8px 20px;display:inline-flex;align-items:center;gap:8px;">
-                        <i class="fas fa-store" style="color:#C9A227;font-size:.85rem;"></i>
-                        <span style="font-size:.9rem;font-weight:700;color:#C9A227;font-family:'Poppins',sans-serif;">{{ $companies->total() }}</span>
-                        <span style="font-size:.8rem;color:rgba(255,255,255,.45);font-family:'Poppins',sans-serif;">{{ $isAr ? 'مكان' : 'places' }}</span>
+                        <i class="fas fa-code-branch" style="color:#C9A227;font-size:.85rem;"></i>
+                        <span style="font-size:.9rem;font-weight:700;color:#C9A227;font-family:'Poppins',sans-serif;">{{ $branches->total() }}</span>
+                        <span style="font-size:.8rem;color:rgba(255,255,255,.45);font-family:'Poppins',sans-serif;">{{ $isAr ? 'فرع' : 'branches' }}</span>
                     </div>
                     @if(request('search') || request('category'))
                     <a href="{{ route('front.index') }}"
@@ -665,17 +687,17 @@ html{scroll-behavior:smooth;}
             </div>
         </div>
 
-        @if($companies->isNotEmpty())
+        @if($branches->isNotEmpty())
         <div class="row g-4">
-            @foreach($companies as $company)
+            @foreach($branches as $branch)
             @php
-                $firstBranch = $company->branches->first();
-                $branchImg   = $firstBranch?->images?->first();
-                $allReviews  = $company->branches->flatMap(fn($b) => $b->reviews);
-                $reviewCount = $allReviews->count();
-                $avgRating   = $reviewCount ? round($allReviews->avg('rating'),1) : null;
-                $svcCount    = $company->branches->sum(fn($b) => $b->services->count());
-                $branchCount = $company->branches->count();
+                $branchImg   = $branch->images->first();
+                $reviewCount = $branch->reviews->count();
+                $avgRating   = $reviewCount ? round($branch->reviews->avg('rating'), 1) : null;
+                $svcCount    = $branch->services->count();
+                $company     = $branch->company;
+                $branchName  = $isAr ? ($branch->name_ar ?? $branch->name_en) : ($branch->name_en ?? $branch->name_ar);
+                $companyName = $isAr ? ($company->name_ar ?? $company->name_en) : ($company->name_en ?? $company->name_ar);
             @endphp
             <div class="col-sm-6 col-lg-4 col-xl-3 appear-animation"
                  data-appear-animation="fadeInUpShorter"
@@ -683,12 +705,13 @@ html{scroll-behavior:smooth;}
                  data-plugin-options="{'minWindowWidth':0}">
 
                 <div class="bk-company-card">
+
                     {{-- Image --}}
                     <div class="bk-cc-img">
                         @if($branchImg)
-                            <img src="{{ asset('storage/'.$branchImg->path) }}" alt="{{ $isAr ? $company->name_ar : $company->name_en }}" loading="lazy">
+                            <img src="{{ asset('storage/'.$branchImg->path) }}" alt="{{ $branchName }}" loading="lazy">
                         @elseif($company->logo)
-                            <img src="{{ asset('storage/'.$company->logo) }}" alt="" loading="lazy">
+                            <img src="{{ asset('storage/'.$company->logo) }}" alt="{{ $companyName }}" loading="lazy">
                         @else
                             <div class="bk-cc-img-placeholder"><i class="fas fa-store"></i></div>
                         @endif
@@ -705,24 +728,34 @@ html{scroll-behavior:smooth;}
                         </span>
                         @endif
 
-                        <button class="bk-cc-like bk-like-btn" data-id="{{ $company->id }}"
-                                onclick="bkToggleLike(this,{{ $company->id }})">
+                        <button class="bk-cc-like bk-like-btn" data-id="{{ $branch->id }}"
+                                onclick="bkToggleLike(this,{{ $branch->id }})">
                             <i class="far fa-heart" style="font-size:.9rem;color:rgba(255,255,255,.7);pointer-events:none;"></i>
                         </button>
                     </div>
 
-                    {{-- Body --}}
-                    <div class="bk-cc-body">
-                        <div class="bk-cc-name">{{ $isAr ? $company->name_ar : $company->name_en }}</div>
-
-                        <div class="bk-cc-location">
-                            <i class="fas fa-map-marker-alt"></i>
-                            @if($firstBranch?->address)
-                                {{ Str::limit($firstBranch->address, 32) }}
+                    {{-- Company row --}}
+                    <div class="bk-cc-company">
+                        <div class="bk-cc-company-logo">
+                            @if($company->logo)
+                                <img src="{{ asset('storage/'.$company->logo) }}" alt="">
                             @else
-                                {{ $branchCount }} {{ $isAr ? ($branchCount>1?'فروع':'فرع') : 'branch'.($branchCount>1?'es':'') }}
+                                <i class="fas fa-store"></i>
                             @endif
                         </div>
+                        <span class="bk-cc-company-name">{{ $companyName }}</span>
+                    </div>
+
+                    {{-- Body --}}
+                    <div class="bk-cc-body" style="padding-top:8px;">
+                        <div class="bk-cc-name">{{ $branchName }}</div>
+
+                        @if($branch->address)
+                        <div class="bk-cc-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            {{ Str::limit($branch->address, 34) }}
+                        </div>
+                        @endif
 
                         @if($avgRating)
                         <div class="bk-cc-stars">
@@ -734,15 +767,15 @@ html{scroll-behavior:smooth;}
                         @endif
 
                         <div class="bk-cc-chips">
-                            @if($svcCount>0)
-                            <span class="bk-cc-chip"><i class="fas fa-cut"></i> {{ $svcCount }} {{ $isAr?'خدمة':'svcs' }}</span>
+                            @if($svcCount > 0)
+                            <span class="bk-cc-chip"><i class="fas fa-cut"></i> {{ $svcCount }} {{ $isAr ? 'خدمة' : 'svcs' }}</span>
                             @endif
-                            @if($branchCount>1)
-                            <span class="bk-cc-chip"><i class="fas fa-map-marker-alt"></i> {{ $branchCount }} {{ $isAr?'فرع':'branches' }}</span>
+                            @if($branch->address)
+                            <span class="bk-cc-chip"><i class="fas fa-map-marker-alt"></i> {{ $isAr ? 'فرع' : 'Branch' }}</span>
                             @endif
                         </div>
 
-                        <a href="{{ route('front.show', $company) }}#bk-services-tab" class="bk-cc-book">
+                        <a href="{{ route('front.branch', $branch) }}" class="bk-cc-book">
                             <i class="far fa-calendar-check"></i>
                             {{ $isAr ? 'احجز الآن' : 'Book Now' }}
                             <i class="fas fa-arrow-{{ $isAr?'left':'right' }}" style="font-size:.7rem;opacity:.7;margin-{{ $isAr?'right':'left' }}:auto;"></i>
@@ -754,9 +787,9 @@ html{scroll-behavior:smooth;}
             @endforeach
         </div>
 
-        @if($companies->hasPages())
-        <div class="d-flex justify-content-center mt-6" style="margin-top:56px;">
-            {{ $companies->links() }}
+        @if($branches->hasPages())
+        <div class="d-flex justify-content-center" style="margin-top:56px;">
+            {{ $branches->links() }}
         </div>
         @endif
 
@@ -960,6 +993,12 @@ html{scroll-behavior:smooth;}
 </section>
 
 @include('front.partials.footer')
+
+{{-- زر المقارنة --}}
+<a href="{{ route('front.index2') }}" style="position:fixed;bottom:24px;{{ $isAr?'left':'right' }}:24px;z-index:9999;background:#C9A227;color:#0a0a0a;border-radius:30px;padding:10px 20px;font-weight:700;font-size:.82rem;font-family:'Poppins',sans-serif;text-decoration:none;box-shadow:0 6px 28px rgba(201,162,39,.5);display:flex;align-items:center;gap:7px;transition:all .22s;" onmouseover="this.style.background='#e8c84a'" onmouseout="this.style.background='#C9A227'">
+    <i class="fas fa-exchange-alt"></i>
+    {{ $isAr ? 'جرّب النسخة الثانية' : 'Try Version 2' }}
+</a>
 
 {{-- ========== SCRIPTS ========== --}}
 <script src="{{ asset('frontend/vendor/jquery/jquery.min.js') }}"></script>

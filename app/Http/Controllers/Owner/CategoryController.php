@@ -14,11 +14,30 @@ use Illuminate\View\View;
 
 class CategoryController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $categories = Category::query()->orderBy('sort_order')->get();
+        $q         = trim($request->input('q', ''));
+        $sortField = in_array($request->input('sort'), ['name', 'sort_order', 'created_at']) ? $request->input('sort') : 'sort_order';
+        $sortDir   = $request->input('dir') === 'desc' ? 'desc' : 'asc';
 
-        return view('owner.category.index', compact('categories'));
+        $query = Category::query();
+
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('name_en', 'like', "%{$q}%")
+                    ->orWhere('name_ar', 'like', "%{$q}%");
+            });
+        }
+
+        if ($sortField === 'name') {
+            $query->orderByRaw("COALESCE(NULLIF(name_en,''), name_ar) {$sortDir}");
+        } else {
+            $query->orderBy($sortField, $sortDir);
+        }
+
+        $categories = $query->paginate(15)->withQueryString();
+
+        return view('owner.category.index', compact('categories', 'q', 'sortField', 'sortDir'));
     }
 
   

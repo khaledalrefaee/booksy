@@ -33,7 +33,6 @@ class UpdateEmployeeRequest extends FormRequest
                     ->where('company_id', $employee->company_id)
                     ->ignore($employee->id),
             ],
-            'role_id' => ['required', 'integer', Rule::exists('roles', 'id')],
             'password' => ['nullable', 'string', 'min:8', 'max:255'],
             'bio' => ['nullable', 'string', 'max:10000'],
             'is_active' => ['sometimes', 'boolean'],

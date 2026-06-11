@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Company;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Employee;
+use App\Models\EmployeeWorkingHour;
 use App\Models\Role;
 use App\Models\ServiceCategory;
+use App\Models\SocialLink;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -69,6 +71,12 @@ class EmployeeController extends Controller
             'is_active'            => ['nullable', 'boolean'],
             'service_category_ids' => ['nullable', 'array'],
             'service_category_ids.*'=> ['exists:service_categories,id'],
+            'working_hours'        => ['nullable', 'array'],
+            'working_hours.*.is_working' => ['nullable', 'boolean'],
+            'working_hours.*.start_time' => ['nullable', 'date_format:H:i'],
+            'working_hours.*.end_time'   => ['nullable', 'date_format:H:i'],
+            'social_links'               => ['nullable', 'array'],
+            'social_links.*'             => ['nullable', 'url', 'max:2048'],
         ]);
 
         $employee = $branch->employees()->create([
@@ -86,6 +94,12 @@ class EmployeeController extends Controller
         // Sync service categories (what the employee can do)
         $employee->serviceCategories()->sync($data['service_category_ids'] ?? []);
 
+        // Save working hours
+        $this->syncWorkingHours($employee, $request->input('working_hours', []));
+
+        // Save social links
+        SocialLink::syncFor($employee, $request->input('social_links', []));
+
         return redirect()
             ->route('company.branches.employees.index', $branch)
             ->with('success', __('Employee created successfully.'));
@@ -99,6 +113,8 @@ class EmployeeController extends Controller
         $serviceCategories = ServiceCategory::where('company_id', $this->company()->id)
                                ->orderBy('sort_order')->get();
         $selectedCatIds    = $employee->serviceCategories()->pluck('service_categories.id')->toArray();
+        $workingHours      = $employee->workingHours()->get()->keyBy('day_of_week');
+        $socialLinks       = $employee->socialLinks()->get()->keyBy('platform');
 
         return view('company.employees.edit', [
             'employee'          => $employee,
@@ -106,6 +122,8 @@ class EmployeeController extends Controller
             'roles'             => $roles,
             'serviceCategories' => $serviceCategories,
             'selectedCatIds'    => $selectedCatIds,
+            'workingHours'      => $workingHours,
+            'socialLinks'       => $socialLinks,
         ]);
     }
 
@@ -124,6 +142,12 @@ class EmployeeController extends Controller
             'is_active'             => ['nullable', 'boolean'],
             'service_category_ids'  => ['nullable', 'array'],
             'service_category_ids.*'=> ['exists:service_categories,id'],
+            'working_hours'         => ['nullable', 'array'],
+            'working_hours.*.is_working' => ['nullable', 'boolean'],
+            'working_hours.*.start_time' => ['nullable', 'date_format:H:i'],
+            'working_hours.*.end_time'   => ['nullable', 'date_format:H:i'],
+            'social_links'               => ['nullable', 'array'],
+            'social_links.*'             => ['nullable', 'url', 'max:2048'],
         ]);
 
         $updateData = [
@@ -145,9 +169,31 @@ class EmployeeController extends Controller
         // Sync service categories
         $employee->serviceCategories()->sync($data['service_category_ids'] ?? []);
 
+        // Sync working hours
+        $this->syncWorkingHours($employee, $request->input('working_hours', []));
+
+        // Sync social links
+        SocialLink::syncFor($employee, $request->input('social_links', []));
+
         return redirect()
             ->route('company.branches.employees.index', $employee->branch)
             ->with('success', __('Employee updated successfully.'));
+    }
+
+    private function syncWorkingHours(Employee $employee, array $hours): void
+    {
+        foreach (range(0, 6) as $day) {
+            $row        = $hours[$day] ?? [];
+            $isWorking  = ! empty($row['is_working']);
+            $employee->workingHours()->updateOrCreate(
+                ['day_of_week' => $day],
+                [
+                    'is_working' => $isWorking,
+                    'start_time' => $isWorking ? ($row['start_time'] ?? null) : null,
+                    'end_time'   => $isWorking ? ($row['end_time'] ?? null) : null,
+                ]
+            );
+        }
     }
 
     public function destroy(Employee $employee): RedirectResponse

@@ -20,12 +20,24 @@
 
     @include('owner.partials.flash')
 
+    @include('owner.partials._search-sort-bar', [
+        'dtTableId'  => 'dt-svcats',
+        'sortField'  => $sortField,
+        'sortDir'    => $sortDir,
+        'sortOptions' => [
+            ['field' => 'sort_order',    'label' => __('الترتيب')],
+            ['field' => 'name',          'label' => __('الاسم')],
+            ['field' => 'services_count','label' => __('عدد الخدمات')],
+            ['field' => 'created_at',    'label' => __('تاريخ الإضافة')],
+        ],
+    ])
+
     <div class="row">
         <div class="col-md-12 stretch-card">
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover mb-0" id="dt-svcats">
                             <thead>
                                 <tr>
                                     <th class="pt-0">#</th>
@@ -72,6 +84,9 @@
                             </tbody>
                         </table>
                     </div>
+                    @if($serviceCategories->hasPages())
+                        <div class="py-3 px-2">{{ $serviceCategories->links() }}</div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -114,4 +129,10 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 @endpush
+@include('owner.partials._datatable', [
+    'tableId'    => 'dt-svcats',
+    'exportName' => 'Service-Categories',
+    'noSortCols' => [-1],
+])
+
 @endsection

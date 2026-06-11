@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             OwnerSeeder::class,
             DemoOwnerSeeder::class,
             DemoCompany2Seeder::class,
+            DamascusSeeder::class,
         ]);
 
         User::firstOrCreate(

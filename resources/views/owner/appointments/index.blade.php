@@ -11,34 +11,52 @@
                 </ol>
             </nav>
         </div>
-        <form method="get" action="{{ route('owner.appointments.index') }}" class="d-flex align-items-center gap-2 flex-wrap">
-            <select name="company_id" class="form-select rounded-pill" style="min-width: 12rem;" onchange="this.form.submit()">
-                <option value="">{{ __('All companies') }}</option>
-                @foreach ($companies as $company)
-                    <option value="{{ $company->id }}" @selected($filterCompanyId === (int) $company->id)>{{ $company->localizedName() }}</option>
-                @endforeach
-            </select>
-            <select name="status" class="form-select rounded-pill" style="min-width: 11rem;" onchange="this.form.submit()">
-                <option value="">{{ __('All statuses') }}</option>
-                @foreach (['pending', 'confirmed', 'rejected', 'cancelled', 'completed', 'no_show'] as $st)
-                    <option value="{{ $st }}" @selected($filterStatus === $st)>{{ __($st) }}</option>
-                @endforeach
-            </select>
-            @if(request()->hasAny(['company_id', 'status']) && array_filter([request('company_id'), request('status')]))
-                <a href="{{ route('owner.appointments.index') }}" class="btn btn-outline-secondary rounded-pill" title="{{ __('Clear filters') }}">
-                    <i data-feather="x" style="width:14px;height:14px;"></i>
-                    {{ __('Clear') }}
-                </a>
-            @endif
-        </form>
+        {{-- filters moved below --}}
     </div>
 
     @include('owner.partials.flash')
 
+    @php
+        $apptExtraFilters = '
+            <select name="company_id" class="bk-ssb-select" style="min-width:150px;" onchange="document.getElementById(\'bk-sf-form\').submit()">
+                <option value="">' . __('كل الشركات') . '</option>
+                ' . $companies->map(fn($c) => '<option value="' . $c->id . '" ' . ((string)$filterCompanyId === (string)$c->id ? 'selected' : '') . '>' . e($c->localizedName()) . '</option>')->implode('') . '
+            </select>
+            <select name="status" class="bk-ssb-select" style="min-width:130px;" onchange="document.getElementById(\'bk-sf-form\').submit()">
+                <option value="">' . __('كل الحالات') . '</option>
+                ' . collect([
+                    'pending'   => 'قيد الانتظار',
+                    'confirmed' => 'مؤكد',
+                    'rejected'  => 'مرفوض',
+                    'cancelled' => 'ملغى',
+                    'completed' => 'مكتمل',
+                    'no_show'   => 'لم يحضر',
+                ])->map(fn($label, $st) => '<option value="' . $st . '" ' . ($filterStatus === $st ? 'selected' : '') . '>' . $label . '</option>')->implode('') . '
+            </select>
+            <input type="date" name="date_from" value="' . e($filterDateFrom) . '"
+                   class="bk-ssb-date" style="min-width:130px;" onchange="document.getElementById(\'bk-sf-form\').submit()">
+            <input type="date" name="date_to" value="' . e($filterDateTo) . '"
+                   class="bk-ssb-date" style="min-width:130px;" onchange="document.getElementById(\'bk-sf-form\').submit()">
+        ';
+    @endphp
+
+    @include('owner.partials._search-sort-bar', [
+        'dtTableId'       => 'dt-appointments',
+        'sortField'       => $sortField,
+        'sortDir'         => $sortDir,
+        'extraFilterKeys' => ['company_id', 'status', 'date_from', 'date_to'],
+        'sortOptions'     => [
+            ['field' => 'start_time',   'label' => __('وقت الموعد')],
+            ['field' => 'created_at',   'label' => __('تاريخ الإضافة')],
+            ['field' => 'total_price',  'label' => __('السعر')],
+        ],
+        'extraFilters' => $apptExtraFilters,
+    ])
+
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0" id="dt-appointments">
                     <thead class="table-light">
                         <tr>
                             <th class="ps-4">{{ __('When') }}</th>
@@ -93,4 +111,10 @@
         @endif
     </div>
 </div>
+@include('owner.partials._datatable', [
+    'tableId'    => 'dt-appointments',
+    'exportName' => 'Appointments',
+    'noSortCols' => [4, 5, -1],
+])
+
 @endsection

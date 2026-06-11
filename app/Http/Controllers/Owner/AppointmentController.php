@@ -16,12 +16,24 @@ class AppointmentController extends Controller
     public function index(Request $request): View
     {
         $validated = $request->validate([
-            'status' => ['nullable', 'string', 'in:pending,confirmed,rejected,cancelled,completed,no_show'],
+            'status'     => ['nullable', 'string', 'in:pending,confirmed,rejected,cancelled,completed,no_show'],
             'company_id' => ['nullable', 'integer', 'exists:companies,id'],
+            'date_from'  => ['nullable', 'date'],
+            'date_to'    => ['nullable', 'date'],
         ]);
+
+        $q         = trim($request->input('q', ''));
+        $sortField = in_array($request->input('sort'), ['start_time', 'created_at', 'total_price']) ? $request->input('sort') : 'start_time';
+        $sortDir   = $request->input('dir') === 'asc' ? 'asc' : 'desc';
 
         $query = Appointment::query()
             ->with(['branch.company', 'customer', 'employee', 'service.serviceCategory']);
+
+        if ($q !== '') {
+            $query->whereHas('customer', function ($sub) use ($q) {
+                $sub->where('name', 'like', "%{$q}%");
+            });
+        }
 
         if (! empty($validated['status'])) {
             $query->where('status', $validated['status']);
@@ -31,15 +43,28 @@ class AppointmentController extends Controller
             $query->where('company_id', $validated['company_id']);
         }
 
-        $appointments = $query->orderByDesc('start_time')->paginate(15)->withQueryString();
+        if (! empty($validated['date_from'])) {
+            $query->whereDate('start_time', '>=', $validated['date_from']);
+        }
+
+        if (! empty($validated['date_to'])) {
+            $query->whereDate('start_time', '<=', $validated['date_to']);
+        }
+
+        $appointments = $query->orderBy($sortField, $sortDir)->paginate(15)->withQueryString();
 
         $companies = Company::query()->orderByLocalizedName()->get();
 
         return view('owner.appointments.index', [
-            'appointments' => $appointments,
-            'filterStatus' => $validated['status'] ?? null,
+            'appointments'    => $appointments,
+            'filterStatus'    => $validated['status'] ?? null,
             'filterCompanyId' => isset($validated['company_id']) ? (int) $validated['company_id'] : null,
-            'companies' => $companies,
+            'filterDateFrom'  => $validated['date_from'] ?? '',
+            'filterDateTo'    => $validated['date_to'] ?? '',
+            'companies'       => $companies,
+            'q'               => $q,
+            'sortField'       => $sortField,
+            'sortDir'         => $sortDir,
         ]);
     }
 

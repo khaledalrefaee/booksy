@@ -62,9 +62,10 @@
     // Build employee data for JS
     $empData = $branch->employees->map(function($e) use ($isAr) {
         return [
-            'id'   => $e->id,
-            'name' => $isAr ? ($e->name_ar ?: $e->name_en) : $e->name_en,
-            'cats' => $e->serviceCategories->pluck('id')->toArray(),
+            'id'    => $e->id,
+            'name'  => $isAr ? ($e->name_ar ?: $e->name_en) : ($e->name_en ?: $e->name_ar),
+            'image' => $e->image ? asset('storage/'.$e->image) : null,
+            'cats'  => $e->serviceCategories->pluck('id')->toArray(),
         ];
     })->toArray();
 
@@ -216,37 +217,47 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
 
 /* ── Service card ── */
 .bk-svc-card{
-    background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:14px;
-    padding:16px;display:flex;gap:14px;align-items:flex-start;
-    transition:border-color .28s,box-shadow .28s;margin-bottom:12px;
-    position:relative;
+    background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:16px;
+    padding:18px;display:flex;gap:16px;align-items:flex-start;
+    transition:border-color .28s,box-shadow .28s,transform .28s;margin-bottom:12px;
+    position:relative;overflow:hidden;
 }
-.bk-svc-card:hover{border-color:rgba(201,162,39,.3);box-shadow:0 8px 28px rgba(0,0,0,.35);}
+.bk-svc-card::before{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(135deg,rgba(201,162,39,.04) 0%,transparent 60%);
+    opacity:0;transition:opacity .28s;pointer-events:none;
+}
+.bk-svc-card:hover{border-color:rgba(201,162,39,.35);box-shadow:0 10px 32px rgba(0,0,0,.4);transform:translateY(-2px);}
+.bk-svc-card:hover::before{opacity:1;}
 .bk-svc-card .icon{
-    width:50px;height:50px;border-radius:12px;flex-shrink:0;
-    background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.2);
-    display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#C9A227;
+    width:52px;height:52px;border-radius:14px;flex-shrink:0;
+    background:linear-gradient(135deg,rgba(201,162,39,.15),rgba(201,162,39,.06));
+    border:1px solid rgba(201,162,39,.25);
+    display:flex;align-items:center;justify-content:center;font-size:1.35rem;color:#C9A227;
+    box-shadow:0 2px 10px rgba(201,162,39,.12);
 }
 .bk-svc-card .info{flex:1;min-width:0;}
-.bk-svc-card .info h5{font-size:.93rem;font-weight:700;color:#fff;margin:0 0 4px;font-family:'Poppins',sans-serif;}
-.bk-svc-card .info .desc{font-size:.78rem;color:rgba(255,255,255,.4);margin:0 0 8px;
+.bk-svc-card .info h5{font-size:.95rem;font-weight:700;color:#fff;margin:0 0 5px;font-family:'Poppins',sans-serif;line-height:1.3;}
+.bk-svc-card .info .desc{font-size:.78rem;color:rgba(255,255,255,.38);margin:0 0 10px;line-height:1.6;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .bk-svc-card .meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-.bk-svc-card .price{font-size:.95rem;font-weight:800;color:#C9A227;font-family:'Poppins',sans-serif;}
-.bk-svc-card .dur{font-size:.74rem;color:rgba(255,255,255,.35);display:flex;align-items:center;gap:4px;}
-.bk-svc-card .dur i{font-size:.65rem;}
+.bk-svc-card .price{font-size:1rem;font-weight:800;color:#C9A227;font-family:'Poppins',sans-serif;}
+.bk-svc-card .dur{font-size:.74rem;color:rgba(255,255,255,.3);display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.04);padding:3px 8px;border-radius:20px;}
+.bk-svc-card .dur i{font-size:.65rem;color:rgba(201,162,39,.6);}
 .bk-svc-card .add-btn{
-    background:transparent;border:1.5px solid rgba(201,162,39,.4);color:#C9A227;
-    border-radius:8px;padding:7px 16px;font-size:.78rem;font-weight:700;
+    background:transparent;border:1.5px solid rgba(201,162,39,.35);color:#C9A227;
+    border-radius:10px;padding:8px 18px;font-size:.8rem;font-weight:700;
     font-family:'Poppins',sans-serif;cursor:pointer;transition:all .22s;white-space:nowrap;flex-shrink:0;
+    align-self:center;
 }
 .bk-svc-card .add-btn:hover,.bk-svc-card .add-btn.added{
-    background:#C9A227;color:#0a0a0a;border-color:#C9A227;
+    background:#C9A227;color:#0a0a0a;border-color:#C9A227;box-shadow:0 4px 14px rgba(201,162,39,.3);
 }
 .bk-popular-badge{
-    position:absolute;top:-1px;{{ $isAr?'left':'right' }}:12px;
-    background:#C9A227;color:#0a0a0a;font-size:.6rem;font-weight:800;
-    padding:3px 10px;border-radius:0 0 8px 8px;font-family:'Poppins',sans-serif;
+    position:absolute;top:0;{{ $isAr?'left':'right' }}:14px;
+    background:linear-gradient(135deg,#C9A227,#e8c84a);color:#0a0a0a;font-size:.58rem;font-weight:900;
+    padding:4px 12px;border-radius:0 0 10px 10px;font-family:'Poppins',sans-serif;
+    letter-spacing:.4px;text-transform:uppercase;box-shadow:0 3px 10px rgba(201,162,39,.3);
 }
 
 /* ── Gallery ── */
@@ -313,55 +324,102 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
 /* ── Booking cart (right sidebar) ── */
 .bk-cart-sticky{
     position:sticky;top:calc(68px + 60px);
-    background:#111;border:1px solid rgba(201,162,39,.2);border-radius:18px;
-    overflow:hidden;
+    background:#111;border:1px solid rgba(201,162,39,.2);border-radius:20px;
+    overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.45);
 }
 .bk-cart-head{
-    background:linear-gradient(135deg,rgba(201,162,39,.15),rgba(201,162,39,.05));
-    border-bottom:1px solid rgba(201,162,39,.15);padding:16px 20px;
+    background:linear-gradient(135deg,rgba(201,162,39,.18),rgba(201,162,39,.06));
+    border-bottom:1px solid rgba(201,162,39,.15);padding:18px 22px;
     display:flex;align-items:center;gap:10px;
 }
 .bk-cart-head h4{font-size:1rem;font-weight:800;color:#fff;font-family:'Poppins',sans-serif;margin:0;}
-.bk-cart-badge{background:#C9A227;color:#0a0a0a;border-radius:50%;width:22px;height:22px;font-size:.72rem;font-weight:900;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;}
-.bk-cart-body{padding:16px 20px;}
-.bk-cart-empty{text-align:center;padding:28px 10px;color:rgba(255,255,255,.3);}
-.bk-cart-empty i{font-size:2.2rem;color:rgba(201,162,39,.12);display:block;margin-bottom:10px;}
-.bk-cart-empty p{font-size:.8rem;margin:0;}
+.bk-cart-badge{
+    background:#C9A227;color:#0a0a0a;border-radius:50%;width:24px;height:24px;
+    font-size:.72rem;font-weight:900;display:flex;align-items:center;justify-content:center;
+    font-family:'Poppins',sans-serif;box-shadow:0 2px 8px rgba(201,162,39,.35);
+}
+.bk-cart-body{padding:18px 22px;}
+.bk-cart-empty{text-align:center;padding:32px 10px;color:rgba(255,255,255,.3);}
+.bk-cart-empty i{font-size:2.5rem;color:rgba(201,162,39,.1);display:block;margin-bottom:12px;}
+.bk-cart-empty p{font-size:.82rem;margin:0;line-height:1.6;}
 .bk-cart-item{
-    background:#181818;border:1px solid rgba(255,255,255,.06);border-radius:10px;
-    padding:12px;margin-bottom:10px;position:relative;
+    background:#181818;border:1px solid rgba(255,255,255,.07);border-radius:12px;
+    padding:14px;margin-bottom:10px;position:relative;
+    transition:border-color .2s;
 }
-.bk-cart-item .svc-name{font-size:.86rem;font-weight:700;color:#fff;font-family:'Poppins',sans-serif;margin-bottom:6px;}
+.bk-cart-item:hover{border-color:rgba(201,162,39,.2);}
+.bk-cart-item .svc-name{font-size:.88rem;font-weight:700;color:#fff;font-family:'Poppins',sans-serif;margin-bottom:7px;padding-{{ $isAr?'left':'right' }}:22px;}
 .bk-cart-item .svc-meta{display:flex;gap:10px;font-size:.75rem;color:rgba(255,255,255,.4);}
-.bk-cart-item .svc-price{color:#C9A227;font-weight:700;}
+.bk-cart-item .svc-price{color:#C9A227;font-weight:800;}
 .bk-cart-item .remove-btn{
-    position:absolute;top:8px;{{ $isAr?'left':'right' }}:8px;
-    background:transparent;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:.85rem;
-    transition:color .2s;padding:3px;
+    position:absolute;top:10px;{{ $isAr?'left':'right' }}:10px;
+    width:22px;height:22px;border-radius:50%;
+    background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);
+    color:rgba(248,113,113,.6);cursor:pointer;font-size:.65rem;
+    transition:all .2s;display:flex;align-items:center;justify-content:center;
 }
-.bk-cart-item .remove-btn:hover{color:#f87171;}
+.bk-cart-item .remove-btn:hover{background:rgba(248,113,113,.2);color:#f87171;border-color:#f87171;}
 .bk-cart-item .emp-select{
-    width:100%;margin-top:8px;padding:7px 10px;
-    background:#141414;border:1px solid rgba(255,255,255,.1);border-radius:7px;
-    color:rgba(255,255,255,.75);font-size:.77rem;font-family:'Poppins',sans-serif;
+    width:100%;margin-top:10px;padding:8px 12px;
+    background:#141414;border:1px solid rgba(255,255,255,.1);border-radius:9px;
+    color:rgba(255,255,255,.75);font-size:.78rem;font-family:'Poppins',sans-serif;
     cursor:pointer;outline:none;transition:border-color .2s;
+    appearance:none;-webkit-appearance:none;
 }
-.bk-cart-item .emp-select:focus{border-color:#C9A227;}
+.bk-cart-item .emp-select:focus{border-color:rgba(201,162,39,.5);}
 .bk-cart-total{
-    border-top:1px solid rgba(201,162,39,.15);padding-top:14px;margin-top:4px;
+    border-top:1px solid rgba(201,162,39,.12);padding-top:16px;margin-top:4px;
 }
-.bk-cart-total .row-t{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:'Poppins',sans-serif;}
-.bk-cart-total .lbl{font-size:.8rem;color:rgba(255,255,255,.45);}
+.bk-cart-total .row-t{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-family:'Poppins',sans-serif;}
+.bk-cart-total .lbl{font-size:.8rem;color:rgba(255,255,255,.4);}
 .bk-cart-total .val{font-size:.9rem;font-weight:700;color:#fff;}
-.bk-cart-total .val.gold{color:#C9A227;}
+.bk-cart-total .val.gold{color:#C9A227;font-size:1.05rem;}
 .bk-confirm-btn{
-    width:100%;background:#C9A227;color:#0a0a0a;border:none;border-radius:12px;
-    padding:14px;font-weight:800;font-size:.95rem;font-family:'Poppins',sans-serif;
-    cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
-    transition:all .22s;margin-top:14px;text-decoration:none;
+    width:100%;background:linear-gradient(135deg,#C9A227,#e8c84a);color:#0a0a0a;border:none;border-radius:14px;
+    padding:15px;font-weight:800;font-size:.95rem;font-family:'Poppins',sans-serif;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;
+    transition:all .25s;margin-top:16px;text-decoration:none;
+    box-shadow:0 4px 18px rgba(201,162,39,.25);letter-spacing:.2px;
 }
-.bk-confirm-btn:hover{background:#e8c84a;box-shadow:0 6px 24px rgba(201,162,39,.4);color:#0a0a0a;text-decoration:none;}
-.bk-confirm-btn:disabled,.bk-confirm-btn[disabled]{opacity:.4;cursor:not-allowed;box-shadow:none;}
+.bk-confirm-btn:hover{box-shadow:0 8px 28px rgba(201,162,39,.45);transform:translateY(-2px);color:#0a0a0a;text-decoration:none;filter:brightness(1.06);}
+.bk-confirm-btn:disabled,.bk-confirm-btn[disabled]{opacity:.4;cursor:not-allowed;box-shadow:none;transform:none;}
+
+/* ── Floating cart button (mobile) ── */
+.bk-float-cart{
+    display:none;
+    position:fixed;bottom:24px;{{ $isAr?'left':'right' }}:20px;z-index:900;
+    background:linear-gradient(135deg,#C9A227,#e8c84a);color:#0a0a0a;
+    width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;
+    align-items:center;justify-content:center;font-size:1.25rem;
+    box-shadow:0 6px 24px rgba(201,162,39,.5);transition:transform .22s,box-shadow .22s;
+}
+.bk-float-cart:hover{transform:scale(1.08);box-shadow:0 10px 32px rgba(201,162,39,.6);}
+.bk-float-cart .cart-cnt{
+    position:absolute;top:-2px;{{ $isAr?'left':'right' }}:-2px;
+    background:#ef4444;color:#fff;border-radius:50%;width:20px;height:20px;
+    font-size:.62rem;font-weight:900;display:flex;align-items:center;justify-content:center;
+    border:2px solid #0a0a0a;
+}
+@media(max-width:991px){
+    .bk-float-cart{display:flex;}
+    .bk-cart-sticky{display:none;}
+    #bk-cart{display:none;}
+}
+
+/* ── Mobile cart sheet ── */
+#bk-mobile-cart{
+    display:none;position:fixed;inset:0;z-index:10000;
+}
+#bk-mobile-cart .overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);}
+#bk-mobile-cart .sheet{
+    position:absolute;bottom:0;left:0;right:0;
+    background:#111;border-radius:24px 24px 0 0;
+    border-top:1px solid rgba(201,162,39,.2);
+    padding:0 0 30px;max-height:85vh;overflow-y:auto;
+}
+#bk-mobile-cart .sheet-handle{width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin:12px auto 0;}
+#bk-mobile-cart .sheet-head{padding:14px 22px;border-bottom:1px solid rgba(201,162,39,.1);display:flex;align-items:center;gap:10px;}
+#bk-mobile-cart .sheet-body{padding:18px 22px;}
 
 /* ── Info section ── */
 .bk-info-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;}
@@ -559,7 +617,7 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
                         <button class="add-btn"
                                 id="add-btn-{{ $svc->id }}"
                                 onclick="bkAddToCart({{ $svc->id }}, {{ json_encode($svcName) }}, {{ $svc->price }}, {{ $svc->duration_minutes ?? 0 }}, {{ $catId ?? 'null' }})">
-                            <i class="fas fa-plus {{ $isAr?'ms-1':'me-1' }}"></i>{{ $isAr?'أضف للحجز':'Add to Booking' }}
+                            <i class="fas fa-plus {{ $isAr?'ms-1':'me-1' }}"></i>{{ $isAr?'أضف للحجز':'Add' }}
                         </button>
                     </div>
                     @endforeach
@@ -792,10 +850,10 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
                             <span class="lbl">{{ $isAr ? 'إجمالي السعر' : 'Total Price' }}</span>
                             <span class="val gold" id="cart-price">0 {{ $isAr?'ر.س':'SAR' }}</span>
                         </div>
-                        <a href="#" id="cart-confirm-btn" class="bk-confirm-btn">
+                        <button onclick="bkOpenBookingModal()" id="cart-confirm-btn" class="bk-confirm-btn" style="width:100%;border:none;cursor:pointer;">
                             <i class="far fa-calendar-check"></i>
-                            {{ $isAr ? 'تأكيد الحجز' : 'Confirm Booking' }}
-                        </a>
+                            {{ $isAr ? 'اختر الوقت والتاريخ' : 'Choose Date & Time' }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -803,6 +861,43 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
 
     </div>{{-- end grid --}}
 </div>{{-- end container --}}
+
+{{-- ── Floating cart button (mobile only) ── --}}
+<button class="bk-float-cart" onclick="bkToggleMobileCart()" id="bk-float-btn" aria-label="{{ $isAr?'سلة الحجز':'Cart' }}">
+    <i class="far fa-calendar-check"></i>
+    <span class="cart-cnt" id="float-cart-cnt" style="display:none;">0</span>
+</button>
+
+{{-- ── Mobile cart sheet ── --}}
+<div id="bk-mobile-cart">
+    <div class="overlay" onclick="bkToggleMobileCart()"></div>
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+            <i class="far fa-calendar-check" style="color:#C9A227;font-size:1.1rem;"></i>
+            <h4 style="font-size:1rem;font-weight:800;color:#fff;font-family:'Poppins',sans-serif;margin:0;">{{ $isAr?'سلة الحجز':'Booking Cart' }}</h4>
+            <span class="bk-cart-badge ms-auto" id="mobile-cart-count">0</span>
+            <button onclick="bkToggleMobileCart()" style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:.9rem;margin-{{ $isAr?'right':'left' }}:8px;">✕</button>
+        </div>
+        <div class="sheet-body" id="mobile-cart-body">
+            <div class="bk-cart-empty" id="mobile-cart-empty">
+                <i class="fas fa-calendar-plus"></i>
+                <p>{{ $isAr?'اختر خدمة من القائمة.':'Select services from the list.' }}</p>
+            </div>
+            <div id="mobile-cart-items"></div>
+            <div id="mobile-cart-total" class="bk-cart-total" style="display:none;">
+                <div class="row-t">
+                    <span class="lbl">{{ $isAr?'إجمالي السعر':'Total' }}</span>
+                    <span class="val gold" id="mobile-cart-price">0</span>
+                </div>
+                <button onclick="bkOpenBookingModal();bkToggleMobileCart();" class="bk-confirm-btn">
+                    <i class="far fa-calendar-check"></i>
+                    {{ $isAr?'اختر الوقت والتاريخ':'Choose Date & Time' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @include('front.partials.footer')
 
@@ -990,20 +1085,121 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
         $total.show();
 
         bkUpdateConfirmLink();
+        bkSyncMobileCart();
     }
 
     function bkUpdateConfirmLink(){
-        if(cart.length === 0) return;
-        // Build query string for booking page
-        var params = [];
-        params.push('branch_id='+branchId);
-        cart.forEach(function(item, idx){
-            params.push('services['+idx+']='+item.serviceId);
-            if(item.employeeId) params.push('employees['+idx+']='+item.employeeId);
-        });
-        var url = '{{ route("company.appointments.create") }}?' + params.join('&');
-        $('#cart-confirm-btn').attr('href', url);
+        // no-op: button opens modal directly
     }
+
+    function bkSyncMobileCart(){
+        // Sync float button badge
+        var cnt = cart.length;
+        var floatCnt = document.getElementById('float-cart-cnt');
+        if(floatCnt){ floatCnt.textContent = cnt; floatCnt.style.display = cnt > 0 ? 'flex' : 'none'; }
+
+        // Sync mobile cart sheet
+        var mEmpty = document.getElementById('mobile-cart-empty');
+        var mItems = document.getElementById('mobile-cart-items');
+        var mTotal = document.getElementById('mobile-cart-total');
+        var mCount = document.getElementById('mobile-cart-count');
+        if(!mItems) return;
+
+        mItems.innerHTML = '';
+        if(cnt === 0){
+            if(mEmpty) mEmpty.style.display='block';
+            if(mTotal) mTotal.style.display='none';
+            if(mCount) mCount.textContent='0';
+            return;
+        }
+        if(mEmpty) mEmpty.style.display='none';
+        if(mCount) mCount.textContent=cnt;
+
+        cart.forEach(function(item){
+            var div = document.createElement('div');
+            div.className = 'bk-cart-item';
+            div.innerHTML = '<button class="remove-btn" onclick="bkRemoveFromCart('+item.serviceId+')" title="Remove"><i class="fas fa-times"></i></button>'
+                +'<div class="svc-name">'+item.serviceName+'</div>'
+                +'<div class="svc-meta"><span class="svc-price">'+item.price+' '+(isAr?'ر.س':'SAR')+'</span></div>';
+            mItems.appendChild(div);
+        });
+
+        if(mTotal){
+            var totalP = cart.reduce(function(s,i){ return s+(parseFloat(i.price)||0); },0);
+            var mPrice = document.getElementById('mobile-cart-price');
+            if(mPrice) mPrice.textContent = totalP.toFixed(0)+' '+(isAr?'ر.س':'SAR');
+            mTotal.style.display='block';
+        }
+    }
+
+    // Sequential index when booking multiple services
+    var bkCartBookingIndex = 0;
+
+    window.bkOpenBookingModal = function(){
+        if(cart.length === 0) return;
+        bkCartBookingIndex = 0;
+        bkOpenNextService();
+    };
+
+    function bkOpenNextService(){
+        if(bkCartBookingIndex >= cart.length) return;
+
+        var item = cart[bkCartBookingIndex];
+
+        // Pick employee: if user chose one, use it; else use first available
+        var emp = null;
+        if(item.employeeId){
+            emp = item.matchedEmps.find(function(e){ return e.id === item.employeeId; });
+        }
+        if(!emp) emp = item.matchedEmps[0] || null;
+
+        if(!emp){
+            bkToast(isAr ? 'لا يوجد موظف متاح لهذه الخدمة' : 'No employee available for this service');
+            return;
+        }
+
+        BookingModal.open({
+            service: {
+                id:       item.serviceId,
+                name:     item.serviceName,
+                duration: item.duration,
+                price:    item.price,
+            },
+            employee: {
+                id:    emp.id,
+                name:  emp.name,
+                image: emp.image || null,
+            },
+            branch: {
+                id:   branchId,
+                name: isAr ? '{{ $branch->name_ar ?? $branch->name_en }}' : '{{ $branch->name_en ?? $branch->name_ar }}',
+            },
+            // called after successful booking of this item
+            onSuccess: function(appt){
+                bkCartBookingIndex++;
+                if(bkCartBookingIndex < cart.length){
+                    // small delay then open next service modal
+                    setTimeout(function(){
+                        BookingModal.resetForNext(
+                            isAr ? 'خدمة ' + (bkCartBookingIndex+1) + ' من ' + cart.length : 'Service ' + (bkCartBookingIndex+1) + ' of ' + cart.length
+                        );
+                        bkOpenNextService();
+                    }, 1200);
+                } else {
+                    // All booked — clear cart
+                    setTimeout(function(){
+                        cart = [];
+                        bkRenderCart();
+                    }, 2000);
+                }
+            },
+        });
+    }
+
+    window.bkToggleMobileCart = function(){
+        var sheet = document.getElementById('bk-mobile-cart');
+        sheet.style.display = (sheet.style.display === 'block') ? 'none' : 'block';
+    };
 
     function bkToast(msg){
         var t = $('<div>').css({
@@ -1021,5 +1217,9 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
 </script>
 
 </div>
+
+{{-- ── Booking Modal (Booksy-style date/time picker) ── --}}
+@include('front.partials.booking-modal')
+
 </body>
 </html>

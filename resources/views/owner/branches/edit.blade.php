@@ -148,6 +148,22 @@
                             </template>
                         </div>
 
+                        {{-- Social Links --}}
+                        <div class="mt-4 pt-3 border-top">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <i data-feather="share-2" style="width:15px;height:15px;"></i>
+                                <span class="fw-semibold">{{ __('Social Media Links') }}</span>
+                            </div>
+                            <p class="text-muted small mb-2">{{ __('Add any social accounts you want customers to find you on.') }}</p>
+                            <div class="border rounded-3" style="overflow:hidden;">
+                                @include('partials.social-links-form', [
+                                    'savedLinks'  => $socialLinks,
+                                    'inputPrefix' => 'social_links',
+                                    'accentColor' => '#c9a227',
+                                ])
+                            </div>
+                        </div>
+
                         <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
                             <button type="submit" class="btn btn-primary rounded-pill px-4">{{ __('Update') }}</button>
                             <a href="{{ route('owner.branches.working-hours.create', $branch) }}" class="btn btn-outline-secondary rounded-pill px-4">{{ __('Edit working hours') }}</a>

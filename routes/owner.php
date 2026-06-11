@@ -7,6 +7,7 @@ use App\Http\Controllers\Owner\CompanyController;
 use App\Http\Controllers\Owner\CategoryController;
 use App\Http\Controllers\Owner\DashboardController;
 use App\Http\Controllers\Owner\EmployeeController;
+use App\Http\Controllers\Owner\EmployeeLeaveController;
 use App\Http\Controllers\Owner\ProfileController;
 use App\Http\Controllers\Owner\ServiceCategoryController;
 use App\Http\Controllers\Owner\ServiceController;
@@ -66,6 +67,13 @@ Route::prefix('owner')->name('owner.')->group(function () {
         Route::resource('branches.employees', EmployeeController::class)
             ->shallow()
             ->except(['show']);
+
+        // Employee leaves
+        Route::get('employee-leaves', [EmployeeLeaveController::class, 'index'])->name('employee-leaves.index');
+        Route::get('employees/{employee}/leaves/create', [EmployeeLeaveController::class, 'create'])->name('employee-leaves.create');
+        Route::post('employees/{employee}/leaves', [EmployeeLeaveController::class, 'store'])->name('employee-leaves.store');
+        Route::patch('employee-leaves/{employeeLeave}/status', [EmployeeLeaveController::class, 'updateStatus'])->name('employee-leaves.update-status');
+        Route::delete('employee-leaves/{employeeLeave}', [EmployeeLeaveController::class, 'destroy'])->name('employee-leaves.destroy');
 
         Route::resource('appointments', AppointmentController::class)->only(['index', 'show']);
     });

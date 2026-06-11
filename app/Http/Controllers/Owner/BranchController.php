@@ -10,6 +10,7 @@ use App\Models\Branch;
 use App\Models\BranchImage;
 use App\Models\BranchWorkingHour;
 use App\Models\Company;
+use App\Models\SocialLink;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -18,13 +19,13 @@ class BranchController extends Controller
 {
     public function index(\Illuminate\Http\Request $request): View
     {
-        $search = trim($request->input('q', ''));
-        $perPage = 15;
+        $search     = trim($request->input('q', ''));
+        $sortField  = in_array($request->input('sort'), ['name', 'created_at', 'sort_order']) ? $request->input('sort') : 'created_at';
+        $sortDir    = $request->input('dir') === 'asc' ? 'asc' : 'desc';
+        $filterCompanyId = $request->input('company_id', '');
 
         $query = Branch::query()
-            ->with(['company', 'services', 'employees', 'workingHours'])
-            ->orderBy('sort_order')
-            ->orderByLocalizedName();
+            ->with(['company', 'services', 'employees', 'workingHours']);
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -38,9 +39,22 @@ class BranchController extends Controller
             });
         }
 
-        $branches = $query->paginate($perPage)->withQueryString();
+        if ($filterCompanyId !== '') {
+            $query->where('company_id', (int) $filterCompanyId);
+        }
 
-        return view('owner.branches.index', compact('branches', 'search'));
+        if ($sortField === 'name') {
+            $query->orderByLocalizedName();
+        } elseif ($sortField === 'sort_order') {
+            $query->orderBy('sort_order', $sortDir)->orderByLocalizedName();
+        } else {
+            $query->orderBy($sortField, $sortDir);
+        }
+
+        $branches  = $query->paginate(15)->withQueryString();
+        $companies = Company::query()->orderByLocalizedName()->get();
+
+        return view('owner.branches.index', compact('branches', 'search', 'sortField', 'sortDir', 'filterCompanyId', 'companies'));
     }
 
     public function create(): View
@@ -141,9 +155,10 @@ class BranchController extends Controller
     public function edit(Branch $branch): View
     {
         $branch->load(['company', 'images']);
-        $companies = Company::query()->orderByLocalizedName()->get();
+        $companies   = Company::query()->orderByLocalizedName()->get();
+        $socialLinks = $branch->socialLinks()->get()->keyBy('platform');
 
-        return view('owner.branches.edit', compact('branch', 'companies'));
+        return view('owner.branches.edit', compact('branch', 'companies', 'socialLinks'));
     }
 
     public function update(UpdateBranchRequest $request, Branch $branch): RedirectResponse
@@ -184,6 +199,9 @@ class BranchController extends Controller
 
         // Add new images
         $this->syncImages($branch, $request->file('images', []), $request->input('image_sort_orders', []));
+
+        // Sync social links
+        SocialLink::syncFor($branch, $request->input('social_links', []));
 
         return redirect()
             ->route('owner.branches.index')

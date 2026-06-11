@@ -19,5 +19,7 @@
     </div>
     @include('company.partials.js')
     @stack('scripts')
+    @stack('company-after-template')
+    @include('company.partials.reverb-notifications')
 </body>
 </html>

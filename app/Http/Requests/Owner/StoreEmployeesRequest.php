@@ -33,7 +33,6 @@ class StoreEmployeesRequest extends FormRequest
                 'max:255',
                 Rule::unique('employees', 'email')->where('company_id', $companyId),
             ],
-            'employees.*.role_id' => ['required', 'integer', Rule::exists('roles', 'id')],
             'employees.*.password' => ['required', 'string', 'min:8', 'max:255'],
             'employees.*.bio' => ['nullable', 'string', 'max:10000'],
             'employees.*.is_active' => ['sometimes', 'boolean'],

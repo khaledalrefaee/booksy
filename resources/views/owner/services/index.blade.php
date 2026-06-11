@@ -20,6 +20,30 @@
 
     @include('owner.partials.flash')
 
+    @include('owner.partials._search-sort-bar', [
+        'dtTableId'  => 'dt-services',
+        'sortField'  => $sortField,
+        'sortDir'    => $sortDir,
+        'sortOptions' => [
+            ['field' => 'name',             'label' => __('الاسم')],
+            ['field' => 'price',            'label' => __('السعر')],
+            ['field' => 'duration_minutes', 'label' => __('المدة')],
+            ['field' => 'created_at',       'label' => __('تاريخ الإضافة')],
+        ],
+        'extraFilterKeys' => ['service_category_id', 'is_active'],
+        'extraFilters' => '
+            <select name="service_category_id" class="bk-ssb-select" style="min-width:150px;" onchange="document.getElementById(\'bk-sf-form\').submit()">
+                <option value="">' . __('كل الفئات') . '</option>
+                ' . $serviceCategories->map(fn($c) => '<option value="' . $c->id . '" ' . ((string)$filterServiceCatId === (string)$c->id ? 'selected' : '') . '>' . e($c->localizedName()) . '</option>')->implode('') . '
+            </select>
+            <select name="is_active" class="bk-ssb-select" style="min-width:120px;" onchange="document.getElementById(\'bk-sf-form\').submit()">
+                <option value="">' . __('الكل') . '</option>
+                <option value="1" ' . ($filterIsActive === '1' ? 'selected' : '') . '>' . __('نشط')    . '</option>
+                <option value="0" ' . ($filterIsActive === '0' ? 'selected' : '') . '>' . __('غير نشط') . '</option>
+            </select>
+        ',
+    ])
+
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-3">
         <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3 py-3 px-4 bg-light bg-opacity-50">
             <div class="d-flex align-items-center gap-2">
@@ -33,7 +57,7 @@
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0" id="dt-services">
                     <thead class="table-light">
                         <tr>
                             <th class="ps-4">{{ __('Service category') }}</th>
@@ -90,6 +114,15 @@
                 </table>
             </div>
         </div>
+        @if($services->hasPages())
+            <div class="card-footer bg-transparent border-0 py-3">{{ $services->links() }}</div>
+        @endif
     </div>
 </div>
+@include('owner.partials._datatable', [
+    'tableId'    => 'dt-services',
+    'exportName' => 'Services',
+    'noSortCols' => [-1],
+])
+
 @endsection

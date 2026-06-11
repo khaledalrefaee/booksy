@@ -64,7 +64,25 @@
                                 <label class="form-check-label" for="is_head_office">{{ __('Head office') }}</label>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary">{{ __('Update branch') }}</button>
+                        {{-- Social Links --}}
+                        <hr class="my-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold d-flex align-items-center gap-2">
+                                <i data-feather="share-2" style="width:15px;height:15px;"></i>
+                                {{ __('Social Media Links') }}
+                            </label>
+                            <p class="text-muted small mb-2">{{ __('Add any social accounts you want customers to find you on.') }}</p>
+                        </div>
+                        <div class="border rounded-3" style="overflow:hidden;">
+                            @include('partials.social-links-form', [
+                                'savedLinks'  => $socialLinks,
+                                'inputPrefix' => 'social_links',
+                                'accentColor' => '#6366f1',
+                            ])
+                        </div>
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">{{ __('Update branch') }}</button>
+                        </div>
                     </form>
                 </div>
             </div>

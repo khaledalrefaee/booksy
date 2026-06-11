@@ -1,89 +1,289 @@
 @extends('owner.dashboard')
+
+@push('owner-styles')
+<style>
+.emp-form-hero {
+    background: linear-gradient(135deg, #f4a642 0%, #c9a227 100%);
+    border-radius: 20px; padding: 26px 30px;
+    margin-bottom: 24px; color: #000;
+    position: relative; overflow: hidden;
+}
+.emp-form-hero::before {
+    content: ''; position: absolute; top: -50px; right: -50px;
+    width: 180px; height: 180px; border-radius: 50%;
+    background: rgba(255,255,255,.1); pointer-events: none;
+}
+[dir="rtl"] .emp-form-hero::before { right: auto; left: -50px; }
+.emp-avatar-hero {
+    width: 50px; height: 50px; border-radius: 14px;
+    background: rgba(0,0,0,.15); display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 20px; color: #000; flex-shrink: 0;
+}
+
+.sec-card  { border-radius: 16px !important; margin-bottom: 18px; overflow: hidden; }
+.sec-header {
+    padding: 14px 20px 13px;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+    display: flex; align-items: center; gap: 10px;
+}
+.bk-theme-light .sec-header { border-bottom-color: rgba(0,0,0,.07); }
+.sec-icon  { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sec-body  { padding: 18px 20px; }
+.sec-title { font-weight: 700; font-size: 13px; }
+.sec-sub   { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 1px; }
+.bk-theme-light .sec-sub { color: rgba(0,0,0,.45); }
+
+.f-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    color: rgba(255,255,255,.5); margin-bottom: 5px; display: block;
+}
+.bk-theme-light .f-label { color: rgba(0,0,0,.5); }
+.f-input {
+    width: 100%; background: rgba(255,255,255,.05); border: 1.5px solid rgba(255,255,255,.1);
+    border-radius: 11px; padding: 9px 13px; font-size: 13px; color: inherit;
+    transition: border-color .2s, background .2s, box-shadow .2s; outline: none;
+}
+.f-input::placeholder { color: rgba(255,255,255,.25); }
+.f-input:focus { border-color: #c9a227; background: rgba(201,162,39,.07); box-shadow: 0 0 0 3px rgba(201,162,39,.15); }
+.bk-theme-light .f-input { background: #f8f9fa; border-color: #dee2e6; color: #212529; }
+.bk-theme-light .f-input::placeholder { color: rgba(0,0,0,.3); }
+.bk-theme-light .f-input:focus { background: #fff; border-color: #c9a227; box-shadow: 0 0 0 3px rgba(201,162,39,.12); }
+.f-input.is-invalid { border-color: #f5576c !important; }
+
+.day-pill { border-radius: 11px; border: 1.5px solid rgba(255,255,255,.09); padding: 11px 13px; transition: all .2s; background: rgba(255,255,255,.03); }
+.bk-theme-light .day-pill { border-color: #e8ecf1; background: #fafbfc; }
+.day-pill.active { border-color: rgba(201,162,39,.5); background: rgba(201,162,39,.07); }
+.bk-theme-light .day-pill.active { border-color: #c9a227; background: rgba(201,162,39,.06); }
+.day-name { font-weight: 700; font-size: 12px; }
+.day-times { display: flex; align-items: center; gap: 5px; margin-top: 9px; }
+.day-times input {
+    flex: 1; border: 1.5px solid rgba(255,255,255,.1); border-radius: 9px; padding: 5px 7px;
+    font-size: 12px; text-align: center; background: rgba(255,255,255,.05); color: inherit; outline: none;
+}
+.day-times input:focus { border-color: #c9a227; }
+.day-times input:disabled { opacity: .3; cursor: not-allowed; }
+.bk-theme-light .day-times input { background: #fff; border-color: #dee2e6; color: #212529; }
+.day-times .sep { color: rgba(255,255,255,.3); font-size: 11px; flex-shrink: 0; }
+.bk-theme-light .day-times .sep { color: rgba(0,0,0,.3); }
+
+.toggle-row {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(255,255,255,.03); border-radius: 12px;
+    border: 1.5px solid rgba(255,255,255,.08); padding: 12px 14px; cursor: pointer;
+}
+.bk-theme-light .toggle-row { background: #f8f9fa; border-color: #dee2e6; }
+
+.btn-submit-main {
+    background: linear-gradient(135deg, #c9a227, #f4a642);
+    color: #000; border: none; border-radius: 13px;
+    padding: 12px 36px; font-weight: 700; font-size: 14px;
+    cursor: pointer; width: 100%;
+    box-shadow: 0 4px 18px rgba(201,162,39,.3);
+    transition: opacity .2s, transform .15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-submit-main:hover { opacity: .9; transform: translateY(-1px); }
+</style>
+@endpush
+
 @section('content')
 <div class="page-content">
-    <div class="mb-4">
-        <h4 class="mb-2">{{ __('Edit employee') }}</h4>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{{ route('owner.dashboard') }}">{{ __('Dashboard') }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('owner.branches.index') }}">{{ __('Branches') }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('owner.branches.employees.index', $branch) }}">{{ $branch->localizedName() }}</a></li>
-                <li class="breadcrumb-item active">{{ $employee->localizedName() }}</li>
-            </ol>
-        </nav>
+
+    <div class="emp-form-hero bk-a1">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 position-relative" style="z-index:1;">
+            <div class="d-flex align-items-center gap-3">
+                <div class="emp-avatar-hero">
+                    {{ strtoupper(mb_substr($employee->name_en ?? $employee->name_ar ?? '?', 0, 1)) }}
+                </div>
+                <div>
+                    <nav aria-label="breadcrumb" class="mb-1">
+                        <ol class="breadcrumb mb-0" style="--bs-breadcrumb-divider-color:rgba(0,0,0,.4);">
+                            <li class="breadcrumb-item">
+                                <a href="{{ route('owner.branches.employees.index', $branch) }}" class="text-decoration-none" style="color:rgba(0,0,0,.6);font-size:13px;">{{ $branch->localizedName() }}</a>
+                            </li>
+                            <li class="breadcrumb-item active" style="color:rgba(0,0,0,.5);font-size:13px;">{{ __('Edit') }}</li>
+                        </ol>
+                    </nav>
+                    <h3 class="fw-bold mb-0" style="font-family:'Poppins',sans-serif;">{{ $employee->localizedName() }}</h3>
+                </div>
+            </div>
+            <a href="{{ route('owner.branches.employees.index', $branch) }}"
+               style="background:rgba(0,0,0,.15); color:#000; border:1.5px solid rgba(0,0,0,.25); font-weight:600; font-size:13px;"
+               class="btn btn-sm rounded-pill px-3">
+                <i data-feather="arrow-left" style="width:13px;height:13px;"></i>
+                <span class="{{ app()->getLocale()==='ar' ? 'me-1' : 'ms-1' }}">{{ __('Back') }}</span>
+            </a>
+        </div>
     </div>
 
     @include('owner.partials.flash')
 
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-body p-4 p-md-5">
-                    @php
-                        $roleLabel = function ($role) {
-                            return app()->getLocale() === 'ar'
-                                ? ($role->label_ar ?: $role->label_en)
-                                : ($role->label_en ?: $role->label_ar);
-                        };
-                    @endphp
-                    <form method="post" action="{{ route('owner.employees.update', $employee) }}">
-                        @csrf
-                        @method('PUT')
-                        @include('owner.partials.localized-name-fields', [
-                            'nameEnId' => 'employee-edit-name-en',
-                            'nameArId' => 'employee-edit-name-ar',
-                            'nameEnValue' => old('name_en', $employee->name_en),
-                            'nameArValue' => old('name_ar', $employee->name_ar),
-                            'wrapperClass' => 'mb-3',
-                        ])
+    <form method="post" action="{{ route('owner.employees.update', $employee) }}">
+    @csrf @method('PUT')
+    <div class="row g-4">
+
+        <div class="col-lg-7">
+            <div class="card border-0 sec-card bk-a2">
+                <div class="card-body p-0">
+                    <div class="sec-header">
+                        <div class="sec-icon" style="background:rgba(201,162,39,.15);">
+                            <i data-feather="user" style="width:15px;height:15px;color:#c9a227;"></i>
+                        </div>
+                        <div>
+                            <div class="sec-title">{{ __('Basic Information') }}</div>
+                            <div class="sec-sub">{{ __('Name, contact & credentials') }}</div>
+                        </div>
+                    </div>
+                    <div class="sec-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">{{ __('Phone') }}</label>
-                                <input type="text" name="phone" value="{{ old('phone', $employee->phone) }}" class="form-control rounded-3 @error('phone') is-invalid @enderror">
-                                @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                <label class="f-label">{{ __('Name (English)') }} <span class="text-danger">*</span></label>
+                                <input type="text" name="name_en"
+                                       class="f-input form-control @error('name_en') is-invalid @enderror"
+                                       value="{{ old('name_en', $employee->name_en) }}">
+                                @error('name_en')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">{{ __('Email') }}</label>
-                                <input type="email" name="email" value="{{ old('email', $employee->email) }}" class="form-control rounded-3 @error('email') is-invalid @enderror">
+                                <label class="f-label">{{ __('Name (Arabic)') }}</label>
+                                <input type="text" name="name_ar" dir="rtl"
+                                       class="f-input form-control"
+                                       value="{{ old('name_ar', $employee->name_ar) }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="f-label">{{ __('Email') }}</label>
+                                <input type="email" name="email"
+                                       class="f-input form-control @error('email') is-invalid @enderror"
+                                       value="{{ old('email', $employee->email) }}">
                                 @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
-                        </div>
-                        <div class="row g-3 mt-0">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">{{ __('Role') }} <span class="text-danger">*</span></label>
-                                <select name="role_id" class="form-select rounded-3 @error('role_id') is-invalid @enderror" required>
-                                    <option value="">{{ __('Select role') }}</option>
-                                    @foreach ($roles as $role)
-                                        <option value="{{ $role->id }}" @selected((string) old('role_id', $employee->role_id) === (string) $role->id)>
-                                            {{ $roleLabel($role) }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('role_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                <label class="f-label">{{ __('Phone') }}</label>
+                                <input type="text" name="phone" class="f-input form-control"
+                                       value="{{ old('phone', $employee->phone) }}">
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">{{ __('New password') }}</label>
-                                <input type="password" name="password" autocomplete="new-password" class="form-control rounded-3 @error('password') is-invalid @enderror" placeholder="{{ __('Leave blank to keep current') }}">
-                                @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            <div class="col-12">
+                                <label class="f-label">
+                                    {{ __('New password') }}
+                                    <span style="font-weight:400;text-transform:none;letter-spacing:0;">({{ __('optional') }})</span>
+                                </label>
+                                <input type="password" name="password" class="f-input form-control"
+                                       placeholder="••••••••" autocomplete="new-password">
+                            </div>
+                            <div class="col-12">
+                                <label class="f-label">{{ __('Bio') }}</label>
+                                <textarea name="bio" class="f-input form-control" rows="3">{{ old('bio', $employee->bio) }}</textarea>
                             </div>
                         </div>
-                        <div class="mb-3 mt-3">
-                            <label class="form-label fw-semibold">{{ __('Bio') }}</label>
-                            <textarea name="bio" rows="3" class="form-control rounded-3 @error('bio') is-invalid @enderror">{{ old('bio', $employee->bio) }}</textarea>
-                            @error('bio')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="form-check form-switch mt-4">
-                            <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1" @checked(old('is_active', $employee->is_active))>
-                            <label class="form-check-label" for="is_active">{{ __('Employee is active') }}</label>
-                        </div>
-                        <div class="d-flex gap-2 mt-4 pt-2">
-                            <button type="submit" class="btn btn-primary rounded-pill px-4">{{ __('Update') }}</button>
-                            <a href="{{ route('owner.branches.employees.index', $branch) }}" class="btn btn-light rounded-pill px-4">{{ __('Cancel') }}</a>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 sec-card bk-a2">
+                <div class="card-body p-0">
+                    <div class="sec-header">
+                        <div class="sec-icon" style="background:rgba(250,112,154,.12);">
+                            <i data-feather="clock" style="width:15px;height:15px;color:#fa709a;"></i>
+                        </div>
+                        <div>
+                            <div class="sec-title">{{ __('Working Schedule') }}</div>
+                            <div class="sec-sub">{{ __('Set working days & hours') }}</div>
+                        </div>
+                    </div>
+                    <div class="sec-body">
+                        @php
+                            $dayNames = \App\Models\EmployeeWorkingHour::$dayNames;
+                            $locale   = app()->getLocale();
+                        @endphp
+                        <div class="d-flex flex-column gap-2">
+                            @foreach($dayNames as $dayNum => $names)
+                            @php
+                                $saved     = $workingHours->get($dayNum);
+                                $oldRow    = old("working_hours.$dayNum");
+                                $isWorking = $oldRow ? !empty($oldRow['is_working']) : ($saved?->is_working ?? false);
+                                $startTime = $oldRow['start_time'] ?? ($saved?->start_time ?? '09:00');
+                                $endTime   = $oldRow['end_time'] ?? ($saved?->end_time ?? '17:00');
+                            @endphp
+                            <div class="day-pill {{ $isWorking ? 'active' : '' }}" id="pill-{{ $dayNum }}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="day-name">{{ $locale==='ar' ? $names['ar'] : $names['en'] }}</span>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input wh-toggle" type="checkbox"
+                                               name="working_hours[{{ $dayNum }}][is_working]"
+                                               value="1" id="wt_{{ $dayNum }}"
+                                               {{ $isWorking ? 'checked' : '' }}>
+                                    </div>
+                                </div>
+                                <div class="day-times" id="times-{{ $dayNum }}" style="{{ $isWorking ? '' : 'display:none;' }}">
+                                    <input type="time" name="working_hours[{{ $dayNum }}][start_time]"
+                                           value="{{ $startTime }}" {{ !$isWorking ? 'disabled' : '' }}>
+                                    <span class="sep">→</span>
+                                    <input type="time" name="working_hours[{{ $dayNum }}][end_time]"
+                                           value="{{ $endTime }}" {{ !$isWorking ? 'disabled' : '' }}>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Social Links --}}
+            <div class="card border-0 sec-card bk-a2">
+                <div class="card-body p-0">
+                    <div class="sec-header">
+                        <div class="sec-icon" style="background:rgba(99,102,241,.15);">
+                            <i data-feather="share-2" style="width:15px;height:15px;color:#6366f1;"></i>
+                        </div>
+                        <div>
+                            <div class="sec-title">{{ __('Social Media Links') }}</div>
+                            <div class="sec-sub">{{ __('Personal accounts (optional)') }}</div>
+                        </div>
+                    </div>
+                    @include('partials.social-links-form', [
+                        'savedLinks'  => $socialLinks,
+                        'inputPrefix' => 'social_links',
+                        'accentColor' => '#c9a227',
+                    ])
+                </div>
+            </div>
+
+            <div class="card border-0 sec-card bk-a3">
+                <div class="card-body" style="padding:16px 20px;">
+                    <label class="toggle-row" for="is_active">
+                        <div class="flex-grow-1">
+                            <div class="sec-title">{{ __('Active Employee') }}</div>
+                            <div class="sec-sub">{{ __('Can receive bookings') }}</div>
+                        </div>
+                        <input type="checkbox" class="form-check-input" id="is_active" name="is_active" value="1"
+                               {{ old('is_active', $employee->is_active) ? 'checked' : '' }}
+                               style="width:42px;height:22px;cursor:pointer;flex-shrink:0;">
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit-main bk-a4">
+                <i data-feather="save" style="width:15px;height:15px;"></i>
+                {{ __('Update Employee') }}
+            </button>
+        </div>
+
     </div>
+    </form>
 </div>
+
+@push('scripts')
+<script>
+document.querySelectorAll('.wh-toggle').forEach(t => {
+    t.addEventListener('change', function () {
+        const n = this.id.split('_')[1];
+        document.getElementById('pill-' + n).classList.toggle('active', this.checked);
+        const times = document.getElementById('times-' + n);
+        times.style.display = this.checked ? 'flex' : 'none';
+        times.querySelectorAll('input').forEach(i => i.disabled = !this.checked);
+    });
+});
+</script>
+@endpush
 @endsection

@@ -1,181 +1,288 @@
 @extends('owner.dashboard')
+
+@push('owner-styles')
+<style>
+.emp-form-hero {
+    background: linear-gradient(135deg, #c9a227 0%, #a07d10 100%);
+    border-radius: 20px; padding: 26px 30px;
+    margin-bottom: 24px; color: #000;
+    position: relative; overflow: hidden;
+}
+.emp-form-hero::before {
+    content: ''; position: absolute; top: -50px; right: -50px;
+    width: 180px; height: 180px; border-radius: 50%;
+    background: rgba(255,255,255,.1); pointer-events: none;
+}
+[dir="rtl"] .emp-form-hero::before { right: auto; left: -50px; }
+
+.sec-card  { border-radius: 16px !important; margin-bottom: 18px; overflow: hidden; }
+.sec-header {
+    padding: 14px 20px 13px;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+    display: flex; align-items: center; gap: 10px;
+}
+.bk-theme-light .sec-header { border-bottom-color: rgba(0,0,0,.07); }
+.sec-icon  { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sec-body  { padding: 18px 20px; }
+.sec-title { font-weight: 700; font-size: 13px; }
+.sec-sub   { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 1px; }
+.bk-theme-light .sec-sub { color: rgba(0,0,0,.45); }
+
+.f-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    color: rgba(255,255,255,.5); margin-bottom: 5px; display: block;
+}
+.bk-theme-light .f-label { color: rgba(0,0,0,.5); }
+.f-input {
+    width: 100%; background: rgba(255,255,255,.05); border: 1.5px solid rgba(255,255,255,.1);
+    border-radius: 11px; padding: 9px 13px; font-size: 13px; color: inherit;
+    transition: border-color .2s, background .2s, box-shadow .2s; outline: none;
+}
+.f-input::placeholder { color: rgba(255,255,255,.25); }
+.f-input:focus { border-color: #c9a227; background: rgba(201,162,39,.07); box-shadow: 0 0 0 3px rgba(201,162,39,.15); }
+.bk-theme-light .f-input { background: #f8f9fa; border-color: #dee2e6; color: #212529; }
+.bk-theme-light .f-input::placeholder { color: rgba(0,0,0,.3); }
+.bk-theme-light .f-input:focus { background: #fff; border-color: #c9a227; box-shadow: 0 0 0 3px rgba(201,162,39,.12); }
+.f-input.is-invalid { border-color: #f5576c !important; }
+
+/* Employee block separator */
+.emp-block { border-bottom: 1px solid rgba(255,255,255,.07); padding-bottom: 22px; margin-bottom: 22px; }
+.bk-theme-light .emp-block { border-bottom-color: rgba(0,0,0,.07); }
+.emp-block:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+.emp-block-num {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: rgba(201,162,39,.2); color: #c9a227;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px; flex-shrink: 0;
+}
+.bk-theme-light .emp-block-num { background: rgba(201,162,39,.12); }
+
+/* Day pills */
+.day-pill { border-radius: 11px; border: 1.5px solid rgba(255,255,255,.09); padding: 11px 13px; transition: all .2s; background: rgba(255,255,255,.03); }
+.bk-theme-light .day-pill { border-color: #e8ecf1; background: #fafbfc; }
+.day-pill.active { border-color: rgba(201,162,39,.5); background: rgba(201,162,39,.07); }
+.bk-theme-light .day-pill.active { border-color: #c9a227; background: rgba(201,162,39,.06); }
+.day-name { font-weight: 700; font-size: 12px; }
+.day-times { display: flex; align-items: center; gap: 5px; margin-top: 9px; }
+.day-times input {
+    flex: 1; border: 1.5px solid rgba(255,255,255,.1); border-radius: 9px; padding: 5px 7px;
+    font-size: 12px; text-align: center; background: rgba(255,255,255,.05); color: inherit; outline: none;
+}
+.day-times input:focus { border-color: #c9a227; }
+.day-times input:disabled { opacity: .3; cursor: not-allowed; }
+.bk-theme-light .day-times input { background: #fff; border-color: #dee2e6; color: #212529; }
+.day-times .sep { color: rgba(255,255,255,.3); font-size: 11px; flex-shrink: 0; }
+.bk-theme-light .day-times .sep { color: rgba(0,0,0,.3); }
+
+.toggle-row {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(255,255,255,.03); border-radius: 12px;
+    border: 1.5px solid rgba(255,255,255,.08); padding: 12px 14px; cursor: pointer;
+}
+.bk-theme-light .toggle-row { background: #f8f9fa; border-color: #dee2e6; }
+
+.btn-add-more {
+    width: 100%; border: 1.5px dashed rgba(255,255,255,.15); background: rgba(255,255,255,.02);
+    border-radius: 12px; padding: 10px; color: rgba(255,255,255,.5);
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-add-more:hover { border-color: #c9a227; color: #c9a227; background: rgba(201,162,39,.05); }
+.bk-theme-light .btn-add-more { border-color: #dee2e6; color: rgba(0,0,0,.4); background: transparent; }
+.bk-theme-light .btn-add-more:hover { border-color: #c9a227; color: #c9a227; }
+
+.btn-remove-emp {
+    border: none; background: transparent; color: rgba(255,255,255,.3);
+    cursor: pointer; border-radius: 7px; padding: 4px 8px;
+    transition: all .2s; font-size: 12px;
+}
+.btn-remove-emp:hover { background: rgba(245,87,108,.12); color: #f5576c; }
+.bk-theme-light .btn-remove-emp { color: rgba(0,0,0,.3); }
+
+.btn-submit-main {
+    background: linear-gradient(135deg, #c9a227, #f4a642);
+    color: #000; border: none; border-radius: 13px;
+    padding: 12px 36px; font-weight: 700; font-size: 14px;
+    cursor: pointer; box-shadow: 0 4px 18px rgba(201,162,39,.3);
+    transition: opacity .2s, transform .15s;
+}
+.btn-submit-main:hover { opacity: .9; transform: translateY(-1px); }
+</style>
+@endpush
+
 @section('content')
 <div class="page-content">
-    <div class="mb-4">
-        <h4 class="mb-2">{{ __('Add employees') }} — {{ $branch->localizedName() }}</h4>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{{ route('owner.dashboard') }}">{{ __('Dashboard') }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('owner.branches.index') }}">{{ __('Branches') }}</a></li>
-                @unless ($wizard)
-                    <li class="breadcrumb-item"><a href="{{ route('owner.branches.employees.index', $branch) }}">{{ $branch->localizedName() }}</a></li>
-                @endunless
-                <li class="breadcrumb-item active">{{ __('Create') }}</li>
-            </ol>
-        </nav>
-        <p class="text-muted small mt-2 mb-0">
-            {{ __('Company') }}: <strong>{{ $branch->company?->localizedName() }}</strong>
-        </p>
+
+    <div class="emp-form-hero bk-a1">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 position-relative" style="z-index:1;">
+            <div>
+                <nav aria-label="breadcrumb" class="mb-2">
+                    <ol class="breadcrumb mb-0" style="--bs-breadcrumb-divider-color:rgba(0,0,0,.4);">
+                        <li class="breadcrumb-item">
+                            <a href="{{ route('owner.branches.index') }}" class="text-decoration-none" style="color:rgba(0,0,0,.6);font-size:13px;">{{ __('Branches') }}</a>
+                        </li>
+                        @unless($wizard)
+                        <li class="breadcrumb-item">
+                            <a href="{{ route('owner.branches.employees.index', $branch) }}" class="text-decoration-none" style="color:rgba(0,0,0,.6);font-size:13px;">{{ $branch->localizedName() }}</a>
+                        </li>
+                        @endunless
+                        <li class="breadcrumb-item active" style="color:rgba(0,0,0,.5);font-size:13px;">{{ __('New Employee') }}</li>
+                    </ol>
+                </nav>
+                <h3 class="fw-bold mb-0" style="font-family:'Poppins',sans-serif;">{{ __('Add employees') }} — {{ $branch->localizedName() }}</h3>
+            </div>
+            @unless($wizard)
+            <a href="{{ route('owner.branches.employees.index', $branch) }}"
+               style="background:rgba(0,0,0,.15); color:#000; border:1.5px solid rgba(0,0,0,.25); font-weight:600; font-size:13px;"
+               class="btn btn-sm rounded-pill px-3">
+                <i data-feather="arrow-left" style="width:13px;height:13px;"></i>
+                <span class="{{ app()->getLocale()==='ar' ? 'me-1' : 'ms-1' }}">{{ __('Back') }}</span>
+            </a>
+            @endunless
+        </div>
     </div>
 
     @include('owner.partials.flash')
 
     <div class="row justify-content-center">
-        <div class="col-lg-9">
-            <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-body p-4 p-md-5">
-                    @if ($wizard)
-                        @include('owner.branches.partials.wizard-steps', ['currentStep' => 3])
-                    @endif
+        <div class="col-xl-10">
 
-                    <p class="text-muted mb-4">{{ __('Add one or more employees. Use the button below to add another form.') }}</p>
+            @if($wizard)
+                @include('owner.branches.partials.wizard-steps', ['currentStep' => 3])
+            @endif
 
-                    @error('employees')
-                        <div class="alert alert-danger rounded-3">{{ $message }}</div>
-                    @enderror
+            <form method="post" action="{{ route('owner.branches.employees.store', $branch) }}" id="employees-form">
+                @csrf
+                @if($wizard)<input type="hidden" name="wizard" value="1">@endif
 
-                    <form method="post" action="{{ route('owner.branches.employees.store', $branch) }}" id="employees-form">
-                        @csrf
-                        @if ($wizard)
-                            <input type="hidden" name="wizard" value="1">
-                        @endif
+                @error('employees')
+                    <div class="alert alert-danger rounded-3 mb-3">{{ $message }}</div>
+                @enderror
 
-                        <div id="employee-forms">
-                            @php
-                                $rows = old('employees', [[]]);
-                            @endphp
-                            @foreach ($rows as $index => $row)
-                                @include('owner.employees.partials.form-block', [
-                                    'index' => $index,
-                                    'row' => is_array($row) ? $row : [],
-                                    'roles' => $roles,
-                                ])
-                            @endforeach
+                <div class="card border-0 sec-card bk-a2">
+                    <div class="card-body p-0">
+                        <div class="sec-header">
+                            <div class="sec-icon" style="background:rgba(201,162,39,.15);">
+                                <i data-feather="users" style="width:15px;height:15px;color:#c9a227;"></i>
+                            </div>
+                            <div>
+                                <div class="sec-title">{{ __('Basic Information') }}</div>
+                                <div class="sec-sub">{{ __('Add one or more employees. Use the button below to add another form.') }}</div>
+                            </div>
                         </div>
-
-                        <button type="button" class="btn btn-outline-primary rounded-pill w-100 mb-4" id="add-employee-btn">
-                            <i data-feather="plus" style="width:16px;height:16px;"></i>
-                            {{ __('Add another employee') }}
-                        </button>
-                    </form>
-
-                    <div class="d-flex justify-content-between gap-2 pt-3 border-top flex-wrap">
-                        @if ($wizard)
-                            <form method="post" action="{{ route('owner.branches.employees.skip', $branch) }}" class="d-inline">
-                                @csrf
-                                <button type="submit" class="btn btn-light rounded-pill px-4">{{ __('Skip for now') }}</button>
-                            </form>
-                            <button type="submit" form="employees-form" class="btn btn-primary rounded-pill px-4">
-                                <i data-feather="check" class="me-1" style="width:16px;height:16px;"></i>
-                                {{ __('Save & finish') }}
+                        <div class="sec-body">
+                            <div id="employee-forms">
+                                @php $rows = old('employees', [[]]); @endphp
+                                @foreach($rows as $index => $row)
+                                    @include('owner.employees.partials.form-block', [
+                                        'index' => $index,
+                                        'row'   => is_array($row) ? $row : [],
+                                    ])
+                                @endforeach
+                            </div>
+                            <button type="button" class="btn-add-more mt-2" id="add-employee-btn">
+                                <i data-feather="plus" style="width:14px;height:14px;"></i>
+                                {{ __('Add another employee') }}
                             </button>
-                        @else
-                            <a href="{{ route('owner.branches.employees.index', $branch) }}" class="btn btn-light rounded-pill px-4">{{ __('Cancel') }}</a>
-                            <button type="submit" form="employees-form" class="btn btn-primary rounded-pill px-4">{{ __('Save all') }}</button>
-                        @endif
+                        </div>
                     </div>
                 </div>
-            </div>
+
+                <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                    @if($wizard)
+                        <form method="post" action="{{ route('owner.branches.employees.skip', $branch) }}">
+                            @csrf
+                            <button type="submit" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.06); border:1.5px solid rgba(255,255,255,.12); font-size:13px;">{{ __('Skip for now') }}</button>
+                        </form>
+                        <button type="submit" form="employees-form" class="btn-submit-main">
+                            <i data-feather="check" style="width:14px;height:14px;" class="{{ app()->getLocale()==='ar' ? 'ms-2' : 'me-2' }}"></i>
+                            {{ __('Save & finish') }}
+                        </button>
+                    @else
+                        <a href="{{ route('owner.branches.employees.index', $branch) }}"
+                           class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.06); border:1.5px solid rgba(255,255,255,.12); font-size:13px;">{{ __('Cancel') }}</a>
+                        <button type="submit" form="employees-form" class="btn-submit-main">
+                            <i data-feather="save" style="width:14px;height:14px;" class="{{ app()->getLocale()==='ar' ? 'ms-2' : 'me-2' }}"></i>
+                            {{ __('Save all') }}
+                        </button>
+                    @endif
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
 <template id="employee-block-template">
-    @include('owner.employees.partials.form-block', [
-        'index' => '__INDEX__',
-        'row' => [],
-        'roles' => $roles,
-    ])
+    @include('owner.employees.partials.form-block', ['index' => '__INDEX__', 'row' => []])
 </template>
 
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    if (typeof window.feather !== 'undefined') {
-        window.feather.replace();
-    }
-
-    var container = document.getElementById('employee-forms');
-    var template = document.getElementById('employee-block-template');
-    var addBtn = document.getElementById('add-employee-btn');
-    var form = document.getElementById('employees-form');
-
-    if (!container || !template || !addBtn) {
-        return;
-    }
+    feather.replace();
+    const container = document.getElementById('employee-forms');
+    const template  = document.getElementById('employee-block-template');
+    const addBtn    = document.getElementById('add-employee-btn');
 
     function nextIndex() {
-        var blocks = container.querySelectorAll('.employee-block');
-        var max = -1;
-        blocks.forEach(function (block) {
-            var idx = parseInt(block.getAttribute('data-index'), 10);
-            if (!isNaN(idx) && idx > max) {
-                max = idx;
-            }
+        let max = -1;
+        container.querySelectorAll('.employee-block').forEach(b => {
+            const i = parseInt(b.dataset.index, 10);
+            if (!isNaN(i) && i > max) max = i;
         });
         return max + 1;
     }
 
-    function reindexBlocks() {
-        var blocks = container.querySelectorAll('.employee-block');
-        blocks.forEach(function (block, i) {
-            block.setAttribute('data-index', i);
-            var badge = block.querySelector('.js-employee-number');
-            if (badge) {
-                badge.textContent = String(i + 1);
-            }
-            block.querySelectorAll('[name]').forEach(function (input) {
-                input.name = input.name.replace(/employees\[\d+\]/, 'employees[' + i + ']');
+    function reindex() {
+        container.querySelectorAll('.employee-block').forEach((block, i) => {
+            block.dataset.index = i;
+            const badge = block.querySelector('.js-employee-number');
+            if (badge) badge.textContent = String(i + 1);
+            block.querySelectorAll('[name]').forEach(el => {
+                el.name = el.name.replace(/employees\[\d+\]/, `employees[${i}]`);
             });
-            block.querySelectorAll('[id]').forEach(function (el) {
-                if (el.id && el.id.indexOf('employee-active-') === 0) {
-                    el.id = 'employee-active-' + i;
-                }
-            });
-            block.querySelectorAll('label[for]').forEach(function (label) {
-                if (label.getAttribute('for') && label.getAttribute('for').indexOf('employee-active-') === 0) {
-                    label.setAttribute('for', 'employee-active-' + i);
-                }
-            });
-            var removeBtn = block.querySelector('.js-remove-employee');
-            if (removeBtn) {
-                removeBtn.hidden = blocks.length <= 1;
-            }
+            const rem = block.querySelector('.js-remove-employee');
+            if (rem) rem.hidden = container.querySelectorAll('.employee-block').length <= 1;
         });
-        if (typeof window.feather !== 'undefined') {
-            window.feather.replace();
-        }
+        feather.replace();
     }
 
-    addBtn.addEventListener('click', function () {
-        var index = nextIndex();
-        var html = template.innerHTML.replace(/__INDEX__/g, String(index));
-        var wrapper = document.createElement('div');
-        wrapper.innerHTML = html.trim();
-        var block = wrapper.firstElementChild;
-        container.appendChild(block);
-        reindexBlocks();
+    addBtn.addEventListener('click', () => {
+        const html = template.innerHTML.replace(/__INDEX__/g, String(nextIndex()));
+        const div  = document.createElement('div');
+        div.innerHTML = html.trim();
+        container.appendChild(div.firstElementChild);
+        reindex();
+        // Init new toggles
+        initToggles(container.lastElementChild);
     });
 
-    container.addEventListener('click', function (event) {
-        var btn = event.target.closest('.js-remove-employee');
-        if (!btn) {
-            return;
-        }
-        var block = btn.closest('.employee-block');
-        if (block && container.querySelectorAll('.employee-block').length > 1) {
-            block.remove();
-            reindexBlocks();
+    container.addEventListener('click', e => {
+        const btn = e.target.closest('.js-remove-employee');
+        if (btn && container.querySelectorAll('.employee-block').length > 1) {
+            btn.closest('.employee-block').remove();
+            reindex();
         }
     });
 
-    if (form) {
-        form.addEventListener('submit', function () {
-            reindexBlocks();
+    function initToggles(scope) {
+        scope = scope || document;
+        scope.querySelectorAll('.wh-toggle').forEach(t => {
+            t.addEventListener('change', function () {
+                const n = this.id.split('_').slice(-1)[0];
+                const pill  = document.getElementById('pill-' + n);
+                const times = document.getElementById('times-' + n);
+                if (!pill || !times) return;
+                pill.classList.toggle('active', this.checked);
+                times.style.display = this.checked ? 'flex' : 'none';
+                times.querySelectorAll('input').forEach(i => i.disabled = !this.checked);
+            });
         });
     }
 
-    reindexBlocks();
+    initToggles();
+    document.getElementById('employees-form').addEventListener('submit', reindex);
+    reindex();
 });
 </script>
 @endpush

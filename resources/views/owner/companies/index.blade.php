@@ -20,10 +20,34 @@
 
     @include('owner.partials.flash')
 
+    @include('owner.partials._search-sort-bar', [
+        'dtTableId'       => 'dt-companies',
+        'sortField'       => $sortField,
+        'sortDir'         => $sortDir,
+        'extraFilterKeys' => ['status', 'category_id'],
+        'sortOptions'     => [
+            ['field' => 'created_at', 'label' => __('تاريخ الإضافة')],
+            ['field' => 'name',       'label' => __('الاسم')],
+            ['field' => 'status',     'label' => __('الحالة')],
+        ],
+        'extraFilters' => '
+            <select name="status" class="bk-ssb-select" style="min-width:130px;" onchange="document.getElementById(\'bk-sf-form\').submit()">
+                <option value="">' . __('كل الحالات') . '</option>
+                <option value="pending"   ' . ($filterStatus === 'pending'   ? 'selected' : '') . '>' . __('قيد الانتظار') . '</option>
+                <option value="active"    ' . ($filterStatus === 'active'    ? 'selected' : '') . '>' . __('نشط')          . '</option>
+                <option value="suspended" ' . ($filterStatus === 'suspended' ? 'selected' : '') . '>' . __('موقوف')        . '</option>
+            </select>
+            <select name="category_id" class="bk-ssb-select" style="min-width:140px;" onchange="document.getElementById(\'bk-sf-form\').submit()">
+                <option value="">' . __('كل الفئات') . '</option>
+                ' . $categories->map(fn($c) => '<option value="' . $c->id . '" ' . ((string)$filterCategoryId === (string)$c->id ? 'selected' : '') . '>' . e($c->localizedName()) . '</option>')->implode('') . '
+            </select>
+        ',
+    ])
+
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0" id="dt-companies">
                     <thead class="table-light">
                         <tr>
                             <th class="ps-4">{{ __('Company') }}</th>
@@ -121,12 +145,21 @@
                 </table>
             </div>
         </div>
+        @if($companies->hasPages())
+            <div class="card-footer bg-transparent border-0 py-3">{{ $companies->links() }}</div>
+        @endif
     </div>
 
     @include('owner.companies.create', ['categories' => $categories])
     @include('owner.companies.edit', ['categories' => $categories])
     @include('owner.companies.delete')
 </div>
+
+@include('owner.partials._datatable', [
+    'tableId'    => 'dt-companies',
+    'exportName' => 'Companies',
+    'noSortCols' => [4, -1],
+])
 
 @push('scripts')
     @include('owner.partials.campanias-form-validation-script', [

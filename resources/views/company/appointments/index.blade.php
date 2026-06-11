@@ -27,6 +27,8 @@
     --cal-scroll:       rgba(255,255,255,.08);
     --cal-radius:       18px;
     --cal-ev-radius:    9px;
+    --sf-closed-bg:     rgba(102,126,234,.10);
+    --sf-closed-stripe: rgba(102,126,234,.18);
 }
 
 .bk-theme-light {
@@ -48,12 +50,134 @@
     --cal-slot-border:  rgba(0,0,0,.05);
     --cal-pill-active:  rgba(109,40,217,.08);
     --cal-scroll:       rgba(0,0,0,.08);
+    --sf-closed-bg:     rgba(102,126,234,.07);
+    --sf-closed-stripe: rgba(102,126,234,.14);
 }
 
 /* ══════════════════════════════════════════
    PAGE WRAPPER
 ══════════════════════════════════════════ */
 .bk-appt-page { padding-bottom: 40px; }
+
+/* ══════════════════════════════════════════
+   STAFF VIEW — BOOKSY STYLE
+══════════════════════════════════════════ */
+#bk-staff-shell {
+    font-family: inherit;
+}
+.sf-emp-header {
+    height: 70px;
+    border-bottom: 1px solid var(--cal-border);
+    background: var(--cal-hdr-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px 10px;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+.sf-emp-av {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .72rem;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+}
+.sf-emp-name {
+    font-size: .7rem;
+    font-weight: 700;
+    color: var(--cal-text);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+    line-height: 1.2;
+}
+.sf-emp-hours {
+    font-size: .6rem;
+    color: var(--cal-text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+}
+/* closed-hours — diagonal #667eea stripes */
+.sf-closed-zone {
+    position: absolute;
+    left: 0; right: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-color: var(--sf-closed-bg);
+    background-image: repeating-linear-gradient(
+        135deg,
+        var(--sf-closed-stripe) 0px,
+        var(--sf-closed-stripe) 2px,
+        transparent            2px,
+        transparent            10px
+    );
+}
+
+/* 15-min sub-tick line */
+.sf-tick-15 {
+    position: absolute;
+    left: 0; right: 0;
+    height: 0;
+    border-top: 1px solid var(--cal-border2);
+    pointer-events: none;
+}
+/* 30-min half-hour line — slightly more visible */
+.sf-tick-30 {
+    position: absolute;
+    left: 8%; right: 0;
+    height: 0;
+    border-top: 1px dashed var(--cal-border);
+    pointer-events: none;
+}
+/* 45-min sub-tick line */
+.sf-tick-45 {
+    position: absolute;
+    left: 0; right: 0;
+    height: 0;
+    border-top: 1px solid var(--cal-border2);
+    pointer-events: none;
+}
+/* appt block hover */
+.sf-appt-block:hover {
+    filter: brightness(1.1);
+    transform: scale(.985);
+    transition: filter .12s, transform .12s;
+    z-index: 10 !important;
+}
+
+/* FullCalendar — closed/outside-hours: diagonal #667eea stripes */
+#bk-cal-shell .fc-timegrid-col-bg .fc-bg-event {
+    opacity: 1 !important;
+    background-color: rgba(102,126,234,.10) !important;
+    background-image: repeating-linear-gradient(
+        135deg,
+        rgba(102,126,234,.20) 0px,
+        rgba(102,126,234,.20) 2px,
+        transparent           2px,
+        transparent           10px
+    ) !important;
+}
+.bk-theme-light #bk-cal-shell .fc-timegrid-col-bg .fc-bg-event {
+    background-color: rgba(102,126,234,.07) !important;
+    background-image: repeating-linear-gradient(
+        135deg,
+        rgba(102,126,234,.14) 0px,
+        rgba(102,126,234,.14) 2px,
+        transparent           2px,
+        transparent           10px
+    ) !important;
+}
 
 /* ══════════════════════════════════════════
    TOP BAR
@@ -256,12 +380,13 @@
     background: rgba(255,255,255,.5);
     border-radius: 9px 0 0 9px;
 }
-#bk-cal-shell .fc-event-main { padding: 6px 8px 5px 11px !important; }
-#bk-cal-shell .ev-name { font-size: .73rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#bk-cal-shell .ev-svc  { font-size: .65rem; opacity: .82; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+#bk-cal-shell .fc-event-main { padding: 5px 7px 4px 11px !important; }
+#bk-cal-shell .ev-time { font-size: .56rem; font-weight: 600; color: rgba(255,255,255,.82); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; margin-bottom: 1px; }
+#bk-cal-shell .ev-name { font-size: .73rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+#bk-cal-shell .ev-svc  { font-size: .63rem; color: rgba(255,255,255,.88); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; line-height: 1.3; }
 #bk-cal-shell .ev-emp  {
     display: inline-flex; align-items: center; gap: 4px;
-    font-size: .6rem; margin-top: 3px;
+    font-size: .58rem; margin-top: 3px;
     background: rgba(255,255,255,.18); border-radius: 8px;
     padding: 1px 6px; width: fit-content; max-width: 100%;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -495,14 +620,17 @@
     <div id="view-staff" class="d-none">
         <div id="bk-staff-shell" style="background:var(--cal-surface);border-radius:var(--cal-radius);border:1px solid var(--cal-border);box-shadow:var(--cal-shadow);overflow:hidden;">
 
-            {{-- Staff nav --}}
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 18px 11px;border-bottom:1px solid var(--cal-border);background:var(--cal-toolbar-bg);flex-wrap:wrap;gap:8px;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <button id="sf-prev" style="background:var(--cal-surface2);border:1px solid var(--cal-border);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--cal-text);font-size:1rem;">‹</button>
-                    <span id="sf-title" style="font-size:.95rem;font-weight:800;color:var(--cal-text);"></span>
-                    <button id="sf-next" style="background:var(--cal-surface2);border:1px solid var(--cal-border);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--cal-text);font-size:1rem;">›</button>
+            {{-- Staff nav — Booksy style ── --}}
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 10px;border-bottom:1px solid var(--cal-border);background:var(--cal-toolbar-bg);flex-wrap:wrap;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <button id="sf-prev" style="background:var(--cal-surface2);border:1px solid var(--cal-border);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--cal-text);font-size:1.05rem;transition:background .12s;">‹</button>
+                    <div style="text-align:center;min-width:160px;">
+                        <div id="sf-title" style="font-size:.96rem;font-weight:800;color:var(--cal-text);line-height:1.25;"></div>
+                        <div id="sf-subtitle" style="font-size:.68rem;color:var(--cal-text-muted);font-weight:600;margin-top:1px;"></div>
+                    </div>
+                    <button id="sf-next" style="background:var(--cal-surface2);border:1px solid var(--cal-border);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--cal-text);font-size:1.05rem;transition:background .12s;">›</button>
                 </div>
-                <button id="sf-today" style="background:linear-gradient(135deg,#f97316,#ef4444);border:none;border-radius:18px;padding:5px 16px;font-size:.76rem;font-weight:800;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(249,115,22,.4);">
+                <button id="sf-today" style="background:linear-gradient(135deg,#f97316,#ef4444);border:none;border-radius:18px;padding:6px 18px;font-size:.76rem;font-weight:800;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(249,115,22,.4);">
                     {{ $isRtl ? 'اليوم' : 'Today' }}
                 </button>
             </div>
@@ -687,8 +815,13 @@ var calendar = new FullCalendar.Calendar(calEl, {
         var service = parts.slice(1).join(' · ') || props.service || '';
         var emp     = props.employee || '';
 
+        var tStart = arg.event.start ? _fmtTime(arg.event.start) : '';
+        var tEnd   = arg.event.end   ? _fmtTime(arg.event.end)   : '';
+        var tStr   = tStart + (tEnd ? ' – ' + tEnd : '');
+
         return {
-            html: '<div class="ev-name">' + _esc(name) + '</div>'
+            html: '<div class="ev-time">' + _esc(tStr) + '</div>'
+                + '<div class="ev-name">' + _esc(name) + '</div>'
                 + '<div class="ev-svc">'  + _esc(service) + '</div>'
                 + (emp ? '<div class="ev-emp"><span class="ev-emp-dot"></span>' + _esc(emp) + '</div>' : '')
         };
@@ -737,6 +870,7 @@ var calendar = new FullCalendar.Calendar(calEl, {
     },
 });
 calendar.render();
+window.bkCalendar = calendar; // expose for real-time updates via Reverb
 
 /* ════════════════════════════════
    POPUP
@@ -922,7 +1056,7 @@ var sfDate     = new Date();
 var sfLoaded   = false;
 
 var SF_EMP_COLORS = ['#7c3aed','#10b981','#f97316','#ef4444','#06b6d4','#ec4899','#f59e0b','#8b5cf6','#14b8a6','#a855f7'];
-var HOUR_S = 0, HOUR_E = 24, SLOT_H = 52; /* px per hour */
+var HOUR_S = 0, HOUR_E = 24, SLOT_H = 80; /* px per hour — gives ~20px per 15-min slot */
 
 var DAY_AR  = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 var DAY_EN  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -943,7 +1077,10 @@ function sfIsToday(d) {
 }
 
 function loadStaffView() {
-    document.getElementById('sf-title').textContent = sfFmtTitle(sfDate);
+    document.getElementById('sf-title').textContent = sfIsToday(sfDate)
+        ? (IS_RTL ? 'اليوم' : 'Today')
+        : sfFmtTitle(sfDate);
+    document.getElementById('sf-subtitle').textContent = sfFmtTitle(sfDate);
     var grid = document.getElementById('sf-grid');
     grid.innerHTML = '<div class="text-center py-5 w-100" style="color:var(--cal-text-muted);"><div class="spinner-border spinner-border-sm"></div></div>';
 
@@ -961,20 +1098,58 @@ function loadStaffView() {
 function renderStaffGrid(data) {
     var staff = data.staff || [];
     var appts = (data.appointments || []).filter(function(a){ return activeStatuses.includes(a.status); });
-    var totalH = HOUR_E - HOUR_S;
+
+    /* ── Compute visible hour range from staff working hours ── */
+    var minHour = 24, maxHour = 0;
+    staff.forEach(function(emp) {
+        if (emp.closedSlots && emp.closedSlots.length) {
+            /* infer open range: before first closed and after last closed */
+            var allMins = emp.closedSlots.map(function(cs){ return [cs.from, cs.to]; }).flat();
+            var empMin  = Math.min.apply(null, allMins) / 60;
+            var empMax  = Math.max.apply(null, allMins) / 60;
+            /* working hours = between the closed zones (simplification: just use boundaries) */
+            if (empMin < minHour) minHour = empMin;
+            if (empMax > maxHour) maxHour = empMax;
+        }
+    });
+    /* fallback: if no closed slots info, show 8 AM – 10 PM */
+    if (minHour >= maxHour) { minHour = 8; maxHour = 22; }
+    /* pad slightly + clamp */
+    minHour = Math.max(0,  Math.floor(minHour));
+    maxHour = Math.min(24, Math.ceil(maxHour));
+
+    var HOUR_S_LOCAL = minHour;
+    var HOUR_E_LOCAL = maxHour;
+    var totalH  = HOUR_E_LOCAL - HOUR_S_LOCAL;
     var totalPx = totalH * SLOT_H;
     var html = '';
 
-    /* ── Time column ── */
-    html += '<div style="flex-shrink:0;width:52px;border-' + (IS_RTL?'left':'right') + ':1px solid var(--cal-border);">';
-    html += '<div style="height:62px;border-bottom:1px solid var(--cal-border);background:var(--cal-hdr-bg);"></div>';
-    for (var h = HOUR_S; h < HOUR_E; h++) {
+    /* ── Time column: hour label + silent sub-tick lines ── */
+    /* Each hour = SLOT_H px, split into 4 × (SLOT_H/4) segments for :00/:15/:30/:45 */
+    var Q = SLOT_H / 4; /* quarter-hour height in px */
+    html += '<div style="flex-shrink:0;width:52px;border-' + (IS_RTL?'left':'right') + ':1px solid var(--cal-border);background:var(--cal-hdr-bg);position:relative;">';
+    html += '<div style="height:70px;border-bottom:1px solid var(--cal-border);"></div>';
+    for (var h = HOUR_S_LOCAL; h < HOUR_E_LOCAL; h++) {
         var h12 = h % 12 || 12;
         var ap  = h < 12 ? (IS_RTL?'ص':'AM') : (IS_RTL?'م':'PM');
-        html += '<div style="height:' + SLOT_H + 'px;border-bottom:1px solid var(--cal-border);display:flex;align-items:flex-start;justify-content:center;padding-top:4px;">'
-              + '<span style="font-size:.62rem;font-weight:700;color:var(--cal-text-muted);text-align:center;line-height:1.2;">' + h12 + '<br><small>' + ap + '</small></span>'
+        /* :00 — hour label spans full Q, vertically centred */
+        html += '<div style="height:' + Q + 'px;position:relative;border-top:1px solid var(--cal-border);">'
+              + '<span style="position:absolute;top:3px;' + (IS_RTL?'left':'right') + ':6px;'
+              + 'font-size:.62rem;font-weight:700;color:var(--cal-text-muted);line-height:1.15;text-align:' + (IS_RTL?'left':'right') + ';">'
+              + h12 + '<small style="font-size:.48rem;display:block;margin-top:1px;">' + ap + '</small></span>'
               + '</div>';
+        /* :15 — just a subtle line, no text */
+        html += '<div style="height:' + Q + 'px;border-top:1px solid var(--cal-border2);"></div>';
+        /* :30 — slightly more visible dashed, small "30" label */
+        html += '<div style="height:' + Q + 'px;position:relative;border-top:1px dashed var(--cal-border);">'
+              + '<span style="position:absolute;top:2px;' + (IS_RTL?'left':'right') + ':6px;'
+              + 'font-size:.45rem;color:var(--cal-text-muted);opacity:.6;">30</span>'
+              + '</div>';
+        /* :45 — subtle line, no text */
+        html += '<div style="height:' + Q + 'px;border-top:1px solid var(--cal-border2);"></div>';
     }
+    /* closing hour border */
+    html += '<div style="height:0;border-top:1px solid var(--cal-border);"></div>';
     html += '</div>';
 
     /* ── Employee columns ── */
@@ -987,51 +1162,70 @@ function renderStaffGrid(data) {
         var eColor   = SF_EMP_COLORS[idx % SF_EMP_COLORS.length];
         var empAppts = appts.filter(function(a){ return a.employeeId === emp.id; });
 
-        /* Get working hours for this employee's day */
-        var wh = emp.workingHours || null;
-
-        html += '<div style="flex:1;min-width:140px;border-' + (IS_RTL?'left':'right') + ':1px solid var(--cal-border);position:relative;">';
-
-        /* Header */
-        html += '<div style="height:62px;border-bottom:1px solid var(--cal-border);background:var(--cal-hdr-bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px;position:sticky;top:0;z-index:3;">';
-        html += '<div style="width:34px;height:34px;border-radius:50%;background:' + eColor + ';display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;color:#fff;box-shadow:0 3px 10px ' + eColor + '55;">' + _esc(emp.initials) + '</div>';
-        html += '<div style="font-size:.68rem;font-weight:700;color:var(--cal-text);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">' + _esc(emp.name) + '</div>';
-        html += '<div style="font-size:.6rem;color:var(--cal-text-muted);">' + empAppts.length + ' ' + (IS_RTL ? 'موعد' : 'appt') + '</div>';
-        html += '</div>';
-
-        /* Slots */
-        html += '<div style="position:relative;height:' + totalPx + 'px;">';
-
-        /* Hour lines */
-        for (var hh = 0; hh < totalH; hh++) {
-            html += '<div style="position:absolute;left:0;right:0;top:' + (hh*SLOT_H) + 'px;height:' + SLOT_H + 'px;border-bottom:1px solid var(--cal-border);"></div>';
-            html += '<div style="position:absolute;left:0;right:0;top:' + (hh*SLOT_H + SLOT_H/2) + 'px;border-bottom:1px dashed var(--cal-border2);pointer-events:none;"></div>';
+        /* Derive open hours label from closedSlots */
+        var openLabel = '';
+        if (emp.closedSlots && emp.closedSlots.length >= 2) {
+            /* assume first closedSlot = before work, last = after work */
+            var sorted = emp.closedSlots.slice().sort(function(a,b){ return a.from - b.from; });
+            var openStart = sorted[0].to;   /* end of morning closed zone */
+            var openEnd   = sorted[sorted.length-1].from; /* start of evening closed zone */
+            openLabel = _fmtMinutes(openStart) + ' – ' + _fmtMinutes(openEnd);
+        } else if (emp.workHoursLabel) {
+            openLabel = emp.workHoursLabel;
         }
 
-        /* Closed / outside-hours shading from working hours */
+        html += '<div style="flex:1;min-width:145px;border-' + (IS_RTL?'left':'right') + ':1px solid var(--cal-border);position:relative;">';
+
+        /* ── Employee header (Booksy style) ── */
+        html += '<div class="sf-emp-header">';
+        html += '<div class="sf-emp-av" style="background:' + eColor + ';box-shadow:0 3px 10px ' + eColor + '44;">'
+              + _esc(emp.initials) + '</div>';
+        html += '<div class="sf-emp-name">' + _esc(emp.name) + '</div>';
+        if (openLabel) {
+            html += '<div class="sf-emp-hours">' + openLabel + '</div>';
+        } else {
+            html += '<div class="sf-emp-hours" style="opacity:.6;">'
+                  + empAppts.length + ' ' + (IS_RTL ? 'موعد' : 'appts') + '</div>';
+        }
+        html += '</div>';
+
+        /* ── Grid body ── */
+        html += '<div style="position:relative;height:' + totalPx + 'px;">';
+
+        /* Grid lines matching time column: :00 solid, :15/:45 faint, :30 dashed */
+        var Qg = SLOT_H / 4;
+        for (var hh = 0; hh < totalH; hh++) {
+            var bt = hh * SLOT_H;
+            html += '<div style="position:absolute;left:0;right:0;top:' + bt + 'px;border-top:1px solid var(--cal-border);pointer-events:none;z-index:1;"></div>';
+            html += '<div style="position:absolute;left:0;right:0;top:' + (bt + Qg) + 'px;border-top:1px solid var(--cal-border2);pointer-events:none;z-index:1;"></div>';
+            html += '<div style="position:absolute;left:0;right:0;top:' + (bt + Qg*2) + 'px;border-top:1px dashed var(--cal-border);pointer-events:none;z-index:1;"></div>';
+            html += '<div style="position:absolute;left:0;right:0;top:' + (bt + Qg*3) + 'px;border-top:1px solid var(--cal-border2);pointer-events:none;z-index:1;"></div>';
+        }
+        html += '<div style="position:absolute;left:0;right:0;top:' + totalPx + 'px;border-top:1px solid var(--cal-border);pointer-events:none;z-index:1;"></div>';
+
+        /* ── Closed / outside-hours — Booksy-style diagonal stripes ── */
         if (emp.closedSlots) {
             emp.closedSlots.forEach(function(cs) {
-                var topPx = (cs.from - HOUR_S * 60) * (SLOT_H / 60);
+                var topPx = (cs.from - HOUR_S_LOCAL * 60) * (SLOT_H / 60);
                 var htPx  = (cs.to - cs.from) * (SLOT_H / 60);
                 if (topPx < 0) { htPx += topPx; topPx = 0; }
                 if (htPx > 0 && topPx < totalPx) {
-                    html += '<div style="position:absolute;left:0;right:0;top:' + topPx + 'px;height:' + htPx + 'px;background:repeating-linear-gradient(45deg,rgba(239,68,68,.04),rgba(239,68,68,.04) 4px,transparent 4px,transparent 12px);pointer-events:none;z-index:0;"></div>';
+                    html += '<div class="sf-closed-zone" style="top:' + topPx + 'px;height:' + htPx + 'px;"></div>';
                 }
             });
         }
 
-        /* Appointment blocks — compute from ISO string in browser local TZ */
+        /* ── Appointment blocks ── */
         empAppts.forEach(function(a) {
             var startD = a.startIso ? new Date(a.startIso) : null;
             var endD   = a.endIso   ? new Date(a.endIso)   : null;
             if (!startD) return;
             var startMin = startD.getHours() * 60 + startD.getMinutes();
             var endMin   = endD ? (endD.getHours() * 60 + endD.getMinutes()) : startMin + 30;
-            /* update labels to browser local TZ */
             a.startLabel = startD.toLocaleTimeString(IS_RTL?'ar-SA':'en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
             a.endLabel   = endD ? endD.toLocaleTimeString(IS_RTL?'ar-SA':'en-US',{hour:'2-digit',minute:'2-digit',hour12:true}) : '';
-            var topMin = startMin - HOUR_S * 60;
-            var durMin = Math.max(endMin - startMin, 20);
+            var topMin = startMin - HOUR_S_LOCAL * 60;
+            var durMin = Math.max(endMin - startMin, 15); /* min 15min height so label is readable */
             var topPx2 = topMin * (SLOT_H / 60);
             var htPx2  = durMin * (SLOT_H / 60);
             if (topPx2 < 0 || topPx2 >= totalPx) return;
@@ -1039,29 +1233,44 @@ function renderStaffGrid(data) {
 
             var dataAttr = 'data-appt=\'' + JSON.stringify(a).replace(/\\/g,'\\\\').replace(/'/g,'&#39;') + '\'';
 
+            /* Status color: fully opaque bg, white text, solid left accent */
+            var timeLabel = a.startLabel + ' – ' + a.endLabel;
+
             html += '<div class="sf-appt-block" ' + dataAttr + ' onclick="sfShowPopup(this,event)"'
-                  + ' style="position:absolute;left:3px;right:3px;top:' + topPx2 + 'px;height:' + htPx2 + 'px;'
-                  + 'background:' + a.color + ';border-radius:9px;padding:5px 8px;cursor:pointer;'
-                  + 'box-shadow:0 2px 8px ' + a.color + '55;overflow:hidden;z-index:1;'
-                  + 'border-left:3px solid rgba(255,255,255,.4);">'
-                  + '<div style="font-size:.72rem;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _esc(a.customer) + '</div>';
-            if (htPx2 > 38) {
-                html += '<div style="font-size:.63rem;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _esc(a.service) + '</div>';
-            }
-            if (htPx2 > 55) {
-                html += '<div style="font-size:.58rem;color:rgba(255,255,255,.7);margin-top:2px;">' + _esc(a.startLabel) + ' – ' + _esc(a.endLabel) + '</div>';
+                  + ' style="position:absolute;left:2px;right:2px;top:' + topPx2 + 'px;height:' + (htPx2 - 2) + 'px;'
+                  + 'background:' + a.color + ';border-radius:7px;padding:4px 7px 4px 9px;cursor:pointer;'
+                  + 'box-shadow:0 2px 10px ' + a.color + '55;overflow:hidden;z-index:2;'
+                  + 'border-left:3px solid rgba(255,255,255,.45);'
+                  + 'display:flex;flex-direction:column;justify-content:center;">';
+
+            /* ── Block content — always show time + name + service ── */
+            /* Row 1: time range */
+            html += '<div style="font-size:.55rem;font-weight:600;color:rgba(255,255,255,.82);'
+                  + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;margin-bottom:1px;">'
+                  + timeLabel + '</div>';
+            /* Row 2: customer name */
+            html += '<div style="font-size:.72rem;font-weight:800;color:#fff;'
+                  + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">'
+                  + _esc(a.customer) + '</div>';
+            /* Row 3: service — shown unless block is too short */
+            if (htPx2 >= 46) {
+                html += '<div style="font-size:.61rem;color:rgba(255,255,255,.88);'
+                      + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px;">'
+                      + _esc(a.service) + '</div>';
             }
             html += '</div>';
         });
 
-        /* Now indicator */
+        /* ── Now indicator ── */
         if (sfIsToday(sfDate)) {
-            var now2 = new Date();
-            var nowMin2 = now2.getHours() * 60 + now2.getMinutes() - HOUR_S * 60;
+            var now2    = new Date();
+            var nowMin2 = now2.getHours() * 60 + now2.getMinutes() - HOUR_S_LOCAL * 60;
             if (nowMin2 > 0 && nowMin2 < totalH * 60) {
                 var nowPx2 = nowMin2 * (SLOT_H / 60);
-                html += '<div style="position:absolute;left:0;right:0;top:' + nowPx2 + 'px;height:2px;background:var(--cal-now-color);z-index:4;box-shadow:0 0 6px var(--cal-now-color);pointer-events:none;">'
-                      + '<div style="position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--cal-now-color);"></div></div>';
+                html += '<div style="position:absolute;left:0;right:0;top:' + nowPx2 + 'px;height:2px;'
+                      + 'background:var(--cal-now-color);z-index:4;box-shadow:0 0 5px var(--cal-now-color);pointer-events:none;">'
+                      + '<div style="position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--cal-now-color);"></div>'
+                      + '</div>';
             }
         }
 
@@ -1070,12 +1279,23 @@ function renderStaffGrid(data) {
 
     document.getElementById('sf-grid').innerHTML = html;
 
-    /* Scroll to 8 AM or current time */
+    /* Update subtitle with business hours range */
+    var subEl = document.getElementById('sf-subtitle');
+    if (subEl) {
+        var rLabel = _fmtMinutes(HOUR_S_LOCAL * 60) + ' – ' + _fmtMinutes(HOUR_E_LOCAL * 60);
+        if (sfIsToday(sfDate)) {
+            subEl.textContent = rLabel;
+        } else {
+            subEl.textContent = sfFmtTitle(sfDate);
+        }
+    }
+
+    /* Scroll to business start or current time */
     var container = document.getElementById('sf-grid-wrap');
-    var scrollTo = (8 - HOUR_S) * SLOT_H - 20;
+    var scrollTo = 0;
     if (sfIsToday(sfDate)) {
         var cur = new Date();
-        scrollTo = Math.max(0, (cur.getHours() - HOUR_S - 1) * SLOT_H);
+        scrollTo = Math.max(0, (cur.getHours() - HOUR_S_LOCAL - 1) * SLOT_H);
     }
     container.scrollTop = scrollTo;
 }
@@ -1146,6 +1366,13 @@ function _hashStr(s) {
     var h = 0;
     for (var i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
     return h;
+}
+function _fmtMinutes(totalMin) {
+    var h   = Math.floor(totalMin / 60);
+    var m   = totalMin % 60;
+    var h12 = h % 12 || 12;
+    var ap  = h < 12 ? (IS_RTL ? 'ص' : 'AM') : (IS_RTL ? 'م' : 'PM');
+    return h12 + (m ? ':' + String(m).padStart(2,'0') : '') + ' ' + ap;
 }
 
 })();

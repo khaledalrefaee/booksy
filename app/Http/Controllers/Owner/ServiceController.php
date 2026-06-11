@@ -10,24 +10,57 @@ use App\Models\Branch;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ServiceController extends Controller
 {
     use ResolvesOwnerCompany;
 
-    public function index(Branch $branch): View
+    public function index(Request $request, Branch $branch): View
     {
         $this->authorizeBranch($branch);
 
-        $services = $branch->services()
-            ->with('serviceCategory')
-            ->orderByLocalizedName()
-            ->get();
+        $q                    = trim($request->input('q', ''));
+        $sortField            = in_array($request->input('sort'), ['name', 'price', 'duration_minutes', 'created_at']) ? $request->input('sort') : 'name';
+        $sortDir              = $request->input('dir') === 'desc' ? 'desc' : 'asc';
+        $filterServiceCatId   = $request->input('service_category_id', '');
+        $filterIsActive       = $request->input('is_active', '');
+
+        $query = $branch->services()->with('serviceCategory');
+
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('name_en', 'like', "%{$q}%")
+                    ->orWhere('name_ar', 'like', "%{$q}%");
+            });
+        }
+
+        if ($filterServiceCatId !== '') {
+            $query->where('service_category_id', (int) $filterServiceCatId);
+        }
+
+        if ($filterIsActive !== '') {
+            $query->where('is_active', (bool) $filterIsActive);
+        }
+
+        if ($sortField === 'name') {
+            $query->orderByLocalizedName();
+        } else {
+            $query->orderBy($sortField, $sortDir);
+        }
+
+        $services = $query->paginate(15)->withQueryString();
 
         return view('owner.services.index', [
-            'branch' => $branch,
-            'services' => $services,
+            'branch'              => $branch,
+            'services'            => $services,
+            'q'                   => $q,
+            'sortField'           => $sortField,
+            'sortDir'             => $sortDir,
+            'filterServiceCatId'  => $filterServiceCatId,
+            'filterIsActive'      => $filterIsActive,
+            'serviceCategories'   => $this->serviceCategories(),
         ]);
     }
 

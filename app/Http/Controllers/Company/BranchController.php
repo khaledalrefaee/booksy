@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Company;
 
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\SocialLink;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -67,7 +68,9 @@ class BranchController extends Controller
     {
         $this->authoriseBranch($branch);
 
-        return view('company.branches.edit', compact('branch'));
+        $socialLinks = $branch->socialLinks()->get()->keyBy('platform');
+
+        return view('company.branches.edit', compact('branch', 'socialLinks'));
     }
 
     public function update(Request $request, Branch $branch): RedirectResponse
@@ -81,6 +84,8 @@ class BranchController extends Controller
             'phone'          => ['nullable', 'string', 'max:30'],
             'is_head_office' => ['boolean'],
             'status'         => ['required', 'in:active,inactive,maintenance'],
+            'social_links'   => ['nullable', 'array'],
+            'social_links.*' => ['nullable', 'url', 'max:2048'],
         ]);
 
         if (! empty($data['is_head_office'])) {
@@ -88,6 +93,9 @@ class BranchController extends Controller
         }
 
         $branch->update($data);
+
+        // Sync social links
+        SocialLink::syncFor($branch, $request->input('social_links', []));
 
         return redirect()->route('company.branches.index')
             ->with('success', __('Branch updated.'));

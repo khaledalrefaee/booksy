@@ -8,26 +8,56 @@ use App\Http\Requests\Owner\StoreEmployeesRequest;
 use App\Http\Requests\Owner\UpdateEmployeeRequest;
 use App\Models\Branch;
 use App\Models\Employee;
+use App\Models\EmployeeWorkingHour;
 use App\Models\Role;
+use App\Models\SocialLink;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class EmployeeController extends Controller
 {
     use ResolvesOwnerCompany;
 
-    public function index(Branch $branch): View
+    public function index(Request $request, Branch $branch): View
     {
         $this->authorizeBranch($branch);
 
-        $employees = $branch->employees()
-            ->with('role')
-            ->orderByLocalizedName()
-            ->get();
+        $q         = trim($request->input('q', ''));
+        $sortField = in_array($request->input('sort'), ['name', 'created_at']) ? $request->input('sort') : 'name';
+        $sortDir   = $request->input('dir') === 'desc' ? 'desc' : 'asc';
+        $isActive  = $request->input('is_active', '');
+
+        $query = $branch->employees();
+
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('name_en', 'like', "%{$q}%")
+                    ->orWhere('name_ar', 'like', "%{$q}%")
+                    ->orWhere('email', 'like', "%{$q}%")
+                    ->orWhere('phone', 'like', "%{$q}%");
+            });
+        }
+
+        if ($isActive !== '') {
+            $query->where('is_active', (bool) $isActive);
+        }
+
+        if ($sortField === 'name') {
+            $query->orderByLocalizedName();
+        } else {
+            $query->orderBy($sortField, $sortDir);
+        }
+
+        $employees = $query->paginate(15)->withQueryString();
 
         return view('owner.employees.index', [
-            'branch' => $branch,
+            'branch'    => $branch,
             'employees' => $employees,
+            'q'         => $q,
+            'sortField' => $sortField,
+            'sortDir'   => $sortDir,
+            'isActive'  => $isActive,
         ]);
     }
 
@@ -37,7 +67,6 @@ class EmployeeController extends Controller
 
         return view('owner.employees.create', [
             'branch' => $branch,
-            'roles' => $this->branchAssignableRoles(),
             'wizard' => $this->isWizardStep($branch),
         ]);
     }
@@ -46,29 +75,37 @@ class EmployeeController extends Controller
     {
         $this->authorizeBranch($branch);
 
-        foreach ($request->validated('employees') as $row) {
-            $branch->employees()->create([
+        $defaultRole = Role::where('slug', '!=', 'company_owner')->orderBy('id')->first();
+
+        foreach ($request->validated('employees') as $index => $row) {
+            $employee = $branch->employees()->create([
                 'company_id' => $branch->company_id,
-                'name_en' => $row['name_en'],
-                'name_ar' => $row['name_ar'],
-                'phone' => $row['phone'] ?? null,
-                'email' => $row['email'] ?? null,
-                'role_id' => $row['role_id'],
-                'password' => $row['password'],
-                'bio' => $row['bio'] ?? null,
-                'is_active' => ! empty($row['is_active']),
+                'name_en'    => $row['name_en'],
+                'name_ar'    => $row['name_ar'] ?? null,
+                'phone'      => $row['phone'] ?? null,
+                'email'      => $row['email'] ?? null,
+                'role_id'    => $defaultRole?->id ?? 1,
+                'password'   => $row['password'],
+                'bio'        => $row['bio'] ?? null,
+                'is_active'  => ! empty($row['is_active']),
             ]);
+
+            // Save working hours per employee
+            $hours = $request->input("employees.$index.working_hours", []);
+            $this->syncWorkingHours($employee, $hours);
+
+            // Save social links per employee
+            $links = $request->input("employees.$index.social_links", []);
+            SocialLink::syncFor($employee, $links);
         }
 
-        $count = count($request->validated('employees'));
+        $count   = count($request->validated('employees'));
         $message = $count === 1
             ? __('Employee created successfully.')
             : __(':count employees created successfully.', ['count' => $count]);
 
         if ($request->boolean('wizard')) {
-            return redirect()
-                ->route('owner.branches.index')
-                ->with('success', $message);
+            return redirect()->route('owner.branches.index')->with('success', $message);
         }
 
         return redirect()
@@ -89,10 +126,14 @@ class EmployeeController extends Controller
     {
         $this->authorizeEmployee($employee);
 
+        $workingHours = $employee->workingHours()->get()->keyBy('day_of_week');
+        $socialLinks  = $employee->socialLinks()->get()->keyBy('platform');
+
         return view('owner.employees.edit', [
-            'branch' => $employee->branch,
-            'employee' => $employee,
-            'roles' => $this->branchAssignableRoles(),
+            'branch'       => $employee->branch,
+            'employee'     => $employee,
+            'workingHours' => $workingHours,
+            'socialLinks'  => $socialLinks,
         ]);
     }
 
@@ -108,6 +149,11 @@ class EmployeeController extends Controller
         }
 
         $employee->update($data);
+
+        $this->syncWorkingHours($employee, $request->input('working_hours', []));
+
+        // Sync social links
+        SocialLink::syncFor($employee, $request->input('social_links', []));
 
         return redirect()
             ->route('owner.branches.employees.index', $employee->branch)
@@ -126,19 +172,24 @@ class EmployeeController extends Controller
             ->with('success', __('Employee deleted successfully.'));
     }
 
+    private function syncWorkingHours(Employee $employee, array $hours): void
+    {
+        foreach (range(0, 6) as $day) {
+            $row       = $hours[$day] ?? [];
+            $isWorking = ! empty($row['is_working']);
+            $employee->workingHours()->updateOrCreate(
+                ['day_of_week' => $day],
+                [
+                    'is_working' => $isWorking,
+                    'start_time' => $isWorking ? ($row['start_time'] ?? null) : null,
+                    'end_time'   => $isWorking ? ($row['end_time'] ?? null) : null,
+                ]
+            );
+        }
+    }
+
     private function isWizardStep(Branch $branch): bool
     {
         return request()->boolean('wizard');
-    }
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Collection<int, Role>
-     */
-    private function branchAssignableRoles()
-    {
-        return Role::query()
-            ->where('slug', '!=', 'company_owner')
-            ->orderBy('label_en')
-            ->get();
     }
 }

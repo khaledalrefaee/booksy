@@ -10,21 +10,48 @@ use App\Models\Category;
 use App\Models\Company;
 use App\Support\CategoryUploadedImage;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class CompanyController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $companies = Company::query()
-            ->with('category')
-            ->orderBy('id')
-            ->get();
+        $q          = trim($request->input('q', ''));
+        $sortField  = in_array($request->input('sort'), ['name', 'created_at', 'status']) ? $request->input('sort') : 'created_at';
+        $sortDir    = $request->input('dir') === 'asc' ? 'asc' : 'desc';
+        $filterStatus     = $request->input('status', '');
+        $filterCategoryId = $request->input('category_id', '');
 
+        $query = Company::query()->with('category');
+
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('name_en', 'like', "%{$q}%")
+                    ->orWhere('name_ar', 'like', "%{$q}%")
+                    ->orWhere('email', 'like', "%{$q}%");
+            });
+        }
+
+        if ($filterStatus !== '') {
+            $query->where('status', $filterStatus);
+        }
+
+        if ($filterCategoryId !== '') {
+            $query->where('category_id', (int) $filterCategoryId);
+        }
+
+        if ($sortField === 'name') {
+            $query->orderByRaw("COALESCE(NULLIF(name_en,''), name_ar) {$sortDir}");
+        } else {
+            $query->orderBy($sortField, $sortDir);
+        }
+
+        $companies  = $query->paginate(15)->withQueryString();
         $categories = Category::query()->orderBy('sort_order')->get();
 
-        return view('owner.companies.index', compact('companies', 'categories'));
+        return view('owner.companies.index', compact('companies', 'categories', 'q', 'sortField', 'sortDir', 'filterStatus', 'filterCategoryId'));
     }
 
     public function show(Company $company): View

@@ -1,83 +1,126 @@
 @php
-    $row = $row ?? [];
-    $roleLabel = function ($role) {
-        return app()->getLocale() === 'ar'
-            ? ($role->label_ar ?: $role->label_en)
-            : ($role->label_en ?: $role->label_ar);
-    };
+    $dayNames = \App\Models\EmployeeWorkingHour::$dayNames;
+    $locale   = app()->getLocale();
+    $pfx      = "employees[$index]";
 @endphp
-<div class="employee-block card border rounded-4 mb-3" data-index="{{ $index }}">
-    <div class="card-body p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0 fw-semibold">
-                <span class="badge bg-primary rounded-pill me-2 js-employee-number">{{ (int) $index + 1 }}</span>
-                {{ __('Employee') }}
-            </h6>
-            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill js-remove-employee" @if($index === 0) hidden @endif>
-                <i data-feather="x" style="width:14px;height:14px;"></i>
-                {{ __('Remove') }}
-            </button>
+
+<div class="employee-block emp-block" data-index="{{ $index }}">
+
+    {{-- Header --}}
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <div class="emp-block-num js-employee-number">{{ is_numeric($index) ? $index + 1 : 1 }}</div>
+            <span style="font-weight:600;font-size:13px;">{{ __('Employee') }}</span>
         </div>
+        <button type="button" class="btn-remove-emp js-remove-employee" hidden>
+            <i data-feather="x" style="width:13px;height:13px;"></i> {{ __('Remove') }}
+        </button>
+    </div>
 
-        @include('owner.partials.localized-name-fields', [
-            'nameEnId' => 'employee-name-en-'.$index,
-            'nameArId' => 'employee-name-ar-'.$index,
-            'nameEnField' => 'employees['.$index.'][name_en]',
-            'nameArField' => 'employees['.$index.'][name_ar]',
-            'nameEnValue' => $row['name_en'] ?? '',
-            'nameArValue' => $row['name_ar'] ?? '',
-            'errorContext' => 'employees.'.$index,
-            'size' => 'md',
-            'wrapperClass' => 'mb-3',
-        ])
-
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label fw-semibold">{{ __('Phone') }}</label>
-                <input type="text" name="employees[{{ $index }}][phone]" value="{{ $row['phone'] ?? '' }}"
-                    class="form-control rounded-3 @error('employees.'.$index.'.phone') is-invalid @enderror">
-                @error('employees.'.$index.'.phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-semibold">{{ __('Email') }}</label>
-                <input type="email" name="employees[{{ $index }}][email]" value="{{ $row['email'] ?? '' }}"
-                    class="form-control rounded-3 @error('employees.'.$index.'.email') is-invalid @enderror">
-                @error('employees.'.$index.'.email')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            </div>
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <label class="f-label">{{ __('Name (English)') }} <span class="text-danger">*</span></label>
+            <input type="text" name="{{ $pfx }}[name_en]"
+                   class="f-input form-control"
+                   value="{{ $row['name_en'] ?? '' }}" placeholder="John Doe">
         </div>
-
-        <div class="row g-3 mt-0">
-            <div class="col-md-6">
-                <label class="form-label fw-semibold">{{ __('Role') }} <span class="text-danger">*</span></label>
-                <select name="employees[{{ $index }}][role_id]" class="form-select rounded-3 @error('employees.'.$index.'.role_id') is-invalid @enderror" required>
-                    <option value="">{{ __('Select role') }}</option>
-                    @foreach ($roles as $role)
-                        <option value="{{ $role->id }}" @selected((string) ($row['role_id'] ?? '') === (string) $role->id)>
-                            {{ $roleLabel($role) }}
-                        </option>
-                    @endforeach
-                </select>
-                @error('employees.'.$index.'.role_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-semibold">{{ __('Password') }} <span class="text-danger">*</span></label>
-                <input type="password" name="employees[{{ $index }}][password]" autocomplete="new-password"
-                    class="form-control rounded-3 @error('employees.'.$index.'.password') is-invalid @enderror" required>
-                @error('employees.'.$index.'.password')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            </div>
+        <div class="col-md-6">
+            <label class="f-label">{{ __('Name (Arabic)') }}</label>
+            <input type="text" name="{{ $pfx }}[name_ar]" dir="rtl"
+                   class="f-input form-control"
+                   value="{{ $row['name_ar'] ?? '' }}" placeholder="جون دو">
         </div>
-
-        <div class="mb-3 mt-3">
-            <label class="form-label fw-semibold">{{ __('Bio') }}</label>
-            <textarea name="employees[{{ $index }}][bio]" rows="2" class="form-control rounded-3 @error('employees.'.$index.'.bio') is-invalid @enderror">{{ $row['bio'] ?? '' }}</textarea>
-            @error('employees.'.$index.'.bio')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        <div class="col-md-6">
+            <label class="f-label">{{ __('Email') }}</label>
+            <input type="email" name="{{ $pfx }}[email]"
+                   class="f-input form-control"
+                   value="{{ $row['email'] ?? '' }}">
         </div>
-
-        <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" name="employees[{{ $index }}][is_active]" value="1"
-                id="employee-active-{{ $index }}"
-                @checked(array_key_exists('is_active', $row) ? (bool) $row['is_active'] : true)>
-            <label class="form-check-label" for="employee-active-{{ $index }}">{{ __('Employee is active') }}</label>
+        <div class="col-md-6">
+            <label class="f-label">{{ __('Phone') }}</label>
+            <input type="text" name="{{ $pfx }}[phone]"
+                   class="f-input form-control"
+                   value="{{ $row['phone'] ?? '' }}">
+        </div>
+        <div class="col-md-6">
+            <label class="f-label">{{ __('Password') }} <span class="text-danger">*</span></label>
+            <input type="password" name="{{ $pfx }}[password]"
+                   class="f-input form-control" placeholder="••••••••">
+        </div>
+        <div class="col-md-6">
+            <label class="f-label">{{ __('Bio') }}</label>
+            <input type="text" name="{{ $pfx }}[bio]"
+                   class="f-input form-control"
+                   value="{{ $row['bio'] ?? '' }}"
+                   placeholder="{{ __('Short description about the employee…') }}">
         </div>
     </div>
+
+    {{-- Working Schedule --}}
+    <div class="mb-3">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <div style="width:28px;height:28px;border-radius:8px;background:rgba(250,112,154,.12);display:flex;align-items:center;justify-content:center;">
+                <i data-feather="clock" style="width:13px;height:13px;color:#fa709a;"></i>
+            </div>
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.5);">{{ __('Working Schedule') }}</span>
+        </div>
+        <div class="d-flex flex-column gap-2">
+            @foreach($dayNames as $dayNum => $names)
+            @php
+                $wOld      = $row['working_hours'][$dayNum] ?? [];
+                $isWorking = !empty($wOld['is_working']);
+                $uid       = "wt_{$index}_{$dayNum}";
+            @endphp
+            <div class="day-pill {{ $isWorking ? 'active' : '' }}" id="pill-{{ $uid }}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="day-name">{{ $locale === 'ar' ? $names['ar'] : $names['en'] }}</span>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input wh-toggle" type="checkbox"
+                               name="{{ $pfx }}[working_hours][{{ $dayNum }}][is_working]"
+                               value="1" id="{{ $uid }}"
+                               {{ $isWorking ? 'checked' : '' }}>
+                    </div>
+                </div>
+                <div class="day-times" id="times-{{ $uid }}" style="{{ $isWorking ? '' : 'display:none;' }}">
+                    <input type="time" name="{{ $pfx }}[working_hours][{{ $dayNum }}][start_time]"
+                           value="{{ $wOld['start_time'] ?? '09:00' }}"
+                           {{ !$isWorking ? 'disabled' : '' }}>
+                    <span class="sep">→</span>
+                    <input type="time" name="{{ $pfx }}[working_hours][{{ $dayNum }}][end_time]"
+                           value="{{ $wOld['end_time'] ?? '17:00' }}"
+                           {{ !$isWorking ? 'disabled' : '' }}>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+
+    {{-- Social Links --}}
+    <div class="mb-3">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <div style="width:28px;height:28px;border-radius:8px;background:rgba(99,102,241,.15);display:flex;align-items:center;justify-content:center;">
+                <i data-feather="share-2" style="width:13px;height:13px;color:#6366f1;"></i>
+            </div>
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.5);">{{ __('Social Media Links') }}</span>
+        </div>
+        <div class="border rounded-3" style="overflow:hidden;border-color:rgba(255,255,255,.09) !important;">
+            @include('partials.social-links-form', [
+                'savedLinks'  => collect(),
+                'inputPrefix' => "{$pfx}[social_links]",
+                'accentColor' => '#c9a227',
+            ])
+        </div>
+    </div>
+
+    {{-- Active --}}
+    <label class="toggle-row" for="employee-active-{{ $index }}">
+        <div class="flex-grow-1">
+            <div style="font-weight:700;font-size:13px;">{{ __('Active Employee') }}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.45);">{{ __('Can receive bookings') }}</div>
+        </div>
+        <input type="checkbox" class="form-check-input" id="employee-active-{{ $index }}"
+               name="{{ $pfx }}[is_active]" value="1" checked
+               style="width:42px;height:22px;cursor:pointer;flex-shrink:0;">
+    </label>
+
 </div>

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Employee extends Model
 {
@@ -88,5 +89,20 @@ class Employee extends Model
     public function recordedBranchPayments(): HasMany
     {
         return $this->hasMany(BranchPayment::class, 'recorded_by_employee_id');
+    }
+
+    public function workingHours(): HasMany
+    {
+        return $this->hasMany(EmployeeWorkingHour::class)->orderBy('day_of_week');
+    }
+
+    public function leaves(): HasMany
+    {
+        return $this->hasMany(EmployeeLeave::class);
+    }
+
+    public function socialLinks(): MorphMany
+    {
+        return $this->morphMany(SocialLink::class, 'linkable');
     }
 }

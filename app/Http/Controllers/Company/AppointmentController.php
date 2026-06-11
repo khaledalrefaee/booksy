@@ -262,7 +262,7 @@ class AppointmentController extends Controller
                     'start'           => $cursor->toDateString(),
                     'end'             => $cursor->copy()->addDay()->toDateString(),
                     'display'         => 'background',
-                    'backgroundColor' => 'rgba(239,68,68,.08)',
+                    'backgroundColor' => 'rgba(102,126,234,.13)',
                     'extendedProps'   => ['type' => 'closed'],
                 ]);
             } else {
@@ -275,7 +275,7 @@ class AppointmentController extends Controller
                         'start'           => $cursor->toDateString() . 'T00:00:00',
                         'end'             => $cursor->toDateString() . 'T' . $firstOpen,
                         'display'         => 'background',
-                        'backgroundColor' => 'rgba(239,68,68,.06)',
+                        'backgroundColor' => 'rgba(102,126,234,.13)',
                         'extendedProps'   => ['type' => 'outside-hours'],
                     ]);
                 }
@@ -284,7 +284,7 @@ class AppointmentController extends Controller
                         'start'           => $cursor->toDateString() . 'T' . $lastClose,
                         'end'             => $cursor->toDateString() . 'T23:59:59',
                         'display'         => 'background',
-                        'backgroundColor' => 'rgba(239,68,68,.06)',
+                        'backgroundColor' => 'rgba(102,126,234,.13)',
                         'extendedProps'   => ['type' => 'outside-hours'],
                     ]);
                 }

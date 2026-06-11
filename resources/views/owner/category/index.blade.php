@@ -22,12 +22,23 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
+    @include('owner.partials._search-sort-bar', [
+        'dtTableId'  => 'dt-categories',
+        'sortField'  => $sortField,
+        'sortDir'    => $sortDir,
+        'sortOptions' => [
+            ['field' => 'sort_order', 'label' => __('الترتيب')],
+            ['field' => 'name',       'label' => __('الاسم')],
+            ['field' => 'created_at', 'label' => __('تاريخ الإضافة')],
+        ],
+    ])
+
     <div class="row">
         <div class="col-md-12 stretch-card">
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover mb-0" id="dt-categories">
                             <thead>
                                 <tr>
                                     <th class="pt-0">#</th>
@@ -95,6 +106,9 @@
                             </tbody>
                         </table>
                     </div>
+                    @if($categories->hasPages())
+                        <div class="py-3 px-2">{{ $categories->links() }}</div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -104,6 +118,12 @@
     @include('owner.category.edit')
     @include('owner.category.delete')
 </div>
+
+@include('owner.partials._datatable', [
+    'tableId'    => 'dt-categories',
+    'exportName' => 'Categories',
+    'noSortCols' => [-1],
+])
 
 @push('scripts')
     @include('owner.partials.category-form-validation-script', [
