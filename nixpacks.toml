@@ -1,3 +1,6 @@
+[phases.setup]
+nixPkgs = ["liberation_ttf", "dejavu_fonts"]
+
 [phases.build]
 cmds = []
 
