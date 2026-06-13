@@ -14,12 +14,7 @@ nixPkgs = [
     "php82Extensions.zip",
     "php82Extensions.bcmath",
     "php82Extensions.exif",
-    "php82Extensions.fileinfo",
-    "freetype",
-    "libjpeg",
-    "libpng",
-    "libwebp",
-    "composer"
+    "php82Extensions.fileinfo"
 ]
 
 [phases.install]
