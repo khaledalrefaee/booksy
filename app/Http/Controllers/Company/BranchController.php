@@ -251,7 +251,12 @@ class BranchController extends Controller
             $branch->update(['qr_code' => $qrPath]);
             return back()->with('success', __('QR code regenerated.'));
         } catch (\Throwable $e) {
-            return back()->with('error', __('Failed to generate QR code.'));
+            \Illuminate\Support\Facades\Log::error('QR generation failed', [
+                'branch' => $branch->id,
+                'error'  => $e->getMessage(),
+                'file'   => $e->getFile() . ':' . $e->getLine(),
+            ]);
+            return back()->with('error', $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine());
         }
     }
 
