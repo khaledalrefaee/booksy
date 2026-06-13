@@ -29,32 +29,11 @@ class BranchQrService
 
     private function font(string $v): string
     {
-        // Use __DIR__ so the path works on any OS regardless of APP_PATH
-        $base = dirname(__DIR__, 2) . '/resources/fonts';
-
-        $candidates = match ($v) {
-            'title'   => [
-                "{$base}/Inkfree.ttf",
-                "{$base}/Gabriola.ttf",
-                "{$base}/arialbd.ttf",
-                '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
-                '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-            ],
-            'booknow' => [
-                "{$base}/ERASBD.TTF",
-                "{$base}/arialbd.ttf",
-                '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
-                '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-            ],
-            default   => ["{$base}/arialbd.ttf"],
+        return match ($v) {
+            'title'   => resource_path('fonts/DejaVuSans-Bold.ttf'),
+            'booknow' => resource_path('fonts/DejaVuSans-Bold.ttf'),
+            default   => resource_path('fonts/DejaVuSans.ttf'),
         };
-
-        foreach ($candidates as $path) {
-            if (file_exists($path)) return $path;
-        }
-
-        // Last resort: return first candidate and let GD throw a clear error
-        return $candidates[0];
     }
 
     public function generate(Branch $branch): string
