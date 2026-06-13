@@ -1,29 +1,5 @@
-[variables]
-PHP_VERSION = "8.2"
-
-[phases.setup]
-nixPkgs = [
-    "php82",
-    "php82Extensions.gd",
-    "php82Extensions.mbstring",
-    "php82Extensions.pdo",
-    "php82Extensions.pdo_mysql",
-    "php82Extensions.tokenizer",
-    "php82Extensions.xml",
-    "php82Extensions.curl",
-    "php82Extensions.zip",
-    "php82Extensions.bcmath",
-    "php82Extensions.exif",
-    "php82Extensions.fileinfo"
-]
-
-[phases.install]
-cmds = [
-    "composer install --no-dev --optimize-autoloader --no-interaction"
-]
-
 [phases.build]
 cmds = []
 
 [start]
-cmd = "php artisan config:clear && php artisan route:clear && php artisan view:clear && php artisan migrate --force && php artisan storage:link --force && php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan serve --host=0.0.0.0 --port=$PORT"
+cmd = "php artisan config:clear && php artisan migrate --force && php artisan storage:link --force && php artisan serve --host=0.0.0.0 --port=$PORT"
