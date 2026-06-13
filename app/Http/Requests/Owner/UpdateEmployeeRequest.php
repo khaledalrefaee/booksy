@@ -35,6 +35,7 @@ class UpdateEmployeeRequest extends FormRequest
             ],
             'password' => ['nullable', 'string', 'min:8', 'max:255'],
             'bio' => ['nullable', 'string', 'max:10000'],
+            'image' => ['nullable', 'image', 'max:2048'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

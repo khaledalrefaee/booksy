@@ -81,6 +81,7 @@ class BranchController extends Controller
         }
 
         $this->syncImages($branch, $request->file('images', []), $request->input('image_sort_orders', []));
+        SocialLink::syncFor($branch, $request->input('social_links', []));
 
         return redirect()
             ->route('owner.branches.working-hours.create', $branch)

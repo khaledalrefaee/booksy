@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Employee extends Model
@@ -24,6 +25,7 @@ class Employee extends Model
         'bio',
         'image',
         'is_active',
+        'is_bookable',
         'password',
     ];
 
@@ -35,8 +37,9 @@ class Employee extends Model
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
-            'password' => 'hashed',
+            'is_active'   => 'boolean',
+            'is_bookable' => 'boolean',
+            'password'    => 'hashed',
         ];
     }
 
@@ -64,6 +67,12 @@ class Employee extends Model
             'employee_id',
             'service_category_id'
         );
+    }
+
+    /** Individual services this employee can perform */
+    public function services(): BelongsToMany
+    {
+        return $this->belongsToMany(Service::class, 'employee_service');
     }
 
     public function appointments(): HasMany
@@ -104,5 +113,20 @@ class Employee extends Model
     public function socialLinks(): MorphMany
     {
         return $this->morphMany(SocialLink::class, 'linkable');
+    }
+
+    public function compensation(): HasOne
+    {
+        return $this->hasOne(EmployeeCompensation::class);
+    }
+
+    public function deductions(): HasMany
+    {
+        return $this->hasMany(EmployeeDeduction::class);
+    }
+
+    public function serviceCommissions(): HasMany
+    {
+        return $this->hasMany(EmployeeServiceCommission::class);
     }
 }

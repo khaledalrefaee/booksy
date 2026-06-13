@@ -17,6 +17,25 @@
         </button>
     </div>
 
+    {{-- Profile Photo --}}
+    <div class="mb-3">
+        <label class="f-label">{{ __('Profile Photo') }}</label>
+        <div class="d-flex align-items-center gap-3">
+            <div class="emp-photo-preview" id="photo-preview-{{ $index }}"
+                 style="width:60px;height:60px;border-radius:14px;background:rgba(255,255,255,.08);border:1.5px dashed rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+                <i data-feather="user" style="width:22px;height:22px;opacity:.3;" class="emp-photo-placeholder-{{ $index }}"></i>
+            </div>
+            <div class="flex-grow-1">
+                <input type="file" name="{{ $pfx }}[image]" accept="image/*"
+                       class="f-input form-control emp-photo-input"
+                       data-preview="photo-preview-{{ $index }}"
+                       data-placeholder="emp-photo-placeholder-{{ $index }}"
+                       style="font-size:12px;padding:7px 10px;">
+                <div class="mt-1" style="font-size:10px;opacity:.4;">{{ __('JPG, PNG or WEBP — max 2 MB') }}</div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-3 mb-3">
         <div class="col-md-6">
             <label class="f-label">{{ __('Name (English)') }} <span class="text-danger">*</span></label>
@@ -105,9 +124,10 @@
         </div>
         <div class="border rounded-3" style="overflow:hidden;border-color:rgba(255,255,255,.09) !important;">
             @include('partials.social-links-form', [
-                'savedLinks'  => collect(),
-                'inputPrefix' => "{$pfx}[social_links]",
-                'accentColor' => '#c9a227',
+                'savedLinks'       => collect(),
+                'inputPrefix'      => "{$pfx}[social_links]",
+                'accentColor'      => '#c9a227',
+                'allowedPlatforms' => ['whatsapp', 'facebook', 'instagram'],
             ])
         </div>
     </div>

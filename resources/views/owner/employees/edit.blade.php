@@ -118,7 +118,7 @@
 
     @include('owner.partials.flash')
 
-    <form method="post" action="{{ route('owner.employees.update', $employee) }}">
+    <form method="post" action="{{ route('owner.employees.update', $employee) }}" enctype="multipart/form-data">
     @csrf @method('PUT')
     <div class="row g-4">
 
@@ -135,6 +135,28 @@
                         </div>
                     </div>
                     <div class="sec-body">
+                        {{-- Profile Photo --}}
+                        <div class="mb-3">
+                            <label class="f-label">{{ __('Profile Photo') }}</label>
+                            <div class="d-flex align-items-center gap-3">
+                                <div id="edit-photo-preview"
+                                     style="width:64px;height:64px;border-radius:14px;overflow:hidden;flex-shrink:0;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);">
+                                    @if($employee->image)
+                                        <img src="{{ asset('storage/'.$employee->image) }}" style="width:100%;height:100%;object-fit:cover;" alt="">
+                                    @else
+                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+                                            <i data-feather="user" style="width:24px;height:24px;opacity:.3;"></i>
+                                        </div>
+                                    @endif
+                                </div>
+                                <div class="flex-grow-1">
+                                    <input type="file" name="image" id="edit-photo-input" accept="image/*"
+                                           class="f-input form-control" style="font-size:12px;padding:7px 10px;">
+                                    <div class="mt-1" style="font-size:10px;opacity:.4;">{{ __('JPG, PNG or WEBP — max 2 MB') }}</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="f-label">{{ __('Name (English)') }} <span class="text-danger">*</span></label>
@@ -242,9 +264,10 @@
                         </div>
                     </div>
                     @include('partials.social-links-form', [
-                        'savedLinks'  => $socialLinks,
-                        'inputPrefix' => 'social_links',
-                        'accentColor' => '#c9a227',
+                        'savedLinks'       => $socialLinks,
+                        'inputPrefix'      => 'social_links',
+                        'accentColor'      => '#c9a227',
+                        'allowedPlatforms' => ['whatsapp', 'facebook', 'instagram'],
                     ])
                 </div>
             </div>
@@ -275,6 +298,15 @@
 
 @push('scripts')
 <script>
+document.getElementById('edit-photo-input').addEventListener('change', function () {
+    const wrap = document.getElementById('edit-photo-preview');
+    const file = this.files && this.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = e => { wrap.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">'; };
+    reader.readAsDataURL(file);
+});
+
 document.querySelectorAll('.wh-toggle').forEach(t => {
     t.addEventListener('change', function () {
         const n = this.id.split('_')[1];

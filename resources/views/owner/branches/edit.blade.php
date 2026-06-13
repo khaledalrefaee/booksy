@@ -157,9 +157,10 @@
                             <p class="text-muted small mb-2">{{ __('Add any social accounts you want customers to find you on.') }}</p>
                             <div class="border rounded-3" style="overflow:hidden;">
                                 @include('partials.social-links-form', [
-                                    'savedLinks'  => $socialLinks,
-                                    'inputPrefix' => 'social_links',
-                                    'accentColor' => '#c9a227',
+                                    'savedLinks'       => $socialLinks,
+                                    'inputPrefix'      => 'social_links',
+                                    'accentColor'      => '#c9a227',
+                                    'allowedPlatforms' => ['whatsapp', 'facebook', 'instagram'],
                                 ])
                             </div>
                         </div>

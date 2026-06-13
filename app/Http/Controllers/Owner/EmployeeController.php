@@ -13,6 +13,7 @@ use App\Models\Role;
 use App\Models\SocialLink;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class EmployeeController extends Controller
@@ -78,6 +79,9 @@ class EmployeeController extends Controller
         $defaultRole = Role::where('slug', '!=', 'company_owner')->orderBy('id')->first();
 
         foreach ($request->validated('employees') as $index => $row) {
+            $imageFile = $request->file("employees.$index.image");
+            $imagePath = $imageFile ? $imageFile->store('employees/images', 'public') : null;
+
             $employee = $branch->employees()->create([
                 'company_id' => $branch->company_id,
                 'name_en'    => $row['name_en'],
@@ -87,6 +91,7 @@ class EmployeeController extends Controller
                 'role_id'    => $defaultRole?->id ?? 1,
                 'password'   => $row['password'],
                 'bio'        => $row['bio'] ?? null,
+                'image'      => $imagePath,
                 'is_active'  => ! empty($row['is_active']),
             ]);
 
@@ -146,6 +151,15 @@ class EmployeeController extends Controller
 
         if (empty($data['password'])) {
             unset($data['password']);
+        }
+
+        if ($request->hasFile('image')) {
+            if ($employee->image) {
+                Storage::disk('public')->delete($employee->image);
+            }
+            $data['image'] = $request->file('image')->store('employees/images', 'public');
+        } else {
+            unset($data['image']);
         }
 
         $employee->update($data);

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\HasLocalizedNames;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Service extends Model
@@ -18,6 +19,7 @@ class Service extends Model
         'name_ar',
         'description',
         'price',
+        'currency',
         'duration_minutes',
         'is_active',
     ];
@@ -49,5 +51,10 @@ class Service extends Model
     public function waitlistEntries(): HasMany
     {
         return $this->hasMany(WaitlistEntry::class);
+    }
+
+    public function employees(): BelongsToMany
+    {
+        return $this->belongsToMany(Employee::class, 'employee_service');
     }
 }

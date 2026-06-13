@@ -59,6 +59,7 @@ class ServiceController extends Controller
             'name_ar'             => ['nullable', 'string', 'max:255'],
             'description'         => ['nullable', 'string', 'max:2000'],
             'price'               => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'currency'            => ['required', 'string', 'in:' . implode(',', array_keys(config('booksy.currencies')))],
             'duration_minutes'    => ['required', 'integer', 'min:1', 'max:1440'],
             'is_active'           => ['nullable', 'boolean'],
         ]);
@@ -93,6 +94,7 @@ class ServiceController extends Controller
             'name_ar'             => ['nullable', 'string', 'max:255'],
             'description'         => ['nullable', 'string', 'max:2000'],
             'price'               => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'currency'            => ['required', 'string', 'in:' . implode(',', array_keys(config('booksy.currencies')))],
             'duration_minutes'    => ['required', 'integer', 'min:1', 'max:1440'],
             'is_active'           => ['nullable', 'boolean'],
         ]);

@@ -2,109 +2,186 @@
 
 @section('content')
 <div class="page-content">
-    <div class="d-flex justify-content-between align-items-center flex-wrap grid-margin">
-        <h4 class="mb-0">{{ __('Edit branch') }}</h4>
-        <a href="{{ route('company.branches.index') }}" class="btn btn-outline-secondary">
-            <i data-feather="arrow-left" style="width:14px;"></i> {{ __('Back') }}
-        </a>
+
+    {{-- Breadcrumb --}}
+    <div class="mb-4">
+        <h4 class="mb-2">{{ __('Edit branch') }}</h4>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item">
+                    <a href="{{ route('company.dashboard') }}">{{ __('Dashboard') }}</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{{ route('company.branches.index') }}">{{ __('Branches') }}</a>
+                </li>
+                <li class="breadcrumb-item active">{{ __('Edit') }}</li>
+            </ol>
+        </nav>
     </div>
 
     @include('company.partials.flash')
 
-    <div class="row">
-        <div class="col-md-8 col-xl-6">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <form method="POST" action="{{ route('company.branches.update', $branch) }}">
-                        @csrf @method('PUT')
-                        <div class="mb-3">
-                            <label for="name_en" class="form-label fw-semibold">{{ __('Branch name (EN)') }} <span class="text-danger">*</span></label>
-                            <input type="text" id="name_en" name="name_en" class="form-control @error('name_en') is-invalid @enderror" value="{{ old('name_en', $branch->name_en) }}">
-                            @error('name_en')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-                        <div class="mb-3">
-                            <label for="name_ar" class="form-label fw-semibold">{{ __('Branch name (AR)') }}</label>
-                            <input type="text" id="name_ar" name="name_ar" dir="rtl" class="form-control" value="{{ old('name_ar', $branch->name_ar) }}">
-                        </div>
-                        <div class="mb-3">
-                            <label for="address" class="form-label fw-semibold">{{ __('Address') }}</label>
-                            <input type="text" id="address" name="address" class="form-control" value="{{ old('address', $branch->address) }}">
-                        </div>
-                        <div class="mb-3">
-                            <label for="phone" class="form-label fw-semibold">{{ __('Phone') }}</label>
-                            <input type="text" id="phone" name="phone" class="form-control" value="{{ old('phone', $branch->phone) }}">
-                        </div>
-                        {{-- Status --}}
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">{{ __('Branch Status') }} <span class="text-danger">*</span></label>
-                            <div class="d-flex gap-3 flex-wrap mt-1">
-                                @foreach(['active' => ['check-circle','success',__('Active'),__('Open & visible to customers')], 'inactive' => ['x-circle','secondary',__('Inactive'),__('Hidden from public')], 'maintenance' => ['tool','warning',__('Maintenance'),__('Visible but booking disabled')]] as $st => [$icon,$color,$lbl,$hint])
-                                <label class="d-flex align-items-start gap-2 p-3 rounded-3 border flex-fill
-                                    {{ old('status', $branch->status) === $st ? 'border-'.$color.' bg-'.$color.' bg-opacity-10' : '' }}"
-                                    style="cursor:pointer;min-width:140px;" id="status-lbl-{{ $st }}">
-                                    <input type="radio" name="status" value="{{ $st }}" class="form-check-input mt-0 flex-shrink-0"
-                                        {{ old('status', $branch->status) === $st ? 'checked' : '' }}
-                                        onchange="highlightStatus()">
-                                    <div>
-                                        <span class="fw-semibold text-{{ $color }} d-flex align-items-center gap-1">
-                                            <i data-feather="{{ $icon }}" style="width:13px;height:13px;"></i>
-                                            {{ $lbl }}
-                                        </span>
-                                        <small class="text-muted">{{ $hint }}</small>
-                                    </div>
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4 p-md-5">
+
+                    <form method="POST" action="{{ route('company.branches.update', $branch) }}" novalidate>
+                        @csrf
+                        @method('PUT')
+
+                        {{-- ── Basic info ──────────────────────────────────────── --}}
+                        <h6 class="fw-semibold text-muted text-uppercase small mb-3">
+                            {{ __('Branch information') }}
+                        </h6>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="name_en">
+                                    {{ __('Branch name (EN)') }} <span class="text-danger">*</span>
                                 </label>
-                                @endforeach
+                                <input type="text" id="name_en" name="name_en"
+                                       value="{{ old('name_en', $branch->name_en) }}"
+                                       class="form-control rounded-3 @error('name_en') is-invalid @enderror"
+                                       required maxlength="255">
+                                @error('name_en')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
-                            @error('status')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="name_ar">
+                                    {{ __('Branch name (AR)') }}
+                                </label>
+                                <input type="text" id="name_ar" name="name_ar"
+                                       value="{{ old('name_ar', $branch->name_ar) }}"
+                                       class="form-control rounded-3 @error('name_ar') is-invalid @enderror"
+                                       dir="rtl" maxlength="255">
+                                @error('name_ar')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold" for="address">{{ __('Address') }}</label>
+                                <input type="text" id="address" name="address"
+                                       value="{{ old('address', $branch->address) }}"
+                                       class="form-control rounded-3 @error('address') is-invalid @enderror"
+                                       maxlength="500">
+                                @error('address')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
                         </div>
 
+                        {{-- ── أرقام الهاتف ─────────────────────────────────────── --}}
                         <div class="mb-4">
-                            <div class="form-check">
-                                <input type="checkbox" id="is_head_office" name="is_head_office" value="1" class="form-check-input" {{ old('is_head_office', $branch->is_head_office) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="is_head_office">{{ __('Head office') }}</label>
-                            </div>
+                            @include('company.branches.partials.phone-fields')
                         </div>
-                        {{-- Social Links --}}
+
                         <hr class="my-4">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold d-flex align-items-center gap-2">
-                                <i data-feather="share-2" style="width:15px;height:15px;"></i>
-                                {{ __('Social Media Links') }}
+
+                        {{-- ── Status ───────────────────────────────────────────── --}}
+                        <h6 class="fw-semibold text-muted text-uppercase small mb-3">
+                            {{ __('Branch status') }}
+                        </h6>
+
+                        <div class="d-flex gap-3 flex-wrap mb-4">
+                            @foreach([
+                                'active'      => ['check-circle', 'success',   __('Active'),      __('Open & visible to customers')],
+                                'inactive'    => ['x-circle',    'secondary',  __('Inactive'),    __('Hidden from public')],
+                                'maintenance' => ['tool',         'warning',   __('Maintenance'), __('Visible but booking disabled')],
+                            ] as $st => [$icon, $color, $lbl, $hint])
+                            <label class="d-flex align-items-start gap-2 p-3 rounded-3 border flex-fill
+                                       {{ old('status', $branch->status) === $st ? 'border-'.$color.' bg-'.$color.' bg-opacity-10' : '' }}"
+                                   style="cursor:pointer;min-width:145px;" id="status-lbl-{{ $st }}">
+                                <input type="radio" name="status" value="{{ $st }}"
+                                       class="form-check-input mt-0 flex-shrink-0"
+                                       {{ old('status', $branch->status) === $st ? 'checked' : '' }}
+                                       onchange="highlightStatus()">
+                                <div>
+                                    <span class="fw-semibold text-{{ $color }} d-flex align-items-center gap-1">
+                                        <i data-feather="{{ $icon }}" style="width:13px;height:13px;"></i>
+                                        {{ $lbl }}
+                                    </span>
+                                    <small class="text-muted">{{ $hint }}</small>
+                                </div>
                             </label>
-                            <p class="text-muted small mb-2">{{ __('Add any social accounts you want customers to find you on.') }}</p>
+                            @endforeach
                         </div>
-                        <div class="border rounded-3" style="overflow:hidden;">
+                        @error('status')<div class="text-danger small mb-3">{{ $message }}</div>@enderror
+
+                        <div class="form-check form-switch mb-4">
+                            <input class="form-check-input" type="checkbox"
+                                   name="is_head_office" id="is_head_office" value="1"
+                                   @checked(old('is_head_office', $branch->is_head_office))>
+                            <label class="form-check-label" for="is_head_office">
+                                {{ __('Mark as head office') }}
+                            </label>
+                        </div>
+
+                        <hr class="my-4">
+
+                        {{-- ── Location ──────────────────────────────────────────── --}}
+                        <h6 class="fw-semibold text-muted text-uppercase small mb-3">
+                            {{ __('Location') }}
+                        </h6>
+
+                        @include('company.branches.partials.map-picker', [
+                            'latitude'  => $branch->latitude,
+                            'longitude' => $branch->longitude,
+                        ])
+
+                        <hr class="my-4">
+
+                        {{-- ── Social links ───────────────────────────────────────── --}}
+                        <h6 class="fw-semibold text-muted text-uppercase small mb-1">
+                            <i data-feather="share-2" style="width:14px;height:14px;" class="me-1"></i>
+                            {{ __('Social Media Links') }}
+                        </h6>
+                        <p class="text-muted small mb-3">{{ __('Add any social accounts you want customers to find you on.') }}</p>
+
+                        <div class="border rounded-3 mb-4">
                             @include('partials.social-links-form', [
-                                'savedLinks'  => $socialLinks,
-                                'inputPrefix' => 'social_links',
-                                'accentColor' => '#6366f1',
+                                'savedLinks'       => $socialLinks,
+                                'inputPrefix'      => 'social_links',
+                                'allowedPlatforms' => ['whatsapp', 'facebook', 'instagram', 'linkedin'],
                             ])
                         </div>
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-primary">{{ __('Update branch') }}</button>
+
+                        {{-- ── Footer ────────────────────────────────────────────── --}}
+                        <div class="d-flex justify-content-between gap-2 pt-3 border-top">
+                            <a href="{{ route('company.branches.index') }}"
+                               class="btn btn-light rounded-pill px-4">
+                                {{ __('Cancel') }}
+                            </a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4">
+                                <i data-feather="save" class="me-1" style="width:16px;height:16px;"></i>
+                                {{ __('Save changes') }}
+                            </button>
                         </div>
+
                     </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
+@endsection
+
 @push('scripts')
 <script>
-const statusColors = {active:'success', inactive:'secondary', maintenance:'warning'};
-function highlightStatus(){
-    document.querySelectorAll('[name="status"]').forEach(radio => {
-        const lbl = document.getElementById('status-lbl-' + radio.value);
-        if(!lbl) return;
-        const c = statusColors[radio.value];
-        if(radio.checked){
+const statusColors = { active: 'success', inactive: 'secondary', maintenance: 'warning' };
+
+function highlightStatus() {
+    document.querySelectorAll('[name="status"]').forEach(function (radio) {
+        var lbl = document.getElementById('status-lbl-' + radio.value);
+        if (!lbl) return;
+        var c = statusColors[radio.value];
+        if (radio.checked) {
             lbl.classList.add('border-' + c, 'bg-' + c, 'bg-opacity-10');
         } else {
-            lbl.classList.remove('border-success','border-secondary','border-warning','bg-success','bg-secondary','bg-warning','bg-opacity-10');
+            lbl.classList.remove(
+                'border-success', 'border-secondary', 'border-warning',
+                'bg-success', 'bg-secondary', 'bg-warning', 'bg-opacity-10'
+            );
         }
     });
-    if(window.feather) feather.replace();
+    if (window.feather) feather.replace();
 }
 </script>
 @endpush
-@endsection

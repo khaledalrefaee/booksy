@@ -35,6 +35,7 @@ class StoreEmployeesRequest extends FormRequest
             ],
             'employees.*.password' => ['required', 'string', 'min:8', 'max:255'],
             'employees.*.bio' => ['nullable', 'string', 'max:10000'],
+            'employees.*.image' => ['nullable', 'image', 'max:2048'],
             'employees.*.is_active' => ['sometimes', 'boolean'],
             'wizard' => ['sometimes', 'boolean'],
         ];

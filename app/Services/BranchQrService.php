@@ -1,0 +1,238 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Branch;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Color\Color;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\RoundBlockSizeMode;
+use Endroid\QrCode\Writer\PngWriter;
+use Illuminate\Support\Facades\Storage;
+
+class BranchQrService
+{
+    private const W      = 580;
+    private const H      = 740;
+    private const RADIUS = 24;
+    private const BG     = [12,  11,  10];
+    private const GOLD   = [201, 162, 39];
+    private const GOLD2  = [245, 205, 80];
+    private const DARK   = [15,  12,   5];
+    private const QR_SIZE   = 460;
+    private const QR_MARGIN = 0;
+
+    // Gradient: top-left (near-black) → bottom-right (gold)
+    private const G_FROM = [20,  18,  12];
+    private const G_TO   = [218, 175,  38];
+
+    private function font(string $v): string
+    {
+        $map = [
+            'title'   => 'C:/Windows/Fonts/Inkfree.ttf',    // handwritten-elegant for app name
+            'booknow' => 'C:/Windows/Fonts/ERASBD.TTF',     // geometric bold for BOOK NOW
+        ];
+        $p = $map[$v] ?? '';
+        if (!file_exists($p)) {
+            // fallbacks
+            $fallbacks = [
+                'title'   => ['C:/Windows/Fonts/FRSCRIPT.TTF', 'C:/Windows/Fonts/Gabriola.ttf', 'C:/Windows/Fonts/arialbd.ttf'],
+                'booknow' => ['C:/Windows/Fonts/GOTHICB.TTF',  'C:/Windows/Fonts/segoeuib.ttf',  'C:/Windows/Fonts/arialbd.ttf'],
+            ];
+            foreach ($fallbacks[$v] ?? [] as $fb) {
+                if (file_exists($fb)) return $fb;
+            }
+            return 'C:/Windows/Fonts/arialbd.ttf';
+        }
+        return $p;
+    }
+
+    public function generate(Branch $branch): string
+    {
+        $company  = $branch->company;
+        $logoPath = null;
+        if ($company?->logo) {
+            $c = Storage::disk('public')->path($company->logo);
+            if (file_exists($c)) $logoPath = $c;
+        }
+
+        // 1 ── Plain black-on-white QR (no margin so we get max data area) ──
+        $rawQr = (new Builder(
+            writer               : new PngWriter(),
+            data                 : route('front.branch', $branch),
+            encoding             : new Encoding('UTF-8'),
+            errorCorrectionLevel : ErrorCorrectionLevel::High,
+            size                 : self::QR_SIZE,
+            margin               : self::QR_MARGIN,
+            roundBlockSizeMode   : RoundBlockSizeMode::Margin,
+            foregroundColor      : new Color(0, 0, 0),
+            backgroundColor      : new Color(255, 255, 255),
+        ))->build()->getString();
+
+        $qrRaw = imagecreatefromstring($rawQr);
+        // Ensure truecolor so imagecolorat returns RGB not palette index
+        imagepalettetotruecolor($qrRaw);
+        $qrW = imagesx($qrRaw);
+        $qrH = imagesy($qrRaw);
+
+        // 2 ── Apply gradient ─────────────────────────────────────────────────
+        $qrFinal = $this->buildGradientQr($qrRaw, $qrW, $qrH);
+        imagedestroy($qrRaw);
+
+        // 3 ── Main canvas ────────────────────────────────────────────────────
+        [$br,$bgc,$bb]   = self::BG;
+        [$gr,$gg,$gb]    = self::GOLD;
+        [$g2r,$g2g,$g2b] = self::GOLD2;
+        [$dr,$dg,$db]    = self::DARK;
+
+        $img   = imagecreatetruecolor(self::W, self::H);
+        $cBg   = imagecolorallocate($img, $br, $bgc, $bb);
+        $cGold = imagecolorallocate($img, $gr, $gg, $gb);
+        $cG2   = imagecolorallocate($img, $g2r, $g2g, $g2b);
+        $cDk   = imagecolorallocate($img, $dr, $dg, $db);
+
+        imagefilledrectangle($img, 0, 0, self::W, self::H, $cBg);
+        $this->roundedBorder($img, 1, 1, self::W - 2, self::H - 2, self::RADIUS, $cGold, 2);
+
+        // 4 ── TOP strip ──────────────────────────────────────────────────────
+        $topH = 110;
+        $sR   = self::RADIUS - 1;
+        $this->filledRounded($img, 2, 2, self::W - 3, $topH, $sR, $cGold);
+
+        for ($i = 0; $i < 8; $i++) {
+            $dx = (int)(self::W * 0.09 + $i * self::W * 0.12);
+            imagefilledellipse($img, $dx, 18, 5, 5, $cG2);
+        }
+
+        // ── App name (Booksy) — Ink Free, dark-gold on golden strip ─────────
+        $appName   = config('app.name', 'Booksy');
+        $titleFont = $this->font('title');
+        $sz        = 52;
+        $bbox      = imagettfbbox($sz, 0, $titleFont, $appName);
+        $tw        = abs($bbox[4] - $bbox[0]);
+        $th        = abs($bbox[5] - $bbox[1]);
+        $tx        = (int)((self::W - $tw) / 2);
+        $ty        = (int)(($topH + $th) / 2) + 8;
+        // soft drop-shadow (2px offset, semi-transparent black)
+        $cShadow   = imagecolorallocate($img, 40, 30, 0);
+        imagettftext($img, $sz, 0, $tx + 3, $ty + 3, $cShadow, $titleFont, $appName);
+        // main text in very dark brown-black so it contrasts on gold strip
+        imagettftext($img, $sz, 0, $tx, $ty, imagecolorallocate($img, 25, 18, 2), $titleFont, $appName);
+
+        // 5 ── QR directly on dark background (no white card) ────────────────
+        $qrX = (int)((self::W - $qrW) / 2);
+        $qrY = $topH + 20;
+        imagecopy($img, $qrFinal, $qrX, $qrY, 0, 0, $qrW, $qrH);
+        imagedestroy($qrFinal);
+
+        // 6 ── BOTTOM strip ───────────────────────────────────────────────────
+        $botY = $qrY + $qrH + 20;
+        $botH = self::H - $botY - 4;
+        $this->filledRounded($img, 2, $botY, self::W - 3, self::H - 3, $sR, $cGold);
+
+        // ── BOOK NOW — Eras Bold, letter-spaced manually ─────────────────────
+        $bnFont  = $this->font('booknow');
+        $bnText  = 'BOOK  NOW';          // two spaces = visual letter gap
+        $sz2     = 28;
+        $bbox2   = imagettfbbox($sz2, 0, $bnFont, $bnText);
+        $tw2     = abs($bbox2[4] - $bbox2[0]);
+        $th2     = abs($bbox2[5] - $bbox2[1]);
+        $x2      = (int)((self::W - $tw2) / 2);
+        $y2      = $botY + (int)(($botH + $th2) / 2) + 4;
+        // thin shadow
+        imagettftext($img, $sz2, 0, $x2 + 2, $y2 + 2, imagecolorallocate($img, 40, 30, 0), $bnFont, $bnText);
+        imagettftext($img, $sz2, 0, $x2, $y2, imagecolorallocate($img, 22, 16, 2), $bnFont, $bnText);
+
+        // 7 ── Corner accents ─────────────────────────────────────────────────
+        $sq = 9; $ins = 10;
+        imagefilledrectangle($img, $ins, $ins + 6, $ins + $sq, $ins + $sq + 6, $cG2);
+        imagefilledrectangle($img, self::W-$ins-$sq-1, $ins+6, self::W-$ins-1, $ins+$sq+6, $cG2);
+
+        ob_start(); imagepng($img); $data = ob_get_clean();
+        imagedestroy($img);
+
+        if ($branch->qr_code) Storage::disk('public')->delete($branch->qr_code);
+        $path = "branches/{$branch->id}/qr.png";
+        Storage::disk('public')->put($path, $data);
+        return $path;
+    }
+
+    /**
+     * Black→Gold diagonal gradient on dark QR modules.
+     * White modules → transparent (dark BG shows through).
+     * Logo locked inside white circle at center.
+     */
+    private function buildGradientQr(\GdImage $qrImg, int $w, int $h): \GdImage
+    {
+        [$fr, $fg, $fb] = self::G_FROM;
+        [$tr, $tg, $tb] = self::G_TO;
+        [$br, $bgc, $bb] = self::BG;
+
+        $out = imagecreatetruecolor($w, $h);
+        imagealphablending($out, false);
+        imagesavealpha($out, true);
+
+        // Fill with dark BG colour (matches card background — no white border visible)
+        $cBg = imagecolorallocate($out, $br, $bgc, $bb);
+        imagefilledrectangle($out, 0, 0, $w, $h, $cBg);
+
+        for ($y = 0; $y < $h; $y++) {
+            $fy = $y / $h;
+            for ($x = 0; $x < $w; $x++) {
+                $px  = imagecolorat($qrImg, $x, $y);
+                $r8  = ($px >> 16) & 0xFF;
+                $g8  = ($px >>  8) & 0xFF;
+                $b8  =  $px        & 0xFF;
+                $lum = (int)($r8 * 0.299 + $g8 * 0.587 + $b8 * 0.114);
+
+                if ($lum > 128) continue; // white module → leave as dark BG
+
+                $t  = ($x / $w + $fy) / 2.0;
+                $r  = (int)($fr + ($tr - $fr) * $t);
+                $g  = (int)($fg + ($tg - $fg) * $t);
+                $b  = (int)($fb + ($tb - $fb) * $t);
+                imagesetpixel($out, $x, $y, imagecolorallocate($out, $r, $g, $b));
+            }
+        }
+
+
+        return $out;
+    }
+
+    private function loadImage(string $path): \GdImage
+    {
+        $mime = @getimagesize($path)['mime'] ?? '';
+        return match ($mime) {
+            'image/png'  => imagecreatefrompng($path),
+            'image/gif'  => imagecreatefromgif($path),
+            'image/webp' => imagecreatefromwebp($path),
+            default      => imagecreatefromjpeg($path),
+        };
+    }
+
+    private function filledRounded($img, int $x1, int $y1, int $x2, int $y2, int $r, $color): void
+    {
+        imagefilledrectangle($img, $x1+$r, $y1,    $x2-$r, $y2,    $color);
+        imagefilledrectangle($img, $x1,    $y1+$r, $x2,    $y2-$r, $color);
+        imagefilledellipse($img, $x1+$r, $y1+$r, $r*2, $r*2, $color);
+        imagefilledellipse($img, $x2-$r, $y1+$r, $r*2, $r*2, $color);
+        imagefilledellipse($img, $x1+$r, $y2-$r, $r*2, $r*2, $color);
+        imagefilledellipse($img, $x2-$r, $y2-$r, $r*2, $r*2, $color);
+    }
+
+    private function roundedBorder($img, int $x1, int $y1, int $x2, int $y2, int $r, $color, int $t = 1): void
+    {
+        for ($i = 0; $i < $t; $i++) {
+            [$a,$b,$d,$e] = [$x1+$i, $y1+$i, $x2-$i, $y2-$i];
+            imageline($img, $a+$r, $b, $d-$r, $b, $color);
+            imageline($img, $a+$r, $e, $d-$r, $e, $color);
+            imageline($img, $a, $b+$r, $a, $e-$r, $color);
+            imageline($img, $d, $b+$r, $d, $e-$r, $color);
+            imagearc($img, $a+$r, $b+$r, $r*2, $r*2, 180, 270, $color);
+            imagearc($img, $d-$r, $b+$r, $r*2, $r*2, 270, 360, $color);
+            imagearc($img, $a+$r, $e-$r, $r*2, $r*2,  90, 180, $color);
+            imagearc($img, $d-$r, $e-$r, $r*2, $r*2,   0,  90, $color);
+        }
+    }
+}

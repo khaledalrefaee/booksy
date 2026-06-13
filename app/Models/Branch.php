@@ -20,10 +20,13 @@ class Branch extends Model
         'is_head_office',
         'status',
         'phone',
+        'phones',
         'address',
         'latitude',
         'longitude',
         'landline_phone',
+        'landlines',
+        'qr_code',
     ];
 
     // Convenience helpers
@@ -58,6 +61,8 @@ class Branch extends Model
             'is_head_office' => 'boolean',
             'latitude'       => 'decimal:8',
             'longitude'      => 'decimal:8',
+            'phones'         => 'array',
+            'landlines'      => 'array',
         ];
     }
 

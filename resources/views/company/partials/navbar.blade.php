@@ -6,6 +6,12 @@
     $isAr          = $currentLocale === 'ar';
 @endphp
 
+<style>
+.navbar .navbar-content { gap: 6px !important; }
+.navbar .navbar-nav { gap: 0 !important; }
+.navbar .navbar-nav .nav-link { padding-inline: 6px !important; }
+</style>
+
 <nav class="navbar">
 
     {{-- Hamburger toggler --}}
@@ -27,7 +33,7 @@
         </div>
 
         {{-- Action Buttons --}}
-        <div class="d-none d-lg-flex align-items-center gap-2 me-2">
+        <div class="d-none d-lg-flex align-items-center gap-1 me-1">
             <a href="{{ route('company.appointments.create') }}"
                class="btn btn-primary btn-sm rounded-pill d-flex align-items-center gap-1 px-3">
                 <i class="feather icon-plus" style="font-size:13px;line-height:1;"></i>
@@ -68,7 +74,7 @@
 
             {{-- Profile --}}
             <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#"
+                <a class="nav-link dropdown-toggle d-flex align-items-center gap-1" href="#"
                    data-bs-toggle="dropdown">
                     @if($authCompany?->logo)
                         <img src="{{ asset('storage/'.$authCompany->logo) }}"
@@ -87,21 +93,31 @@
 
                 <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:220px;border-radius:12px;overflow:hidden;">
                     <div class="px-4 py-3 border-bottom" style="background:rgba(201,162,39,.07);">
-                        <div class="d-flex align-items-center gap-3">
-                            @if($authCompany?->logo)
-                                <img src="{{ asset('storage/'.$authCompany->logo) }}"
-                                     style="width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="">
-                            @else
-                                <img src="https://ui-avatars.com/api/?name={{ urlencode($authCompany?->localizedName() ?? 'Co') }}&size=42&background=C9A227&color=000&bold=true"
-                                     style="width:42px;height:42px;border-radius:50%;flex-shrink:0;" alt="">
-                            @endif
-                            <div style="min-width:0;">
-                                <div style="font-size:.84rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $authCompany?->localizedName() }}</div>
-                                <div style="font-size:.72rem;color:#C9A227;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $authCompany?->email }}</div>
+                        <a href="{{ route('company.profile.show') }}">
+                            <div class="d-flex align-items-center gap-3">
+                                @if($authCompany?->logo)
+                                    <img src="{{ asset('storage/'.$authCompany->logo) }}"
+                                        style="width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="">
+                                @else
+                                    <img src="https://ui-avatars.com/api/?name={{ urlencode($authCompany?->localizedName() ?? 'Co') }}&size=42&background=C9A227&color=000&bold=true"
+                                        style="width:42px;height:42px;border-radius:50%;flex-shrink:0;" alt="">
+                                @endif
+                                <div style="min-width:0;">
+                                    <div style="font-size:.84rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $authCompany?->localizedName() }}</div>
+                                    <div style="font-size:.72rem;color:#C9A227;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $authCompany?->email }}</div>
+                                </div>
                             </div>
-                        </div>
+                        </a>
                     </div>
                     <ul class="list-unstyled p-2 mb-0">
+                         <li >
+                            <a href="{{ route('company.profile.show') }}"
+                            class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
+                                <i class="link-icon" data-feather="user"></i>
+                                <span class="icon-sm link-title " >{{ __('Profile') }}</span>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
                         <li>
                             <a href="{{ $authCompany ? route('front.show', $authCompany) : '#' }}" target="_blank"
                                class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">

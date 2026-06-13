@@ -23,11 +23,12 @@
     font-weight: 800; font-size: 20px; color: #fff; flex-shrink: 0;
 }
 
-.sec-card { border-radius: 16px !important; margin-bottom: 18px; overflow: hidden; }
+.sec-card { border-radius: 16px !important; margin-bottom: 18px; }
 .sec-header {
     padding: 14px 20px 13px;
     border-bottom: 1px solid rgba(255,255,255,.07);
     display: flex; align-items: center; gap: 10px;
+    border-radius: 16px 16px 0 0;
 }
 .bk-theme-light .sec-header { border-bottom-color: rgba(0,0,0,.07); }
 .sec-icon { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -145,7 +146,7 @@
 
     @include('company.partials.flash')
 
-    <form method="POST" action="{{ route('company.employees.update', $employee) }}">
+    <form method="POST" action="{{ route('company.employees.update', $employee) }}" enctype="multipart/form-data">
     @csrf @method('PUT')
     <div class="row g-4">
 
@@ -164,6 +165,28 @@
                         </div>
                     </div>
                     <div class="sec-body">
+                        {{-- Profile Photo --}}
+                        <div class="mb-3">
+                            <label class="f-label">{{ __('Profile Photo') }}</label>
+                            <div class="d-flex align-items-center gap-3">
+                                <div id="edit-photo-preview"
+                                     style="width:64px;height:64px;border-radius:14px;overflow:hidden;flex-shrink:0;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);">
+                                    @if($employee->image)
+                                        <img src="{{ asset('storage/'.$employee->image) }}" style="width:100%;height:100%;object-fit:cover;" alt="">
+                                    @else
+                                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+                                            <i data-feather="user" style="width:24px;height:24px;opacity:.3;"></i>
+                                        </div>
+                                    @endif
+                                </div>
+                                <div class="flex-grow-1">
+                                    <input type="file" name="image" id="edit-photo-input" accept="image/*"
+                                           class="f-input form-control" style="font-size:12px;padding:7px 10px;">
+                                    <div class="mt-1" style="font-size:10px;opacity:.4;">{{ __('JPG, PNG or WEBP — max 2 MB') }}</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="f-label">{{ __('Name (English)') }} <span class="text-danger">*</span></label>
@@ -226,36 +249,70 @@
                 </div>
             </div>
 
-            @if($serviceCategories->isNotEmpty())
+            {{-- Compensation --}}
+            @include('company.employees.partials.compensation-form', [
+                'services'           => $services,
+                'compensation'       => $compensation,
+                'serviceCommissions' => $serviceCommissions,
+            ])
+
+            {{-- is_bookable + Services --}}
             <div class="card border-0 sec-card bk-a3">
                 <div class="card-body p-0">
                     <div class="sec-header">
                         <div class="sec-icon" style="background:rgba(67,233,123,.12);">
                             <i data-feather="scissors" style="width:15px;height:15px;color:#43e97b;"></i>
                         </div>
-                        <div>
-                            <div class="sec-title">{{ __('Service Categories') }}</div>
-                            <div class="sec-sub">{{ __('What this employee can provide') }}</div>
+                        <div class="flex-grow-1">
+                            <div class="sec-title">{{ __('Service Provider') }}</div>
+                            <div class="sec-sub">{{ __('Does this employee offer services to customers?') }}</div>
+                        </div>
+                        <div class="form-check form-switch mb-0 ms-auto">
+                            <input class="form-check-input" type="checkbox"
+                                   id="is_bookable" name="is_bookable" value="1"
+                                   style="width:42px;height:22px;cursor:pointer;"
+                                   {{ old('is_bookable', $employee->is_bookable) ? 'checked' : '' }}>
                         </div>
                     </div>
-                    <div class="sec-body">
-                        <div class="d-flex flex-wrap gap-2">
-                            @foreach($serviceCategories as $cat)
-                            @php $checked = in_array($cat->id, old('service_category_ids', $selectedCatIds)); @endphp
-                            <label class="svc-chip {{ $checked ? 'selected' : '' }}" for="scat_{{ $cat->id }}">
-                                <input type="checkbox" id="scat_{{ $cat->id }}"
-                                       name="service_category_ids[]" value="{{ $cat->id }}"
-                                       class="svc-cat-check" style="display:none;"
-                                       {{ $checked ? 'checked' : '' }}>
-                                <i data-feather="check-circle" class="svc-chip-icon"></i>
-                                {{ app()->getLocale()==='ar' ? ($cat->name_ar ?: $cat->name_en) : ($cat->name_en ?: $cat->name_ar) }}
-                            </label>
+
+                    <div id="services-panel" style="{{ old('is_bookable', $employee->is_bookable) ? '' : 'display:none;' }}">
+                        @if($services->isNotEmpty())
+                        <div class="sec-body">
+                            <p class="sec-sub mb-3" style="font-size:12px;">
+                                {{ __('Select the specific services this employee can perform:') }}
+                            </p>
+                            @foreach($services as $catId => $group)
+                            @php $cat = $group->first()->serviceCategory; @endphp
+                            <div class="mb-3">
+                                <div class="f-label mb-2">
+                                    {{ $cat ? (app()->getLocale()==='ar' ? ($cat->name_ar ?: $cat->name_en) : ($cat->name_en ?: $cat->name_ar)) : __('Uncategorized') }}
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach($group as $svc)
+                                    @php $checked = in_array($svc->id, old('service_ids', $selectedServiceIds)); @endphp
+                                    <label class="svc-chip {{ $checked ? 'selected' : '' }}" for="svc_{{ $svc->id }}">
+                                        <input type="checkbox" id="svc_{{ $svc->id }}"
+                                               name="service_ids[]" value="{{ $svc->id }}"
+                                               class="svc-check" style="display:none;"
+                                               {{ $checked ? 'checked' : '' }}>
+                                        <i data-feather="check-circle" class="svc-chip-icon"></i>
+                                        {{ app()->getLocale()==='ar' ? ($svc->name_ar ?: $svc->name_en) : ($svc->name_en ?: $svc->name_ar) }}
+                                    </label>
+                                    @endforeach
+                                </div>
+                            </div>
                             @endforeach
                         </div>
+                        @else
+                        <div class="sec-body">
+                            <p class="sec-sub" style="font-size:12px;">
+                                {{ __('No active services for this branch yet.') }}
+                            </p>
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
-            @endif
 
         </div>
 
@@ -324,9 +381,9 @@
                         </div>
                     </div>
                     @include('partials.social-links-form', [
-                        'savedLinks'  => $socialLinks,
-                        'inputPrefix' => 'social_links',
-                        'accentColor' => '#6366f1',
+                        'savedLinks'       => $socialLinks,
+                        'inputPrefix'      => 'social_links',
+                        'allowedPlatforms' => ['whatsapp', 'facebook', 'instagram'],
                     ])
                 </div>
             </div>
@@ -357,6 +414,16 @@
 
 @push('scripts')
 <script>
+// Photo preview
+document.getElementById('edit-photo-input').addEventListener('change', function () {
+    const wrap = document.getElementById('edit-photo-preview');
+    const file = this.files && this.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = e => { wrap.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">'; };
+    reader.readAsDataURL(file);
+});
+
 document.querySelectorAll('.wh-toggle').forEach(t => {
     t.addEventListener('change', function () {
         const n = this.id.split('_')[1];
@@ -369,11 +436,26 @@ document.querySelectorAll('.wh-toggle').forEach(t => {
 
 document.querySelectorAll('.svc-chip').forEach(chip => {
     chip.addEventListener('click', function () {
-        const chk = this.querySelector('.svc-cat-check');
+        const chk = this.querySelector('.svc-check');
+        if (!chk) return;
         chk.checked = !chk.checked;
         this.classList.toggle('selected', chk.checked);
     });
 });
+
+const bookableToggle = document.getElementById('is_bookable');
+const servicesPanel  = document.getElementById('services-panel');
+if (bookableToggle && servicesPanel) {
+    bookableToggle.addEventListener('change', function () {
+        servicesPanel.style.display = this.checked ? '' : 'none';
+        if (!this.checked) {
+            servicesPanel.querySelectorAll('.svc-check').forEach(c => {
+                c.checked = false;
+                c.closest('.svc-chip')?.classList.remove('selected');
+            });
+        }
+    });
+}
 
 document.querySelectorAll('.js-toggle-pw').forEach(btn => {
     btn.addEventListener('click', function () {

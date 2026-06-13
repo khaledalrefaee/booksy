@@ -1,6 +1,62 @@
 @php
     $authCompany = Auth::guard('company')->user();
+    $sidebarBranches = $authCompany ? $authCompany->branches()->orderBy('sort_order')->get() : collect();
+    $currentBranchId = request()->route('branch')?->id;
+    $onBranchRoute = request()->routeIs('company.branches.show')
+        || request()->routeIs('company.branches.employees.*')
+        || request()->routeIs('company.branches.services.*')
+        || request()->routeIs('company.branches.working-hours.*');
 @endphp
+
+<style>
+.sidebar .sidebar-body .nav .nav-item.nav-category:not(:first-child) { margin-top: 6px !important; }
+.nav-link-sub {
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+    padding-inline-start: 36px !important;
+    font-size: 13px !important;
+}
+.nav-link-sub .sub-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.25);
+    flex-shrink: 0;
+    transition: background .2s, transform .2s;
+    margin-inline-end: 8px;
+}
+.nav-link-sub:hover .sub-dot,
+.nav-link-sub.active .sub-dot {
+    background: var(--primary, #667eea);
+    transform: scale(1.3);
+}
+.branch-collapse-toggle {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: start;
+    border-radius: 6px;
+    transition: background .15s;
+    gap: 8px;
+    opacity: .75;
+}
+.branch-collapse-toggle:hover { background: rgba(255,255,255,.05); opacity:1; }
+.branch-collapse-toggle .caret {
+    margin-inline-start: auto;
+    transition: transform .2s;
+    opacity: .5;
+    flex-shrink: 0;
+}
+.branch-collapse-toggle[aria-expanded="true"] .caret { transform: rotate(180deg); }
+.branch-collapse-list { padding: 0; margin: 0; list-style: none; }
+</style>
 
 <nav class="sidebar">
     <div class="sidebar-header">
@@ -15,7 +71,7 @@
     <div class="sidebar-body">
         <ul class="nav">
 
-            {{-- ── Profile card (inside nav) ── --}}
+            {{-- ── Profile card ── --}}
             <li class="nav-item" style="padding:0 8px 8px;">
                 <div style="
                     display:flex;align-items:center;gap:10px;
@@ -40,7 +96,7 @@
                 </div>
             </li>
 
-            {{-- ── Main ── --}}
+            {{-- ── MAIN ── --}}
             <li class="nav-item nav-category">{{ __('Main') }}</li>
 
             <li class="nav-item">
@@ -51,7 +107,46 @@
                 </a>
             </li>
 
-            {{-- ── Management ── --}}
+            {{-- ── BUSINESS (Branches) ── --}}
+            <li class="nav-item nav-category">{{ __('Business') }}</li>
+
+            {{-- All branches link --}}
+            <li class="nav-item">
+                <a href="{{ route('company.branches.index') }}"
+                   class="nav-link {{ request()->routeIs('company.branches.index') ? 'active' : '' }}">
+                    <i class="link-icon" data-feather="grid"></i>
+                    <span class="link-title">{{ __('All Branches') }}</span>
+                </a>
+            </li>
+
+            {{-- Individual branches (collapsible) --}}
+            @if($sidebarBranches->isNotEmpty())
+            <li class="nav-item">
+                <button class="branch-collapse-toggle"
+                        type="button"
+                        id="branchesToggle"
+                        aria-expanded="{{ $onBranchRoute ? 'true' : 'false' }}"
+                        onclick="toggleBranches()">
+                    <i data-feather="map-pin" style="width:16px;height:16px;flex-shrink:0;"></i>
+                    <span>{{ __('Branches') }}</span>
+                    <i data-feather="chevron-down" class="caret" style="width:14px;height:14px;"></i>
+                </button>
+                <ul class="branch-collapse-list" id="branchCollapseList"
+                    style="{{ $onBranchRoute ? '' : 'display:none;' }}">
+                    @foreach($sidebarBranches as $branch)
+                    <li class="nav-item">
+                        <a href="{{ route('company.branches.show', $branch) }}"
+                           class="nav-link nav-link-sub {{ $currentBranchId === $branch->id ? 'active' : '' }}">
+                            <span class="sub-dot"></span>
+                            <span class="link-title text-truncate">{{ $branch->localizedName() }}</span>
+                        </a>
+                    </li>
+                    @endforeach
+                </ul>
+            </li>
+            @endif
+
+            {{-- ── MANAGEMENT ── --}}
             <li class="nav-item nav-category">{{ __('Management') }}</li>
 
             <li class="nav-item">
@@ -76,14 +171,14 @@
             </li>
 
             <li class="nav-item">
-                <a href="{{ route('company.branches.index') }}"
-                   class="nav-link {{ request()->routeIs('company.branches.*') || request()->routeIs('company.services.*') || request()->routeIs('company.employees.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="map-pin"></i>
-                    <span class="link-title">{{ __('Branches') }}</span>
+                <a href="{{ route('company.employee-leaves.index') }}"
+                   class="nav-link {{ request()->routeIs('company.employee-leaves.*') ? 'active' : '' }}">
+                    <i class="link-icon" data-feather="user-x"></i>
+                    <span class="link-title">{{ __('Employee Leaves') }}</span>
                 </a>
             </li>
 
-            {{-- ── Settings ── --}}
+            {{-- ── SETTINGS ── --}}
             <li class="nav-item nav-category">{{ __('Settings') }}</li>
 
             <li class="nav-item">
@@ -91,6 +186,14 @@
                    class="nav-link {{ request()->routeIs('company.service-categories.*') ? 'active' : '' }}">
                     <i class="link-icon" data-feather="tag"></i>
                     <span class="link-title">{{ __('Service categories') }}</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ route('company.profile.show') }}"
+                   class="nav-link {{ request()->routeIs('company.profile.*') ? 'active' : '' }}">
+                    <i class="link-icon" data-feather="user"></i>
+                    <span class="link-title">{{ __('Profile') }}</span>
                 </a>
             </li>
 
@@ -125,3 +228,13 @@
         </div>
     </div>
 </nav>
+
+<script>
+function toggleBranches() {
+    var btn  = document.getElementById('branchesToggle');
+    var list = document.getElementById('branchCollapseList');
+    var open = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+    list.style.display = open ? 'none' : '';
+}
+</script>

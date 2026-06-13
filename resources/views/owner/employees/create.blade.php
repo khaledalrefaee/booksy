@@ -151,7 +151,7 @@
                 @include('owner.branches.partials.wizard-steps', ['currentStep' => 3])
             @endif
 
-            <form method="post" action="{{ route('owner.branches.employees.store', $branch) }}" id="employees-form">
+            <form method="post" action="{{ route('owner.branches.employees.store', $branch) }}" id="employees-form" enctype="multipart/form-data">
                 @csrf
                 @if($wizard)<input type="hidden" name="wizard" value="1">@endif
 
@@ -253,8 +253,8 @@ document.addEventListener('DOMContentLoaded', function () {
         div.innerHTML = html.trim();
         container.appendChild(div.firstElementChild);
         reindex();
-        // Init new toggles
         initToggles(container.lastElementChild);
+        initPhotoPreview(container.lastElementChild);
     });
 
     container.addEventListener('click', e => {
@@ -283,6 +283,27 @@ document.addEventListener('DOMContentLoaded', function () {
     initToggles();
     document.getElementById('employees-form').addEventListener('submit', reindex);
     reindex();
+
+    // Photo preview
+    function initPhotoPreview(scope) {
+        scope = scope || document;
+        scope.querySelectorAll('.emp-photo-input').forEach(function (input) {
+            input.addEventListener('change', function () {
+                const previewId     = this.dataset.preview;
+                const placeholderCl = this.dataset.placeholder;
+                const wrap          = document.getElementById(previewId);
+                if (!wrap) return;
+                const file = this.files && this.files[0];
+                if (!file || !file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    wrap.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+    }
+    initPhotoPreview();
 });
 </script>
 @endpush

@@ -628,3 +628,49 @@ html { scroll-behavior: smooth; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(201,162,39,.3); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(201,162,39,.5); }
+
+/* ── Select / form-select theme-aware fix ── */
+/* Dark theme: white background makes text invisible */
+.form-select,
+select.f-input {
+    background-color: var(--input-bg, rgba(255,255,255,.06)) !important;
+    color: inherit !important;
+    border-color: rgba(255,255,255,.12) !important;
+}
+.form-select:focus,
+select.f-input:focus {
+    background-color: var(--input-bg, rgba(255,255,255,.09)) !important;
+    border-color: rgba(201,162,39,.5) !important;
+    box-shadow: 0 0 0 3px rgba(201,162,39,.15) !important;
+    color: inherit !important;
+}
+/* Light theme override */
+.bk-theme-light .form-select,
+.bk-theme-light select.f-input {
+    background-color: #fff !important;
+    color: #1a1a2e !important;
+    border-color: #dee2e6 !important;
+}
+.bk-theme-light .form-select:focus,
+.bk-theme-light select.f-input:focus {
+    border-color: #C9A227 !important;
+    box-shadow: 0 0 0 3px rgba(201,162,39,.15) !important;
+}
+/* Fix the dropdown arrow SVG color in dark mode */
+.form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23aaaaaa' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") !important;
+}
+.bk-theme-light .form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23444444' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") !important;
+}
+/* Fix option elements in selects */
+.form-select option,
+select.f-input option {
+    background-color: #1e2a3a;
+    color: #e0e0e0;
+}
+.bk-theme-light .form-select option,
+.bk-theme-light select.f-input option {
+    background-color: #fff;
+    color: #1a1a2e;
+}

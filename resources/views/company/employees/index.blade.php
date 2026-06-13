@@ -175,11 +175,42 @@
                         <span><i data-feather="phone" style="width:11px;height:11px;" class="{{ app()->getLocale()==='ar' ? 'ms-1' : 'me-1' }}"></i>{{ $emp->phone }}</span>
                         @endif
                     </div>
+                    {{-- Compensation --}}
+                    @if($emp->compensation)
+                    @php
+                        $comp = $emp->compensation;
+                        $revenue = (float)($emp->revenue_this_month ?? 0);
+                        $commissionEarned = null;
+                        if (in_array($comp->type, ['commission','mixed']) && $comp->commission_type === 'flat') {
+                            $commissionEarned = $revenue * ($comp->commission_rate / 100);
+                        }
+                    @endphp
+                    <div class="d-flex flex-wrap gap-2 mt-1">
+                        @if(in_array($comp->type, ['salary','mixed']))
+                            <span style="font-size:11px;background:rgba(43,207,126,.1);color:#2bcf7e;border-radius:6px;padding:2px 8px;font-weight:600;">
+                                💰 {{ number_format($comp->base_amount,0) }} / {{ __($comp->pay_period) }}
+                            </span>
+                        @endif
+                        @if($commissionEarned !== null)
+                            <span style="font-size:11px;background:rgba(250,112,154,.1);color:#fa709a;border-radius:6px;padding:2px 8px;font-weight:600;">
+                                📊 {{ number_format($commissionEarned,0) }} {{ __('commission this month') }}
+                            </span>
+                        @endif
+                        @if(($emp->appointments_this_month ?? 0) > 0)
+                            <span style="font-size:11px;background:rgba(102,126,234,.1);color:#a5b4fd;border-radius:6px;padding:2px 8px;font-weight:600;">
+                                📅 {{ $emp->appointments_this_month }} {{ __('appts this month') }}
+                            </span>
+                        @endif
+                    </div>
+                    @endif
                 </div>
 
                 <div class="emp-actions">
                     <a href="{{ route('company.employee-leaves.create', $emp) }}" class="btn-act btn-act-leave">
                         <i data-feather="calendar" style="width:11px;height:11px;"></i>{{ __('Leave') }}
+                    </a>
+                    <a href="{{ route('company.employees.deductions.index', $emp) }}" class="btn-act" style="background:rgba(245,87,108,.12);color:#f5576c;">
+                        <i data-feather="minus-circle" style="width:11px;height:11px;"></i>{{ __('Deductions') }}
                     </a>
                     <a href="{{ route('company.employees.edit', $emp) }}" class="btn-act btn-act-edit">
                         <i data-feather="edit-2" style="width:11px;height:11px;"></i>{{ __('Edit') }}
