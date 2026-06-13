@@ -17,6 +17,7 @@ Route::get('/branch/{branch}', [FrontController::class, 'branchShow'])->name('fr
 Route::get('/about', [FrontController::class, 'about'])->name('front.about');
 Route::get('/contact', [FrontController::class, 'contact'])->name('front.contact');
 Route::post('/contact', [FrontController::class, 'contactSend'])->name('front.contact.send');
+
 Route::get('/test-gd', function () {
     return extension_loaded('gd') ? 'GD ON' : 'GD OFF';
 });
