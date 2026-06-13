@@ -114,20 +114,11 @@ class BranchQrService
             imagefilledellipse($img, $dx, 18, 5, 5, $cG2);
         }
 
-        // ── App name (Booksy) — Ink Free, dark-gold on golden strip ─────────
-        $appName   = config('app.name', 'Booksy');
-        $titleFont = $this->font('title');
-        $sz        = 52;
-        $bbox      = imagettfbbox($sz, 0, $titleFont, $appName);
-        $tw        = abs($bbox[4] - $bbox[0]);
-        $th        = abs($bbox[5] - $bbox[1]);
-        $tx        = (int)((self::W - $tw) / 2);
-        $ty        = (int)(($topH + $th) / 2) + 8;
-        // soft drop-shadow (2px offset, semi-transparent black)
-        $cShadow   = imagecolorallocate($img, 40, 30, 0);
-        imagettftext($img, $sz, 0, $tx + 3, $ty + 3, $cShadow, $titleFont, $appName);
-        // main text in very dark brown-black so it contrasts on gold strip
-        imagettftext($img, $sz, 0, $tx, $ty, imagecolorallocate($img, 25, 18, 2), $titleFont, $appName);
+        // ── App name ─────────────────────────────────────────────────────────
+        $appName = config('app.name', 'Booksy');
+        $cText   = imagecolorallocate($img, 25, 18, 2);
+        $cShad   = imagecolorallocate($img, 40, 30, 0);
+        $this->drawText($img, $appName, $this->font('title'), 52, self::W, $topH, $cText, $cShad);
 
         // 5 ── QR directly on dark background (no white card) ────────────────
         $qrX = (int)((self::W - $qrW) / 2);
@@ -140,18 +131,10 @@ class BranchQrService
         $botH = self::H - $botY - 4;
         $this->filledRounded($img, 2, $botY, self::W - 3, self::H - 3, $sR, $cGold);
 
-        // ── BOOK NOW — Eras Bold, letter-spaced manually ─────────────────────
-        $bnFont  = $this->font('booknow');
-        $bnText  = 'BOOK  NOW';          // two spaces = visual letter gap
-        $sz2     = 28;
-        $bbox2   = imagettfbbox($sz2, 0, $bnFont, $bnText);
-        $tw2     = abs($bbox2[4] - $bbox2[0]);
-        $th2     = abs($bbox2[5] - $bbox2[1]);
-        $x2      = (int)((self::W - $tw2) / 2);
-        $y2      = $botY + (int)(($botH + $th2) / 2) + 4;
-        // thin shadow
-        imagettftext($img, $sz2, 0, $x2 + 2, $y2 + 2, imagecolorallocate($img, 40, 30, 0), $bnFont, $bnText);
-        imagettftext($img, $sz2, 0, $x2, $y2, imagecolorallocate($img, 22, 16, 2), $bnFont, $bnText);
+        // ── BOOK NOW ─────────────────────────────────────────────────────────
+        $cText2 = imagecolorallocate($img, 22, 16, 2);
+        $cShad2 = imagecolorallocate($img, 40, 30, 0);
+        $this->drawText($img, 'BOOK  NOW', $this->font('booknow'), 28, self::W, $botH, $cText2, $cShad2, $botY);
 
         // 7 ── Corner accents ─────────────────────────────────────────────────
         $sq = 9; $ins = 10;
@@ -207,6 +190,39 @@ class BranchQrService
 
 
         return $out;
+    }
+
+    /**
+     * Draw centered text using TTF if available, GD built-in font otherwise.
+     * $stripH = height of the strip, $stripY = top Y of strip (0 for top strip).
+     */
+    private function drawText(
+        \GdImage $img, string $text, string $fontPath, int $sz,
+        int $canvasW, int $stripH, $cText, $cShad, int $stripY = 0
+    ): void {
+        if (file_exists($fontPath)) {
+            try {
+                $bbox = @imagettfbbox($sz, 0, $fontPath, $text);
+                if ($bbox === false) throw new \RuntimeException('bbox failed');
+                $tw = abs($bbox[4] - $bbox[0]);
+                $th = abs($bbox[5] - $bbox[1]);
+                $tx = (int)(($canvasW - $tw) / 2);
+                $ty = $stripY + (int)(($stripH + $th) / 2) + 6;
+                imagettftext($img, $sz, 0, $tx + 2, $ty + 2, $cShad, $fontPath, $text);
+                imagettftext($img, $sz, 0, $tx, $ty, $cText, $fontPath, $text);
+                return;
+            } catch (\Throwable) {
+                // fall through to built-in
+            }
+        }
+
+        // GD built-in font fallback (no external file needed)
+        $gdFont = 5;
+        $tw     = imagefontwidth($gdFont) * strlen($text);
+        $th     = imagefontheight($gdFont);
+        $tx     = (int)(($canvasW - $tw) / 2);
+        $ty     = $stripY + (int)(($stripH - $th) / 2);
+        imagestring($img, $gdFont, $tx, $ty, $text, $cText);
     }
 
     private function loadImage(string $path): \GdImage
