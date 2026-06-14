@@ -203,6 +203,17 @@ class FrontController extends Controller
         return view('front.index3', compact('categories', 'branches'));
     }
 
+    public function index4(Request $request)
+    {
+        $categories = Category::withCount('companies')->orderBy('sort_order')->get();
+        $branches = \App\Models\Branch::with([
+            'company.category','images','reviews',
+            'services' => fn($q) => $q->where('is_active', true),
+        ])->whereHas('company', fn($q) => $q->where('status', 'active'))
+          ->paginate(12)->withQueryString();
+        return view('front.index4', compact('categories', 'branches'));
+    }
+
     public function index2(Request $request)
     {
         $categories = Category::withCount('companies')->orderBy('sort_order')->get();

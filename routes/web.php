@@ -6,9 +6,10 @@ use App\Http\Controllers\BookingController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
-Route::get('/', [FrontController::class, 'index'])->name('front.index');
+Route::get('/', [FrontController::class, 'index4'])->name('front.index');
 Route::get('/v2', [FrontController::class, 'index2'])->name('front.index2');
 Route::get('/v3', [FrontController::class, 'index3'])->name('front.index3');
+Route::get('/v4', [FrontController::class, 'index4'])->name('front.index4');
 Route::get('/api/branches-json', [FrontController::class, 'branchesJson'])->name('front.branches.json');
 Route::get('/api/map-branches', [FrontController::class, 'mapBranches'])->name('front.map.branches');
 Route::get('/business/{company}', [FrontController::class, 'show'])->name('front.show');
