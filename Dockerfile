@@ -2,7 +2,8 @@ FROM php:8.2-cli
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl zip unzip git \
-    libzip-dev libpng-dev libxml2-dev libonig-dev \
+    libzip-dev libpng-dev libxml2-dev libonig-dev libfreetype6-dev libjpeg62-turbo-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo pdo_mysql mbstring xml zip gd bcmath tokenizer fileinfo \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
