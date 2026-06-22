@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 
-# Build a .env from environment variables (Railway injects these)
 cat > /app/.env <<EOF
 APP_NAME="${APP_NAME:-Booksy}"
 APP_ENV="${APP_ENV:-production}"
 APP_KEY="${APP_KEY:-}"
 APP_DEBUG="${APP_DEBUG:-false}"
 APP_URL="${APP_URL:-http://localhost}"
+APP_TIMEZONE="${APP_TIMEZONE:-Asia/Damascus}"
 
 APP_LOCALE="${APP_LOCALE:-en}"
 APP_FALLBACK_LOCALE="${APP_FALLBACK_LOCALE:-en}"
@@ -51,21 +51,17 @@ MAIL_FROM_ADDRESS="${MAIL_FROM_ADDRESS:-hello@example.com}"
 MAIL_FROM_NAME="${MAIL_FROM_NAME:-Booksy}"
 EOF
 
-# Generate APP_KEY if not set
 if [ -z "$APP_KEY" ]; then
     php artisan key:generate --force
 fi
 
-# Clear any old config cache
 php artisan config:clear
 
-# Run migrations
-php artisan migrate --force
+# Fresh migration with seed (reset DB to match new schema)
+php artisan migrate:fresh --seed --force
 
-# Create storage symlink
 php artisan storage:link --force 2>/dev/null || true
 
-# Cache for performance
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
