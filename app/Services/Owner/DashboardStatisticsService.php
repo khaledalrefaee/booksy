@@ -4,6 +4,7 @@ namespace App\Services\Owner;
 
 use App\Models\Appointment;
 use App\Models\Branch;
+use App\Models\BranchWorkingHour;
 use App\Models\Company;
 use App\Models\Service;
 use App\Models\WaitlistEntry;
@@ -68,13 +69,48 @@ final class DashboardStatisticsService
      */
     public function chartDataForCompany(Company $company): array
     {
-        return $this->buildChartData($company->id);
+        return $this->buildChartData($company->id, $company);
+    }
+
+    public function monthChartForCompany(Company $company, int $year, int $month): array
+    {
+        return $this->buildMonthDailySeries($year, $month, $company->id);
+    }
+
+    private function buildMonthDailySeries(int $year, int $month, ?int $companyId): array
+    {
+        $tz    = config('app.timezone');
+        $start = Carbon::create($year, $month, 1, 0, 0, 0, $tz)->startOfMonth();
+        $end   = $start->copy()->endOfMonth();
+
+        $query = Appointment::query()->whereBetween('start_time', [$start, $end]);
+
+        if ($companyId !== null) {
+            $query->where('company_id', $companyId);
+        }
+
+        $rows  = $query->get(['start_time', 'status']);
+        $byDay = $rows->groupBy(
+            fn (Appointment $r) => (int) $r->start_time?->timezone($tz)->format('j')
+        );
+
+        $labels = $total = $pending = $completed = [];
+
+        for ($d = 1; $d <= $start->daysInMonth; $d++) {
+            $group       = $byDay->get($d, collect());
+            $labels[]    = (string) $d;
+            $total[]     = $group->count();
+            $pending[]   = $group->where('status', 'pending')->count();
+            $completed[] = $group->where('status', 'completed')->count();
+        }
+
+        return compact('labels', 'total', 'pending', 'completed');
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function buildChartData(?int $companyId): array
+    private function buildChartData(?int $companyId, ?Company $company = null): array
     {
         $tz = config('app.timezone');
         $now = now($tz);
@@ -90,13 +126,13 @@ final class DashboardStatisticsService
         $recent = $recentQuery->get(['start_time', 'status', 'total_price']);
 
         $daily = $this->buildDailySeries($recent, $now, $tz, 30);
-        $monthly = $this->buildMonthlySeries($now, $tz, 12, $companyId);
+        $monthly = $this->buildMonthlySeries($now, $tz, 12, $companyId, $company?->created_at);
         $status = $this->buildStatusBreakdown($companyId);
         $revenue = $this->buildRevenueSeries($now, $tz, 12, $companyId);
 
-        $today     = $this->buildTodaySeries($now, $tz, $companyId);
+        $today     = $this->buildTodaySeries($now, $tz, $companyId, $company);
         $weekly    = $this->buildWeeklySeries($now, $tz, $companyId);
-        $yearly    = $this->buildYearlySeries($now, $tz, $companyId);
+        $yearly    = $this->buildYearlySeries($now, $tz, $companyId, $company?->created_at);
         $byStatus  = $this->buildStatusCounts($companyId);
 
         return [
@@ -128,23 +164,23 @@ final class DashboardStatisticsService
         $zeros = [];
 
         for ($i = 29; $i >= -7; $i--) {
-            $labels[] = now()->subDays($i)->format('Y-m-d');
+            $labels[] = now()->subDays($i)->format('d');
             $zeros[] = 0;
         }
 
         $monthlyLabels = [];
         $monthlyZeros = [];
         for ($i = 11; $i >= 0; $i--) {
-            $monthlyLabels[] = now()->subMonths($i)->format('M Y');
+            $monthlyLabels[] = (string) now()->subMonths($i)->month;
             $monthlyZeros[] = 0;
         }
 
         $dailyData = ['labels' => $labels, 'total' => $zeros, 'pending' => $zeros, 'completed' => $zeros];
         $monthlyData = ['labels' => $monthlyLabels, 'total' => $monthlyZeros];
 
-        // Today: 24 hours zeros
-        $hourLabels = array_map(fn($h) => sprintf('%02d:00', $h), range(0, 23));
-        $hourZeros  = array_fill(0, 24, 0);
+        // Today: working hours only (8:00 – 22:00 default)
+        $hourLabels = array_map(fn($h) => sprintf('%02d:00', $h), range(8, 22));
+        $hourZeros  = array_fill(0, 15, 0);
         $todayData  = ['labels' => $hourLabels, 'total' => $hourZeros, 'pending' => $hourZeros, 'completed' => $hourZeros];
 
         // Week: last 7 days zeros
@@ -193,7 +229,7 @@ final class DashboardStatisticsService
             $key = $day->format('Y-m-d');
             $rows = $byDay->get($key, collect());
 
-            $labels[] = $day->translatedFormat('d M');
+            $labels[] = $day->format('d');
             $total[] = $rows->count();
             $pending[] = $rows->where('status', 'pending')->count();
             $completed[] = $rows->where('status', 'completed')->count();
@@ -241,7 +277,7 @@ final class DashboardStatisticsService
     /**
      * @return array{labels: list<string>, total: list<int>}
      */
-    private function buildMonthlySeries(Carbon $now, string $tz, int $months, ?int $companyId = null): array
+    private function buildMonthlySeries(Carbon $now, string $tz, int $months, ?int $companyId = null, ?Carbon $companyCreatedAt = null): array
     {
         $from = $now->copy()->subMonths($months - 1)->startOfMonth();
 
@@ -257,6 +293,10 @@ final class DashboardStatisticsService
             fn (Appointment $row) => $row->start_time?->timezone($tz)->format('Y-m') ?? ''
         );
 
+        // Show year only when account is >= 12 months old (spans two calendar years)
+        $accountAgeMonths = $companyCreatedAt ? $companyCreatedAt->diffInMonths($now) : 0;
+        $showYear = $accountAgeMonths >= 12;
+
         $labels = [];
         $total = [];
 
@@ -264,15 +304,18 @@ final class DashboardStatisticsService
             $month = $now->copy()->subMonths($i);
             $key = $month->format('Y-m');
 
-            $labels[] = $month->translatedFormat('M Y');
+            // If account < 1 year: plain month number. If >= 1 year: "Jan '24" style.
+            $labels[] = $showYear
+                ? $month->translatedFormat("M 'y")
+                : (string) $month->month;
             $total[] = $byMonth->get($key, collect())->count();
         }
 
         return compact('labels', 'total');
     }
 
-    /** Today: hourly breakdown (0–23) */
-    private function buildTodaySeries(Carbon $now, string $tz, ?int $companyId): array
+    /** Today: hourly breakdown limited to company working hours */
+    private function buildTodaySeries(Carbon $now, string $tz, ?int $companyId, ?Company $company = null): array
     {
         $start = $now->copy()->startOfDay();
         $end   = $now->copy()->endOfDay();
@@ -290,12 +333,34 @@ final class DashboardStatisticsService
             fn (Appointment $r) => (int) $r->start_time?->timezone($tz)->format('G')
         );
 
+        // Determine working hour range from branch working hours (today's day of week)
+        $todayDow = (int) $now->dayOfWeek; // 0=Sun … 6=Sat
+        $hourFrom = 8;
+        $hourTo   = 22;
+
+        if ($company !== null) {
+            $branchIds = $company->branches()->pluck('id');
+
+            $todayHours = BranchWorkingHour::query()
+                ->whereIn('branch_id', $branchIds)
+                ->where('day_of_week', $todayDow)
+                ->where('is_open', true)
+                ->get(['open_time', 'close_time']);
+
+            if ($todayHours->isNotEmpty()) {
+                $opens  = $todayHours->map(fn ($r) => (int) substr($r->open_time, 0, 2));
+                $closes = $todayHours->map(fn ($r) => (int) substr($r->close_time, 0, 2));
+                $hourFrom = $opens->min();
+                $hourTo   = min($closes->max(), 23);
+            }
+        }
+
         $labels = [];
         $total  = [];
         $pending   = [];
         $completed = [];
 
-        for ($h = 0; $h <= 23; $h++) {
+        for ($h = $hourFrom; $h <= $hourTo; $h++) {
             $group = $byHour->get($h, collect());
             $labels[]    = sprintf('%02d:00', $h);
             $total[]     = $group->count();
@@ -345,9 +410,9 @@ final class DashboardStatisticsService
     }
 
     /** Year: last 12 months (same as monthly but named "year" range) */
-    private function buildYearlySeries(Carbon $now, string $tz, ?int $companyId): array
+    private function buildYearlySeries(Carbon $now, string $tz, ?int $companyId, ?Carbon $companyCreatedAt = null): array
     {
-        return $this->buildMonthlySeries($now, $tz, 12, $companyId);
+        return $this->buildMonthlySeries($now, $tz, 12, $companyId, $companyCreatedAt);
     }
 
     /** Returns raw status → count map (no translation). */

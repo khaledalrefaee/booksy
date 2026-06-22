@@ -64,8 +64,16 @@
     flex-shrink: 0;
     opacity: 0; transition: opacity .2s;
 }
-/* Always show on mobile/touch */
+.emp-row:hover .emp-actions,
 @media (max-width: 768px) { .emp-actions { opacity: 1; } }
+@media (max-width: 768px) {
+    .emp-actions { opacity: 1; }
+    .emp-row { min-width: 520px; }
+}
+.emp-scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.emp-scroll-wrap::-webkit-scrollbar { height: 4px; }
+.emp-scroll-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
+.bk-theme-light .emp-scroll-wrap::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); }
 
 .btn-act {
     border: none; border-radius: 9px;
@@ -137,7 +145,7 @@
 
     {{-- List --}}
     <div class="card border-0 emp-list-card bk-a2">
-        <div class="card-body p-0">
+        <div class="card-body p-0 emp-scroll-wrap">
             @forelse($employees as $emp)
             @php
                 $palette = ['#667eea','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1','#fda085'];
@@ -206,6 +214,11 @@
                 </div>
 
                 <div class="emp-actions">
+                    <button type="button" class="btn-act js-emp-show"
+                            style="background:rgba(102,126,234,.18);color:#a5b4fd;"
+                            data-id="{{ $emp->id }}">
+                        <i data-feather="eye" style="width:11px;height:11px;"></i>{{ __('Show') }}
+                    </button>
                     <a href="{{ route('company.employee-leaves.create', $emp) }}" class="btn-act btn-act-leave">
                         <i data-feather="calendar" style="width:11px;height:11px;"></i>{{ __('Leave') }}
                     </a>
@@ -242,3 +255,158 @@
 
 </div>
 @endsection
+
+@push('company-after-template')
+{{-- Hidden employee detail panels --}}
+@foreach($employees as $emp)
+@php
+    $palette  = ['#667eea','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1','#fda085'];
+    $bg       = $palette[$emp->id % count($palette)];
+    $initial  = strtoupper(mb_substr($emp->name_en ?? $emp->name_ar ?? '?', 0, 1));
+    $comp     = $emp->compensation;
+    $revenue  = (float)($emp->revenue_this_month ?? 0);
+@endphp
+<div id="emp-detail-{{ $emp->id }}" class="d-none">
+    {{-- Header --}}
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,{{ $bg }}bb,{{ $bg }});display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#fff;flex-shrink:0;">{{ $initial }}</div>
+        <div>
+            <div class="fw-bold" style="font-size:16px;">{{ $emp->name_en ?: $emp->name_ar }}</div>
+            @if($emp->name_ar && $emp->name_en)
+            <div style="font-size:12px;opacity:.5;" dir="rtl">{{ $emp->name_ar }}</div>
+            @endif
+            <div class="d-flex flex-wrap gap-2 mt-1">
+                @if($emp->role)
+                <span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:6px;background:rgba(102,126,234,.18);color:#a5b4fd;">
+                    {{ app()->getLocale()==='ar' ? ($emp->role->label_ar ?: $emp->role->label_en) : ($emp->role->label_en ?: $emp->role->label_ar) }}
+                </span>
+                @endif
+                <span style="font-size:11px;font-weight:600;color:{{ $emp->is_active ? '#2bcf7e' : '#6c757d' }};">
+                    ● {{ $emp->is_active ? __('Active') : __('Inactive') }}
+                </span>
+                @if($emp->is_bookable)
+                <span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:6px;background:rgba(67,233,123,.1);color:#43e97b;">
+                    <i data-feather="calendar" style="width:10px;height:10px;"></i> {{ __('Bookable') }}
+                </span>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    {{-- Stats row --}}
+    <div class="row g-2 mb-4">
+        <div class="col-6">
+            <div style="border-radius:12px;background:rgba(102,126,234,.1);border:1px solid rgba(102,126,234,.2);padding:12px 14px;text-align:center;">
+                <div style="font-size:22px;font-weight:800;color:#a5b4fd;">{{ $emp->appointments_this_month ?? 0 }}</div>
+                <div style="font-size:10px;font-weight:700;opacity:.5;text-transform:uppercase;">{{ __('Appts this month') }}</div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div style="border-radius:12px;background:rgba(43,207,126,.08);border:1px solid rgba(43,207,126,.2);padding:12px 14px;text-align:center;">
+                <div style="font-size:22px;font-weight:800;color:#2bcf7e;">{{ number_format($revenue, 0) }}</div>
+                <div style="font-size:10px;font-weight:700;opacity:.5;text-transform:uppercase;">{{ __('Revenue') }}</div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Info rows --}}
+    <div style="border-radius:12px;border:1px solid rgba(255,255,255,.07);overflow:hidden;margin-bottom:16px;" class="bk-info-table">
+        @if($emp->email)
+        <div class="emp-info-row">
+            <span class="emp-info-label"><i data-feather="mail" style="width:13px;height:13px;"></i> {{ __('Email') }}</span>
+            <span class="emp-info-val">{{ $emp->email }}</span>
+        </div>
+        @endif
+        @if($emp->phone)
+        <div class="emp-info-row">
+            <span class="emp-info-label"><i data-feather="phone" style="width:13px;height:13px;"></i> {{ __('Phone') }}</span>
+            <span class="emp-info-val">{{ $emp->phone }}</span>
+        </div>
+        @endif
+        @if($emp->bio)
+        <div class="emp-info-row" style="align-items:flex-start;">
+            <span class="emp-info-label"><i data-feather="file-text" style="width:13px;height:13px;"></i> {{ __('Bio') }}</span>
+            <span class="emp-info-val" style="white-space:pre-line;">{{ $emp->bio }}</span>
+        </div>
+        @endif
+        @if($comp)
+        <div class="emp-info-row">
+            <span class="emp-info-label"><i data-feather="dollar-sign" style="width:13px;height:13px;"></i> {{ __('Compensation') }}</span>
+            <span class="emp-info-val">
+                @if(in_array($comp->type,['salary','mixed']))
+                    {{ number_format($comp->base_amount,0) }} {{ $comp->currency }} / {{ __($comp->pay_period) }}
+                @endif
+                @if(in_array($comp->type,['commission','mixed']) && $comp->commission_type==='flat')
+                    @if(in_array($comp->type,['mixed'])) &nbsp;+&nbsp; @endif
+                    {{ $comp->commission_rate }}% {{ __('commission') }}
+                @endif
+            </span>
+        </div>
+        @endif
+    </div>
+
+    {{-- Action links --}}
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ route('company.employee-leaves.create', $emp) }}" class="btn btn-sm rounded-pill flex-fill fw-semibold" style="background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff;font-size:12px;">
+            <i data-feather="calendar" style="width:12px;height:12px;margin-inline-end:4px;"></i>{{ __('Leave') }}
+        </a>
+        <a href="{{ route('company.employees.deductions.index', $emp) }}" class="btn btn-sm rounded-pill flex-fill fw-semibold" style="background:rgba(245,87,108,.15);color:#f5576c;font-size:12px;">
+            <i data-feather="minus-circle" style="width:12px;height:12px;margin-inline-end:4px;"></i>{{ __('Deductions') }}
+        </a>
+        <a href="{{ route('company.employees.edit', $emp) }}" class="btn btn-sm rounded-pill flex-fill fw-semibold" style="background:linear-gradient(135deg,#4facfe,#00f2fe);color:#fff;font-size:12px;">
+            <i data-feather="edit-2" style="width:12px;height:12px;margin-inline-end:4px;"></i>{{ __('Edit') }}
+        </a>
+    </div>
+</div>
+@endforeach
+
+{{-- Single show modal --}}
+<div class="modal fade" id="empShowModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
+        <div class="modal-content border-0 rounded-4" id="emp-modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold" style="font-size:13px;opacity:.4;">{{ __('Employee Profile') }}</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2" id="emp-modal-body"></div>
+        </div>
+    </div>
+</div>
+@endpush
+
+@push('scripts')
+<style>
+#emp-modal-content { background-color: var(--bs-body-bg, #1e2130); color: var(--bs-body-color); }
+.bk-theme-light #emp-modal-content { background-color: #fff; }
+.emp-info-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    font-size: 13px;
+}
+.bk-theme-light .emp-info-row { border-color: rgba(0,0,0,.07); }
+.emp-info-row:last-child { border-bottom: none; }
+.emp-info-label { width: 90px; flex-shrink: 0; font-size: 11px; font-weight: 700; opacity: .45; display: flex; align-items: center; gap: 4px; }
+.emp-info-val { flex: 1; font-weight: 500; }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.feather) feather.replace();
+
+    var modal    = document.getElementById('empShowModal');
+    var modalBody = document.getElementById('emp-modal-body');
+    if (!modal || !modalBody) return;
+
+    document.querySelectorAll('.js-emp-show').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var id     = this.dataset.id;
+            var detail = document.getElementById('emp-detail-' + id);
+            if (!detail) return;
+            modalBody.innerHTML = detail.innerHTML;
+            if (window.feather) setTimeout(function(){ feather.replace(); }, 30);
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        });
+    });
+});
+</script>
+@endpush

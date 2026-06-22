@@ -33,27 +33,35 @@ class BranchController extends Controller
 
     public function create(): View
     {
-        return view('company.branches.create');
+        $countries = \App\Models\Country::orderBy('sort_order')->get(['id', 'name_en', 'name_ar']);
+        return view('company.branches.create', compact('countries'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'name_en'        => ['required', 'string', 'max:255'],
-            'name_ar'        => ['nullable', 'string', 'max:255'],
-            'address'        => ['nullable', 'string', 'max:500'],
-            'is_head_office' => ['boolean'],
-            'status'         => ['required', 'in:active,inactive,maintenance'],
-            'latitude'       => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude'      => ['nullable', 'numeric', 'between:-180,180'],
-            'phones'         => ['nullable', 'array'],
-            'phones.*'       => ['nullable', 'string', 'max:30'],
-            'phone_codes'    => ['nullable', 'array'],
-            'landlines'      => ['nullable', 'array'],
-            'landlines.*'    => ['nullable', 'string', 'max:30'],
-            'landline_codes' => ['nullable', 'array'],
-            'social_links'   => ['nullable', 'array'],
-            'social_links.*' => ['nullable', 'string', 'max:500'],
+            'name_en'         => ['required', 'string', 'max:255'],
+            'name_ar'         => ['nullable', 'string', 'max:255'],
+            'description_en'  => ['nullable', 'string', 'max:1000'],
+            'description_ar'  => ['nullable', 'string', 'max:1000'],
+            'country_id'      => ['nullable', 'integer', 'exists:countries,id'],
+            'governorate_id'  => ['nullable', 'integer', 'exists:governorates,id'],
+            'area_id'         => ['nullable', 'integer', 'exists:areas,id'],
+            'address'         => ['nullable', 'string', 'max:500'],
+            'sort_order'      => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'is_head_office'  => ['boolean'],
+            'status'          => ['required', 'in:active,inactive,maintenance'],
+            'booking_mode'    => ['required', 'in:marketplace,private'],
+            'latitude'        => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude'       => ['nullable', 'numeric', 'between:-180,180'],
+            'phones'          => ['nullable', 'array'],
+            'phones.*'        => ['nullable', 'string', 'max:30'],
+            'phone_codes'     => ['nullable', 'array'],
+            'landlines'       => ['nullable', 'array'],
+            'landlines.*'     => ['nullable', 'string', 'max:30'],
+            'landline_codes'  => ['nullable', 'array'],
+            'social_links'    => ['nullable', 'array'],
+            'social_links.*'  => ['nullable', 'string', 'max:500'],
         ]);
 
         $this->validatePhoneDigits($request->input('phones', []), $request->input('phone_codes', []));
@@ -70,6 +78,11 @@ class BranchController extends Controller
         $branch = $company->branches()->create([
             'name_en'        => $data['name_en'],
             'name_ar'        => $data['name_ar'] ?? null,
+            'description_en' => $data['description_en'] ?? null,
+            'description_ar' => $data['description_ar'] ?? null,
+            'country_id'     => $data['country_id'] ?? null,
+            'governorate_id' => $data['governorate_id'] ?? null,
+            'area_id'        => $data['area_id'] ?? null,
             'address'        => $data['address'] ?? null,
             'phone'          => $phones[0] ?? null,
             'phones'         => count($phones) > 1 ? array_slice($phones, 1) : null,
@@ -77,7 +90,8 @@ class BranchController extends Controller
             'landlines'      => count($landlines) > 1 ? array_slice($landlines, 1) : null,
             'is_head_office' => ! empty($data['is_head_office']),
             'status'         => $data['status'],
-            'sort_order'     => $company->branches()->count(),
+            'booking_mode'   => $data['booking_mode'],
+            'sort_order'     => $data['sort_order'] ?? $company->branches()->count(),
             'latitude'       => $data['latitude'] ?? null,
             'longitude'      => $data['longitude'] ?? null,
         ]);
@@ -92,8 +106,9 @@ class BranchController extends Controller
             // QR failure must not block branch creation
         }
 
-        return redirect()->route('company.branches.index')
-            ->with('success', __('Branch created.'));
+        return redirect()
+            ->route('company.branches.working-hours.edit', $branch)
+            ->with('branch_created', $branch->localizedName());
     }
 
     public function show(Branch $branch): View
@@ -154,9 +169,17 @@ class BranchController extends Controller
     {
         $this->authoriseBranch($branch);
 
+        $countries   = \App\Models\Country::orderBy('sort_order')->get(['id', 'name_en', 'name_ar']);
+        $governorates = $branch->country_id
+            ? \App\Models\Governorate::where('country_id', $branch->country_id)->orderBy('sort_order')->get(['id', 'name_en', 'name_ar'])
+            : collect();
+        $areas = $branch->governorate_id
+            ? \App\Models\Area::where('governorate_id', $branch->governorate_id)->orderBy('sort_order')->get(['id', 'name_en', 'name_ar'])
+            : collect();
+
         $socialLinks = $branch->socialLinks()->get()->keyBy('platform');
 
-        return view('company.branches.edit', compact('branch', 'socialLinks'));
+        return view('company.branches.edit', compact('branch', 'socialLinks', 'countries', 'governorates', 'areas'));
     }
 
     public function update(Request $request, Branch $branch): RedirectResponse
@@ -164,21 +187,28 @@ class BranchController extends Controller
         $this->authoriseBranch($branch);
 
         $data = $request->validate([
-            'name_en'        => ['required', 'string', 'max:255'],
-            'name_ar'        => ['nullable', 'string', 'max:255'],
-            'address'        => ['nullable', 'string', 'max:500'],
-            'is_head_office' => ['boolean'],
-            'status'         => ['required', 'in:active,inactive,maintenance'],
-            'latitude'       => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude'      => ['nullable', 'numeric', 'between:-180,180'],
-            'phones'         => ['nullable', 'array'],
-            'phones.*'       => ['nullable', 'string', 'max:30'],
-            'phone_codes'    => ['nullable', 'array'],
-            'landlines'      => ['nullable', 'array'],
-            'landlines.*'    => ['nullable', 'string', 'max:30'],
-            'landline_codes' => ['nullable', 'array'],
-            'social_links'   => ['nullable', 'array'],
-            'social_links.*' => ['nullable', 'string', 'max:500'],
+            'name_en'         => ['required', 'string', 'max:255'],
+            'name_ar'         => ['nullable', 'string', 'max:255'],
+            'description_en'  => ['nullable', 'string', 'max:1000'],
+            'description_ar'  => ['nullable', 'string', 'max:1000'],
+            'country_id'      => ['nullable', 'integer', 'exists:countries,id'],
+            'governorate_id'  => ['nullable', 'integer', 'exists:governorates,id'],
+            'area_id'         => ['nullable', 'integer', 'exists:areas,id'],
+            'address'         => ['nullable', 'string', 'max:500'],
+            'sort_order'      => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'is_head_office'  => ['boolean'],
+            'status'          => ['required', 'in:active,inactive,maintenance'],
+            'booking_mode'    => ['required', 'in:marketplace,private'],
+            'latitude'        => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude'       => ['nullable', 'numeric', 'between:-180,180'],
+            'phones'          => ['nullable', 'array'],
+            'phones.*'        => ['nullable', 'string', 'max:30'],
+            'phone_codes'     => ['nullable', 'array'],
+            'landlines'       => ['nullable', 'array'],
+            'landlines.*'     => ['nullable', 'string', 'max:30'],
+            'landline_codes'  => ['nullable', 'array'],
+            'social_links'    => ['nullable', 'array'],
+            'social_links.*'  => ['nullable', 'string', 'max:500'],
         ]);
 
         $this->validatePhoneDigits($request->input('phones', []), $request->input('phone_codes', []));
@@ -193,13 +223,20 @@ class BranchController extends Controller
         $branch->update([
             'name_en'        => $data['name_en'],
             'name_ar'        => $data['name_ar'] ?? null,
+            'description_en' => $data['description_en'] ?? null,
+            'description_ar' => $data['description_ar'] ?? null,
+            'country_id'     => $data['country_id'] ?? null,
+            'governorate_id' => $data['governorate_id'] ?? null,
+            'area_id'        => $data['area_id'] ?? null,
             'address'        => $data['address'] ?? null,
+            'sort_order'     => $data['sort_order'] ?? $branch->sort_order,
             'phone'          => $phones[0] ?? null,
             'phones'         => count($phones) > 1 ? array_slice($phones, 1) : null,
             'landline_phone' => $landlines[0] ?? null,
             'landlines'      => count($landlines) > 1 ? array_slice($landlines, 1) : null,
             'is_head_office' => ! empty($data['is_head_office']),
             'status'         => $data['status'],
+            'booking_mode'   => $data['booking_mode'],
             'latitude'       => $data['latitude'] ?? null,
             'longitude'      => $data['longitude'] ?? null,
         ]);
@@ -276,7 +313,7 @@ class BranchController extends Controller
 
         $request->validate([
             'images'   => ['required', 'array', 'max:20'],
-            'images.*' => ['required', 'image', 'max:4096'],
+            'images.*' => ['required', 'image', 'max:20480'], // 20 MB per file
             'type'     => ['required', 'in:place,work'],
         ]);
 
@@ -284,13 +321,57 @@ class BranchController extends Controller
         $nextOrder = $branch->images()->where('type', $type)->max('sort_order') + 1;
         $saved     = [];
 
+        $dir = "branches/{$branch->id}/gallery";
+        Storage::disk('public')->makeDirectory($dir);
+        $absDir = Storage::disk('public')->path($dir);
+
         foreach ($request->file('images') as $file) {
-            $path = $file->store("branches/{$branch->id}/gallery", 'public');
-            $img  = $branch->images()->create(['path' => $path, 'type' => $type, 'sort_order' => $nextOrder++]);
-            $saved[] = ['id' => $img->id, 'url' => asset('storage/' . $path)];
+            $filename = \Str::uuid() . '.webp';
+            $destPath = $absDir . DIRECTORY_SEPARATOR . $filename;
+
+            $this->convertToWebp($file->getRealPath(), $destPath);
+
+            $storagePath = $dir . '/' . $filename;
+            $img = $branch->images()->create([
+                'path'       => $storagePath,
+                'type'       => $type,
+                'sort_order' => $nextOrder++,
+            ]);
+            $saved[] = ['id' => $img->id, 'url' => asset('storage/' . $storagePath)];
         }
 
         return response()->json(['images' => $saved]);
+    }
+
+    private function convertToWebp(string $sourcePath, string $destPath, int $quality = 82): void
+    {
+        $mime = mime_content_type($sourcePath);
+
+        $src = match ($mime) {
+            'image/jpeg', 'image/jpg' => imagecreatefromjpeg($sourcePath),
+            'image/png'               => $this->gdFromPng($sourcePath),
+            'image/gif'               => imagecreatefromgif($sourcePath),
+            'image/webp'              => imagecreatefromwebp($sourcePath),
+            default                   => null,
+        };
+
+        if (! $src) {
+            // Fallback: copy as-is if GD can't handle it
+            copy($sourcePath, $destPath);
+            return;
+        }
+
+        imagewebp($src, $destPath, $quality);
+        imagedestroy($src);
+    }
+
+    private function gdFromPng(string $path): \GdImage
+    {
+        $src = imagecreatefrompng($path);
+        // Preserve transparency
+        imagealphablending($src, false);
+        imagesavealpha($src, true);
+        return $src;
     }
 
     public function galleryDelete(Request $request, Branch $branch, BranchImage $image): \Illuminate\Http\JsonResponse

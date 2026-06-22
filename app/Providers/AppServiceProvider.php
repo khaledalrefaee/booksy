@@ -31,6 +31,6 @@ class AppServiceProvider extends ServiceProvider
 
         Route::bind('company', fn (string $value) => Company::query()->findOrFail($value));
 
-           URL::forceScheme('https');
+        //   URL::forceScheme('https');
     }
 }

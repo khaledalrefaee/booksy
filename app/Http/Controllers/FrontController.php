@@ -63,6 +63,37 @@ class FrontController extends Controller
         ));
     }
 
+    public function privateBooking(string $slug)
+    {
+        $branch = \App\Models\Branch::where('slug', $slug)
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        $branch->load([
+            'company.category',
+            'company.socialLinks',
+            'images',
+            'workingHours',
+            'services' => fn($q) => $q->where('is_active', true)->with('serviceCategory'),
+            'employees' => fn($q) => $q->where('is_active', true)->with(['role', 'serviceCategories']),
+            'reviews.customer',
+        ]);
+
+        $company = $branch->company;
+        $allImages = $branch->images;
+        $servicesByCategory = $branch->services->groupBy('service_category_id');
+        $employees = $branch->employees;
+        $reviews = $branch->reviews->sortByDesc('created_at');
+        $avgRating = $reviews->avg('rating') ?? 0;
+        $stars = round($avgRating * 2) / 2;
+        $totalRev = $reviews->count();
+
+        return view('front.private-booking', compact(
+            'branch', 'company', 'allImages', 'servicesByCategory',
+            'employees', 'reviews', 'avgRating', 'stars', 'totalRev'
+        ));
+    }
+
     public function about()
     {
         return view('front.about');
@@ -97,7 +128,7 @@ class FrontController extends Controller
             'employees' => fn($q) => $q->where('is_active', true),
             'workingHours',
             'reviews',
-        ])->whereHas('company', fn($q) => $q->where('status', 'active')
+        ])->marketplace()->whereHas('company', fn($q) => $q->where('status', 'active')
             ->whereHas('category', fn($q2) => $q2->where('slug', $slug)));
 
         if ($request->filled('search')) {
@@ -120,7 +151,7 @@ class FrontController extends Controller
         $query  = \App\Models\Branch::with([
             'company.category', 'images', 'reviews',
             'services' => fn($q) => $q->where('is_active', true),
-        ])->whereHas('company', fn($q) => $q->where('status', 'active'));
+        ])->marketplace()->whereHas('company', fn($q) => $q->where('status', 'active'));
 
         if ($request->filled('category')) {
             $query->whereHas('company.category', fn($q) => $q->where('slug', $request->category));
@@ -166,6 +197,7 @@ class FrontController extends Controller
     {
         $isAr = app()->getLocale() === 'ar';
         $branches = \App\Models\Branch::with(['company.category','images','reviews'])
+            ->marketplace()
             ->whereNotNull('latitude')->whereNotNull('longitude')
             ->whereHas('company', fn($q) => $q->where('status','active'))
             ->get();
@@ -198,7 +230,7 @@ class FrontController extends Controller
         $branches = \App\Models\Branch::with([
             'company.category','images','reviews',
             'services' => fn($q) => $q->where('is_active', true),
-        ])->whereHas('company', fn($q) => $q->where('status', 'active'))
+        ])->marketplace()->whereHas('company', fn($q) => $q->where('status', 'active'))
           ->paginate(12)->withQueryString();
         return view('front.index3', compact('categories', 'branches'));
     }
@@ -209,7 +241,7 @@ class FrontController extends Controller
         $branches = \App\Models\Branch::with([
             'company.category','images','reviews',
             'services' => fn($q) => $q->where('is_active', true),
-        ])->whereHas('company', fn($q) => $q->where('status', 'active'))
+        ])->marketplace()->whereHas('company', fn($q) => $q->where('status', 'active'))
           ->paginate(12)->withQueryString();
         return view('front.index4', compact('categories', 'branches'));
     }
@@ -224,7 +256,7 @@ class FrontController extends Controller
             'images',
             'reviews',
             'services' => fn($q) => $q->where('is_active', true),
-        ])->whereHas('company', fn($q) => $q->where('status', 'active'));
+        ])->marketplace()->whereHas('company', fn($q) => $q->where('status', 'active'));
 
         if ($request->filled('category')) {
             $query->whereHas('company.category', fn($q) => $q->where('slug', $request->category));
@@ -256,7 +288,7 @@ class FrontController extends Controller
             'images',
             'reviews',
             'services' => fn($q) => $q->where('is_active', true),
-        ])->whereHas('company', fn($q) => $q->where('status', 'active'));
+        ])->marketplace()->whereHas('company', fn($q) => $q->where('status', 'active'));
 
         if ($request->filled('category')) {
             $query->whereHas('company.category', fn($q) => $q->where('slug', $request->category));

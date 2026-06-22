@@ -23,6 +23,20 @@ class DeductionController extends Controller
         abort_unless($employee->company_id === $this->company()->id, 403);
     }
 
+    public function globalIndex(): View
+    {
+        $company = $this->company();
+
+        $deductions = \App\Models\EmployeeDeduction::whereHas('employee', fn($q) => $q->where('company_id', $company->id))
+            ->with(['employee.branch', 'recordedBy'])
+            ->orderByDesc('deduction_date')
+            ->get();
+
+        $totalDeducted = $deductions->where('is_sick_leave', false)->sum('amount');
+
+        return view('company.deductions.index', compact('deductions', 'totalDeducted'));
+    }
+
     public function index(Employee $employee): View
     {
         $this->authoriseEmployee($employee);

@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Company;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
-use App\Models\User;
+use App\Models\AppointmentService;
+use App\Models\BranchPayment;
+use App\Models\Customer;
+use App\Support\Auditor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class AppointmentController extends Controller
@@ -63,59 +67,93 @@ class AppointmentController extends Controller
         $company = $this->company();
 
         $data = $request->validate([
-            'branch_id'       => ['required', 'exists:branches,id'],
-            'service_id'      => ['required', 'exists:services,id'],
-            'employee_id'     => ['nullable', 'exists:employees,id'],
-            'customer_name'   => ['required', 'string', 'max:255'],
-            'customer_email'  => ['nullable', 'email', 'max:255'],
-            'customer_phone'  => ['nullable', 'string', 'max:30'],
-            'start_time'      => ['required', 'date'],
-            'notes'           => ['nullable', 'string', 'max:1000'],
-            'payment_status'  => ['nullable', 'in:pending,paid,partial'],
+            'branch_id'        => ['required', 'exists:branches,id'],
+            'notes'            => ['nullable', 'string', 'max:1000'],
+            'payment_status'   => ['nullable', 'in:pending,paid,partial'],
+            // Persons: each person has name, phone, and services array
+            'persons'          => ['required', 'array', 'min:1'],
+            'persons.*.name'   => ['required', 'string', 'max:255'],
+            'persons.*.phone'  => ['nullable', 'string', 'max:30'],
+            'persons.*.age'    => ['nullable', 'integer', 'min:1', 'max:150'],
+            'persons.*.services'             => ['required', 'array', 'min:1'],
+            'persons.*.services.*.service_id'=> ['required', 'exists:services,id'],
+            'persons.*.services.*.employee_id'=> ['nullable', 'exists:employees,id'],
+            'persons.*.services.*.start_time' => ['required', 'date'],
         ]);
 
-        // Verify branch belongs to company
         abort_unless($company->branches()->where('id', $data['branch_id'])->exists(), 403);
 
-        // Find or create customer
-        $customer = null;
-        if (! empty($data['customer_email'])) {
-            $customer = User::query()->firstOrCreate(
-                ['email' => $data['customer_email']],
-                [
-                    'name'     => $data['customer_name'],
-                    'password' => Hash::make(str()->random(16)),
-                ]
-            );
-            if ($customer->name !== $data['customer_name']) {
-                $customer->update(['name' => $data['customer_name']]);
+        $groupId = count($data['persons']) > 1 ? Appointment::newGroupId() : null;
+
+        DB::transaction(function () use ($data, $company, $groupId) {
+            foreach ($data['persons'] as $personIndex => $person) {
+                // Resolve or create customer record
+                $customer = null;
+                if (! empty($person['phone'])) {
+                    $customer = Customer::firstOrCreate(
+                        ['phone' => $person['phone']],
+                        ['name'  => $person['name'], 'age' => $person['age'] ?? null]
+                    );
+                    $updates = [];
+                    if ($customer->name !== $person['name']) $updates['name'] = $person['name'];
+                    if (! empty($person['age'])) $updates['age'] = $person['age'];
+                    if ($updates) $customer->update($updates);
+                }
+
+                // Primary (first) service drives the appointment's own fields
+                $firstSvc  = \App\Models\Service::findOrFail($person['services'][0]['service_id']);
+                $firstStart= Carbon::parse($person['services'][0]['start_time']);
+                $firstEnd  = $firstStart->copy()->addMinutes($firstSvc->duration_minutes);
+
+                // Calculate total across all services
+                $totalPrice = 0;
+                $lastEnd    = $firstEnd->copy();
+
+                foreach ($person['services'] as $svcData) {
+                    $svc        = \App\Models\Service::findOrFail($svcData['service_id']);
+                    $totalPrice += $svc->finalPrice();
+                    $sEnd       = Carbon::parse($svcData['start_time'])->addMinutes($svc->duration_minutes);
+                    if ($sEnd->gt($lastEnd)) $lastEnd = $sEnd;
+                }
+
+                $appointment = Appointment::create([
+                    'booking_group_id'=> $groupId,
+                    'company_id'      => $company->id,
+                    'branch_id'       => $data['branch_id'],
+                    'service_id'      => $firstSvc->id,
+                    'employee_id'     => $person['services'][0]['employee_id'] ?? null,
+                    'customer_id'     => $customer?->id,
+                    'customer_name'   => $person['name'],
+                    'customer_phone'  => $person['phone'] ?? null,
+                    'start_time'      => $firstStart,
+                    'end_time'        => $lastEnd,
+                    'status'          => 'pending',
+                    'total_price'     => $totalPrice,
+                    'payment_status'  => $data['payment_status'] ?? 'pending',
+                    'notes'           => $personIndex === 0 ? ($data['notes'] ?? null) : null,
+                ]);
+
+                // Save all services to pivot table
+                foreach ($person['services'] as $sortOrder => $svcData) {
+                    $svc   = \App\Models\Service::findOrFail($svcData['service_id']);
+                    $start = Carbon::parse($svcData['start_time']);
+                    $end   = $start->copy()->addMinutes($svc->duration_minutes);
+
+                    AppointmentService::create([
+                        'appointment_id' => $appointment->id,
+                        'service_id'     => $svc->id,
+                        'employee_id'    => $svcData['employee_id'] ?? null,
+                        'price'          => $svc->finalPrice(),
+                        'currency'       => $svc->currency ?? config('booksy.default_currency', 'SYP'),
+                        'start_time'     => $start,
+                        'end_time'       => $end,
+                        'sort_order'     => $sortOrder,
+                    ]);
+                }
+
+                Auditor::log("Created appointment #{$appointment->id} for {$appointment->customer_name}", $appointment);
             }
-        } else {
-            $customer = User::query()->create([
-                'name'     => $data['customer_name'],
-                'email'    => 'guest_' . time() . '_' . rand(1000, 9999) . '@booksy.local',
-                'password' => Hash::make(str()->random(16)),
-            ]);
-        }
-
-        // Calculate end_time from service duration
-        $service   = \App\Models\Service::query()->findOrFail($data['service_id']);
-        $startTime = \Illuminate\Support\Carbon::parse($data['start_time']);
-        $endTime   = $startTime->copy()->addMinutes($service->duration_minutes);
-
-        Appointment::query()->create([
-            'company_id'     => $company->id,
-            'branch_id'      => $data['branch_id'],
-            'service_id'     => $data['service_id'],
-            'employee_id'    => $data['employee_id'] ?? null,
-            'customer_id'    => $customer->id,
-            'start_time'     => $startTime,
-            'end_time'       => $endTime,
-            'status'         => 'pending',
-            'total_price'    => $service->price,
-            'payment_status' => $data['payment_status'] ?? 'pending',
-            'notes'          => $data['notes'] ?? null,
-        ]);
+        });
 
         return redirect()
             ->route('company.appointments.index')
@@ -126,7 +164,7 @@ class AppointmentController extends Controller
     {
         $this->authorise($appointment);
 
-        $appointment->load(['branch', 'customer', 'service', 'employee', 'service.serviceCategory', 'handledBy', 'review']);
+        $appointment->load(['branch', 'customer', 'service', 'employee', 'service.serviceCategory', 'handledBy', 'review', 'appointmentServices.service', 'appointmentServices.employee', 'invoice']);
 
         return view('company.appointments.show', compact('appointment'));
     }
@@ -138,15 +176,29 @@ class AppointmentController extends Controller
         $data = $request->validate([
             'status'           => ['required', 'in:confirmed,completed,cancelled,rejected,no_show'],
             'rejection_reason' => ['nullable', 'required_if:status,rejected', 'string', 'max:1000'],
+            // Payment fields (only when completing)
+            'paid_amount'      => ['nullable', 'numeric', 'min:0'],
+            'payment_method'   => ['nullable', 'in:cash,card,later'],
+            'pay_notes'        => ['nullable', 'string', 'max:500'],
         ]);
 
         $company        = $this->company();
         $previousStatus = $appointment->status;
+        $previousPayment= $appointment->payment_status;
+
+        // ── Determine payment_status ────────────────────────────────────────
+        $paymentStatus = $appointment->payment_status;
+        if ($data['status'] === 'completed' && $request->filled('paid_amount')) {
+            $charged = (float) $appointment->total_price;
+            $paid    = (float) $data['paid_amount'];
+            $paymentStatus = $paid <= 0 ? 'pending'
+                : ($paid >= $charged ? 'paid' : 'partial');
+        }
 
         $appointment->update([
             'status'                  => $data['status'],
+            'payment_status'          => $paymentStatus,
             'rejection_reason'        => $data['status'] === 'rejected' ? ($data['rejection_reason'] ?? null) : null,
-            'handled_by_employee_id'  => null,
             'handled_at'              => now(),
             'status_previous'         => $previousStatus,
             'status_changed_by_type'  => 'company',
@@ -154,6 +206,92 @@ class AppointmentController extends Controller
             'status_changed_by_name'  => $company->localizedName(),
             'status_changed_at'       => now(),
         ]);
+
+        // ── Auto-record payment in cash register when completing ─────────────
+        if ($data['status'] === 'completed' && $request->filled('paid_amount')) {
+            $charged  = (float) $appointment->total_price;
+            $paid     = (float) $data['paid_amount'];
+            $currency = $appointment->service?->currency
+                        ?? config('booksy.default_currency', 'SYP');
+            $method   = $data['payment_method'] ?? 'cash';
+
+            // Main payment record
+            if ($paid > 0) {
+                BranchPayment::create([
+                    'company_id'              => $company->id,
+                    'branch_id'               => $appointment->branch_id,
+                    'appointment_id'          => $appointment->id,
+                    'type'                    => 'income',
+                    'category'                => 'appointment',
+                    'amount'                  => min($paid, $charged),
+                    'currency'                => $currency,
+                    'payment_method'          => $method,
+                    'notes'                   => $data['pay_notes'] ?? null,
+                    'recorded_by_employee_id' => null,
+                    'paid_at'                 => now(),
+                ]);
+            }
+
+            // Handle difference
+            $diff = round($paid - $charged, 2);
+            if ($diff > 0) {
+                // Overpayment
+                $branch      = $appointment->branch;
+                $overpayTo   = $branch?->overpayment_to ?? 'treasury';
+                BranchPayment::create([
+                    'company_id'     => $company->id,
+                    'branch_id'      => $appointment->branch_id,
+                    'appointment_id' => $appointment->id,
+                    'type'           => 'income',
+                    'category'       => $overpayTo === 'employee' ? 'tip' : 'other_income',
+                    'amount'         => $diff,
+                    'currency'       => $currency,
+                    'payment_method' => $method,
+                    'notes'          => $overpayTo === 'employee'
+                        ? __('Overpayment — tip to employee')
+                        : __('Overpayment — added to treasury'),
+                    'paid_at'        => now(),
+                ]);
+            } elseif ($diff < 0) {
+                // Underpayment — record as debt note
+                BranchPayment::create([
+                    'company_id'     => $company->id,
+                    'branch_id'      => $appointment->branch_id,
+                    'appointment_id' => $appointment->id,
+                    'type'           => 'adjustment',
+                    'category'       => 'other_expense',
+                    'amount'         => abs($diff),
+                    'currency'       => $currency,
+                    'payment_method' => $method,
+                    'notes'          => __('Underpayment — customer owes :amount', [
+                        'amount' => number_format(abs($diff), 2) . ' ' . $currency,
+                    ]),
+                    'paid_at'        => now(),
+                ]);
+            }
+        }
+
+        // ── Audit log ──────────────────────────────────────────────────────────
+        Auditor::logChange(
+            "Appointment #{$appointment->id} status changed",
+            $appointment,
+            ['status' => $previousStatus, 'payment_status' => $previousPayment],
+            ['status' => $appointment->status, 'payment_status' => $appointment->payment_status],
+        );
+
+        // ── Auto-create invoice when completing ────────────────────────────
+        if ($data['status'] === 'completed' && ! $appointment->invoice()->exists()) {
+            try {
+                $appointment->load(['service', 'employee', 'appointmentServices.service', 'appointmentServices.employee']);
+                \App\Http\Controllers\Company\InvoiceController::buildInvoiceFromAppointment($appointment, $company);
+            } catch (\Throwable $e) {
+                // Invoice creation is non-critical
+            }
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['ok' => true, 'status' => $appointment->status]);
+        }
 
         return redirect()
             ->route('company.appointments.show', $appointment)
@@ -207,8 +345,8 @@ class AppointmentController extends Controller
             return [
                 'id'              => $appt->id,
                 'title'           => $title,
-                'start'           => $appt->start_time?->setTimezone($tz)->toIso8601String(),
-                'end'             => $appt->end_time?->setTimezone($tz)->toIso8601String(),
+                'start'           => $appt->start_time?->format('Y-m-d\TH:i:s'),
+                'end'             => $appt->end_time?->format('Y-m-d\TH:i:s'),
                 'url'             => route('company.appointments.show', $appt->id),
                 'backgroundColor' => $colors['bg'],
                 'borderColor'     => $colors['bg'],
@@ -219,11 +357,15 @@ class AppointmentController extends Controller
                     'branch'     => $appt->branch?->localizedName() ?? '—',
                     'service'    => $appt->service?->localizedName() ?? '—',
                     'employee'   => $appt->employee?->localizedName() ?? '—',
-                    'employeeId' => $appt->employee_id,
-                    'price'      => number_format((float) $appt->total_price, 2),
+                    'employeeId'    => $appt->employee_id,
+                    'employeeImage' => $appt->employee?->image ? asset('storage/' . $appt->employee->image) : null,
+                    'price'         => number_format((float) $appt->total_price, 2),
+                    'currency'      => $appt->service?->currency ?? config('booksy.default_currency', 'SYP'),
+                    'customerPhone' => $appt->customer?->phone,
+                    'updateUrl'     => route('company.appointments.update-status', $appt->id),
                     'showUrl'    => route('company.appointments.show', $appt->id),
                     'changedBy'  => $appt->status_changed_by_name,
-                    'changedAt'  => $appt->status_changed_at?->setTimezone($tz)->toIso8601String(),
+                    'changedAt'  => $appt->status_changed_at?->format('Y-m-d\TH:i:s'),
                     'prevStatus' => $appt->status_previous,
                 ],
             ];
@@ -347,10 +489,11 @@ class AppointmentController extends Controller
             $initials = collect(explode(' ', trim($emp->localizedName())))
                 ->map(fn($w) => strtoupper(mb_substr($w, 0, 1)))->take(2)->join('');
             return [
-                'id'           => $emp->id,
-                'name'         => $emp->localizedName(),
-                'initials'     => $initials,
-                'closedSlots'  => $closedSlots,
+                'id'          => $emp->id,
+                'name'        => $emp->localizedName(),
+                'initials'    => $initials,
+                'image'       => $emp->image ? asset('storage/' . $emp->image) : null,
+                'closedSlots' => $closedSlots,
             ];
         });
 
@@ -382,8 +525,6 @@ class AppointmentController extends Controller
         $appointments = $apptQuery->get()->map(function (Appointment $a) use ($colorMap, $tz) {
             // Convert to local browser-equivalent: send as local wall-clock minutes
             // We send start_time as-is; JavaScript will compute minutes from ISO string in browser TZ
-            $start = $a->start_time?->setTimezone($tz);
-            $end   = $a->end_time?->setTimezone($tz);
             return [
                 'id'          => $a->id,
                 'employeeId'  => $a->employee_id ?? 0,
@@ -394,10 +535,10 @@ class AppointmentController extends Controller
                 'status'      => $a->status,
                 'color'       => $colorMap[$a->status] ?? '#9ca3af',
                 'price'       => number_format((float) $a->total_price, 2),
-                'startIso'    => $a->start_time?->toIso8601String(),
-                'endIso'      => $a->end_time?->toIso8601String(),
-                'startLabel'  => $start?->format('h:i A'),
-                'endLabel'    => $end?->format('h:i A'),
+                'startIso'    => $a->start_time?->format('Y-m-d\TH:i:s'),
+                'endIso'      => $a->end_time?->format('Y-m-d\TH:i:s'),
+                'startLabel'  => $a->start_time?->format('h:i A'),
+                'endLabel'    => $a->end_time?->format('h:i A'),
                 'changedBy'   => $a->status_changed_by_name,
                 'showUrl'     => route('company.appointments.show', $a->id),
             ];

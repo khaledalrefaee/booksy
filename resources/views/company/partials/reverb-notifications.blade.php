@@ -317,20 +317,9 @@
        Inject bell into navbar
     ──────────────────────────────────── */
     window.addEventListener('DOMContentLoaded', function () {
+        // Bell is now in navbar.blade.php — skip injection
         var wrap = document.getElementById('bk-notif-bell-wrap');
-        if (!wrap) return;
-        wrap.style.display = 'inline-flex';
-
-        // Insert before first nav-item li in .navbar-nav
-        var navList = document.querySelector('nav .navbar-nav');
-        if (navList) {
-            var li = document.createElement('li');
-            li.className = 'nav-item d-flex align-items-center';
-            li.style.marginRight = IS_AR ? '0' : '4px';
-            li.style.marginLeft  = IS_AR ? '4px' : '0';
-            li.appendChild(wrap);
-            navList.prepend(li);
-        }
+        if (wrap) wrap.remove();
 
         // Close panel on outside click
         document.addEventListener('click', function (e) {

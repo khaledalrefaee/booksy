@@ -13,6 +13,7 @@ use App\Models\ServiceCategory;
 use App\Models\SocialLink;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -85,17 +86,21 @@ class EmployeeController extends Controller
 
         $data = $request->validate([
             'name_en'              => ['required', 'string', 'max:255'],
-            'name_ar'              => ['nullable', 'string', 'max:255'],
-            'email'                => ['nullable', 'email', 'unique:employees,email'],
-            'phone'                => ['nullable', 'string', 'max:30'],
+            'name_ar'              => ['required', 'string', 'max:255'],
+            'email'                => ['required', 'email', 'unique:employees,email'],
+            'phone'                => ['required', 'string', 'max:30'],
             'role_id'              => ['required', 'exists:roles,id'],
             'password'             => ['required', 'string', 'min:8'],
             'bio'                  => ['nullable', 'string', 'max:1000'],
             'image'                => ['nullable', 'image', 'max:2048'],
             'is_active'    => ['nullable', 'boolean'],
             'is_bookable'  => ['nullable', 'boolean'],
-            'service_ids'  => ['nullable', 'array'],
-            'service_ids.*'=> ['exists:services,id'],
+            'service_ids'           => ['nullable', 'array'],
+            'service_ids.*'         => ['exists:services,id'],
+            'service_price'         => ['nullable', 'array'],
+            'service_price.*'       => ['nullable', 'numeric', 'min:0'],
+            'service_duration'      => ['nullable', 'array'],
+            'service_duration.*'    => ['nullable', 'integer', 'min:1', 'max:1440'],
             // Compensation
             'comp_type'             => ['nullable', 'in:salary,commission,mixed'],
             'comp_currency'         => ['nullable', 'string', 'size:3'],
@@ -105,16 +110,16 @@ class EmployeeController extends Controller
             'comp_commission_rate'  => ['nullable', 'numeric', 'min:0', 'max:100'],
             'comp_service_rates'    => ['nullable', 'array'],
             'comp_service_rates.*'  => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'working_hours'        => ['nullable', 'array'],
+            'working_hours'              => ['nullable', 'array'],
             'working_hours.*.is_working' => ['nullable', 'boolean'],
-            'working_hours.*.start_time' => ['nullable', 'date_format:H:i'],
-            'working_hours.*.end_time'   => ['nullable', 'date_format:H:i'],
+            'working_hours.*.start_time' => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
+            'working_hours.*.end_time'   => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
             'social_links'               => ['nullable', 'array'],
             'social_links.*'             => ['nullable', 'string', 'max:500'],
         ]);
 
         $imagePath = $request->hasFile('image')
-            ? $request->file('image')->store('employees/images', 'public')
+            ? $this->storeAsWebP($request->file('image'))
             : null;
 
         $employee = $branch->employees()->create([
@@ -131,8 +136,8 @@ class EmployeeController extends Controller
             'is_bookable' => $request->boolean('is_bookable'),
         ]);
 
-        // Sync services this employee can perform
-        $employee->services()->sync($data['service_ids'] ?? []);
+        // Sync services with optional per-employee price & duration overrides
+        $employee->services()->sync($this->buildServiceSyncData($request));
 
         // Save compensation
         $this->syncCompensation($employee, $request);
@@ -161,7 +166,12 @@ class EmployeeController extends Controller
                         ->get()
                         ->groupBy('service_category_id');
 
-        $selectedServiceIds  = $employee->services()->pluck('services.id')->toArray();
+        $employeeServices    = $employee->services()->get();
+        $selectedServiceIds  = $employeeServices->pluck('id')->toArray();
+        $servicePivot        = $employeeServices->keyBy('id')->map(fn($s) => [
+            'price'            => $s->pivot->price,
+            'duration_minutes' => $s->pivot->duration_minutes,
+        ]);
         $compensation        = $employee->compensation;
         $serviceCommissions  = $employee->serviceCommissions()->pluck('rate', 'service_id')->toArray();
         $workingHours        = $employee->workingHours()->get()->keyBy('day_of_week');
@@ -173,6 +183,7 @@ class EmployeeController extends Controller
             'roles'              => $roles,
             'services'           => $services,
             'selectedServiceIds' => $selectedServiceIds,
+            'servicePivot'       => $servicePivot,
             'compensation'       => $compensation,
             'serviceCommissions' => $serviceCommissions,
             'workingHours'       => $workingHours,
@@ -186,23 +197,36 @@ class EmployeeController extends Controller
 
         $data = $request->validate([
             'name_en'               => ['required', 'string', 'max:255'],
-            'name_ar'               => ['nullable', 'string', 'max:255'],
-            'email'                 => ['nullable', 'email', "unique:employees,email,{$employee->id}"],
-            'phone'                 => ['nullable', 'string', 'max:30'],
+            'name_ar'               => ['required', 'string', 'max:255'],
+            'email'                 => ['required', 'email', "unique:employees,email,{$employee->id}"],
+            'phone'                 => ['required', 'string', 'max:30'],
             'role_id'               => ['required', 'exists:roles,id'],
             'password'              => ['nullable', 'string', 'min:8'],
             'bio'                   => ['nullable', 'string', 'max:1000'],
             'image'                 => ['nullable', 'image', 'max:2048'],
-            'is_active'    => ['nullable', 'boolean'],
-            'is_bookable'  => ['nullable', 'boolean'],
-            'service_ids'  => ['nullable', 'array'],
-            'service_ids.*'=> ['exists:services,id'],
-            'working_hours'         => ['nullable', 'array'],
+            'is_active'             => ['nullable', 'boolean'],
+            'is_bookable'           => ['nullable', 'boolean'],
+            'service_ids'           => ['nullable', 'array'],
+            'service_ids.*'         => ['exists:services,id'],
+            'service_price'         => ['nullable', 'array'],
+            'service_price.*'       => ['nullable', 'numeric', 'min:0'],
+            'service_duration'      => ['nullable', 'array'],
+            'service_duration.*'    => ['nullable', 'integer', 'min:1', 'max:1440'],
+            'working_hours'              => ['nullable', 'array'],
             'working_hours.*.is_working' => ['nullable', 'boolean'],
-            'working_hours.*.start_time' => ['nullable', 'date_format:H:i'],
-            'working_hours.*.end_time'   => ['nullable', 'date_format:H:i'],
+            'working_hours.*.start_time' => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
+            'working_hours.*.end_time'   => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
             'social_links'               => ['nullable', 'array'],
             'social_links.*'             => ['nullable', 'string', 'max:500'],
+            // Compensation
+            'comp_type'                  => ['nullable', 'in:salary,commission,mixed'],
+            'comp_currency'              => ['nullable', 'string', 'size:3'],
+            'comp_base_amount'           => ['nullable', 'numeric', 'min:0'],
+            'comp_pay_period'            => ['nullable', 'in:daily,weekly,monthly'],
+            'comp_commission_type'       => ['nullable', 'in:flat,per_service'],
+            'comp_commission_rate'       => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'comp_service_rates'         => ['nullable', 'array'],
+            'comp_service_rates.*'       => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
         $updateData = [
@@ -224,13 +248,13 @@ class EmployeeController extends Controller
             if ($employee->image) {
                 Storage::disk('public')->delete($employee->image);
             }
-            $updateData['image'] = $request->file('image')->store('employees/images', 'public');
+            $updateData['image'] = $this->storeAsWebP($request->file('image'));
         }
 
         $employee->update($updateData);
 
-        // Sync services this employee can perform
-        $employee->services()->sync($data['service_ids'] ?? []);
+        // Sync services with optional per-employee price & duration overrides
+        $employee->services()->sync($this->buildServiceSyncData($request));
 
         // Sync compensation
         $this->syncCompensation($employee, $request);
@@ -291,15 +315,73 @@ class EmployeeController extends Controller
         foreach (range(0, 6) as $day) {
             $row        = $hours[$day] ?? [];
             $isWorking  = ! empty($row['is_working']);
+            $start      = $isWorking && isset($row['start_time']) ? substr($row['start_time'], 0, 5) : null;
+            $end        = $isWorking && isset($row['end_time'])   ? substr($row['end_time'],   0, 5) : null;
             $employee->workingHours()->updateOrCreate(
                 ['day_of_week' => $day],
                 [
                     'is_working' => $isWorking,
-                    'start_time' => $isWorking ? ($row['start_time'] ?? null) : null,
-                    'end_time'   => $isWorking ? ($row['end_time'] ?? null) : null,
+                    'start_time' => $start,
+                    'end_time'   => $end,
                 ]
             );
         }
+    }
+
+    private function buildServiceSyncData(Request $request): array
+    {
+        $ids       = $request->input('service_ids', []);
+        $prices    = $request->input('service_price', []);
+        $durations = $request->input('service_duration', []);
+        $sync      = [];
+
+        foreach ($ids as $id) {
+            $sync[$id] = [
+                'price'            => isset($prices[$id]) && $prices[$id] !== '' ? $prices[$id] : null,
+                'duration_minutes' => isset($durations[$id]) && $durations[$id] !== '' ? (int)$durations[$id] : null,
+            ];
+        }
+
+        return $sync;
+    }
+
+    private function storeAsWebP(UploadedFile $file, int $quality = 82): string
+    {
+        $dir      = 'employees/images';
+        $filename = $dir . '/' . uniqid('emp_', true) . '.webp';
+        $fullPath = storage_path('app/public/' . $filename);
+
+        Storage::disk('public')->makeDirectory($dir);
+
+        $mime = $file->getMimeType();
+        $src  = match (true) {
+            str_contains($mime, 'jpeg') => imagecreatefromjpeg($file->getRealPath()),
+            str_contains($mime, 'png')  => imagecreatefrompng($file->getRealPath()),
+            str_contains($mime, 'gif')  => imagecreatefromgif($file->getRealPath()),
+            str_contains($mime, 'webp') => imagecreatefromwebp($file->getRealPath()),
+            default                     => @imagecreatefromstring(file_get_contents($file->getRealPath())),
+        };
+
+        if (! $src) {
+            return $file->store($dir, 'public');
+        }
+
+        // Preserve PNG/GIF transparency on a white background
+        if (str_contains($mime, 'png') || str_contains($mime, 'gif')) {
+            $w    = imagesx($src);
+            $h    = imagesy($src);
+            $dest = imagecreatetruecolor($w, $h);
+            $white = imagecolorallocate($dest, 255, 255, 255);
+            imagefilledrectangle($dest, 0, 0, $w, $h, $white);
+            imagecopy($dest, $src, 0, 0, 0, 0, $w, $h);
+            imagedestroy($src);
+            $src = $dest;
+        }
+
+        imagewebp($src, $fullPath, $quality);
+        imagedestroy($src);
+
+        return $filename;
     }
 
     public function destroy(Employee $employee): RedirectResponse

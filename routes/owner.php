@@ -10,6 +10,7 @@ use App\Http\Controllers\Owner\EmployeeController;
 use App\Http\Controllers\Owner\EmployeeLeaveController;
 use App\Http\Controllers\Owner\ProfileController;
 use App\Http\Controllers\Owner\ServiceCategoryController;
+use App\Http\Controllers\Owner\LocationController;
 use App\Http\Controllers\Owner\ServiceController;
 use Illuminate\Support\Facades\Route;
 
@@ -76,5 +77,18 @@ Route::prefix('owner')->name('owner.')->group(function () {
         Route::delete('employee-leaves/{employeeLeave}', [EmployeeLeaveController::class, 'destroy'])->name('employee-leaves.destroy');
 
         Route::resource('appointments', AppointmentController::class)->only(['index', 'show']);
+
+        // Locations
+        Route::get('locations',                                   [LocationController::class, 'index'])->name('locations.index');
+        Route::post('locations/countries',                        [LocationController::class, 'storeCountry'])->name('locations.countries.store');
+        Route::put('locations/countries/{country}',              [LocationController::class, 'updateCountry'])->name('locations.countries.update');
+        Route::delete('locations/countries/{country}',           [LocationController::class, 'destroyCountry'])->name('locations.countries.destroy');
+        Route::post('locations/governorates',                    [LocationController::class, 'storeGovernorate'])->name('locations.governorates.store');
+        Route::put('locations/governorates/{governorate}',       [LocationController::class, 'updateGovernorate'])->name('locations.governorates.update');
+        Route::delete('locations/governorates/{governorate}',    [LocationController::class, 'destroyGovernorate'])->name('locations.governorates.destroy');
+        Route::post('locations/areas',                           [LocationController::class, 'storeArea'])->name('locations.areas.store');
+        Route::put('locations/areas/{area}',                     [LocationController::class, 'updateArea'])->name('locations.areas.update');
+        Route::delete('locations/areas/{area}',                  [LocationController::class, 'destroyArea'])->name('locations.areas.destroy');
+        Route::get('locations/governorates-by-country',          [LocationController::class, 'governoratesByCountry'])->name('locations.governorates-by-country');
     });
 });

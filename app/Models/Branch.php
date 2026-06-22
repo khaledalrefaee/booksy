@@ -7,10 +7,26 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Str;
 
 class Branch extends Model
 {
     use HasLocalizedNames;
+
+    protected static function booted(): void
+    {
+        static::creating(function (Branch $branch) {
+            if (empty($branch->slug)) {
+                $branch->slug = $branch->generateSlug();
+            }
+        });
+
+        static::updating(function (Branch $branch) {
+            if ($branch->isDirty('name_en') || empty($branch->slug)) {
+                $branch->slug = $branch->generateSlug();
+            }
+        });
+    }
 
     protected $fillable = [
         'company_id',
@@ -19,15 +35,47 @@ class Branch extends Model
         'sort_order',
         'is_head_office',
         'status',
+        'booking_mode',
+        'slug',
         'phone',
         'phones',
         'address',
+        'description_en',
+        'description_ar',
+        'country_id',
+        'governorate_id',
+        'area_id',
         'latitude',
         'longitude',
         'landline_phone',
         'landlines',
         'qr_code',
+        'overpayment_to',
     ];
+
+    public function isMarketplace(): bool { return $this->booking_mode === 'marketplace'; }
+    public function isPrivate(): bool     { return $this->booking_mode === 'private'; }
+
+    public function scopeMarketplace($query)
+    {
+        return $query->where('booking_mode', '!=', 'private');
+    }
+
+    public function generateSlug(): string
+    {
+        $base = Str::slug($this->name_en ?: $this->name_ar ?: 'branch');
+        $slug = $base;
+        $i = 1;
+        while (static::where('slug', $slug)->where('id', '!=', $this->id ?? 0)->exists()) {
+            $slug = $base . '-' . $i++;
+        }
+        return $slug;
+    }
+
+    public function privateBookingUrl(): string
+    {
+        return url('/s/' . $this->slug);
+    }
 
     // Convenience helpers
     public function isActive(): bool    { return $this->status === 'active'; }
@@ -69,6 +117,32 @@ class Branch extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function country(): BelongsTo
+    {
+        return $this->belongsTo(Country::class);
+    }
+
+    public function governorate(): BelongsTo
+    {
+        return $this->belongsTo(Governorate::class);
+    }
+
+    public function area(): BelongsTo
+    {
+        return $this->belongsTo(Area::class);
+    }
+
+    public function fullAddress(): string
+    {
+        $parts = array_filter([
+            $this->area?->localizedName(),
+            $this->governorate?->localizedName(),
+            $this->country?->localizedName(),
+            $this->address,
+        ]);
+        return implode('، ', $parts);
     }
 
     public function workingHours(): HasMany

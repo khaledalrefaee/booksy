@@ -62,4 +62,10 @@ return [
         '+1'   => ['flag' => '🇺🇸',                                        'name_en' => 'USA',          'name_ar' => 'أمريكا',     'digits_min' => 10, 'digits_max' => 10],
     ],
 
+    'whatsapp' => [
+        'url'     => env('WHATSAPP_SERVICE_URL', 'http://127.0.0.1:3001'),
+        'api_key' => env('WHATSAPP_API_KEY', 'booksy-wa-secret-2026'),
+        'reminder_minutes' => (int) env('WHATSAPP_REMINDER_MINUTES', 60),
+    ],
+
 ];

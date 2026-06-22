@@ -110,14 +110,21 @@
         <div class="sec-body">
 
             {{-- ── Step 1: type ── --}}
-            <div class="f-label mb-2">{{ __('Compensation type') }}</div>
+            <div class="f-label mb-2">
+                {{ __('Compensation type') }}
+                <span style="font-weight:500;text-transform:none;letter-spacing:0;opacity:.5;margin-inline-start:6px;">
+                    ({{ __('optional') }})
+                </span>
+            </div>
             <div class="comp-type-cards mb-4">
                 @foreach([
-                    'salary'     => ['💰', __('Fixed Salary'),  __('Monthly/weekly/daily rate')],
-                    'commission' => ['📊', __('Commission'),     __('% of each service')],
-                    'mixed'      => ['🔄', __('Mixed'),          __('Salary + commission')],
+                    ''           => ['⏭️', __('Skip'),           __('Set later')],
+                    'salary'     => ['💰', __('Fixed Salary'),   __('Monthly/weekly/daily rate')],
+                    'commission' => ['📊', __('Commission'),      __('% of each service')],
+                    'mixed'      => ['🔄', __('Mixed'),           __('Salary + commission')],
                 ] as $val => [$icon, $lbl, $sub])
-                <div class="comp-type-card {{ $compType === $val ? 'active' : '' }}"
+                @php $isActive = ($compType === $val); @endphp
+                <div class="comp-type-card {{ $isActive ? 'active' : '' }}"
                      data-type="{{ $val }}" onclick="selectCompType('{{ $val }}')">
                     <span class="ct-icon">{{ $icon }}</span>
                     <div class="ct-label">{{ $lbl }}</div>
@@ -242,6 +249,9 @@
         var showComm   = (val === 'commission' || val === 'mixed');
         togglePanel('panel-salary', showSalary);
         togglePanel('panel-commission', showComm);
+        // highlight skip card differently
+        var skipCard = document.querySelector('.comp-type-card[data-type=""]');
+        if (skipCard) skipCard.style.opacity = val === '' ? '1' : '.65';
     }
 
     function selectPeriod(p) {
@@ -270,6 +280,15 @@
     window.selectCompType  = selectCompType;
     window.selectPeriod    = selectPeriod;
     window.selectCommType  = selectCommType;
+
+    // Apply initial skip opacity on load
+    (function() {
+        var currentType = document.getElementById('comp_type');
+        if (currentType && currentType.value !== '') {
+            var skipCard = document.querySelector('.comp-type-card[data-type=""]');
+            if (skipCard) skipCard.style.opacity = '.65';
+        }
+    })();
 })();
 </script>
 @endpush

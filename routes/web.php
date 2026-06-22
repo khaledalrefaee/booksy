@@ -3,6 +3,7 @@
 use App\Http\Controllers\FrontController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\AppointmentConfirmController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,7 +16,9 @@ Route::get('/api/map-branches', [FrontController::class, 'mapBranches'])->name('
 Route::get('/business/{company}', [FrontController::class, 'show'])->name('front.show');
 Route::get('/category/{slug}', [FrontController::class, 'categoryPage'])->name('front.category');
 Route::get('/branch/{branch}', [FrontController::class, 'branchShow'])->name('front.branch');
+Route::get('/s/{slug}', [FrontController::class, 'privateBooking'])->name('front.private-booking');
 Route::get('/about', [FrontController::class, 'about'])->name('front.about');
+Route::get('/appointment/{token}/{action}', [AppointmentConfirmController::class, 'handle'])->name('appointment.confirm')->where('action', 'confirm|cancel');
 Route::get('/contact', [FrontController::class, 'contact'])->name('front.contact');
 Route::post('/contact', [FrontController::class, 'contactSend'])->name('front.contact.send');
 

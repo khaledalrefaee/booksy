@@ -485,6 +485,7 @@ html{scroll-behavior:smooth;}
                 <li class="nav-item"><a class="nav-link" href="#bk-companies">{{ $isAr ? 'الأماكن' : 'Places' }}</a></li>
                 <li class="nav-item"><a class="nav-link" href="#bk-services">{{ $isAr ? 'الخدمات' : 'Services' }}</a></li>
                 <li class="nav-item"><a class="nav-link" href="#bk-how">{{ $isAr ? 'كيف يعمل' : 'How It Works' }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="#bk-partners">{{ $isAr ? 'شركاؤنا' : 'Partners' }}</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ route('front.about') }}">{{ $isAr ? 'من نحن' : 'About' }}</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ route('front.contact') }}">{{ $isAr ? 'تواصل' : 'Contact' }}</a></li>
             </ul>
@@ -955,6 +956,134 @@ html{scroll-behavior:smooth;}
         </div>
     </div>
 </section>
+
+{{-- ========== PARTNERS ========== --}}
+<section id="bk-partners" class="section border-0 m-0" style="padding:80px 0;background:#0d0d0d;">
+    <div class="container">
+        <div class="row justify-content-center text-center mb-5">
+            <div class="col-lg-7">
+                <p class="appear-animation" data-appear-animation="fadeInDown" data-plugin-options="{'minWindowWidth':0}"
+                   style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:#C9A227;font-family:'Poppins',sans-serif;margin-bottom:10px;">
+                    ✦ {{ $isAr ? 'شركاؤنا' : 'Our Partners' }} ✦
+                </p>
+                <h2 class="appear-animation" data-appear-animation="maskUp" data-plugin-options="{'minWindowWidth':0}"
+                    style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:700;color:#fff;line-height:1.3;margin-bottom:14px;">
+                    {{ $isAr ? 'نفخر بشراكتنا مع' : 'Proud to Partner With' }}
+                    <span style="color:#C9A227;">{{ $isAr ? 'الأفضل' : 'the Best' }}</span>
+                </h2>
+                <p style="color:rgba(255,255,255,.45);font-size:.95rem;font-family:'Poppins',sans-serif;line-height:1.7;margin:0;">
+                    {{ $isAr ? 'نخدم أرقى الصالونات والعيادات ومراكز التجميل في المنطقة' : 'Serving the finest salons, clinics & beauty centers in the region' }}
+                </p>
+            </div>
+        </div>
+
+        {{-- Masonry Grid --}}
+        <div class="bk-partners-grid appear-animation" data-appear-animation="fadeInUp" data-plugin-options="{'minWindowWidth':0}">
+            @php
+            $partners = [
+                ['name' => 'Glow Studio',      'initials' => 'GS', 'color' => '#C9A227', 'bg' => 'rgba(201,162,39,.08)', 'size' => 'large'],
+                ['name' => 'Velvet Salon',     'initials' => 'VS', 'color' => '#a78bfa', 'bg' => 'rgba(167,139,250,.08)', 'size' => 'small'],
+                ['name' => 'Pure Skin Clinic', 'initials' => 'PS', 'color' => '#34d399', 'bg' => 'rgba(52,211,153,.08)',  'size' => 'small'],
+                ['name' => 'Nova Beauty',      'initials' => 'NB', 'color' => '#f87171', 'bg' => 'rgba(248,113,113,.08)', 'size' => 'medium'],
+                ['name' => 'Luxe Lounge',      'initials' => 'LL', 'color' => '#60a5fa', 'bg' => 'rgba(96,165,250,.08)', 'size' => 'medium'],
+                ['name' => 'Aura Spa',         'initials' => 'AS', 'color' => '#fb923c', 'bg' => 'rgba(251,146,60,.08)', 'size' => 'large'],
+                ['name' => 'Bliss Center',     'initials' => 'BC', 'color' => '#e879f9', 'bg' => 'rgba(232,121,249,.08)','size' => 'small'],
+                ['name' => 'Elite Cuts',       'initials' => 'EC', 'color' => '#C9A227', 'bg' => 'rgba(201,162,39,.08)', 'size' => 'medium'],
+            ];
+            @endphp
+
+            @foreach($partners as $p)
+            <div class="bk-partner-card bk-partner-{{ $p['size'] }}"
+                 style="background:{{ $p['bg'] }};border:1px solid {{ $p['color'] }}22;">
+                <div class="bk-partner-inner">
+                    <div class="bk-partner-logo" style="background:{{ $p['color'] }}18;border:1.5px solid {{ $p['color'] }}40;color:{{ $p['color'] }};">
+                        {{ $p['initials'] }}
+                    </div>
+                    <span class="bk-partner-name" style="color:rgba(255,255,255,.7);">{{ $p['name'] }}</span>
+                </div>
+                <div class="bk-partner-shine" style="background:linear-gradient(135deg,{{ $p['color'] }}08,transparent);"></div>
+            </div>
+            @endforeach
+        </div>
+
+        {{-- Counter strip --}}
+        <div class="row text-center mt-5 g-4">
+            @php
+            $stats = [
+                ['num'=>'200+', 'ar'=>'شريك نشط',      'en'=>'Active Partners'],
+                ['num'=>'12',   'ar'=>'مدينة',          'en'=>'Cities'],
+                ['num'=>'98%',  'ar'=>'نسبة الرضا',     'en'=>'Satisfaction Rate'],
+                ['num'=>'50K+', 'ar'=>'حجز شهرياً',    'en'=>'Monthly Bookings'],
+            ];
+            @endphp
+            @foreach($stats as $s)
+            <div class="col-6 col-md-3 appear-animation" data-appear-animation="fadeInUp" data-plugin-options="{'minWindowWidth':0}">
+                <div style="padding:20px;border:1px solid rgba(201,162,39,.12);border-radius:14px;background:rgba(201,162,39,.04);">
+                    <div style="font-size:1.9rem;font-weight:700;color:#C9A227;font-family:'Playfair Display',serif;line-height:1;">{{ $s['num'] }}</div>
+                    <div style="font-size:.82rem;color:rgba(255,255,255,.45);font-family:'Poppins',sans-serif;margin-top:6px;">{{ $isAr ? $s['ar'] : $s['en'] }}</div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</section>
+
+<style>
+.bk-partners-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    grid-auto-rows:130px;
+    gap:14px;
+}
+.bk-partner-card{
+    border-radius:16px;
+    position:relative;
+    overflow:hidden;
+    cursor:default;
+    transition:transform .3s ease,box-shadow .3s ease;
+}
+.bk-partner-card:hover{
+    transform:translateY(-4px);
+    box-shadow:0 12px 32px rgba(0,0,0,.4);
+}
+.bk-partner-card.bk-partner-large{ grid-column:span 2; grid-row:span 2; }
+.bk-partner-card.bk-partner-medium{ grid-column:span 2; grid-row:span 1; }
+.bk-partner-card.bk-partner-small{ grid-column:span 1; grid-row:span 1; }
+.bk-partner-inner{
+    position:relative;z-index:2;
+    height:100%;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:10px;
+    padding:16px;
+}
+.bk-partner-logo{
+    width:52px;height:52px;border-radius:14px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:1rem;font-family:'Poppins',sans-serif;
+    letter-spacing:.5px;flex-shrink:0;
+}
+.bk-partner-card.bk-partner-large .bk-partner-logo{ width:72px;height:72px;font-size:1.3rem;border-radius:18px; }
+.bk-partner-name{
+    font-size:.78rem;font-family:'Poppins',sans-serif;
+    font-weight:500;text-align:center;
+}
+.bk-partner-card.bk-partner-large .bk-partner-name{ font-size:.9rem; }
+.bk-partner-shine{
+    position:absolute;inset:0;z-index:1;
+    pointer-events:none;
+}
+@media(max-width:768px){
+    .bk-partners-grid{
+        grid-template-columns:repeat(2,1fr);
+        grid-auto-rows:110px;
+    }
+    .bk-partner-card.bk-partner-large{ grid-column:span 2; }
+    .bk-partner-card.bk-partner-medium{ grid-column:span 2; }
+}
+@media(max-width:480px){
+    .bk-partners-grid{ grid-template-columns:repeat(2,1fr);grid-auto-rows:100px; }
+}
+</style>
 
 {{-- ========== CTA ========== --}}
 <section class="section border-0 m-0" style="padding:80px 0;background:#111111;border-top:1px solid rgba(201,162,39,.1);">

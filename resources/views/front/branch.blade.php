@@ -439,6 +439,21 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
 <div class="body">
 
 {{-- ========== NAVBAR ========== --}}
+@if(!empty($privateMode))
+{{-- Private mode: isolated navbar — no directory links, no competitors --}}
+<nav id="bk-navbar" class="navbar navbar-expand-lg fixed-top">
+    <div class="container-fluid px-4">
+        <span class="navbar-brand" style="cursor:default;">{{ $brName }}</span>
+        <div class="d-flex align-items-center gap-3 ms-auto">
+            @if($isAr)
+                <a href="{{ route('locale.switch','en') }}" class="bk-lang">EN</a>
+            @else
+                <a href="{{ route('locale.switch','ar') }}" class="bk-lang">عربي</a>
+            @endif
+        </div>
+    </div>
+</nav>
+@else
 <nav id="bk-navbar" class="navbar navbar-expand-lg fixed-top">
     <div class="container-fluid px-4">
         <a href="{{ route('front.index') }}" class="navbar-brand">Booksy<span>.</span></a>
@@ -471,6 +486,7 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
         </div>
     </div>
 </nav>
+@endif
 
 <div role="main" class="main">
 

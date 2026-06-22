@@ -48,6 +48,60 @@
 
         <ul class="navbar-nav">
 
+            {{-- Notifications bell --}}
+            @php
+                $unreadNotifs = $authCompany
+                    ? \App\Models\StaffNotification::where('company_id', $authCompany->id)->unread()->orderByDesc('created_at')->limit(10)->get()
+                    : collect();
+                $unreadCount = $unreadNotifs->count();
+            @endphp
+            <li class="nav-item dropdown">
+                <a class="nav-link d-flex align-items-center" href="#" data-bs-toggle="dropdown" style="padding:0 10px;position:relative;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    @if($unreadCount > 0)
+                    <span style="position:absolute;top:-2px;inset-inline-end:2px;min-width:16px;height:16px;border-radius:8px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1;">
+                        {{ $unreadCount > 9 ? '9+' : $unreadCount }}
+                    </span>
+                    @endif
+                </a>
+                <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:340px;max-height:440px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.08);box-shadow:0 12px 40px rgba(0,0,0,.4);">
+                    <div class="px-4 py-3 d-flex justify-content-between align-items-center" style="background:rgba(201,162,39,.06);border-bottom:1px solid rgba(255,255,255,.06);">
+                        <span class="fw-bold tx-13">🔔 {{ __('Notifications') }}</span>
+                        @if($unreadCount > 0)
+                        <form method="POST" action="{{ route('company.notifications.read-all') }}" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-sm px-2 py-1 rounded-pill" style="font-size:10px;color:#C9A227;font-weight:700;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.2);">{{ __('Mark all read') }}</button>
+                        </form>
+                        @endif
+                    </div>
+                    <div style="max-height:370px;overflow-y:auto;">
+                        @forelse($unreadNotifs as $notif)
+                        <a href="{{ $notif->link ?? '#' }}"
+                           class="d-flex gap-3 px-4 py-3 text-decoration-none notif-item"
+                           style="border-bottom:1px solid rgba(255,255,255,.04);transition:background .12s;"
+                           onclick="fetch('{{ route('company.notifications.read', $notif) }}',{method:'POST',headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}})">
+                            <div style="width:38px;height:38px;border-radius:12px;background:{{ $notif->color }}15;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
+                                {{ $notif->icon }}
+                            </div>
+                            <div style="min-width:0;flex:1;">
+                                <div class="fw-bold tx-12" style="color:var(--text-color);margin-bottom:2px;">{{ $notif->title }}</div>
+                                @if($notif->body)
+                                <div class="tx-11 text-muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $notif->body }}</div>
+                                @endif
+                                <div class="tx-10 mt-1" style="opacity:.35;">{{ $notif->created_at->diffForHumans() }}</div>
+                            </div>
+                            <div style="width:8px;height:8px;border-radius:50%;background:#C9A227;flex-shrink:0;margin-top:6px;"></div>
+                        </a>
+                        @empty
+                        <div class="text-center py-5" style="opacity:.35;">
+                            <div style="font-size:28px;margin-bottom:8px;">🔔</div>
+                            <div class="tx-12 fw-semibold">{{ __('No new notifications') }}</div>
+                        </div>
+                        @endforelse
+                    </div>
+                </div>
+            </li>
+
             {{-- Language --}}
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle d-flex align-items-center gap-1" href="#"

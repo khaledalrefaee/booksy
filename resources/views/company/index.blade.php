@@ -44,7 +44,7 @@
 {{-- ════ STAT CARDS — horizontal ════ --}}
 <div class="row g-3 mb-4">
 
-    <div class="col-6 col-lg-3 bk-a1">
+    <div class="col-12 col-sm-6 col-lg-3 bk-a1">
         <div class="bk-stat" data-accent="gold">
             <div class="bk-stat-left">
                 <div class="bk-stat-icon bk-icon-gold">
@@ -60,7 +60,7 @@
         </div>
     </div>
 
-    <div class="col-6 col-lg-3 bk-a2">
+    <div class="col-12 col-sm-6 col-lg-3 bk-a2">
         <div class="bk-stat" data-accent="orange">
             <div class="bk-stat-left">
                 <div class="bk-stat-icon bk-icon-orange">
@@ -79,7 +79,7 @@
         </div>
     </div>
 
-    <div class="col-6 col-lg-3 bk-a3">
+    <div class="col-12 col-sm-6 col-lg-3 bk-a3">
         <div class="bk-stat" data-accent="green">
             <div class="bk-stat-left">
                 <div class="bk-stat-icon bk-icon-green">
@@ -95,7 +95,7 @@
         </div>
     </div>
 
-    <div class="col-6 col-lg-3 bk-a4">
+    <div class="col-12 col-sm-6 col-lg-3 bk-a4">
         <div class="bk-stat" data-accent="blue">
             <div class="bk-stat-left">
                 <div class="bk-stat-icon bk-icon-blue">
@@ -162,14 +162,23 @@
     <div class="col-lg-8 bk-a3">
         <div class="card shadow-sm h-100">
             <div class="card-body">
-                <div class="bk-sh">
+                <div class="bk-sh flex-wrap gap-2">
                     <span class="bk-sh-title">{{ __('Booking Activity') }}</span>
-                    {{-- Filter tabs --}}
-                    <div class="bk-filter-tabs" id="bk-chart-filter">
-                        <button class="bk-filter-tab" data-range="today">{{ __('Today') }}</button>
-                        <button class="bk-filter-tab" data-range="week">{{ __('Week') }}</button>
-                        <button class="bk-filter-tab active" data-range="month">{{ __('Month') }}</button>
-                        <button class="bk-filter-tab" data-range="year">{{ __('Year') }}</button>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        {{-- Month picker (visible only on month tab) --}}
+                        <select id="bk-month-picker" class="form-select form-select-sm"
+                                style="display:none;width:auto;font-size:.78rem;padding:.25rem .6rem;">
+                            @foreach($monthOptions as $opt)
+                                <option value="{{ $opt['value'] }}">{{ $opt['label'] }}</option>
+                            @endforeach
+                        </select>
+                        {{-- Filter tabs --}}
+                        <div class="bk-filter-tabs" id="bk-chart-filter">
+                            <button class="bk-filter-tab" data-range="today">{{ __('Today') }}</button>
+                            <button class="bk-filter-tab" data-range="week">{{ __('Week') }}</button>
+                            <button class="bk-filter-tab active" data-range="month">{{ __('Month') }}</button>
+                            <button class="bk-filter-tab" data-range="year">{{ __('Year') }}</button>
+                        </div>
                     </div>
                 </div>
                 <div id="bk-activity-chart" style="min-height:280px;"></div>
@@ -248,7 +257,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($recentAppointments as $row)
+                            @foreach($recentAppointments as $i => $row)
                             @php
                                 $initial = strtoupper(substr($row->customer?->name ?? 'C', 0, 1));
                                 $icColors = ['pending'=>'#f4a642','confirmed'=>'#2bcf7e','completed'=>'#3dbbd4','cancelled'=>'#555','rejected'=>'#555','no_show'=>'#555'];
@@ -256,11 +265,27 @@
                                 $bc = 'bk-badge-'.($row->status ?? 'cancelled');
                             @endphp
                             <tr class="bk-table-row" onclick="location.href='{{ route('company.appointments.show', $row) }}'">
-                                <td class="text-muted tx-12 fw-semibold">#{{ $row->id }}</td>
-                                <td>
+                                <td class="text-muted tx-12 fw-semibold">{{ $i + 1 }}</td>
+                                <td onclick="event.stopPropagation()">
                                     <div class="d-flex align-items-center gap-2">
                                         <div style="width:32px;height:32px;border-radius:50%;background:{{ $ic }}22;color:{{ $ic }};display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;flex-shrink:0;">{{ $initial }}</div>
-                                        <span class="fw-semibold tx-13">{{ $row->customer?->name ?? '—' }}</span>
+                                        <div>
+                                            <div class="fw-semibold tx-13">{{ $row->customer?->name ?? '—' }}</div>
+                                            @if($row->customer?->phone)
+                                            @php $phone = preg_replace('/\D/', '', $row->customer->phone); @endphp
+                                            <div class="d-flex align-items-center gap-1 mt-1">
+                                                <span class="text-muted" style="font-size:.7rem;">{{ $row->customer->phone }}</span>
+                                                <a href="tel:{{ $row->customer->phone }}"
+                                                   style="color:#2bcf7e;line-height:1;" title="{{ __('Call') }}">
+                                                    <i data-feather="phone" style="width:11px;height:11px;"></i>
+                                                </a>
+                                                <a href="https://wa.me/{{ $phone }}" target="_blank"
+                                                   style="color:#25d366;line-height:1;" title="WhatsApp">
+                                                    <svg style="width:11px;height:11px;fill:currentColor;" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                                </a>
+                                            </div>
+                                            @endif
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="tx-13 text-muted">
@@ -268,8 +293,8 @@
                                     @if($row->branch)<small class="opacity-50">{{ $row->branch->localizedName() }}</small>@endif
                                 </td>
                                 <td class="text-muted tx-12 text-nowrap">
-                                    <div>{{ $row->start_time?->format('d M Y') }}</div>
-                                    <small class="opacity-50">{{ $row->start_time?->format('H:i') }}</small>
+                                    <div>{{ $row->start_time?->format('d/m/Y') }} <span class="opacity-50">{{ $row->start_time?->format('H:i') }}</span></div>
+                                    <small class="bk-reltime opacity-75" data-ts="{{ $row->start_time?->format('Y-m-d\TH:i:s') }}" style="font-size:.68rem;"></small>
                                 </td>
                                 <td><span class="bk-badge {{ $bc }}">{{ __($row->status ?? '') }}</span></td>
                                 <td>
@@ -303,9 +328,10 @@
 @push('company-after-template')
 @php
     $booksyPayload = [
-        'theme'  => request()->cookie('company_theme','dark'),
-        'rtl'    => $isAr,
-        'charts' => $chartData,
+        'theme'       => request()->cookie('company_theme','dark'),
+        'rtl'         => $isAr,
+        'charts'      => $chartData,
+        'monthChartUrl' => route('company.dashboard.chart.month'),
         'labels' => [
             'appointments' => __('Appointments'),
             'revenue'      => __('Revenue'),
@@ -355,83 +381,105 @@ document.querySelectorAll('.bk-stat-bar-fill').forEach(function(el){
 
 /* ── Activity chart (filterable bar) ── */
 var activityChart = null;
+var monthPicker   = document.getElementById('bk-month-picker');
+var monthChartUrl = p.monthChartUrl || '';
 
-function getSeriesForRange(range){
-    // map tab name → chartData key
+function getSeriesForRange(range, overrideData){
+    if (overrideData) {
+        return { labels: overrideData.labels || [], data: overrideData.total || [], name: labels.appointments || 'Appointments' };
+    }
     var key = { today:'today', week:'week', month:'month', year:'year' }[range] || 'month';
     var d = charts[key] || charts.month || charts.daily || {};
-    return {
-        labels : d.labels || [],
-        data   : d.total  || [],
-        name   : labels.appointments || 'Appointments'
-    };
+    return { labels: d.labels || [], data: d.total || [], name: labels.appointments || 'Appointments' };
 }
 
-function renderActivityChart(range){
-    range = range || 'month';
-    var s    = getSeriesForRange(range);
+function applyChartSeries(s, range){
     var node = document.getElementById('bk-activity-chart');
     if (!node || typeof ApexCharts === 'undefined') return;
 
-    var rotateAlways = s.labels.length > 8;
+    var needsRotate  = range === 'today' || range === 'week';
+    var rotate       = needsRotate ? (isRtl ? 30 : -30) : 0;
+    var fontSize     = '10px';
+    // Limit visible x-axis labels to avoid crowding
+    var maxTicks     = { today: 12, week: 7, month: 10, year: 12 }[range] || 10;
+    var tickAmount   = Math.min(s.labels.length, maxTicks);
+
+    var xaxisOpts = {
+        categories      : s.labels,
+        tickAmount      : tickAmount,
+        labels          : {
+            rotate              : rotate,
+            rotateAlways        : needsRotate,
+            hideOverlappingLabels: true,
+            style               : { fontSize: fontSize, colors: c.muted }
+        },
+        axisBorder: { color: c.grid },
+        axisTicks : { color: c.grid }
+    };
 
     if (activityChart) {
         activityChart.updateOptions({
-            series  : [{ name: s.name, data: s.data }],
-            xaxis   : {
-                categories  : s.labels,
-                labels      : {
-                    rotate      : isRtl ? 30 : -30,
-                    rotateAlways: rotateAlways,
-                    style       : { fontSize:'11px', colors: c.muted }
-                }
-            },
-            noData  : { text: labels.noData || 'No data yet.' }
+            series : [{ name: s.name, data: s.data }],
+            xaxis  : xaxisOpts,
+            noData : { text: labels.noData || 'No data yet.' }
         }, true, true);
         return;
     }
 
     activityChart = new ApexCharts(node, {
-        chart:{
-            type:'bar', height:280, background:'transparent',
-            toolbar:{show:false}, fontFamily:"'Roboto',sans-serif",
-            foreColor: c.text,
-            animations:{ enabled:true, easing:'easeinout', speed:500 }
-        },
-        plotOptions:{ bar:{ columnWidth:'55%', borderRadius:4 } },
+        chart:{ type:'bar', height:280, background:'transparent', toolbar:{show:false}, fontFamily:"'Roboto',sans-serif", foreColor:c.text, animations:{enabled:true,easing:'easeinout',speed:500} },
+        plotOptions:{ bar:{ columnWidth:'60%', borderRadius:3 } },
         dataLabels:{ enabled:false },
         colors:[gold],
         series:[{ name: s.name, data: s.data }],
-        xaxis:{
-            categories: s.labels,
-            labels:{
-                style:{ fontSize:'11px', colors:c.muted },
-                rotate: isRtl ? 30 : -30,
-                rotateAlways: rotateAlways
-            },
-            axisBorder:{ color:c.grid },
-            axisTicks :{ color:c.grid }
-        },
-        yaxis:{
-            min:0, forceNiceScale:true,
-            labels:{ formatter:function(v){ return Math.round(v); }, style:{ colors:c.muted } }
-        },
-        grid :{ borderColor:c.grid, xaxis:{ lines:{ show:false } } },
-        noData:{ text: labels.noData || 'No data yet.', style:{ color:c.muted } },
+        xaxis: xaxisOpts,
+        yaxis:{ min:0, forceNiceScale:true, labels:{ formatter:function(v){ return Math.round(v); }, style:{colors:c.muted} } },
+        grid :{ borderColor:c.grid, xaxis:{ lines:{show:false} } },
+        noData:{ text: labels.noData || 'No data yet.', style:{color:c.muted} },
         tooltip:{ theme: isDark?'dark':'light' },
         theme  :{ mode: isDark?'dark':'light' },
     });
     activityChart.render();
 }
 
+function renderActivityChart(range, overrideData){
+    range = range || 'month';
+    applyChartSeries(getSeriesForRange(range, overrideData), range);
+}
+
+function loadMonthChart(yearMonth){
+    if (!monthChartUrl) return;
+    var parts = (yearMonth || '').split('-');
+    var year  = parts[0] || '';
+    var month = parts[1] || '';
+    if (!year || !month) return;
+
+    fetch(monthChartUrl + '?year=' + year + '&month=' + month, { headers:{ 'X-Requested-With':'XMLHttpRequest' } })
+        .then(function(r){ return r.json(); })
+        .then(function(data){ renderActivityChart('month', data); })
+        .catch(function(){});
+}
+
+/* ── Month picker ── */
+if (monthPicker) {
+    monthPicker.addEventListener('change', function(){ loadMonthChart(this.value); });
+}
+
 /* ── Filter tabs ── */
 document.querySelectorAll('#bk-chart-filter .bk-filter-tab').forEach(function(btn){
     btn.addEventListener('click', function(){
-        document.querySelectorAll('#bk-chart-filter .bk-filter-tab').forEach(function(b){
-            b.classList.remove('active');
-        });
+        document.querySelectorAll('#bk-chart-filter .bk-filter-tab').forEach(function(b){ b.classList.remove('active'); });
         this.classList.add('active');
-        renderActivityChart(this.dataset.range);
+        var range = this.dataset.range;
+
+        // Show/hide month picker
+        if (monthPicker) monthPicker.style.display = (range === 'month') ? '' : 'none';
+
+        if (range === 'month') {
+            loadMonthChart(monthPicker ? monthPicker.value : '');
+        } else {
+            renderActivityChart(range);
+        }
     });
 });
 
@@ -490,13 +538,59 @@ function renderDonut(){
     }).render();
 }
 
-renderActivityChart('month');
+// Show month picker on initial load (month tab is active by default)
+if (monthPicker) monthPicker.style.display = '';
+loadMonthChart(monthPicker ? monthPicker.value : '');
 renderDonut();
 
 /* Re-run feather after charts render (icons inside cards need a second pass) */
 setTimeout(function(){
     if(typeof feather !== 'undefined') feather.replace();
 }, 50);
+
+/* ── Relative time (real-time) ── */
+(function(){
+    var ar = p.rtl === true;
+
+    function relTime(ts){
+        // ts is a local datetime string like "2025-06-15T20:00:00"
+        // new Date(str) without timezone treats it as local time
+        var apptMs = new Date(ts).getTime();
+        var nowMs  = Date.now();
+        var diffSec = Math.round((nowMs - apptMs) / 1000); // positive = past
+        var diff = diffSec;
+        var abs  = Math.abs(diff);
+        var past = diff >= 0;
+
+        var val, unit;
+        if      (abs < 60)       { val = abs;                unit = ar ? ['ثانية','ثوانٍ','دقيقة'] : ['second','seconds','minute']; val = Math.max(val,1); unit = val===1?(ar?'ثانية':'second'):(ar?'ثوانٍ':'seconds'); }
+        else if (abs < 3600)     { val = Math.round(abs/60);  unit = val===1?(ar?'دقيقة':'minute'):(ar?'دقائق':'minutes'); }
+        else if (abs < 86400)    { val = Math.round(abs/3600); unit = val===1?(ar?'ساعة':'hour'):(ar?'ساعات':'hours'); }
+        else if (abs < 2592000)  { val = Math.round(abs/86400); unit = val===1?(ar?'يوم':'day'):(ar?'أيام':'days'); }
+        else if (abs < 31536000) { val = Math.round(abs/2592000); unit = val===1?(ar?'شهر':'month'):(ar?'أشهر':'months'); }
+        else                     { val = Math.round(abs/31536000); unit = val===1?(ar?'سنة':'year'):(ar?'سنوات':'years'); }
+
+        if(ar){
+            return past
+                ? 'مضى ' + val + ' ' + unit
+                : 'باقي ' + val + ' ' + unit;
+        } else {
+            return past
+                ? val + ' ' + unit + ' ago'
+                : 'in ' + val + ' ' + unit;
+        }
+    }
+
+    function updateAll(){
+        document.querySelectorAll('.bk-reltime[data-ts]').forEach(function(el){
+            var ts = el.dataset.ts;
+            if(ts) el.textContent = relTime(ts);
+        });
+    }
+
+    updateAll();
+    setInterval(updateAll, 30000);
+})();
 
 })();
 </script>

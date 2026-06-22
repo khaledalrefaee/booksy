@@ -1178,13 +1178,14 @@ class DamascusSeeder extends Seeder
         ];
 
         $ids = [];
-        foreach ($customers as $c) {
-            $existing = DB::table('users')->where('email', $c['email'])->value('id');
+        $phoneBase = '09';
+        foreach ($customers as $i => $c) {
+            $phone = $phoneBase . str_pad($i + 1, 8, '0', STR_PAD_LEFT);
+            $existing = DB::table('customers')->where('phone', $phone)->value('id');
             if ($existing) { $ids[] = $existing; continue; }
-            $ids[] = DB::table('users')->insertGetId([
+            $ids[] = DB::table('customers')->insertGetId([
                 'name'       => $c['name'],
-                'email'      => $c['email'],
-                'password'   => Hash::make('password'),
+                'phone'      => $phone,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

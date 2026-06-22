@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Staff accounts: tied to company; branch_id null = company-wide (e.g. finance). role_id drives UI/API access.
-     */
     public function up(): void
     {
         Schema::disableForeignKeyConstraints();
@@ -25,6 +22,7 @@ return new class extends Migration
             $table->text('bio')->nullable();
             $table->string('image')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->boolean('is_bookable')->default(false);
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();

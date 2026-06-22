@@ -2,17 +2,24 @@
 
 namespace App\Models;
 
+use App\Observers\AppointmentObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
+#[ObservedBy(AppointmentObserver::class)]
 class Appointment extends Model
 {
     protected $fillable = [
+        'booking_group_id',
         'company_id',
         'branch_id',
         'customer_id',
+        'customer_name',
+        'customer_phone',
         'employee_id',
         'service_id',
         'start_time',
@@ -30,6 +37,11 @@ class Appointment extends Model
         'status_changed_at',
         'status_previous',
     ];
+
+    public static function newGroupId(): string
+    {
+        return (string) Str::uuid();
+    }
 
     protected function casts(): array
     {
@@ -85,5 +97,28 @@ class Appointment extends Model
     public function branchPayments(): HasMany
     {
         return $this->hasMany(BranchPayment::class);
+    }
+
+    public function appointmentServices(): HasMany
+    {
+        return $this->hasMany(AppointmentService::class)->orderBy('sort_order');
+    }
+
+    public function invoice(): HasOne
+    {
+        return $this->hasOne(Invoice::class);
+    }
+
+    public function groupAppointments(): HasMany
+    {
+        return $this->hasMany(static::class, 'booking_group_id', 'booking_group_id')
+            ->where('id', '!=', $this->id);
+    }
+
+    public function displayName(): string
+    {
+        return $this->customer_name
+            ?? $this->customer?->name
+            ?? __('Guest');
     }
 }

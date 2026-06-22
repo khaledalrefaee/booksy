@@ -35,6 +35,7 @@
     border: none;
     background: none;
     cursor: pointer;
+    color: #e2e8f0;
     border-bottom: 2px solid transparent;
     margin-bottom: -2px;
     border-radius: 6px 6px 0 0;
@@ -44,6 +45,7 @@
     gap: 7px;
     opacity: .5;
 }
+.bk-theme-light .gl-tab-btn { color: #1e293b; }
 .gl-tab-btn.active { opacity: 1; }
 .gl-tab-btn.place.active  { color: #4facfe; border-bottom-color: #4facfe; }
 .gl-tab-btn.work.active   { color: #f093fb; border-bottom-color: #f093fb; }
@@ -194,7 +196,7 @@
                     </div>
                     <p class="fw-bold mb-1" style="color:#4facfe;">{{ __('Drag and drop place photos') }}</p>
                     <p class="mb-2" style="opacity:.5;">{{ __('Interior, exterior, reception...') }}</p>
-                    <small>{{ __('JPG, PNG, WEBP — max 4 MB — up to 20 files') }}</small>
+                    <small>{{ __('JPG, PNG, WEBP — max 20 MB — up to 20 files — converted to WebP') }}</small>
                     <input type="file" id="fi-place" multiple accept="image/*" style="display:none;">
                 </div>
                 <div class="gl-upload-progress" id="prog-place">
@@ -240,7 +242,7 @@
                     </div>
                     <p class="fw-bold mb-1" style="color:#f093fb;">{{ __('Drag and drop work samples') }}</p>
                     <p class="mb-2" style="opacity:.5;">{{ __('Haircuts, nail art, results...') }}</p>
-                    <small>{{ __('JPG, PNG, WEBP — max 4 MB — up to 20 files') }}</small>
+                    <small>{{ __('JPG, PNG, WEBP — max 20 MB — up to 20 files — converted to WebP') }}</small>
                     <input type="file" id="fi-work" multiple accept="image/*" style="display:none;">
                 </div>
                 <div class="gl-upload-progress" id="prog-work">
@@ -359,8 +361,15 @@
         });
     });
 
+    var MAX_BYTES = 20 * 1024 * 1024; // 20 MB
+
     function uploadFiles(files, type) {
         if (!files.length) return;
+        var tooBig = Array.from(files).filter(function(f){ return f.size > MAX_BYTES; });
+        if (tooBig.length) {
+            alert(tooBig.map(function(f){ return f.name + ' — ' + (f.size / 1048576).toFixed(1) + ' MB'; }).join('\n') + '\n\n{{ __("Max file size is 20 MB.") }}');
+            return;
+        }
         var fd = new FormData();
         Array.from(files).forEach(function(f){ fd.append('images[]', f); });
         fd.append('type', type);

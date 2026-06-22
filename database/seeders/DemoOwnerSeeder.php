@@ -121,11 +121,10 @@ class DemoOwnerSeeder extends Seeder
             );
         }
 
-        $customer = User::query()->firstOrCreate(
-            ['email' => 'client@booksy.demo'],
+        $customer = \App\Models\Customer::query()->firstOrCreate(
+            ['phone' => '0900000000'],
             [
                 'name' => 'Demo Client',
-                'password' => Hash::make('password'),
             ]
         );
 

@@ -12,6 +12,7 @@ return new class extends Migration
 
         Schema::create('service_categories', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('company_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('slug')->nullable()->unique();
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->string('name_en')->nullable();
@@ -33,13 +34,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::disableForeignKeyConstraints();
-
         Schema::table('services', function (Blueprint $table) {
             $table->dropConstrainedForeignId('service_category_id');
         });
-
         Schema::dropIfExists('service_categories');
-
         Schema::enableForeignKeyConstraints();
     }
 };

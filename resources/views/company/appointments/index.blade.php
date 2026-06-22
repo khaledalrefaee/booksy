@@ -536,6 +536,160 @@
     transition: filter .15s, transform .1s;
 }
 .bk-pp-btn:hover { filter: brightness(1.1); transform: translateY(-1px); color: #fff; }
+
+/* ══════════════════════════════════════════
+   ENHANCED PAGE HEADER
+══════════════════════════════════════════ */
+.bk-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.bk-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.bk-header-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(124,58,237,.15), rgba(124,58,237,.08));
+    color: #7c3aed;
+}
+.bk-today-label {
+    font-size: .76rem;
+    font-weight: 600;
+    color: var(--cal-text-muted);
+    margin-top: 2px;
+}
+.bk-new-appt-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 22px;
+    border-radius: 12px;
+    font-size: .82rem;
+    font-weight: 800;
+    text-decoration: none;
+    background: linear-gradient(135deg, #C9A227, #d4af37);
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 16px rgba(201,162,39,.35);
+    transition: all .2s;
+}
+.bk-new-appt-btn:hover {
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(201,162,39,.45);
+}
+.bk-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.bk-filter-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,.05);
+    color: var(--cal-text-muted);
+    flex-shrink: 0;
+}
+.bk-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 180px;
+    max-width: 280px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--cal-border);
+    transition: border-color .2s;
+}
+.bk-search-wrap:focus-within {
+    border-color: rgba(124,58,237,.3);
+    background: rgba(124,58,237,.04);
+}
+.bk-search-wrap input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: .82rem;
+    color: var(--cal-text);
+    width: 100%;
+    font-family: inherit;
+}
+.bk-theme-light .bk-filter-icon {
+    background: #f3f4f6;
+}
+.bk-theme-light .bk-search-wrap {
+    background: #f9fafb;
+    border-color: #e5e7eb;
+}
+.bk-theme-light .bk-search-wrap:focus-within {
+    background: #f3f0ff;
+    border-color: rgba(124,58,237,.3);
+}
+
+/* ══════════════════════════════════════════
+   RELATIVE TIME BADGES
+══════════════════════════════════════════ */
+.bk-rel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: .66rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.bk-rel-past {
+    background: rgba(107,114,128,.12);
+    color: #6b7280;
+}
+.bk-rel-now {
+    background: rgba(249,115,22,.15);
+    color: #f97316;
+    animation: bk-rel-pulse 1.5s ease infinite;
+}
+.bk-rel-soon {
+    background: rgba(239,68,68,.12);
+    color: #ef4444;
+    animation: bk-rel-pulse 2s ease infinite;
+}
+.bk-rel-upcoming {
+    background: rgba(245,158,11,.12);
+    color: #f59e0b;
+}
+.bk-rel-future {
+    background: rgba(16,185,129,.1);
+    color: #10b981;
+}
+.bk-rel-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: bk-rel-pulse 1s ease infinite;
+}
+@keyframes bk-rel-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: .5; }
+}
 </style>
 @endpush
 
@@ -555,10 +709,22 @@
 <div class="page-content bk-appt-page">
 
     {{-- ── Page header ── --}}
-    <div class="d-flex justify-content-between align-items-center flex-wrap grid-margin gap-2">
-        <h4 class="mb-0 fw-bold" style="color:var(--cal-text);">{{ __('Appointments') }}</h4>
+    <div class="bk-page-header">
+        <div class="bk-header-left">
+            <div class="bk-header-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+            </div>
+            <div>
+                <h4 class="mb-0 fw-bold" style="color:var(--cal-text);font-size:1.15rem;">{{ __('Appointments') }}</h4>
+                <div class="bk-today-label">
+                    {{ $isRtl ? now()->locale('ar')->translatedFormat('l، j F Y') : now()->format('l, F j, Y') }}
+                </div>
+            </div>
+        </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-
             {{-- View tabs --}}
             <div class="bk-view-tabs">
                 <button class="bk-vtab active" id="tab-cal" onclick="switchView('cal')">
@@ -575,10 +741,9 @@
                 </button>
             </div>
 
-            <a href="{{ route('company.appointments.create') }}"
-               class="btn btn-sm rounded-pill fw-bold px-4"
-               style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;box-shadow:0 3px 12px rgba(124,58,237,.4);border:none;">
-                + {{ __('New appointment') }}
+            <a href="{{ route('company.appointments.create') }}" class="bk-new-appt-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                {{ __('New appointment') }}
             </a>
         </div>
     </div>
@@ -589,8 +754,10 @@
     <div class="bk-topbar">
 
         {{-- Branch selector --}}
-        <div class="d-flex align-items-center gap-2">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--cal-text-muted)" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div class="bk-filter-group">
+            <div class="bk-filter-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
             <select id="filter-branch">
                 <option value="">{{ __('All branches') }}</option>
                 @foreach ($branches as $b)
@@ -599,6 +766,14 @@
                     </option>
                 @endforeach
             </select>
+        </div>
+
+        <div class="bk-divider d-none d-md-block"></div>
+
+        {{-- Search --}}
+        <div class="bk-search-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--cal-text-muted)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="bk-search" type="text" placeholder="{{ $isRtl ? 'بحث باسم الزبون أو الخدمة...' : 'Search customer or service...' }}">
         </div>
 
         <div class="bk-divider d-none d-md-block"></div>
@@ -613,6 +788,22 @@
                     {{ $lbl }}
                 </button>
             @endforeach
+        </div>
+
+        <div class="bk-divider d-none d-md-block"></div>
+
+        {{-- Sort --}}
+        <div class="bk-filter-group">
+            <div class="bk-filter-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+            </div>
+            <select id="filter-sort">
+                <option value="closest">{{ $isRtl ? 'الأقرب أولاً' : 'Closest first' }}</option>
+                <option value="farthest">{{ $isRtl ? 'الأبعد أولاً' : 'Farthest first' }}</option>
+                <option value="newest">{{ $isRtl ? 'الأحدث أولاً' : 'Newest first' }}</option>
+                <option value="price-high">{{ $isRtl ? 'السعر: الأعلى' : 'Price: High' }}</option>
+                <option value="price-low">{{ $isRtl ? 'السعر: الأقل' : 'Price: Low' }}</option>
+            </select>
         </div>
     </div>
 
@@ -660,17 +851,18 @@
                 <thead>
                     <tr>
                         <th class="ps-4">#</th>
-                        <th>{{ __('Customer') }}</th>
-                        <th>{{ __('Service') }}</th>
-                        <th>{{ __('Employee') }}</th>
-                        <th>{{ __('Branch') }}</th>
-                        <th>{{ __('Start') }}</th>
-                        <th>{{ __('Status') }}</th>
-                        <th class="pe-4">{{ __('Price') }}</th>
+                        <th>{{ $isRtl ? 'الزبون' : 'Customer' }}</th>
+                        <th>{{ $isRtl ? 'الخدمة' : 'Service' }}</th>
+                        <th>{{ $isRtl ? 'الموظف' : 'Employee' }}</th>
+                        <th>{{ $isRtl ? 'الفرع' : 'Branch' }}</th>
+                        <th>{{ $isRtl ? 'الوقت' : 'Time' }}</th>
+                        <th>{{ $isRtl ? 'الحالة' : 'Status' }}</th>
+                        <th>{{ $isRtl ? 'السعر' : 'Price' }}</th>
+                        <th class="pe-4">{{ $isRtl ? 'إجراء' : 'Action' }}</th>
                     </tr>
                 </thead>
                 <tbody id="list-tbody">
-                    <tr><td colspan="8" class="text-center py-5" style="color:var(--cal-text-muted);">
+                    <tr><td colspan="9" class="text-center py-5" style="color:var(--cal-text-muted);">
                         <div class="spinner-border spinner-border-sm me-2" role="status"></div>
                         {{ __('Loading...') }}
                     </td></tr>
@@ -853,19 +1045,21 @@ var calendar = new FullCalendar.Calendar(calEl, {
         var p    = info.event.extendedProps;
         var parts= info.event.title.split(' · ');
         showPopup({
-            customer:   parts[0] || '',
-            service:    p.service || parts.slice(1).join(' · '),
-            branch:     p.branch,
-            employee:   p.employee,
-            status:     p.status,
-            color:      info.event.backgroundColor,
-            price:      p.price,
-            showUrl:    p.showUrl,
-            startLabel: _fmtTime(info.event.start),
-            endLabel:   _fmtTime(info.event.end),
-            changedBy:  p.changedBy,
-            changedAt:  p.changedAt,
-            prevStatus: p.prevStatus,
+            customer:       parts[0] || '',
+            service:        p.service || parts.slice(1).join(' · '),
+            branch:         p.branch,
+            employee:       p.employee,
+            employeeImage:  p.employeeImage,
+            status:         p.status,
+            color:          info.event.backgroundColor,
+            price:          p.price,
+            currency:       p.currency,
+            showUrl:        p.showUrl,
+            startLabel:     _fmtTime(info.event.start),
+            endLabel:       _fmtTime(info.event.end),
+            changedBy:      p.changedBy,
+            changedAt:      p.changedAt,
+            prevStatus:     p.prevStatus,
         }, info.jsEvent);
     },
 });
@@ -885,12 +1079,19 @@ function showPopup(a, ev) {
     document.getElementById('bk-pp-status').textContent   = STATUS_LABELS[a.status] || a.status;
     document.getElementById('bk-pp-title').textContent    = a.customer || '—';
     document.getElementById('bk-pp-time').textContent     = (a.startLabel || '') + ' – ' + (a.endLabel || '');
-    document.getElementById('bk-pp-emp-av').textContent   = initials;
-    document.getElementById('bk-pp-emp-av').style.background = color;
+    var avEl = document.getElementById('bk-pp-emp-av');
+    if (a.employeeImage) {
+        avEl.innerHTML = '<img src="' + a.employeeImage + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+        avEl.style.background = 'transparent';
+    } else {
+        avEl.innerHTML = '';
+        avEl.textContent = initials;
+        avEl.style.background = color;
+    }
     document.getElementById('bk-pp-emp-name').textContent = a.employee || '—';
     document.getElementById('bk-pp-service').textContent  = a.service  || '—';
     document.getElementById('bk-pp-branch').textContent   = a.branch   || '—';
-    document.getElementById('bk-pp-price').textContent    = (a.price || '0.00') + ' SAR';
+    document.getElementById('bk-pp-price').textContent    = (a.price || '0.00') + ' ' + (a.currency || 'SAR');
     document.getElementById('bk-pp-link').href            = a.showUrl  || '#';
 
     /* audit row */
@@ -934,10 +1135,177 @@ document.addEventListener('click', function (e) {
 /* ════════════════════════════════
    LIST VIEW
 ════════════════════════════════ */
-var listLoaded = false;
+var listLoaded  = false;
+var listAllData = []; /* raw appointment events cache */
+var listSearch  = '';
+var listSort    = 'closest';
+
+/* ── Relative time helper ── */
+function _relativeTime(dateStr) {
+    if (!dateStr) return { text: '—', isPast: false, isNow: false, cls: '' };
+    var now  = Date.now();
+    var t    = new Date(dateStr).getTime();
+    var diff = t - now;
+    var abs  = Math.abs(diff);
+    var isPast = diff < 0;
+
+    var mins  = Math.floor(abs / 60000);
+    var hours = Math.floor(abs / 3600000);
+    var days  = Math.floor(abs / 86400000);
+
+    if (abs < 60000) return { text: IS_RTL ? 'الآن' : 'Now', isPast: false, isNow: true, cls: 'bk-rel-now' };
+
+    var label;
+    if (IS_RTL) {
+        if (days > 0)       label = days + (days === 1 ? ' يوم' : ' أيام');
+        else if (hours > 0) label = hours + (hours === 1 ? ' ساعة' : ' ساعات');
+        else                label = mins + ' د';
+        label = isPast ? ('منذ ' + label) : ('بعد ' + label);
+    } else {
+        if (days > 0)       label = days + (days === 1 ? ' day' : ' days');
+        else if (hours > 0) label = hours + (hours === 1 ? ' hr' : ' hrs');
+        else                label = mins + ' min';
+        label = isPast ? (label + ' ago') : ('in ' + label);
+    }
+
+    var cls = 'bk-rel-past';
+    if (!isPast) {
+        cls = mins <= 30 ? 'bk-rel-soon' : hours <= 2 ? 'bk-rel-upcoming' : 'bk-rel-future';
+    }
+
+    return { text: label, isPast: isPast, isNow: false, cls: cls };
+}
+
+function renderListRows() {
+    var tbody = document.getElementById('list-tbody');
+    var q = listSearch.trim().toLowerCase();
+
+    var appts = listAllData.filter(function (ev) {
+        var pr = ev.extendedProps || {};
+        var t  = pr.type;
+        if (t === 'closed' || t === 'outside-hours') return false;
+        if (!pr.status) return false;
+        if (!activeStatuses.includes(pr.status)) return false;
+        if (q) {
+            var title = (ev.title || '').toLowerCase();
+            var br    = (pr.branch   || '').toLowerCase();
+            var emp   = (pr.employee || '').toLowerCase();
+            var svc   = (pr.service  || '').toLowerCase();
+            var idStr = String(ev.id || '');
+            if (title.indexOf(q) < 0 && br.indexOf(q) < 0 && emp.indexOf(q) < 0 && svc.indexOf(q) < 0 && idStr.indexOf(q) < 0) return false;
+        }
+        return true;
+    });
+
+    /* ── Sort ── */
+    var now = Date.now();
+    appts.sort(function(a, b) {
+        var tA = a.start ? new Date(a.start).getTime() : 0;
+        var tB = b.start ? new Date(b.start).getTime() : 0;
+        var pA = parseFloat((a.extendedProps || {}).price || 0);
+        var pB = parseFloat((b.extendedProps || {}).price || 0);
+        switch (listSort) {
+            case 'closest':  return Math.abs(tA - now) - Math.abs(tB - now);
+            case 'farthest': return Math.abs(tB - now) - Math.abs(tA - now);
+            case 'newest':   return tB - tA;
+            case 'price-high': return pB - pA;
+            case 'price-low':  return pA - pB;
+            default: return 0;
+        }
+    });
+
+    if (!appts.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5" style="color:var(--cal-text-muted);">{{ $isRtl ? "لم يُعثر على مواعيد." : "No appointments found." }}</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = appts.map(function (ev) {
+                var pr     = ev.extendedProps || {};
+                var title  = ev.title || '';
+                var pts    = title.split(' · ');
+                var cust   = _esc(pts[0] || '—');
+                var svc    = _esc(pts.slice(1).join(' · ') || pr.service || '—');
+                var col    = EV_COLORS[pr.status] || '#94a3b8';
+                var init   = _initials(pr.employee || '');
+                var empIdx = Math.abs(_hashStr(pr.employee || '')) % EMP_COLORS.length;
+                var empCol = EMP_COLORS[empIdx];
+                var empImg = pr.employeeImage || null;
+                var dt     = ev.start ? new Date(ev.start).toLocaleString(IS_RTL ? 'ar-SA' : 'en-US', {
+                    year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12: true
+                }) : '—';
+                var endDt  = ev.end ? new Date(ev.end).toLocaleTimeString(IS_RTL ? 'ar-SA' : 'en-US', {
+                    hour:'2-digit', minute:'2-digit', hour12: true
+                }) : '';
+
+                /* relative time */
+                var rel = _relativeTime(ev.start);
+
+                /* customer phone sub-line */
+                var phoneBadge = '';
+                if (pr.customerPhone) {
+                    var ph = _esc(pr.customerPhone);
+                    phoneBadge = '<div style="display:flex;align-items:center;gap:6px;margin-top:3px;">'
+                        + '<a href="tel:' + ph + '" onclick="event.stopPropagation();" title="{{ $isRtl ? "اتصال" : "Call" }}" style="display:inline-flex;align-items:center;gap:3px;font-size:.68rem;color:var(--cal-text-muted);text-decoration:none;background:var(--cal-surface2);border-radius:8px;padding:2px 7px;border:1px solid var(--cal-border);">'
+                        + '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.5 1.18 2 2 0 012.5 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.91 7.09a16 16 0 006 6l.75-.75a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.92z"/></svg>'
+                        + ph + '</a>'
+                        + '<a href="https://wa.me/' + ph.replace(/\D/g,'') + '" target="_blank" onclick="event.stopPropagation();" title="WhatsApp" style="display:inline-flex;align-items:center;gap:3px;font-size:.68rem;color:#25d366;text-decoration:none;background:rgba(37,211,102,.1);border-radius:8px;padding:2px 7px;border:1px solid rgba(37,211,102,.25);">'
+                        + '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>'
+                        + 'WhatsApp</a>'
+                        + '</div>';
+                }
+
+                /* quick action buttons — show only relevant next states */
+                var nextStates = {
+                    pending:   [['confirmed','#10b981','{{ $isRtl ? "تأكيد" : "Confirm" }}'],['cancelled','#6b7280','{{ $isRtl ? "إلغاء" : "Cancel" }}']],
+                    confirmed: [['completed','#6366f1','{{ $isRtl ? "مكتمل" : "Complete" }}'],['no_show','#94a3b8','{{ $isRtl ? "لم يحضر" : "No-show" }}'],['cancelled','#6b7280','{{ $isRtl ? "إلغاء" : "Cancel" }}']],
+                    completed: [], cancelled: [], rejected: [], no_show: [],
+                };
+                var btns = (nextStates[pr.status] || []).map(function(ns) {
+                    return '<button onclick="event.stopPropagation();_quickStatus(' + ev.id + ',\'' + ns[0] + '\',this);" '
+                        + 'style="border:none;border-radius:10px;padding:3px 10px;font-size:.68rem;font-weight:800;cursor:pointer;background:' + ns[1] + '22;color:' + ns[1] + ';border:1px solid ' + ns[1] + '44;white-space:nowrap;transition:opacity .15s;">'
+                        + ns[2] + '</button>';
+                }).join('');
+
+                return '<tr id="appt-row-' + ev.id + '" style="cursor:pointer;" onclick="location.href=\'' + (pr.showUrl || '#') + '\'">'
+                    /* # */
+                    + '<td class="ps-4" style="color:var(--cal-text-muted);font-size:.76rem;font-weight:700;">#' + ev.id + '</td>'
+                    /* Customer + phone */
+                    + '<td><div style="font-weight:800;font-size:.84rem;">' + cust + '</div>' + phoneBadge + '</td>'
+                    /* Service */
+                    + '<td style="color:var(--cal-text-soft);font-size:.82rem;">' + svc + '</td>'
+                    /* Employee */
+                    + '<td><div style="display:flex;align-items:center;gap:7px;">'
+                    +   (empImg
+                        ? '<img src="' + empImg + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.3);" loading="lazy">'
+                        : '<div style="width:28px;height:28px;border-radius:50%;background:' + empCol + ';display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 6px ' + empCol + '55;">' + _esc(init) + '</div>')
+                    +   '<span style="font-size:.82rem;font-weight:600;">' + _esc(pr.employee || '—') + '</span>'
+                    + '</div></td>'
+                    /* Branch */
+                    + '<td style="color:var(--cal-text-soft);font-size:.82rem;">' + _esc(pr.branch || '—') + '</td>'
+                    /* Time + relative */
+                    + '<td style="font-size:.8rem;white-space:nowrap;">'
+                    +   '<div style="font-weight:700;">' + dt + '</div>'
+                    +   (endDt ? '<div style="color:var(--cal-text-muted);font-size:.72rem;">← ' + endDt + '</div>' : '')
+                    +   '<div class="bk-rel-badge ' + rel.cls + '">'
+                    +     (rel.isNow ? '<span class="bk-rel-dot"></span>' : '')
+                    +     rel.text
+                    +   '</div>'
+                    + '</td>'
+                    /* Status */
+                    + '<td><span id="appt-status-' + ev.id + '" style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;background:' + col + '20;color:' + col + ';font-size:.7rem;font-weight:800;border:1px solid ' + col + '40;">'
+                    +   '<span style="width:6px;height:6px;border-radius:50%;background:' + col + ';display:inline-block;"></span>'
+                    +   (STATUS_LABELS[pr.status] || pr.status)
+                    + '</span></td>'
+                    /* Price */
+                    + '<td style="font-weight:800;font-size:.88rem;">' + (pr.price || '0.00') + ' ' + _esc(pr.currency || '') + '</td>'
+                    /* Actions */
+                    + '<td class="pe-4"><div style="display:flex;gap:4px;flex-wrap:wrap;">' + btns + '</div></td>'
+                    + '</tr>';
+            }).join('');
+}
 
 function loadListView() {
-    if (listLoaded) return;
+    if (listLoaded) { renderListRows(); return; }
     var tbody = document.getElementById('list-tbody');
     tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5" style="color:var(--cal-text-muted);"><div class="spinner-border spinner-border-sm me-2"></div>{{ $isRtl ? "جارٍ التحميل..." : "Loading..." }}</td></tr>';
 
@@ -950,76 +1318,42 @@ function loadListView() {
             return r.json();
         })
         .then(function (data) {
-            /* ── filter out background events (closed/outside-hours) and apply status filter ── */
-            var appts = data.filter(function (ev) {
-                var t = ev.extendedProps && ev.extendedProps.type;
-                if (t === 'closed' || t === 'outside-hours') return false;
-                return activeStatuses.includes(ev.extendedProps.status);
-            });
-
-            if (!appts.length) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5" style="color:var(--cal-text-muted);">{{ $isRtl ? "لم يُعثر على مواعيد." : "No appointments found." }}</td></tr>';
-                listLoaded = true;
-                return;
-            }
-
-            tbody.innerHTML = appts.map(function (ev) {
-                var pr     = ev.extendedProps || {};
-                var title  = ev.title || '';
-                var pts    = title.split(' · ');
-                var cust   = _esc(pts[0] || '—');
-                var svc    = _esc(pts.slice(1).join(' · ') || pr.service || '—');
-                var col    = EV_COLORS[pr.status] || '#94a3b8';
-                var init   = _initials(pr.employee || '');
-                var empIdx = Math.abs(_hashStr(pr.employee || '')) % EMP_COLORS.length;
-                var empCol = EMP_COLORS[empIdx];
-                var dt     = ev.start ? new Date(ev.start).toLocaleString(IS_RTL ? 'ar-SA' : 'en-US', {
-                    year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12: true
-                }) : '—';
-                var endDt  = ev.end ? new Date(ev.end).toLocaleTimeString(IS_RTL ? 'ar-SA' : 'en-US', {
-                    hour:'2-digit', minute:'2-digit', hour12: true
-                }) : '';
-
-                /* changed-by badge */
-                var auditBadge = '';
-                if (pr.changedBy) {
-                    auditBadge = '<div style="font-size:.65rem;color:var(--cal-text-muted);margin-top:2px;">'
-                        + '🔒 ' + _esc(pr.changedBy) + '</div>';
-                }
-
-                return '<tr style="cursor:pointer;" onclick="location.href=\'' + (pr.showUrl || '#') + '\'">'
-                    /* # */
-                    + '<td class="ps-4" style="color:var(--cal-text-muted);font-size:.76rem;font-weight:700;">#' + ev.id + '</td>'
-                    /* Customer */
-                    + '<td><div style="font-weight:800;font-size:.84rem;">' + cust + '</div>' + auditBadge + '</td>'
-                    /* Service */
-                    + '<td style="color:var(--cal-text-soft);font-size:.82rem;">' + svc + '</td>'
-                    /* Employee */
-                    + '<td><div style="display:flex;align-items:center;gap:7px;">'
-                    +   '<div style="width:28px;height:28px;border-radius:50%;background:' + empCol + ';display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 6px ' + empCol + '55;">' + _esc(init) + '</div>'
-                    +   '<span style="font-size:.82rem;font-weight:600;">' + _esc(pr.employee || '—') + '</span>'
-                    + '</div></td>'
-                    /* Branch */
-                    + '<td style="color:var(--cal-text-soft);font-size:.82rem;">' + _esc(pr.branch || '—') + '</td>'
-                    /* Time */
-                    + '<td style="font-size:.8rem;white-space:nowrap;">'
-                    +   '<div style="font-weight:700;">' + dt + '</div>'
-                    +   (endDt ? '<div style="color:var(--cal-text-muted);font-size:.72rem;">← ' + endDt + '</div>' : '')
-                    + '</td>'
-                    /* Status */
-                    + '<td><span style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;background:' + col + '20;color:' + col + ';font-size:.7rem;font-weight:800;border:1px solid ' + col + '40;">'
-                    +   '<span style="width:6px;height:6px;border-radius:50%;background:' + col + ';display:inline-block;"></span>'
-                    +   (STATUS_LABELS[pr.status] || pr.status)
-                    + '</span></td>'
-                    /* Price */
-                    + '<td class="pe-4" style="font-weight:800;font-size:.88rem;">' + (pr.price || '0.00') + ' SAR</td>'
-                    + '</tr>';
-            }).join('');
-            listLoaded = true;
+            listAllData = data;
+            listLoaded  = true;
+            renderListRows();
         })
         .catch(function (err) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4" style="color:#ef4444;">⚠ {{ $isRtl ? "خطأ في تحميل البيانات" : "Error loading data" }}: ' + err.message + '</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4" style="color:#ef4444;">⚠ {{ $isRtl ? "خطأ في تحميل البيانات" : "Error loading data" }}: ' + err.message + '</td></tr>';
         });
+}
+
+/* ════════════════════════════════
+   QUICK STATUS
+════════════════════════════════ */
+var CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+var STATUS_ROUTE_BASE = '{{ rtrim(route("company.appointments.update-status", "__ID__"), "") }}';
+
+function _quickStatus(id, newStatus, btn) {
+    btn.disabled = true;
+    btn.style.opacity = '.4';
+    var url = STATUS_ROUTE_BASE.replace('__ID__', id);
+    var body = new URLSearchParams({ _method: 'PATCH', _token: CSRF, status: newStatus });
+    fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: body })
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+            if (!json.ok) throw new Error('fail');
+            /* update cached data */
+            listAllData = listAllData.map(function(ev) {
+                if (String(ev.id) === String(id)) {
+                    ev = JSON.parse(JSON.stringify(ev)); /* clone */
+                    ev.extendedProps.status = json.status;
+                }
+                return ev;
+            });
+            renderListRows();
+            calendar.refetchEvents();
+        })
+        .catch(function() { btn.disabled = false; btn.style.opacity = '1'; });
 }
 
 /* ════════════════════════════════
@@ -1036,16 +1370,42 @@ document.querySelectorAll('.bk-st-pill').forEach(function (btn) {
             this.classList.remove('off');
         }
         calendar.refetchEvents();
+        if (!document.getElementById('view-list').classList.contains('d-none')) renderListRows();
     });
 });
 
 document.getElementById('filter-branch').addEventListener('change', function () {
     activeBranch = this.value;
-    listLoaded = false;
+    listLoaded   = false;
+    listAllData  = [];
     calendar.refetchEvents();
-    if (document.getElementById('view-list').classList.contains('d-none') === false) {
+    if (!document.getElementById('view-list').classList.contains('d-none')) {
         loadListView();
     }
+    sfLoaded = false;
+    if (!document.getElementById('view-staff').classList.contains('d-none')) {
+        loadStaffView();
+    }
+});
+
+document.getElementById('filter-sort').addEventListener('change', function () {
+    listSort = this.value;
+    if (!document.getElementById('view-list').classList.contains('d-none')) {
+        if (listLoaded) renderListRows(); else loadListView();
+    }
+});
+
+var _searchTimer = null;
+document.getElementById('bk-search').addEventListener('input', function () {
+    listSearch = this.value;
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(function () {
+        /* auto-switch to list view when user types in search */
+        if (document.getElementById('view-list').classList.contains('d-none')) {
+            switchView('list');
+        }
+        if (listLoaded) renderListRows(); else loadListView();
+    }, 220);
 });
 
 /* ════════════════════════════════
@@ -1178,8 +1538,12 @@ function renderStaffGrid(data) {
 
         /* ── Employee header (Booksy style) ── */
         html += '<div class="sf-emp-header">';
-        html += '<div class="sf-emp-av" style="background:' + eColor + ';box-shadow:0 3px 10px ' + eColor + '44;">'
-              + _esc(emp.initials) + '</div>';
+        if (emp.image) {
+            html += '<img src="' + emp.image + '" class="sf-emp-av" style="object-fit:cover;box-shadow:0 3px 10px rgba(0,0,0,.3);" loading="lazy">';
+        } else {
+            html += '<div class="sf-emp-av" style="background:' + eColor + ';box-shadow:0 3px 10px ' + eColor + '44;">'
+                  + _esc(emp.initials) + '</div>';
+        }
         html += '<div class="sf-emp-name">' + _esc(emp.name) + '</div>';
         if (openLabel) {
             html += '<div class="sf-emp-hours">' + openLabel + '</div>';
@@ -1343,7 +1707,7 @@ function switchView(name) {
         document.getElementById(views[k]).classList.toggle('d-none', k !== name);
         document.getElementById('tab-' + k).classList.toggle('active', k === name);
     });
-    if (name === 'list')  { listLoaded = false; loadListView(); }
+    if (name === 'list')  { loadListView(); }
     if (name === 'staff') loadStaffView();
     if (name === 'cal')   setTimeout(function () { calendar.updateSize(); }, 50);
 }
@@ -1374,6 +1738,13 @@ function _fmtMinutes(totalMin) {
     var ap  = h < 12 ? (IS_RTL ? 'ص' : 'AM') : (IS_RTL ? 'م' : 'PM');
     return h12 + (m ? ':' + String(m).padStart(2,'0') : '') + ' ' + ap;
 }
+
+/* Auto-refresh relative times every 30s */
+setInterval(function() {
+    if (!document.getElementById('view-list').classList.contains('d-none') && listLoaded) {
+        renderListRows();
+    }
+}, 30000);
 
 })();
 </script>

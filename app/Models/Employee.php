@@ -72,7 +72,8 @@ class Employee extends Model
     /** Individual services this employee can perform */
     public function services(): BelongsToMany
     {
-        return $this->belongsToMany(Service::class, 'employee_service');
+        return $this->belongsToMany(Service::class, 'employee_service')
+                    ->withPivot('price', 'duration_minutes');
     }
 
     public function appointments(): HasMany
@@ -128,5 +129,10 @@ class Employee extends Model
     public function serviceCommissions(): HasMany
     {
         return $this->hasMany(EmployeeServiceCommission::class);
+    }
+
+    public function attendanceRecords(): HasMany
+    {
+        return $this->hasMany(AttendanceRecord::class);
     }
 }

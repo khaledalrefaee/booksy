@@ -11,7 +11,21 @@
                 </ol>
             </nav>
         </div>
-        <a href="{{ route('company.appointments.index') }}" class="btn btn-outline-secondary rounded-pill">{{ __('Back to list') }}</a>
+        <div class="d-flex gap-2 flex-wrap">
+            @if($appointment->invoice)
+                <a href="{{ route('company.invoices.show', $appointment->invoice) }}" class="btn btn-outline-success rounded-pill">
+                    <i data-feather="file-text" style="width:14px;"></i> {{ __('Invoice') }}
+                </a>
+            @elseif($appointment->status === 'completed')
+                <form method="POST" action="{{ route('company.appointments.invoice.store', $appointment) }}">
+                    @csrf
+                    <button class="btn btn-outline-primary rounded-pill">
+                        <i data-feather="file-plus" style="width:14px;"></i> {{ __('Generate Invoice') }}
+                    </button>
+                </form>
+            @endif
+            <a href="{{ route('company.appointments.index') }}" class="btn btn-outline-secondary rounded-pill">{{ __('Back to list') }}</a>
+        </div>
     </div>
 
     @include('company.partials.flash')
@@ -24,9 +38,9 @@
                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
                         <div>
                             <p class="text-muted text-uppercase tx-11 fw-semibold mb-1">{{ __('Scheduled') }}</p>
-                            <h5 class="mb-0">{{ $appointment->start_time?->timezone(config('app.timezone'))->format('l, M j, Y · H:i') }}</h5>
+                            <h5 class="mb-0">{{ $appointment->start_time?->format('l, M j, Y · H:i') }}</h5>
                             @if($appointment->end_time)
-                                <p class="text-muted mb-0 tx-13 mt-1">{{ __('Ends') }} {{ $appointment->end_time->timezone(config('app.timezone'))->format('H:i') }}</p>
+                                <p class="text-muted mb-0 tx-13 mt-1">{{ __('Ends') }} {{ $appointment->end_time->format('H:i') }}</p>
                             @endif
                         </div>
                         @php
@@ -44,7 +58,18 @@
                         <dt class="col-sm-4 text-muted">{{ __('Branch') }}</dt>
                         <dd class="col-sm-8">{{ $appointment->branch?->localizedName() ?? '—' }}</dd>
                         <dt class="col-sm-4 text-muted">{{ __('Service') }}</dt>
-                        <dd class="col-sm-8">{{ $appointment->service?->localizedName() ?? '—' }}</dd>
+                        <dd class="col-sm-8">
+                            @if($appointment->appointmentServices->isNotEmpty())
+                                @foreach($appointment->appointmentServices as $as)
+                                    <div class="d-flex justify-content-between">
+                                        <span>{{ $as->service?->localizedName() ?? '—' }}</span>
+                                        <span class="text-muted tx-12 ms-3">{{ $as->employee?->localizedName() ?? '—' }} · {{ number_format((float)$as->price,2) }}</span>
+                                    </div>
+                                @endforeach
+                            @else
+                                {{ $appointment->service?->localizedName() ?? '—' }}
+                            @endif
+                        </dd>
                         <dt class="col-sm-4 text-muted">{{ __('Customer') }}</dt>
                         <dd class="col-sm-8">
                             {{ $appointment->customer?->name ?? '—' }}
@@ -55,7 +80,10 @@
                         <dt class="col-sm-4 text-muted">{{ __('Staff') }}</dt>
                         <dd class="col-sm-8">{{ $appointment->employee?->localizedName() ?? '—' }}</dd>
                         <dt class="col-sm-4 text-muted">{{ __('Total') }}</dt>
-                        <dd class="col-sm-8 fw-semibold">{{ number_format((float)$appointment->total_price, 2) }} SAR</dd>
+                        <dd class="col-sm-8 fw-semibold">
+                            {{ number_format((float)$appointment->total_price, 2) }}
+                            {{ config('booksy.currencies.'.($appointment->service?->currency ?? config('booksy.default_currency','SYP')).'.symbol', $appointment->service?->currency ?? 'SYP') }}
+                        </dd>
                         <dt class="col-sm-4 text-muted">{{ __('Payment') }}</dt>
                         <dd class="col-sm-8">
                             @php
@@ -173,7 +201,7 @@
                         </div>
                         <div style="font-size:.82rem;color:var(--text-muted, #6c757d);">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            {{ $appointment->status_changed_at->timezone($tz)->format('Y-m-d H:i') }}
+                            {{ $appointment->status_changed_at->format('Y-m-d H:i') }}
                         </div>
                         @if($appointment->status_previous)
                         <div style="font-size:.8rem;">
@@ -222,6 +250,106 @@
     </div>
 </div>
 
+{{-- ── Payment modal (shown when "completed" is clicked) ───────────────── --}}
+@php
+    $svcCurrency = $appointment->service?->currency ?? config('booksy.default_currency','SYP');
+    $svcSymbol   = config("booksy.currencies.{$svcCurrency}.symbol", $svcCurrency);
+    $apptPrice   = (float) $appointment->total_price;
+    $overpayTo   = $appointment->branch?->overpayment_to ?? 'treasury';
+    $overpayLbl  = $overpayTo === 'employee' ? __('goes to employee tip') : __('added to treasury');
+@endphp
+
+<div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+        <div class="modal-content" style="border:none;border-radius:20px;">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <div>
+                    <h5 class="fw-bold mb-0" style="font-family:'Poppins',sans-serif;">
+                        💳 {{ __('Collect Payment') }}
+                    </h5>
+                    <div style="font-size:12px;opacity:.5;margin-top:2px;">
+                        {{ $appointment->customer?->name ?? __('Customer') }}
+                        · {{ $appointment->service?->localizedName() ?? '' }}
+                    </div>
+                </div>
+            </div>
+            <form method="POST" action="{{ route('company.appointments.update-status', $appointment) }}" id="payment-form">
+                @csrf @method('PATCH')
+                <input type="hidden" name="status" value="completed">
+
+                <div class="modal-body px-4 py-3">
+
+                    {{-- Price banner --}}
+                    <div style="background:rgba(102,126,234,.08);border:1.5px solid rgba(102,126,234,.15);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">
+                        <div style="font-size:12px;opacity:.5;">{{ __('Service price') }}</div>
+                        <div style="font-size:22px;font-weight:900;color:#667eea;">
+                            {{ number_format($apptPrice, 2) }}
+                            <span style="font-size:13px;opacity:.6;">{{ $svcSymbol }}</span>
+                        </div>
+                    </div>
+
+                    {{-- Amount paid --}}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="font-size:13px;">
+                            {{ __('Amount paid by customer') }}
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="font-weight:700;font-size:13px;">{{ $svcSymbol }}</span>
+                            <input type="number" name="paid_amount" id="pay-amount"
+                                   class="form-control form-control-lg fw-bold"
+                                   style="font-size:20px;"
+                                   value="{{ $apptPrice }}"
+                                   min="0" step="0.01" required
+                                   oninput="calcDiff()">
+                        </div>
+
+                        {{-- Diff hint --}}
+                        <div id="pay-diff" style="display:none;margin-top:8px;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:600;"></div>
+                    </div>
+
+                    {{-- Payment method --}}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="font-size:13px;">{{ __('Payment method') }}</label>
+                        <div class="d-flex gap-2">
+                            @foreach(['cash'=>['💵',__('Cash')],'card'=>['💳',__('Card')],'later'=>['📋',__('Pay later')]] as $val=>[$ico,$lbl])
+                            <label style="flex:1;cursor:pointer;">
+                                <input type="radio" name="payment_method" value="{{ $val }}"
+                                       class="d-none pay-method-radio" {{ $val==='cash' ? 'checked' : '' }}>
+                                <div class="pay-method-btn text-center {{ $val==='cash' ? 'active' : '' }}"
+                                     style="border:2px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 6px;font-size:11px;font-weight:700;transition:all .15s;cursor:pointer;background:rgba(255,255,255,.03);">
+                                    <div style="font-size:20px;margin-bottom:3px;">{{ $ico }}</div>
+                                    {{ $lbl }}
+                                </div>
+                            </label>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Notes --}}
+                    <div class="mb-1">
+                        <label class="form-label fw-semibold" style="font-size:13px;">
+                            {{ __('Notes') }}
+                            <span style="font-weight:400;opacity:.5;font-size:11px;">({{ __('optional') }})</span>
+                        </label>
+                        <input type="text" name="pay_notes" class="form-control"
+                               placeholder="{{ __('e.g. paid extra 200 tip') }}">
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-0 gap-2">
+                    <button type="button" class="btn rounded-pill px-4"
+                            style="background:rgba(255,255,255,.07);font-size:13px;font-weight:600;"
+                            data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="submit" class="btn rounded-pill px-5 fw-bold"
+                            style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;font-size:13px;">
+                        ✅ {{ __('Complete & Record') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
 (function () {
@@ -234,11 +362,18 @@
 
     statusBtns.forEach(function (btn) {
         btn.addEventListener('click', function () {
-            // Clear active state
             statusBtns.forEach(function (b) { b.classList.remove('active'); });
             btn.classList.add('active');
 
             var status = btn.dataset.status;
+
+            // ── Intercept "completed" → show payment modal ─────────────────
+            if (status === 'completed') {
+                var modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+                modal.show();
+                return; // don't show the regular submit button
+            }
+
             selectedInput.value = status;
             submitBtn.classList.remove('d-none');
 
@@ -249,6 +384,45 @@
             }
         });
     });
+
+    // ── Payment method pill toggle ─────────────────────────────────────────
+    document.querySelectorAll('.pay-method-radio').forEach(function(r) {
+        r.addEventListener('change', function() {
+            document.querySelectorAll('.pay-method-btn').forEach(function(b) {
+                b.style.borderColor = 'rgba(255,255,255,.1)';
+                b.style.background  = 'rgba(255,255,255,.03)';
+                b.classList.remove('active');
+            });
+            var btn = this.closest('label').querySelector('.pay-method-btn');
+            btn.style.borderColor = '#667eea';
+            btn.style.background  = 'rgba(102,126,234,.12)';
+            btn.classList.add('active');
+        });
+    });
+
+    // ── Diff calculator ────────────────────────────────────────────────────
+    var servicePrice = {{ $apptPrice }};
+    var overpayLabel = '{{ $overpayLbl }}';
+    var currency     = '{{ $svcSymbol }}';
+
+    window.calcDiff = function() {
+        var paid = parseFloat(document.getElementById('pay-amount').value) || 0;
+        var diff = paid - servicePrice;
+        var hint = document.getElementById('pay-diff');
+
+        if (Math.abs(diff) < 0.01) { hint.style.display = 'none'; return; }
+
+        hint.style.display = '';
+        if (diff > 0) {
+            hint.style.background = 'rgba(34,197,94,.1)';
+            hint.style.color      = '#22c55e';
+            hint.textContent = '⬆ {{ __("Overpayment") }}: +' + diff.toFixed(2) + ' ' + currency + ' — ' + overpayLabel;
+        } else {
+            hint.style.background = 'rgba(239,68,68,.1)';
+            hint.style.color      = '#ef4444';
+            hint.textContent = '⬇ {{ __("Underpayment") }}: ' + Math.abs(diff).toFixed(2) + ' ' + currency + ' {{ __("(debt recorded)") }}';
+        }
+    };
 })();
 </script>
 @endpush

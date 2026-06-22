@@ -89,6 +89,14 @@
             </li>
 
             <li class="nav-item">
+                <a href="{{ route('owner.locations.index') }}"
+                   class="nav-link {{ request()->routeIs('owner.locations.*') ? 'active' : '' }}">
+                    <i class="link-icon" data-feather="map"></i>
+                    <span class="link-title">{{ __('Locations') }}</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
                 <a href="{{ route('front.index') }}" target="_blank" class="nav-link" style="opacity:.55;">
                     <i class="link-icon" data-feather="globe"></i>
                     <span class="link-title">{{ __('View website') }}</span>
