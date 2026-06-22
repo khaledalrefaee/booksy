@@ -1,0 +1,11 @@
+node_modules
+vendor
+.git
+whatsapp-service/node_modules
+whatsapp-service/auth_info
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+tests
+.env
