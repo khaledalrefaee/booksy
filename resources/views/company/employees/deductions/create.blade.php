@@ -37,6 +37,17 @@
 .f-input:focus { border-color:#f5576c; }
 .bk-theme-light .f-input { background:#f8f9fa; border-color:#dee2e6; color:#212529; }
 .bk-theme-light .f-input:focus { border-color:#f5576c; }
+.f-input.form-select {
+    color: #fff;
+    appearance: auto;
+    -webkit-appearance: auto;
+}
+.f-input.form-select option {
+    background: #1a1f2e;
+    color: #fff;
+}
+.bk-theme-light .f-input.form-select { color: #212529; }
+.bk-theme-light .f-input.form-select option { background: #fff; color: #212529; }
 
 /* sick leave toggle */
 .sick-banner {
@@ -131,7 +142,7 @@
                         {{-- Date --}}
                         <div class="col-md-6">
                             <label class="f-label">{{ __('Date') }}</label>
-                            <input type="date" name="deduction_date" class="f-input form-control @error('deduction_date') is-invalid @enderror"
+                            <input type="date" name="deduction_date" class="form-control @error('deduction_date') is-invalid @enderror"
                                    value="{{ old('deduction_date', date('Y-m-d')) }}" required>
                             @error('deduction_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
@@ -139,41 +150,43 @@
                         {{-- Hours --}}
                         <div class="col-md-6">
                             <label class="f-label">{{ __('Hours (optional)') }}</label>
-                            <input type="number" name="hours" class="f-input form-control"
+                            <input type="number" name="hours" class="form-control"
                                    min="0" max="24" step="0.5"
                                    value="{{ old('hours') }}" placeholder="e.g. 2.5">
                         </div>
 
-                        {{-- Amount --}}
-                        <div class="col-12" id="amount-wrap">
-                            <label class="f-label">
-                                {{ __('Deduction amount') }}
-                                ({{ config('booksy.currencies.'.config('booksy.default_currency').'.symbol','ل.س') }})
-                            </label>
-                            <input type="number" name="amount" class="f-input form-control"
+                        {{-- Amount + Currency --}}
+                        <div class="col-md-8" id="amount-wrap">
+                            <label class="f-label">{{ __('Deduction amount') }}</label>
+                            <input type="number" name="amount" class="form-control"
                                    min="0" step="0.01"
                                    value="{{ old('amount') }}" placeholder="0.00">
                             <div class="mt-1" style="font-size:11px;opacity:.5;">{{ __('Leave empty if deduction is calculated from hourly rate.') }}</div>
                         </div>
-
-                        {{-- Recorded by --}}
-                        <div class="col-12">
-                            <label class="f-label">{{ __('Recorded by') }} <span style="font-weight:400;text-transform:none;">({{ __('optional') }})</span></label>
-                            <select name="recorded_by_employee_id" class="f-input form-select">
-                                <option value="">— {{ __('Select…') }} —</option>
-                                @foreach($recorders as $rec)
-                                <option value="{{ $rec->id }}" {{ old('recorded_by_employee_id') == $rec->id ? 'selected' : '' }}>
-                                    {{ $rec->localizedName() }}
-                                    @if($rec->role) ({{ app()->getLocale()==='ar' ? ($rec->role->label_ar ?: $rec->role->label_en) : ($rec->role->label_en ?: $rec->role->label_ar) }}) @endif
+                        <div class="col-md-4" id="currency-wrap">
+                            <label class="f-label">{{ __('Currency') }}</label>
+                            <select name="currency" class="form-select">
+                                @foreach(config('booksy.currencies') as $code => $info)
+                                <option value="{{ $code }}" {{ old('currency', $employee->compensation?->currency ?? config('booksy.default_currency', 'SYP')) === $code ? 'selected' : '' }}>
+                                    {{ $info['symbol'] }} {{ $code }}
                                 </option>
                                 @endforeach
                             </select>
                         </div>
 
+                        {{-- Recorded by --}}
+                        <div class="col-12">
+                            <label class="f-label">{{ __('Recorded by') }}</label>
+                            @php $company = Auth::guard('company')->user(); @endphp
+                            <div class="form-control" style="opacity:.7;cursor:default;">
+                                👤 {{ app()->getLocale() === 'ar' ? ($company->name_ar ?: $company->name_en) : ($company->name_en ?: $company->name_ar) }}
+                            </div>
+                        </div>
+
                         {{-- Notes --}}
                         <div class="col-12">
                             <label class="f-label">{{ __('Notes') }}</label>
-                            <textarea name="notes" class="f-input form-control" rows="3"
+                            <textarea name="notes" class="form-control" rows="3"
                                       placeholder="{{ __('Optional reason or additional details…') }}">{{ old('notes') }}</textarea>
                         </div>
                     </div>

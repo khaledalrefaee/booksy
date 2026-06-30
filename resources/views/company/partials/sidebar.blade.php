@@ -217,9 +217,16 @@
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('company.branches.cash.index', $br) }}"
-                           class="nav-link nav-link-sub {{ request()->routeIs('company.branches.cash.*') && $brOpen ? 'active' : '' }}">
+                           class="nav-link nav-link-sub {{ request()->routeIs('company.branches.cash.index') && $brOpen ? 'active' : '' }}">
                             <span class="sub-dot"></span>
                             <span class="link-title">{{ __('Cash Register') }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('company.branches.cash.drawer.archive', $br) }}"
+                           class="nav-link nav-link-sub {{ request()->routeIs('company.branches.cash.drawer.archive') && $brOpen ? 'active' : '' }}">
+                            <span class="sub-dot"></span>
+                            <span class="link-title">{{ __('Drawer Archive') }}</span>
                         </a>
                     </li>
                 </ul>
@@ -292,6 +299,30 @@
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a href="{{ route('company.recurring-expenses.index') }}"
+                   class="nav-link {{ request()->routeIs('company.recurring-expenses.*') ? 'active' : '' }}">
+                    <i class="link-icon" data-feather="repeat"></i>
+                    <span class="link-title">{{ __('Recurring Expenses') }}</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ route('company.debts.index') }}"
+                   class="nav-link {{ request()->routeIs('company.debts.*') ? 'active' : '' }}">
+                    <i class="link-icon" data-feather="alert-circle"></i>
+                    <span class="link-title">{{ __('Customer Debts') }}</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="{{ route('company.inventory.index') }}"
+                   class="nav-link {{ request()->routeIs('company.inventory.*') || request()->routeIs('company.product-categories.*') ? 'active' : '' }}">
+                    <i class="link-icon" data-feather="package"></i>
+                    <span class="link-title">{{ __('Inventory') }}</span>
+                </a>
+            </li>
+
             {{-- ══════════════════════════════════════ --}}
             {{-- ── REPORTS & SETTINGS ── --}}
             {{-- ══════════════════════════════════════ --}}
@@ -306,10 +337,11 @@
             </li>
 
             <li class="nav-item">
-                <a href="#" class="nav-link" style="opacity:.45;cursor:not-allowed;" title="{{ __('Coming soon') }}">
+                <a href="{{ route('company.reports.profit-loss') }}"
+                   class="nav-link {{ request()->routeIs('company.reports.*') ? 'active' : '' }}">
                     <i class="link-icon" data-feather="bar-chart-2"></i>
-                    <span class="link-title">{{ __('Analytics') }}</span>
-                    <span style="font-size:9px;font-weight:700;background:rgba(102,126,234,.2);color:#667eea;padding:2px 7px;border-radius:20px;margin-inline-start:auto;">
+                    <span class="link-title">{{ __('Reports') }}</span>
+                    <span style="font-size:9px;font-weight:700;background:rgba(34,197,94,.2);color:#22c55e;padding:2px 7px;border-radius:20px;margin-inline-start:auto;">
                         {{ __('Soon') }}
                     </span>
                 </a>

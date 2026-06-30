@@ -74,9 +74,9 @@ class DeductionController extends Controller
             'is_sick_leave'           => ['nullable', 'boolean'],
             'deduction_date'          => ['required', 'date'],
             'amount'                  => ['nullable', 'numeric', 'min:0'],
+            'currency'                => ['nullable', 'string', 'max:5'],
             'hours'                   => ['nullable', 'numeric', 'min:0'],
             'notes'                   => ['nullable', 'string', 'max:1000'],
-            'recorded_by_employee_id' => ['nullable', 'exists:employees,id'],
         ]);
 
         $employee->deductions()->create([
@@ -84,9 +84,9 @@ class DeductionController extends Controller
             'is_sick_leave'           => $request->boolean('is_sick_leave'),
             'deduction_date'          => $data['deduction_date'],
             'amount'                  => $data['amount'] ?? null,
+            'currency'                => $data['currency'] ?? config('booksy.default_currency', 'SYP'),
             'hours'                   => $data['hours'] ?? null,
             'notes'                   => $data['notes'] ?? null,
-            'recorded_by_employee_id' => $data['recorded_by_employee_id'] ?? null,
         ]);
 
         return redirect()

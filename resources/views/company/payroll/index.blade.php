@@ -4,7 +4,7 @@
 <style>
 .pay-hero {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 20px; padding: 28px 32px; margin-bottom: 24px;
+    border-radius: 20px; padding: 24px 28px; margin-bottom: 24px;
     color: #fff; position: relative; overflow: hidden;
 }
 .pay-hero::before {
@@ -27,6 +27,7 @@
 }
 .bk-theme-light .emp-pay-row { border-color: #e2e8f0; background: #fafafa; }
 .bk-theme-light .emp-pay-row:hover { background: #f1f5f9; border-color: #a5b4fc; }
+.emp-pay-row.paid { border-color: rgba(34,197,94,.2); }
 .emp-avatar {
     width: 40px; height: 40px; border-radius: 50%;
     object-fit: cover; flex-shrink: 0;
@@ -48,6 +49,10 @@
     transition: background .15s;
 }
 .month-nav a:hover { background: rgba(255,255,255,.3); }
+@media (max-width: 768px) {
+    .pay-hero { padding: 18px 16px; }
+    .emp-pay-row { flex-wrap: wrap; gap: 10px; padding: 12px 14px; }
+}
 </style>
 @endpush
 
@@ -64,6 +69,8 @@
     $totalBase  = $rows->sum('baseSalary');
     $totalComm  = $rows->sum('commInSalaryCurrency');
     $totalDed   = $rows->sum('totalDeducted');
+    $paidCount  = $rows->where('isPaid', true)->count();
+    $unpaidCount = $rows->where('isPaid', false)->count();
 @endphp
 
 {{-- Hero --}}
@@ -74,24 +81,51 @@
             <p class="mb-0" style="opacity:.7;font-size:13px;">
                 {{ $rows->count() }} {{ __('employees') }}
                 &nbsp;·&nbsp;
+                <span style="color:#43e97b;">{{ $paidCount }} {{ __('paid') }}</span>
+                &nbsp;·&nbsp;
+                <span style="color:#fbbf24;">{{ $unpaidCount }} {{ __('unpaid') }}</span>
+                &nbsp;·&nbsp;
                 {{ __('Total net') }}: <strong>{{ number_format($totalNet, 0) }}</strong>
             </p>
         </div>
-        <div class="month-nav">
-            <a href="{{ route('company.payroll.index', ['month' => $prevMonth->month, 'year' => $prevMonth->year]) }}">
-                <i data-feather="chevron-right" style="width:14px;height:14px;"></i>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            {{-- Branch filter --}}
+            <div class="d-flex align-items-center gap-1" style="background:rgba(255,255,255,.1);border-radius:20px;padding:2px 12px 2px 4px;">
+                <span style="font-size:14px;">🏪</span>
+                <select onchange="location.href='{{ route('company.payroll.index') }}?month={{ $month }}&year={{ $year }}&branch_id='+this.value"
+                        style="background:transparent;border:none;color:#fff;font-size:12px;font-weight:600;outline:none;cursor:pointer;max-width:150px;">
+                    <option value="" style="background:#1a1f2e;color:#fff;" {{ !$branchId ? 'selected' : '' }}>{{ __('All branches') }}</option>
+                    @foreach($branches as $b)
+                    <option value="{{ $b->id }}" style="background:#1a1f2e;color:#fff;" {{ $branchId == $b->id ? 'selected' : '' }}>{{ $b->localizedName() }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Export --}}
+            <a href="{{ route('company.payroll.export', ['month' => $month, 'year' => $year, 'branch_id' => $branchId]) }}"
+               class="btn btn-sm rounded-pill px-3" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.3);font-weight:600;font-size:12px;">
+                <i data-feather="download" style="width:12px;height:12px;"></i> {{ __('Export CSV') }}
             </a>
-            <span style="font-weight:700;font-size:15px;min-width:130px;text-align:center;">{{ $monthName }}</span>
-            @if($canGoNext)
-            <a href="{{ route('company.payroll.index', ['month' => $nextMonth->month, 'year' => $nextMonth->year]) }}">
-                <i data-feather="chevron-left" style="width:14px;height:14px;"></i>
-            </a>
-            @else
-            <span style="width:32px;height:32px;"></span>
-            @endif
+
+            {{-- Month nav --}}
+            <div class="month-nav">
+                <a href="{{ route('company.payroll.index', ['month' => $prevMonth->month, 'year' => $prevMonth->year, 'branch_id' => $branchId]) }}">
+                    <i data-feather="chevron-right" style="width:14px;height:14px;"></i>
+                </a>
+                <span style="font-weight:700;font-size:15px;min-width:130px;text-align:center;">{{ $monthName }}</span>
+                @if($canGoNext)
+                <a href="{{ route('company.payroll.index', ['month' => $nextMonth->month, 'year' => $nextMonth->year, 'branch_id' => $branchId]) }}">
+                    <i data-feather="chevron-left" style="width:14px;height:14px;"></i>
+                </a>
+                @else
+                <span style="width:32px;height:32px;"></span>
+                @endif
+            </div>
         </div>
     </div>
 </div>
+
+@include('company.partials.flash')
 
 {{-- Company totals --}}
 <div class="row g-3 mb-4">
@@ -146,34 +180,36 @@
         @foreach($rows as $row)
         @php $emp = $row['employee']; $comp = $row['compensation']; @endphp
         <a href="{{ route('company.employees.payroll', [$emp, 'month' => $month, 'year' => $year]) }}"
-           class="emp-pay-row">
+           class="emp-pay-row {{ $row['isPaid'] ? 'paid' : '' }}">
 
-            {{-- Avatar --}}
             @if($emp->image)
                 <img src="{{ asset('storage/'.$emp->image) }}" class="emp-avatar" alt="">
             @else
                 <div class="emp-avatar-placeholder">{{ mb_substr($emp->localizedName(), 0, 1) }}</div>
             @endif
 
-            {{-- Name + branch --}}
             <div style="flex:1;min-width:0;">
-                <div style="font-weight:700;font-size:14px;">{{ $emp->localizedName() }}</div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span style="font-weight:700;font-size:14px;">{{ $emp->localizedName() }}</span>
+                    @if($row['isPaid'])
+                    <span class="pay-pill" style="background:rgba(34,197,94,.12);color:#22c55e;">✓ {{ __('Paid') }}</span>
+                    @else
+                    <span class="pay-pill" style="background:rgba(251,191,36,.12);color:#fbbf24;">{{ __('Unpaid') }}</span>
+                    @endif
+                </div>
                 <div style="font-size:11px;opacity:.4;">{{ $emp->branch->localizedName() }}</div>
             </div>
 
-            {{-- Appointments count --}}
             <div class="text-center d-none d-md-block" style="min-width:60px;">
                 <div style="font-size:16px;font-weight:800;">{{ $row['appointments']->count() }}</div>
                 <div style="font-size:10px;opacity:.4;">{{ __('appts') }}</div>
             </div>
 
-            {{-- Base --}}
             <div class="text-center d-none d-lg-block" style="min-width:80px;">
                 <div style="font-size:13px;font-weight:700;">{{ number_format($row['baseSalary'],0) }}</div>
                 <div style="font-size:10px;opacity:.4;">{{ __('Base') }}</div>
             </div>
 
-            {{-- Commissions --}}
             <div class="text-center" style="min-width:80px;">
                 @if($row['commissionsByCurrency']->isNotEmpty())
                     @foreach($row['commissionsByCurrency'] as $cur => $amt)
@@ -186,17 +222,18 @@
                 <div style="font-size:10px;opacity:.4;">{{ __('Comm.') }}</div>
             </div>
 
-            {{-- Deductions --}}
             <div class="text-center" style="min-width:80px;">
-                @if($row['totalDeducted'] > 0)
-                <div style="font-size:13px;font-weight:700;color:#ef4444;">-{{ number_format($row['totalDeducted'],0) }}</div>
+                @if($row['deductionsByCurrency']->isNotEmpty())
+                    @foreach($row['deductionsByCurrency'] as $cur => $amt)
+                    @php $sym = config("booksy.currencies.{$cur}.symbol", $cur); @endphp
+                    <div style="font-size:12px;font-weight:700;color:#ef4444;line-height:1.3;">-{{ number_format($amt,0) }}<span style="font-size:9px;opacity:.6;"> {{ $sym }}</span></div>
+                    @endforeach
                 @else
                 <div style="font-size:13px;opacity:.3;">—</div>
                 @endif
                 <div style="font-size:10px;opacity:.4;">{{ __('Ded.') }}</div>
             </div>
 
-            {{-- Net --}}
             <div class="text-end" style="min-width:90px;">
                 <div style="font-size:17px;font-weight:900;color:#22c55e;">{{ number_format($row['netPay'],0) }}</div>
                 <div style="font-size:10px;opacity:.4;">{{ __('Net') }}</div>

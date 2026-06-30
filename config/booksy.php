@@ -62,6 +62,14 @@ return [
         '+1'   => ['flag' => '🇺🇸',                                        'name_en' => 'USA',          'name_ar' => 'أمريكا',     'digits_min' => 10, 'digits_max' => 10],
     ],
 
+    'loyalty' => [
+        'points_per_visit'        => 10,
+        'points_per_currency_unit'=> 10000,
+        'redemption_rate'         => ['points' => 100, 'discount' => 5000, 'currency' => 'SYP'],
+    ],
+
+    'miss_you_days' => 30,
+
     'whatsapp' => [
         'url'     => env('WHATSAPP_SERVICE_URL', 'http://127.0.0.1:3001'),
         'api_key' => env('WHATSAPP_API_KEY', 'booksy-wa-secret-2026'),

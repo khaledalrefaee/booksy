@@ -12,8 +12,8 @@
 
 @if(!empty($branchIds))
 {{-- Load Echo + Pusher --}}
-<script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pusher-js@8.4.0/dist/web/pusher.min.js"></script>
+<script src="{{ asset('vendor/echo/echo.iife.js') }}"></script>
+<script src="{{ asset('vendor/echo/pusher.min.js') }}"></script>
 
 <style>
 /* ════════════════════════════════════════

@@ -1,7 +1,7 @@
 @extends('company.dashboard')
 
 @push('company-styles')
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}">
 <style>
 .att-hero {
     background:linear-gradient(135deg,#0f3460 0%,#16213e 50%,#1a1a2e 100%);
@@ -416,5 +416,5 @@ function showMap(empLat, empLng, brLat, brLng, empName, distance) {
     }, 300);
 }
 </script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ asset('vendor/leaflet/leaflet.js') }}"></script>
 @endpush

@@ -54,7 +54,7 @@ class InvoiceController extends Controller
     {
         abort_unless($invoice->company_id === $this->company()->id, 403);
 
-        $invoice->load(['branch', 'items', 'appointment']);
+        $invoice->load(['branch', 'items', 'appointment', 'payments']);
 
         return view('company.invoices.show', compact('invoice'));
     }
@@ -136,6 +136,33 @@ class InvoiceController extends Controller
 
         return redirect()->route('company.invoices.show', $invoice)
             ->with('success', __('Invoice voided.'));
+    }
+
+    /**
+     * Record a partial/full payment on an invoice.
+     */
+    public function recordPayment(Request $request, Invoice $invoice): RedirectResponse
+    {
+        abort_unless($invoice->company_id === $this->company()->id, 403);
+        abort_if(in_array($invoice->status, ['paid', 'void', 'refunded']), 422);
+
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:' . $invoice->remaining],
+            'payment_method' => ['required', 'in:cash,card,transfer,mixed'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $invoice->recordPayment(
+            $data['amount'],
+            $data['payment_method'],
+            $data['notes'] ?? null,
+            $this->company()->localizedName()
+        );
+
+        Auditor::log("Recorded payment of {$data['amount']} on invoice {$invoice->invoice_number}", $invoice);
+
+        return redirect()->route('company.invoices.show', $invoice)
+            ->with('success', __('Payment recorded on invoice.'));
     }
 
     // ── Static helper used also from AppointmentController ───────────────────

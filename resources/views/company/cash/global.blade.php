@@ -83,24 +83,25 @@
     <div class="row g-3">
         @foreach($summary as $cur => $s)
         @php $sym = config("booksy.currencies.{$cur}.symbol", $cur); @endphp
-        <div class="col-12 col-md-4">
+        @php $colSize = $summary->count() === 1 ? 'col-12' : ($summary->count() === 2 ? 'col-12 col-md-6' : 'col-12 col-md-4'); @endphp
+        <div class="{{ $colSize }}">
             <div class="balance-card">
                 <div class="balance-label">{{ __('Net balance') }} · {{ $cur }}</div>
                 <div class="balance-value {{ $s['net'] >= 0 ? 'text-success' : 'text-danger' }}">
                     {{ $s['net'] >= 0 ? '+' : '' }}{{ number_format($s['net'], 0) }}
-                    <span style="font-size:16px;opacity:.5;">{{ $sym }}</span>
+                    <span>{{ $sym }}</span>
                 </div>
-                <div class="d-flex gap-4 mt-3">
+                <div class="d-flex gap-3 mt-3 flex-wrap">
                     <div class="cash-stat">
                         <div class="cash-stat-icon" style="background:rgba(34,197,94,.15);">⬆️</div>
-                        <div>
+                        <div style="min-width:0;">
                             <div class="cash-stat-val" style="color:#22c55e;">{{ number_format($s['income'],0) }} {{ $sym }}</div>
                             <div class="cash-stat-lbl">{{ __('Income') }}</div>
                         </div>
                     </div>
                     <div class="cash-stat">
                         <div class="cash-stat-icon" style="background:rgba(239,68,68,.15);">⬇️</div>
-                        <div>
+                        <div style="min-width:0;">
                             <div class="cash-stat-val" style="color:#ef4444;">{{ number_format($s['expense'],0) }} {{ $sym }}</div>
                             <div class="cash-stat-lbl">{{ __('Expenses') }}</div>
                         </div>
@@ -108,7 +109,7 @@
                     <div class="cash-stat">
                         <div class="cash-stat-icon" style="background:rgba(100,116,139,.15);">📊</div>
                         <div>
-                            <div class="cash-stat-val">{{ $transactions->count() }}</div>
+                            <div class="cash-stat-val">{{ $paginatedTx->total() }}</div>
                             <div class="cash-stat-lbl">{{ __('Transactions') }}</div>
                         </div>
                     </div>
@@ -257,7 +258,7 @@
 
                 <div class="income-section">
                     <div style="font-size:10px;font-weight:700;color:#22c55e;opacity:.7;margin-bottom:8px;">⬆ {{ __('INCOME') }}</div>
-                    @foreach($incomeCats as $key => $meta)
+                    @foreach($incomeCatsView as $key => $meta)
                     @php $total = $byCat[$key] ?? 0; @endphp
                     @if($total > 0)
                     <div class="d-flex align-items-center gap-2 mb-2">
@@ -275,7 +276,7 @@
 
                 <div class="expense-section mt-3">
                     <div style="font-size:10px;font-weight:700;color:#ef4444;opacity:.7;margin-bottom:8px;">⬇ {{ __('EXPENSES') }}</div>
-                    @foreach($expenseCats as $key => $meta)
+                    @foreach($expenseCatsView as $key => $meta)
                     @php $total = $byCat[$key] ?? 0; @endphp
                     @if($total > 0)
                     <div class="d-flex align-items-center gap-2 mb-2">

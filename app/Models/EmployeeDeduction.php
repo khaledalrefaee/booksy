@@ -14,6 +14,7 @@ class EmployeeDeduction extends Model
         'is_sick_leave',
         'deduction_date',
         'amount',
+        'currency',
         'hours',
         'notes',
     ];

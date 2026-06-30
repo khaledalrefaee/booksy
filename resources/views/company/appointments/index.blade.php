@@ -1,7 +1,7 @@
 @extends('company.dashboard')
 
 @push('company-styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+<link rel="stylesheet" href="{{ asset('vendor/fullcalendar/index.global.min.css') }}">
 <style>
 /* ══════════════════════════════════════════
    CSS VARIABLES — dark (default) / light
@@ -913,7 +913,7 @@
 @endsection
 
 @push('company-after-template')
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script src="{{ asset('vendor/fullcalendar/index.global.min.js') }}"></script>
 @php
     $fcLocale = app()->getLocale() === 'ar' ? 'ar' : 'en';
     $isRtlJs  = app()->getLocale() === 'ar' ? 'true' : 'false';

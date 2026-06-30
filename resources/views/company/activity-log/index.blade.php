@@ -45,6 +45,7 @@
                         <option value="Invoice"       {{ request('subject') === 'Invoice'       ? 'selected' : '' }}>🧾 {{ __('Invoices') }}</option>
                         <option value="Service"       {{ request('subject') === 'Service'       ? 'selected' : '' }}>💆 {{ __('Services') }}</option>
                         <option value="BranchPayment" {{ request('subject') === 'BranchPayment' ? 'selected' : '' }}>💰 {{ __('Payments') }}</option>
+                        <option value="CashDrawerSession" {{ request('subject') === 'CashDrawerSession' ? 'selected' : '' }}>🗄 {{ __('Cash Drawer') }}</option>
                     </select>
                 </div>
                 <div class="col-sm-3 d-flex gap-2">

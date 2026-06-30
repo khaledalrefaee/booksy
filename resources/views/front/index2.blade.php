@@ -657,7 +657,7 @@ html,body{background:var(--bg)!important;color:var(--text)!important;scroll-beha
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 </style>
 {{-- Leaflet CSS --}}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}"/>
 <style>
 /* ── عزل خريطة Leaflet عن تأثيرات القالب ── */
 #v2-leaflet-map { z-index:1 !important; position:relative !important; }
@@ -1211,7 +1211,7 @@ html,body{background:var(--bg)!important;color:var(--text)!important;scroll-beha
 <script src="{{ asset('frontend/js/theme.js') }}"></script>
 <script src="{{ asset('frontend/js/custom.js') }}"></script>
 <script src="{{ asset('frontend/js/theme.init.js') }}"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ asset('vendor/leaflet/leaflet.js') }}"></script>
 
 <script>
 const V2_IS_AR   = {{ $isAr ? 'true' : 'false' }};

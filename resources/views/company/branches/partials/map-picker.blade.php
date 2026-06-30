@@ -41,7 +41,7 @@
 </div>
 
 @push('company-styles')
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}" crossorigin="">
 <style>
     #branch-map-search-results .list-group-item { cursor: pointer; }
     #branch-map-search-results .list-group-item:hover,
@@ -53,7 +53,7 @@
 @endpush
 
 @push('scripts')
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+<script src="{{ asset('vendor/leaflet/leaflet.js') }}"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {

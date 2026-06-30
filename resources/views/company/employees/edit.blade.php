@@ -101,8 +101,8 @@
 }
 /* Photo preview */
 #edit-photo-preview > div {
-    width: 140px !important; height: 140px !important;
-    border-radius: 20px !important;
+    width: 90px !important; height: 90px !important;
+    border-radius: 14px !important;
 }
 
 /* ── Working hours ── */
@@ -183,12 +183,15 @@
     $errKeys    = $errors->keys();
     $tab1Fields = ['name_en','name_ar','email','phone','role_id','password','bio','image'];
     $tab2Fields = ['comp_type','comp_base_amount','comp_commission_rate','service_ids'];
+    $tab4Fields = ['contract_type','hire_date','contract_end_date','national_id','iban','bank_name','emergency_contact_name','emergency_contact_phone','emergency_contact_relation','qualifications','license_number','license_expiry'];
     $initTab    = 1;
-    if (collect($errKeys)->some(fn($k) => str_starts_with($k,'working_hours') || str_starts_with($k,'social_links'))) $initTab = 3;
+    if (collect($errKeys)->some(fn($k) => in_array($k,$tab4Fields))) $initTab = 4;
+    elseif (collect($errKeys)->some(fn($k) => str_starts_with($k,'working_hours') || str_starts_with($k,'social_links'))) $initTab = 3;
     elseif (collect($errKeys)->some(fn($k) => in_array($k,$tab2Fields) || str_starts_with($k,'comp_') || str_starts_with($k,'service_'))) $initTab = 2;
     $errTab1 = collect($errKeys)->some(fn($k) => in_array($k,$tab1Fields));
     $errTab2 = collect($errKeys)->some(fn($k) => in_array($k,$tab2Fields) || str_starts_with($k,'comp_') || str_starts_with($k,'service_'));
     $errTab3 = collect($errKeys)->some(fn($k) => str_starts_with($k,'working_hours') || str_starts_with($k,'social_links'));
+    $errTab4 = collect($errKeys)->some(fn($k) => in_array($k,$tab4Fields));
 @endphp
 
 <div class="page-content">
@@ -214,13 +217,13 @@
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <a href="{{ route('company.employees.payroll', $employee) }}"
-                   style="background:rgba(67,233,123,.2);color:#22c55e;border:1.5px solid rgba(67,233,123,.4);font-weight:600;font-size:13px;backdrop-filter:blur(4px);"
+                   style="background:#22c55e;color:#fff;border:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(34,197,94,.4);"
                    class="btn btn-sm rounded-pill px-3">
                     <i data-feather="dollar-sign" style="width:13px;height:13px;"></i>
                     <span class="{{ app()->getLocale()==='ar' ? 'me-1' : 'ms-1' }}">{{ __('Payroll') }}</span>
                 </a>
                 <a href="{{ route('company.employees.deductions.index', $employee) }}"
-                   style="background:rgba(245,87,108,.15);color:#f5576c;border:1.5px solid rgba(245,87,108,.3);font-weight:600;font-size:13px;backdrop-filter:blur(4px);"
+                   style="background:#f5576c;color:#fff;border:none;font-weight:600;font-size:13px;box-shadow:0 2px 8px rgba(245,87,108,.4);"
                    class="btn btn-sm rounded-pill px-3">
                     <i data-feather="minus-circle" style="width:13px;height:13px;"></i>
                     <span class="{{ app()->getLocale()==='ar' ? 'me-1' : 'ms-1' }}">{{ __('Deductions') }}</span>
@@ -270,6 +273,11 @@
                 {{ __('Schedule') }}
                 @if($errTab3)<span class="tab-badge">!</span>@endif
             </button>
+            <button type="button" class="emp-tab-btn{{ $initTab===4 ? ' active' : '' }}" data-tab="4">
+                <i data-feather="briefcase"></i>
+                {{ __('HR') }}
+                @if($errTab4 ?? false)<span class="tab-badge">!</span>@endif
+            </button>
         </div>
 
         {{-- ══ TAB 1 — Basic Info ══ --}}
@@ -293,7 +301,7 @@
                                     <label class="f-label">{{ __('Profile Photo') }}</label>
                                     <div class="d-flex align-items-center gap-4">
                                         <div id="edit-photo-preview" style="position:relative;flex-shrink:0;">
-                                            <div style="width:110px;height:110px;border-radius:18px;overflow:hidden;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);">
+                                            <div style="width:90px;height:90px;border-radius:14px;overflow:hidden;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);">
                                                 @if($employee->image)
                                                     <img src="{{ asset('storage/'.$employee->image) }}" id="edit-photo-img" style="width:100%;height:100%;object-fit:cover;" alt="">
                                                 @else
@@ -311,8 +319,8 @@
                                             <input type="file" name="image" id="edit-photo-input" accept="image/*"
                                                    class="f-input form-control" style="font-size:12px;padding:7px 10px;">
                                             <div class="mt-2" style="font-size:11px;opacity:.4;">
-                                                {{ __('JPG, PNG or WEBP — max 2 MB') }}<br>
-                                                <span style="color:#0ea5e9;opacity:.8;">{{ __('Will be saved as WebP automatically') }}</span>
+                                                {{ __('Any image size — auto-compressed before upload') }}<br>
+                                                <span style="color:#0ea5e9;opacity:.8;">{{ __('Will be resized to 800px and saved as WebP') }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -624,9 +632,162 @@
                     </div>
                 </div>
             </div>
+            {{-- Prev / Next buttons --}}
+            <div class="d-flex justify-content-between mt-2 mb-1">
+                <button type="button" class="btn-tab-next" data-next="2"
+                        style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:1.5px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.6);font-size:13px;font-weight:700;cursor:pointer;">
+                    <i data-feather="arrow-right" style="width:14px;height:14px;"></i>
+                    {{ __('Previous') }}
+                </button>
+                <button type="button" class="btn-tab-next" data-next="4"
+                        style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:none;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(14,165,233,.3);">
+                    {{ __('Next') }}
+                    <i data-feather="arrow-left" style="width:14px;height:14px;"></i>
+                </button>
+            </div>
+        </div>
+
+        {{-- ══ TAB 4 — HR Details ══ --}}
+        <div class="emp-tab-pane{{ $initTab===4 ? ' active' : '' }}" id="tab-pane-4">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    {{-- Contract --}}
+                    <div class="card border-0 sec-card bk-a2">
+                        <div class="card-body p-0">
+                            <div class="sec-header">
+                                <div class="sec-icon" style="background:rgba(14,165,233,.15);">
+                                    <i data-feather="briefcase" style="width:15px;height:15px;color:#7dd3fc;"></i>
+                                </div>
+                                <div>
+                                    <div class="sec-title">{{ __('Contract & Employment') }}</div>
+                                    <div class="sec-sub">{{ __('Optional — hire date, contract type') }}</div>
+                                </div>
+                            </div>
+                            <div class="sec-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="f-label">{{ __('Contract Type') }}</label>
+                                        <select name="contract_type" class="f-input form-select">
+                                            <option value="">{{ __('Not set') }}</option>
+                                            @foreach(\App\Models\Employee::CONTRACT_TYPES as $ctKey => $ctMeta)
+                                            <option value="{{ $ctKey }}" {{ old('contract_type', $employee->contract_type) === $ctKey ? 'selected' : '' }}>
+                                                {{ $ctMeta['icon'] }} {{ __($ctMeta['label_key']) }}
+                                            </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="f-label">{{ __('Hire Date') }}</label>
+                                        <input type="date" name="hire_date" class="f-input form-control" value="{{ old('hire_date', $employee->hire_date?->format('Y-m-d')) }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="f-label">{{ __('Contract End Date') }}</label>
+                                        <input type="date" name="contract_end_date" class="f-input form-control" value="{{ old('contract_end_date', $employee->contract_end_date?->format('Y-m-d')) }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="f-label">{{ __('National ID / Residency') }}</label>
+                                        <input type="text" name="national_id" class="f-input form-control" value="{{ old('national_id', $employee->national_id) }}" dir="ltr">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Qualifications --}}
+                    <div class="card border-0 sec-card bk-a3">
+                        <div class="card-body p-0">
+                            <div class="sec-header">
+                                <div class="sec-icon" style="background:rgba(67,233,123,.12);">
+                                    <i data-feather="award" style="width:15px;height:15px;color:#43e97b;"></i>
+                                </div>
+                                <div>
+                                    <div class="sec-title">{{ __('Qualifications & License') }}</div>
+                                    <div class="sec-sub">{{ __('Certifications, practice license') }}</div>
+                                </div>
+                            </div>
+                            <div class="sec-body">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="f-label">{{ __('Qualifications') }}</label>
+                                        <textarea name="qualifications" class="f-input form-control" rows="3">{{ old('qualifications', $employee->qualifications) }}</textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="f-label">{{ __('License Number') }}</label>
+                                        <input type="text" name="license_number" class="f-input form-control" value="{{ old('license_number', $employee->license_number) }}" dir="ltr">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="f-label">{{ __('License Expiry') }}</label>
+                                        <input type="date" name="license_expiry" class="f-input form-control" value="{{ old('license_expiry', $employee->license_expiry?->format('Y-m-d')) }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    {{-- Bank --}}
+                    <div class="card border-0 sec-card bk-a2">
+                        <div class="card-body p-0">
+                            <div class="sec-header">
+                                <div class="sec-icon" style="background:rgba(250,112,154,.12);">
+                                    <i data-feather="credit-card" style="width:15px;height:15px;color:#fa709a;"></i>
+                                </div>
+                                <div>
+                                    <div class="sec-title">{{ __('Bank Details') }}</div>
+                                    <div class="sec-sub">{{ __('For salary transfer') }}</div>
+                                </div>
+                            </div>
+                            <div class="sec-body">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="f-label">{{ __('Bank Name') }}</label>
+                                        <input type="text" name="bank_name" class="f-input form-control" value="{{ old('bank_name', $employee->bank_name) }}">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="f-label">{{ __('IBAN') }}</label>
+                                        <input type="text" name="iban" class="f-input form-control" value="{{ old('iban', $employee->iban) }}" placeholder="SA0000000000000000000000" dir="ltr" style="font-family:monospace;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Emergency Contact --}}
+                    <div class="card border-0 sec-card bk-a3">
+                        <div class="card-body p-0">
+                            <div class="sec-header">
+                                <div class="sec-icon" style="background:rgba(239,68,68,.12);">
+                                    <i data-feather="alert-circle" style="width:15px;height:15px;color:#ef4444;"></i>
+                                </div>
+                                <div>
+                                    <div class="sec-title">{{ __('Emergency Contact') }}</div>
+                                    <div class="sec-sub">{{ __('Person to contact in emergencies') }}</div>
+                                </div>
+                            </div>
+                            <div class="sec-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="f-label">{{ __('Name') }}</label>
+                                        <input type="text" name="emergency_contact_name" class="f-input form-control" value="{{ old('emergency_contact_name', $employee->emergency_contact_name) }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="f-label">{{ __('Phone') }}</label>
+                                        <input type="text" name="emergency_contact_phone" class="f-input form-control" value="{{ old('emergency_contact_phone', $employee->emergency_contact_phone) }}" dir="ltr">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="f-label">{{ __('Relation') }}</label>
+                                        <input type="text" name="emergency_contact_relation" class="f-input form-control" value="{{ old('emergency_contact_relation', $employee->emergency_contact_relation) }}" placeholder="{{ __('e.g. Father, Spouse...') }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {{-- Prev button --}}
             <div class="d-flex justify-content-start mt-2 mb-1">
-                <button type="button" class="btn-tab-next" data-next="2"
+                <button type="button" class="btn-tab-next" data-next="3"
                         style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:1.5px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.6);font-size:13px;font-weight:700;cursor:pointer;">
                     <i data-feather="arrow-right" style="width:14px;height:14px;"></i>
                     {{ __('Previous') }}
@@ -646,7 +807,17 @@
 </div>
 
 @push('scripts')
+@include('company.employees.partials.image-compressor')
 <script>
+// ── Save loading overlay ──
+document.getElementById('emp-edit-form').addEventListener('submit', function () {
+    var overlay = document.createElement('div');
+    overlay.id = 'save-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+    overlay.innerHTML = '<div style="text-align:center;color:#fff;"><div class="spinner-border mb-3" style="width:40px;height:40px;border-width:3px;color:#0ea5e9;"></div><div style="font-size:14px;font-weight:600;">{{ __("Saving...") }}</div><div style="font-size:12px;opacity:.5;margin-top:4px;">{{ __("Please wait") }}</div></div>';
+    document.body.appendChild(overlay);
+}, true);
+
 // ── Tabs ──
 function switchTab(t) {
     document.querySelectorAll('.emp-tab-btn').forEach(b => b.classList.remove('active'));
@@ -685,16 +856,16 @@ const btnDeselAll = document.getElementById('btn-deselect-all');
 if (btnSelAll) btnSelAll.addEventListener('click', () => toggleAllServices(true));
 if (btnDeselAll) btnDeselAll.addEventListener('click', () => toggleAllServices(false));
 
-// ── Photo preview ──
+// ── Photo compression (replaces preview) ──
+initImageCompressor('edit-photo-input', null);
 document.getElementById('edit-photo-input').addEventListener('change', function () {
-    const file = this.files && this.files[0];
-    if (!file || !file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        const inner = document.querySelector('#edit-photo-preview > div');
-        if (inner) inner.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
-    };
-    reader.readAsDataURL(file);
+    setTimeout(function () {
+        var input = document.getElementById('edit-photo-input');
+        var file = input.files && input.files[0];
+        if (!file) return;
+        var inner = document.querySelector('#edit-photo-preview > div');
+        if (inner) inner.innerHTML = '<img src="' + URL.createObjectURL(file) + '" style="width:100%;height:100%;object-fit:cover;">';
+    }, 800);
 });
 
 // ── Client-side validation ──

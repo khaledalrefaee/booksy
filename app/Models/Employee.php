@@ -14,6 +14,13 @@ class Employee extends Model
 {
     use HasLocalizedNames;
 
+    public const CONTRACT_TYPES = [
+        'full_time'  => ['label_key' => 'Full-time',  'icon' => '📋', 'color' => '#22c55e'],
+        'part_time'  => ['label_key' => 'Part-time',  'icon' => '⏰', 'color' => '#f59e0b'],
+        'temporary'  => ['label_key' => 'Temporary',  'icon' => '📌', 'color' => '#ef4444'],
+        'freelance'  => ['label_key' => 'Freelance',  'icon' => '💼', 'color' => '#667eea'],
+    ];
+
     protected $fillable = [
         'company_id',
         'branch_id',
@@ -27,6 +34,18 @@ class Employee extends Model
         'is_active',
         'is_bookable',
         'password',
+        'contract_type',
+        'hire_date',
+        'contract_end_date',
+        'national_id',
+        'iban',
+        'bank_name',
+        'emergency_contact_name',
+        'emergency_contact_phone',
+        'emergency_contact_relation',
+        'qualifications',
+        'license_number',
+        'license_expiry',
     ];
 
     protected $hidden = [
@@ -37,9 +56,12 @@ class Employee extends Model
     protected function casts(): array
     {
         return [
-            'is_active'   => 'boolean',
-            'is_bookable' => 'boolean',
-            'password'    => 'hashed',
+            'is_active'         => 'boolean',
+            'is_bookable'       => 'boolean',
+            'password'          => 'hashed',
+            'hire_date'         => 'date',
+            'contract_end_date' => 'date',
+            'license_expiry'    => 'date',
         ];
     }
 
@@ -134,5 +156,10 @@ class Employee extends Model
     public function attendanceRecords(): HasMany
     {
         return $this->hasMany(AttendanceRecord::class);
+    }
+
+    public function payrollPayments(): HasMany
+    {
+        return $this->hasMany(PayrollPayment::class);
     }
 }

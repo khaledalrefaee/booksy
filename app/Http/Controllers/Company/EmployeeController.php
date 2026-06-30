@@ -41,8 +41,10 @@ class EmployeeController extends Controller
     {
         $this->authoriseBranch($branch);
 
-        $employees = $branch->employees()
-            ->with(['role', 'compensation', 'serviceCommissions'])
+        $query = $branch->employees()
+            ->with(['role', 'compensation', 'serviceCommissions']);
+
+        $employees = $query
             ->withCount([
                 'appointments as appointments_this_month' => fn($q) => $q
                     ->whereMonth('start_time', now()->month)
@@ -62,7 +64,14 @@ class EmployeeController extends Controller
             ->orderBy('name_en')
             ->get();
 
-        return view('company.employees.index', compact('branch', 'employees'));
+        $alerts = $branch->employees()
+            ->where(function ($q) {
+                $q->whereNotNull('license_expiry')
+                  ->orWhereNotNull('contract_end_date');
+            })
+            ->get(['id', 'name_en', 'name_ar', 'license_expiry', 'contract_end_date']);
+
+        return view('company.employees.index', compact('branch', 'employees', 'alerts'));
     }
 
     public function create(Branch $branch): View
@@ -92,7 +101,7 @@ class EmployeeController extends Controller
             'role_id'              => ['required', 'exists:roles,id'],
             'password'             => ['required', 'string', 'min:8'],
             'bio'                  => ['nullable', 'string', 'max:1000'],
-            'image'                => ['nullable', 'image', 'max:2048'],
+            'image'                => ['nullable', 'image', 'max:10240'],
             'is_active'    => ['nullable', 'boolean'],
             'is_bookable'  => ['nullable', 'boolean'],
             'service_ids'           => ['nullable', 'array'],
@@ -116,6 +125,19 @@ class EmployeeController extends Controller
             'working_hours.*.end_time'   => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
             'social_links'               => ['nullable', 'array'],
             'social_links.*'             => ['nullable', 'string', 'max:500'],
+            // HR fields
+            'contract_type'              => ['nullable', 'in:' . implode(',', array_keys(Employee::CONTRACT_TYPES))],
+            'hire_date'                  => ['nullable', 'date'],
+            'contract_end_date'          => ['nullable', 'date', 'after_or_equal:hire_date'],
+            'national_id'               => ['nullable', 'string', 'max:30'],
+            'iban'                      => ['nullable', 'string', 'max:40'],
+            'bank_name'                 => ['nullable', 'string', 'max:255'],
+            'emergency_contact_name'    => ['nullable', 'string', 'max:255'],
+            'emergency_contact_phone'   => ['nullable', 'string', 'max:30'],
+            'emergency_contact_relation' => ['nullable', 'string', 'max:50'],
+            'qualifications'            => ['nullable', 'string', 'max:2000'],
+            'license_number'            => ['nullable', 'string', 'max:50'],
+            'license_expiry'            => ['nullable', 'date'],
         ]);
 
         $imagePath = $request->hasFile('image')
@@ -134,6 +156,18 @@ class EmployeeController extends Controller
             'image'       => $imagePath,
             'is_active'   => $request->boolean('is_active'),
             'is_bookable' => $request->boolean('is_bookable'),
+            'contract_type'              => $data['contract_type'] ?? null,
+            'hire_date'                  => $data['hire_date'] ?? null,
+            'contract_end_date'          => $data['contract_end_date'] ?? null,
+            'national_id'               => $data['national_id'] ?? null,
+            'iban'                      => $data['iban'] ?? null,
+            'bank_name'                 => $data['bank_name'] ?? null,
+            'emergency_contact_name'    => $data['emergency_contact_name'] ?? null,
+            'emergency_contact_phone'   => $data['emergency_contact_phone'] ?? null,
+            'emergency_contact_relation' => $data['emergency_contact_relation'] ?? null,
+            'qualifications'            => $data['qualifications'] ?? null,
+            'license_number'            => $data['license_number'] ?? null,
+            'license_expiry'            => $data['license_expiry'] ?? null,
         ]);
 
         // Sync services with optional per-employee price & duration overrides
@@ -203,7 +237,7 @@ class EmployeeController extends Controller
             'role_id'               => ['required', 'exists:roles,id'],
             'password'              => ['nullable', 'string', 'min:8'],
             'bio'                   => ['nullable', 'string', 'max:1000'],
-            'image'                 => ['nullable', 'image', 'max:2048'],
+            'image'                 => ['nullable', 'image', 'max:10240'],
             'is_active'             => ['nullable', 'boolean'],
             'is_bookable'           => ['nullable', 'boolean'],
             'service_ids'           => ['nullable', 'array'],
@@ -227,6 +261,19 @@ class EmployeeController extends Controller
             'comp_commission_rate'       => ['nullable', 'numeric', 'min:0', 'max:100'],
             'comp_service_rates'         => ['nullable', 'array'],
             'comp_service_rates.*'       => ['nullable', 'numeric', 'min:0', 'max:100'],
+            // HR fields
+            'contract_type'              => ['nullable', 'in:' . implode(',', array_keys(Employee::CONTRACT_TYPES))],
+            'hire_date'                  => ['nullable', 'date'],
+            'contract_end_date'          => ['nullable', 'date', 'after_or_equal:hire_date'],
+            'national_id'               => ['nullable', 'string', 'max:30'],
+            'iban'                      => ['nullable', 'string', 'max:40'],
+            'bank_name'                 => ['nullable', 'string', 'max:255'],
+            'emergency_contact_name'    => ['nullable', 'string', 'max:255'],
+            'emergency_contact_phone'   => ['nullable', 'string', 'max:30'],
+            'emergency_contact_relation' => ['nullable', 'string', 'max:50'],
+            'qualifications'            => ['nullable', 'string', 'max:2000'],
+            'license_number'            => ['nullable', 'string', 'max:50'],
+            'license_expiry'            => ['nullable', 'date'],
         ]);
 
         $updateData = [
@@ -238,6 +285,18 @@ class EmployeeController extends Controller
             'bio'         => $data['bio'] ?? null,
             'is_active'   => $request->boolean('is_active'),
             'is_bookable' => $request->boolean('is_bookable'),
+            'contract_type'              => $data['contract_type'] ?? $employee->contract_type,
+            'hire_date'                  => $data['hire_date'] ?? $employee->hire_date,
+            'contract_end_date'          => $data['contract_end_date'] ?? $employee->contract_end_date,
+            'national_id'               => $data['national_id'] ?? $employee->national_id,
+            'iban'                      => $data['iban'] ?? $employee->iban,
+            'bank_name'                 => $data['bank_name'] ?? $employee->bank_name,
+            'emergency_contact_name'    => $data['emergency_contact_name'] ?? $employee->emergency_contact_name,
+            'emergency_contact_phone'   => $data['emergency_contact_phone'] ?? $employee->emergency_contact_phone,
+            'emergency_contact_relation' => $data['emergency_contact_relation'] ?? $employee->emergency_contact_relation,
+            'qualifications'            => $data['qualifications'] ?? $employee->qualifications,
+            'license_number'            => $data['license_number'] ?? $employee->license_number,
+            'license_expiry'            => $data['license_expiry'] ?? $employee->license_expiry,
         ];
 
         if (! empty($data['password'])) {
@@ -382,6 +441,65 @@ class EmployeeController extends Controller
         imagedestroy($src);
 
         return $filename;
+    }
+
+    public function show(Employee $employee): View
+    {
+        $this->authoriseEmployee($employee);
+
+        $employee->load([
+            'role', 'branch', 'compensation', 'workingHours',
+            'socialLinks', 'serviceCommissions',
+        ]);
+
+        $services = $employee->services()->with('serviceCategory')->get();
+
+        $now = now();
+        $appointmentsThisMonth = $employee->appointments()
+            ->whereMonth('start_time', $now->month)
+            ->whereYear('start_time', $now->year)
+            ->count();
+
+        $revenueThisMonth = $employee->appointments()
+            ->whereMonth('start_time', $now->month)
+            ->whereYear('start_time', $now->year)
+            ->where('status', 'completed')
+            ->sum('total_price');
+
+        $completedThisMonth = $employee->appointments()
+            ->whereMonth('start_time', $now->month)
+            ->whereYear('start_time', $now->year)
+            ->where('status', 'completed')
+            ->count();
+
+        $totalAppointments = $employee->appointments()->count();
+        $totalRevenue = $employee->appointments()->where('status', 'completed')->sum('total_price');
+
+        $appointments = $employee->appointments()
+            ->with(['service', 'customer', 'branch'])
+            ->orderByDesc('start_time')
+            ->paginate(10);
+
+        $attendanceThisMonth = $employee->attendanceRecords()
+            ->whereMonth('date', $now->month)
+            ->whereYear('date', $now->year)
+            ->get();
+
+        $attendanceStats = [
+            'present' => $attendanceThisMonth->whereIn('status', ['on_time', 'late'])->count(),
+            'late'    => $attendanceThisMonth->where('status', 'late')->count(),
+            'absent'  => $attendanceThisMonth->where('status', 'absent')->count(),
+        ];
+
+        $leaves = $employee->leaves()->orderByDesc('start_date')->limit(5)->get();
+        $deductions = $employee->deductions()->orderByDesc('created_at')->limit(5)->get();
+
+        return view('company.employees.show', compact(
+            'employee', 'services',
+            'appointmentsThisMonth', 'revenueThisMonth', 'completedThisMonth',
+            'totalAppointments', 'totalRevenue', 'appointments',
+            'attendanceStats', 'leaves', 'deductions'
+        ));
     }
 
     public function destroy(Employee $employee): RedirectResponse

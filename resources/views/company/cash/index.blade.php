@@ -24,6 +24,31 @@
 }
 #diff-hint.over  { background:rgba(34,197,94,.1);  color:#22c55e; }
 #diff-hint.under { background:rgba(239,68,68,.1);  color:#ef4444; }
+
+/* ─── Bulk action bar ──────────────────────────────────────────────────── */
+.bulk-bar {
+    position:sticky; top:60px; z-index:50;
+    background:linear-gradient(135deg,#667eea,#764ba2);
+    color:#fff; border-radius:12px; padding:10px 16px;
+    display:none; align-items:center; gap:12px; margin-bottom:12px;
+    box-shadow:0 4px 20px rgba(102,126,234,.4);
+}
+.bulk-bar.show { display:flex; }
+.bulk-bar .count { font-weight:800; font-size:14px; }
+.bulk-bar .btn { font-size:12px; font-weight:700; border-radius:20px; padding:4px 14px; }
+
+/* ─── Filter pills ─────────────────────────────────────────────────────── */
+.filter-pill {
+    font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px;
+    text-decoration:none; border:1px solid rgba(255,255,255,.1);
+    color:var(--text-color); transition:all .15s;
+}
+.filter-pill:hover { background:rgba(102,126,234,.1); color:#667eea; }
+.filter-pill.active { background:#667eea; color:#fff; border-color:#667eea; }
+
+/* ─── Multi-currency row ───────────────────────────────────────────────── */
+.currency-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+.currency-row .remove-currency { background:none; border:none; color:#ef4444; cursor:pointer; font-size:18px; padding:0 4px; }
 </style>
 @endpush
 
@@ -102,24 +127,25 @@
         <div class="row g-3">
             @foreach($summary as $cur => $s)
             @php $sym = config("booksy.currencies.{$cur}.symbol", $cur); @endphp
-            <div class="col-12 col-md-4">
+            @php $colSize = $summary->count() === 1 ? 'col-12' : ($summary->count() === 2 ? 'col-12 col-md-6' : 'col-12 col-md-4'); @endphp
+            <div class="{{ $colSize }}">
                 <div class="balance-card">
                     <div class="balance-label">{{ __('Net balance') }} · {{ $cur }}</div>
                     <div class="balance-value {{ $s['net'] >= 0 ? 'text-success' : 'text-danger' }}">
                         {{ $s['net'] >= 0 ? '+' : '' }}{{ number_format($s['net'], 0) }}
-                        <span style="font-size:16px;opacity:.5;">{{ $sym }}</span>
+                        <span>{{ $sym }}</span>
                     </div>
-                    <div class="d-flex gap-4 mt-3">
+                    <div class="d-flex gap-3 mt-3 flex-wrap">
                         <div class="cash-stat">
                             <div class="cash-stat-icon" style="background:rgba(34,197,94,.15);">⬆️</div>
-                            <div>
+                            <div style="min-width:0;">
                                 <div class="cash-stat-val" style="color:#22c55e;">{{ number_format($s['income'],0) }} {{ $sym }}</div>
                                 <div class="cash-stat-lbl">{{ __('Income') }}</div>
                             </div>
                         </div>
                         <div class="cash-stat">
                             <div class="cash-stat-icon" style="background:rgba(239,68,68,.15);">⬇️</div>
-                            <div>
+                            <div style="min-width:0;">
                                 <div class="cash-stat-val" style="color:#ef4444;">{{ number_format($s['expense'],0) }} {{ $sym }}</div>
                                 <div class="cash-stat-lbl">{{ __('Expenses') }}</div>
                             </div>
@@ -127,7 +153,7 @@
                         <div class="cash-stat">
                             <div class="cash-stat-icon" style="background:rgba(100,116,139,.15);">📊</div>
                             <div>
-                                <div class="cash-stat-val">{{ $transactions->count() }}</div>
+                                <div class="cash-stat-val">{{ $totalTxCount }}</div>
                                 <div class="cash-stat-lbl">{{ __('Transactions') }}</div>
                             </div>
                         </div>
@@ -148,8 +174,13 @@
         <div>
             <div class="fw-bold" style="font-size:.88rem;">{{ __('Drawer is open') }}</div>
             <div style="font-size:.72rem;opacity:.6;">
-                {{ __('Opening balance') }}: <strong>{{ number_format($drawerSession->opening_balance, 2) }} {{ $drawerSession->currency }}</strong>
+                @foreach($drawerSession->balances as $bal)
+                <span class="me-2">{{ number_format($bal->opening_amount, 2) }} {{ $bal->currency }}</span>
+                @endforeach
                 · {{ $drawerSession->opened_at->diffForHumans() }}
+                @if($drawerSession->opened_by_name)
+                · <strong>{{ $drawerSession->opened_by_name }}</strong>
+                @endif
             </div>
         </div>
         <button class="btn btn-sm rounded-pill px-4 ms-auto fw-bold"
@@ -180,41 +211,73 @@
 @if($recentDrawers->isNotEmpty())
 <div class="card border-0 shadow-sm mb-3" style="border-radius:12px;">
     <div class="card-body p-3">
-        <div style="font-size:11px;font-weight:700;opacity:.4;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
-            {{ __('Recent drawer sessions') }}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div style="font-size:11px;font-weight:700;opacity:.4;text-transform:uppercase;letter-spacing:.5px;">
+                {{ __('Recent drawer sessions') }}
+            </div>
+            <a href="{{ route('company.branches.cash.drawer.archive', $branch) }}"
+               style="font-size:11px;font-weight:700;color:#667eea;text-decoration:none;">
+                {{ __('View all') }} →
+            </a>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             @foreach($recentDrawers as $ds)
-            @php $v = (float) $ds->variance; @endphp
             <div class="drawer-history-card">
-                <div style="font-size:.7rem;font-weight:700;opacity:.5;">{{ $ds->closed_at?->format('M d, H:i') }}</div>
-                <div style="font-size:.82rem;font-weight:800;">
-                    {{ number_format($ds->closing_balance, 0) }} {{ $ds->currency }}
-                </div>
-                <div style="font-size:.68rem;font-weight:700;color:{{ $v == 0 ? '#22c55e' : ($v > 0 ? '#f59e0b' : '#ef4444') }};">
-                    @if($v == 0) ✓ {{ __('Exact') }}
-                    @elseif($v > 0) ↑ +{{ number_format($v, 2) }} {{ __('Over') }}
-                    @else ↓ {{ number_format($v, 2) }} {{ __('Short') }}
+                <div style="font-size:.7rem;font-weight:700;opacity:.5;margin-bottom:4px;">{{ $ds->closed_at?->format('M d, H:i') }}</div>
+                @foreach($ds->balances as $bal)
+                <div style="margin-bottom:2px;">
+                    <div style="font-size:.78rem;font-weight:800;line-height:1.3;">
+                        {{ number_format($bal->closing_amount ?? $bal->opening_amount, 0) }}
+                        <span style="font-size:.65rem;opacity:.5;">{{ $bal->currency }}</span>
+                    </div>
+                    @if($bal->variance !== null && $bal->variance != 0)
+                    <div style="font-size:.65rem;font-weight:700;color:{{ $bal->variance > 0 ? '#f59e0b' : '#ef4444' }};line-height:1;">
+                        {{ $bal->variance > 0 ? '↑ +' : '↓ ' }}{{ number_format(abs($bal->variance), 0) }}
+                    </div>
+                    @elseif($bal->variance !== null)
+                    <div style="font-size:.65rem;font-weight:700;color:#22c55e;line-height:1;">✓</div>
                     @endif
                 </div>
-                @if($ds->isClosed())
-                <button class="btn btn-sm rounded-pill px-2 mt-1"
-                        style="font-size:.6rem;font-weight:700;background:rgba(102,126,234,.1);color:#667eea;border:none;"
-                        data-bs-toggle="modal" data-bs-target="#reconcileModal-{{ $ds->id }}">
-                    {{ __('Reconcile') }}
-                </button>
-                @else
-                @php $rMeta = \App\Models\CashDrawerSession::RECONCILE_REASONS[$ds->reconcile_reason] ?? null; @endphp
-                <div style="font-size:.6rem;font-weight:700;color:#22c55e;margin-top:4px;">✓ {{ __('Reconciled') }}</div>
-                @if($rMeta)
-                <div style="font-size:.58rem;color:{{ $rMeta['color'] }};font-weight:600;margin-top:2px;">
-                    {{ $rMeta['icon'] }} {{ __($rMeta['label_key']) }}
+                @endforeach
+                @if($ds->closed_by_name || $ds->opened_by_name)
+                <div style="font-size:.6rem;opacity:.4;margin-top:2px;">
+                    👤 {{ $ds->closed_by_name ?? $ds->opened_by_name }}
                 </div>
                 @endif
-                @if($ds->reconcile_notes)
-                <div style="font-size:.55rem;opacity:.5;margin-top:1px;">{{ Str::limit($ds->reconcile_notes, 30) }}</div>
-                @endif
-                @endif
+
+                {{-- Status + Action buttons --}}
+                <div class="d-flex gap-1 flex-wrap mt-2" style="justify-content:center;">
+                    @if($ds->isClosed())
+                    <button class="btn btn-sm px-2"
+                            style="font-size:.58rem;font-weight:700;background:rgba(102,126,234,.1);color:#667eea;border:none;border-radius:6px;"
+                            data-bs-toggle="modal" data-bs-target="#reconcileModal-{{ $ds->id }}">
+                        📋 {{ __('Reconcile') }}
+                    </button>
+                    @elseif($ds->isReconciled())
+                    @php $rMeta = \App\Models\CashDrawerSession::RECONCILE_REASONS[$ds->reconcile_reason] ?? null; @endphp
+                    <div style="font-size:.58rem;font-weight:700;color:#22c55e;">✓ {{ __('Reconciled') }}</div>
+                    @endif
+
+                    @if($ds->isClosed() || $ds->isReconciled())
+                    <button class="btn btn-sm px-2"
+                            style="font-size:.58rem;font-weight:700;background:rgba(34,197,94,.1);color:#22c55e;border:none;border-radius:6px;"
+                            data-bs-toggle="modal" data-bs-target="#reopenModal-{{ $ds->id }}">
+                        🔓 {{ __('Reopen') }}
+                    </button>
+                    @endif
+
+                    <button class="btn btn-sm px-2"
+                            style="font-size:.58rem;font-weight:700;background:rgba(255,255,255,.05);color:var(--text-color);opacity:.6;border:none;border-radius:6px;"
+                            data-bs-toggle="modal" data-bs-target="#editNotesModal-{{ $ds->id }}">
+                        ✏️
+                    </button>
+
+                    <button class="btn btn-sm px-2"
+                            style="font-size:.58rem;font-weight:700;background:rgba(239,68,68,.1);color:#ef4444;border:none;border-radius:6px;"
+                            data-bs-toggle="modal" data-bs-target="#voidModal-{{ $ds->id }}">
+                        🚫
+                    </button>
+                </div>
             </div>
             @endforeach
         </div>
@@ -227,38 +290,27 @@
 <div class="modal fade tx-modal" id="reconcileModal-{{ $ds->id }}" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
         <div class="modal-content">
-            <form method="POST" action="{{ route('company.branches.cash.drawer.reconcile', [$branch, $ds]) }}">
+            <form method="POST" action="{{ route('company.branches.cash.drawer.reconcile', [$branch, $ds]) }}" onsubmit="disableSubmit(this)">
                 @csrf @method('PUT')
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">📋 {{ __('Reconcile Drawer') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body pt-3">
-                    {{-- Variance summary --}}
-                    @php $v = (float) $ds->variance; @endphp
+                    @foreach($ds->balances as $bal)
+                    @php $v = (float) ($bal->variance ?? 0); @endphp
                     <div class="p-3 rounded-3 mb-3 text-center" style="background:{{ $v == 0 ? 'rgba(34,197,94,.08)' : ($v > 0 ? 'rgba(245,158,11,.08)' : 'rgba(239,68,68,.08)') }};border:1px solid {{ $v == 0 ? 'rgba(34,197,94,.15)' : ($v > 0 ? 'rgba(245,158,11,.15)' : 'rgba(239,68,68,.15)') }};">
-                        <div style="font-size:.72rem;opacity:.6;font-weight:600;">{{ __('Variance') }}</div>
+                        <div style="font-size:.72rem;opacity:.6;font-weight:600;">{{ __('Variance') }} · {{ $bal->currency }}</div>
                         <div style="font-size:1.4rem;font-weight:800;color:{{ $v == 0 ? '#22c55e' : ($v > 0 ? '#f59e0b' : '#ef4444') }};">
-                            {{ $v > 0 ? '+' : '' }}{{ number_format($v, 2) }} {{ $ds->currency }}
+                            {{ $v > 0 ? '+' : '' }}{{ number_format($v, 2) }} {{ $bal->currency }}
                         </div>
-                        <div style="font-size:.7rem;font-weight:700;color:{{ $v == 0 ? '#22c55e' : ($v > 0 ? '#f59e0b' : '#ef4444') }};">
-                            @if($v == 0) ✓ {{ __('Exact') }}
-                            @elseif($v > 0) {{ __('Over') }}
-                            @else {{ __('Short') }}
-                            @endif
+                        <div class="d-flex justify-content-between mt-2 px-2" style="font-size:.78rem;">
+                            <span style="opacity:.5;">{{ __('Expected') }}: {{ number_format($bal->expected_amount, 2) }}</span>
+                            <span style="opacity:.5;">{{ __('Actual') }}: {{ number_format($bal->closing_amount, 2) }}</span>
                         </div>
                     </div>
+                    @endforeach
 
-                    <div class="d-flex justify-content-between mb-1 px-1" style="font-size:.78rem;">
-                        <span style="opacity:.5;">{{ __('Expected balance') }}</span>
-                        <strong>{{ number_format($ds->expected_balance, 2) }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-3 px-1" style="font-size:.78rem;">
-                        <span style="opacity:.5;">{{ __('Actual cash count') }}</span>
-                        <strong>{{ number_format($ds->closing_balance, 2) }}</strong>
-                    </div>
-
-                    {{-- Reason picker --}}
                     <div class="mb-3">
                         <label class="f-label">{{ __('Reason') }} <span class="text-danger">*</span></label>
                         <div class="d-flex flex-wrap gap-2">
@@ -274,7 +326,6 @@
                         </div>
                     </div>
 
-                    {{-- Notes --}}
                     <div class="mb-1">
                         <label class="f-label">{{ __('Notes') }} <span style="font-weight:400;opacity:.5;">({{ __('optional') }})</span></label>
                         <textarea name="reconcile_notes" class="f-input form-control" rows="2"
@@ -285,6 +336,105 @@
                     <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
                     <button type="submit" class="btn btn-sm rounded-pill px-5 fw-bold" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;">
                         ✔ {{ __('Reconcile') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endforeach
+
+{{-- ─── REOPEN / VOID / EDIT NOTES MODALS ──────────────────────────────── --}}
+@foreach($recentDrawers as $ds)
+@if($ds->isVoided()) @continue @endif
+
+{{-- Reopen Modal --}}
+@if($ds->isClosed() || $ds->isReconciled())
+<div class="modal fade tx-modal" id="reopenModal-{{ $ds->id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('company.branches.cash.drawer.reopen', [$branch, $ds]) }}" onsubmit="disableSubmit(this)">
+                @csrf @method('PUT')
+                <div class="modal-body text-center p-4">
+                    <div style="font-size:40px;margin-bottom:12px;">🔓</div>
+                    <h6 class="fw-bold mb-2">{{ __('Reopen Drawer') }} #{{ $ds->id }}?</h6>
+                    <p class="text-muted small mb-3">
+                        {{ __('This will reset the closing data and set the drawer back to open.') }}
+                    </p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-sm rounded-pill px-4"
+                                style="background:rgba(255,255,255,.07);font-weight:600;"
+                                data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="submit" class="btn btn-sm rounded-pill px-4 fw-bold"
+                                style="background:#22c55e;color:#fff;border:none;">
+                            🔓 {{ __('Reopen') }}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
+{{-- Void Modal --}}
+<div class="modal fade tx-modal" id="voidModal-{{ $ds->id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('company.branches.cash.drawer.void', [$branch, $ds]) }}" onsubmit="disableSubmit(this)">
+                @csrf @method('PUT')
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">🚫 {{ __('Void Drawer') }} #{{ $ds->id }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    <div class="p-3 rounded-3 mb-3" style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.12);font-size:.82rem;">
+                        ⚠️ {{ __('This session will be marked as voided and excluded from reports. The record remains visible for audit.') }}
+                    </div>
+                    <div class="mb-1">
+                        <label class="f-label">{{ __('Reason') }} <span class="text-danger">*</span></label>
+                        <input type="text" name="void_reason" class="f-input form-control" required
+                               placeholder="{{ __('e.g. Opened by mistake, duplicate session...') }}">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="submit" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold">
+                        🚫 {{ __('Void') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Edit Notes Modal --}}
+<div class="modal fade tx-modal" id="editNotesModal-{{ $ds->id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('company.branches.cash.drawer.update-notes', [$branch, $ds]) }}" onsubmit="disableSubmit(this)">
+                @csrf @method('PUT')
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">✏️ {{ __('Edit Notes') }} — #{{ $ds->id }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    <div class="mb-3">
+                        <label class="f-label">{{ __('Session notes') }}</label>
+                        <textarea name="notes" class="f-input form-control" rows="2"
+                                  placeholder="{{ __('General notes...') }}">{{ $ds->notes }}</textarea>
+                    </div>
+                    @if($ds->isReconciled())
+                    <div class="mb-1">
+                        <label class="f-label">{{ __('Reconciliation notes') }}</label>
+                        <textarea name="reconcile_notes" class="f-input form-control" rows="2">{{ $ds->reconcile_notes }}</textarea>
+                    </div>
+                    @endif
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="submit" class="btn btn-sm rounded-pill px-5 fw-bold" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;">
+                        ✔ {{ __('Save') }}
                     </button>
                 </div>
             </form>
@@ -312,12 +462,49 @@
         </div>
         @endif
 
+        {{-- Filter pills --}}
+        <div class="d-flex gap-2 flex-wrap mb-3">
+            <a href="{{ route('company.branches.cash.index', array_merge([$branch], request()->only('period','from','to'))) }}"
+               class="filter-pill {{ !$filterType && !$filterCategory ? 'active' : '' }}">
+                {{ __('All') }}
+            </a>
+            <a href="{{ route('company.branches.cash.index', array_merge([$branch], request()->only('period','from','to'), ['filter_type'=>'income'])) }}"
+               class="filter-pill {{ $filterType==='income' ? 'active' : '' }}" style="color:#22c55e;">
+                ⬆ {{ __('Income') }}
+            </a>
+            <a href="{{ route('company.branches.cash.index', array_merge([$branch], request()->only('period','from','to'), ['filter_type'=>'expense'])) }}"
+               class="filter-pill {{ $filterType==='expense' ? 'active' : '' }}" style="color:#ef4444;">
+                ⬇ {{ __('Expenses') }}
+            </a>
+            @foreach($cats as $catKey => $catMeta)
+            <a href="{{ route('company.branches.cash.index', array_merge([$branch], request()->only('period','from','to'), ['filter_category'=>$catKey])) }}"
+               class="filter-pill {{ $filterCategory===$catKey ? 'active' : '' }}">
+                {{ $catMeta['icon'] }} {{ __($catMeta['label_key']) }}
+            </a>
+            @endforeach
+        </div>
+
+        {{-- Bulk action bar --}}
+        <div class="bulk-bar" id="bulkBar">
+            <span class="count"><span id="selectedCount">0</span> {{ __('selected') }}</span>
+            <button type="button" class="btn btn-light btn-sm" onclick="uncheckAll()">{{ __('Cancel') }}</button>
+            <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteSelectedModal">
+                🗑 {{ __('Delete selected') }}
+            </button>
+            <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAllModal">
+                {{ __('Delete all') }} ({{ $totalTxCount }})
+            </button>
+        </div>
+
         {{-- Transactions grouped by date --}}
         <div class="card border-0 shadow-sm" style="border-radius:16px;">
             <div class="card-body p-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div style="font-size:12px;font-weight:700;opacity:.4;text-transform:uppercase;letter-spacing:.5px;">
-                        {{ __('Transactions') }}
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="checkbox" id="selectAll" onchange="toggleAll(this.checked)" style="width:16px;height:16px;cursor:pointer;">
+                        <div style="font-size:12px;font-weight:700;opacity:.4;text-transform:uppercase;letter-spacing:.5px;">
+                            {{ __('Transactions') }}
+                        </div>
                     </div>
                     <span style="font-size:12px;font-weight:700;background:rgba(102,126,234,.1);color:#667eea;padding:3px 10px;border-radius:20px;">
                         {{ $paginatedTx->total() }}
@@ -341,6 +528,8 @@
                     $sym = config("booksy.currencies.{$tx->currency}.symbol", $tx->currency);
                 @endphp
                 <div class="tx-row">
+                    <input type="checkbox" class="tx-checkbox" value="{{ $tx->id }}" onchange="updateBulkBar()"
+                           style="width:15px;height:15px;cursor:pointer;flex-shrink:0;">
                     <div class="tx-icon" style="background:{{ $catMeta['color'] }}20;">
                         {{ $catMeta['icon'] }}
                     </div>
@@ -358,6 +547,7 @@
                             {{ $tx->paid_at->format('H:i') }}
                             @if($tx->notes) · {{ Str::limit($tx->notes, 50) }}@endif
                             @if($tx->appointment?->customer) · {{ $tx->appointment->customer->name }}@endif
+                            @if($tx->recordedBy) · <span style="opacity:.7;">👤 {{ $tx->recordedBy->name }}</span>@endif
                         </div>
                     </div>
                     <div class="tx-amount" style="color:{{ $isIncome ? '#22c55e' : '#ef4444' }};">
@@ -530,10 +720,65 @@
                     <button type="button" class="btn btn-sm rounded-pill px-4"
                             style="background:rgba(255,255,255,.07);font-weight:600;"
                             data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                    <form id="deleteTxForm" method="POST">
+                    <form id="deleteTxForm" method="POST" onsubmit="disableSubmit(this)">
                         @csrf @method('DELETE')
                         <button type="submit" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold">
                             {{ __('Delete') }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ─── DELETE SELECTED MODAL ────────────────────────────────────────── --}}
+<div class="modal fade tx-modal" id="deleteSelectedModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div style="font-size:40px;margin-bottom:12px;">🗑️</div>
+                <h6 class="fw-bold mb-2">{{ __('Delete selected transactions?') }}</h6>
+                <p class="text-muted small mb-1">
+                    {{ __('This will delete') }} <strong id="deleteSelectedCount">0</strong> {{ __('transactions.') }}
+                </p>
+                <p class="text-muted small mb-3">{{ __('This action cannot be undone.') }}</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-sm rounded-pill px-4"
+                            style="background:rgba(255,255,255,.07);font-weight:600;"
+                            data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <form method="POST" action="{{ route('company.branches.cash.destroy-selected', $branch) }}" id="bulkDeleteForm" onsubmit="disableSubmit(this)">
+                        @csrf @method('DELETE')
+                        <input type="hidden" name="ids" id="bulkIds">
+                        <button type="submit" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold">
+                            🗑 {{ __('Delete') }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ─── DELETE ALL MODAL ──────────────────────────────────────────────── --}}
+<div class="modal fade tx-modal" id="deleteAllModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div style="font-size:40px;margin-bottom:12px;">⚠️</div>
+                <h6 class="fw-bold mb-2">{{ __('Delete ALL transactions?') }}</h6>
+                <p class="text-muted small mb-1">
+                    {{ __('This will delete all') }} <strong>{{ $totalTxCount }}</strong> {{ __('transactions for this period.') }}
+                </p>
+                <p class="text-muted small mb-3" style="color:#ef4444 !important;">{{ __('This action cannot be undone.') }}</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-sm rounded-pill px-4"
+                            style="background:rgba(255,255,255,.07);font-weight:600;"
+                            data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <form method="POST" action="{{ route('company.branches.cash.destroy-all', array_merge([$branch], request()->only('period','from','to'))) }}" onsubmit="disableSubmit(this)">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold">
+                            ⚠️ {{ __('Delete all') }}
                         </button>
                     </form>
                 </div>
@@ -546,7 +791,7 @@
 <div class="modal fade tx-modal" id="addTxModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
         <div class="modal-content">
-            <form method="POST" action="{{ route('company.branches.cash.store', $branch) }}" id="txForm">
+            <form method="POST" action="{{ route('company.branches.cash.store', $branch) }}" id="txForm" onsubmit="disableSubmit(this)">
                 @csrf
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold" style="font-family:'Poppins',sans-serif;">
@@ -612,7 +857,7 @@
                         </div>
                     </div>
 
-                    {{-- Paid amount (for overpay/underpay) - shown only for appointment --}}
+                    {{-- Paid amount (for overpay/underpay) --}}
                     <div id="paid-amount-row" class="mb-3">
                         <label class="f-label">
                             {{ __('Customer actually paid') }}
@@ -624,7 +869,7 @@
                         <div id="diff-hint"></div>
                     </div>
 
-                    {{-- Date + time --}}
+                    {{-- Date --}}
                     <div class="mb-3">
                         <label class="f-label">{{ __('Date') }}</label>
                         <input type="date" name="paid_at" class="f-input form-control"
@@ -676,7 +921,7 @@
 <div class="modal fade tx-modal" id="editTxModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
         <div class="modal-content">
-            <form method="POST" id="editTxForm">
+            <form method="POST" id="editTxForm" onsubmit="disableSubmit(this)">
                 @csrf @method('PUT')
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold" style="font-family:'Poppins',sans-serif;">
@@ -686,7 +931,6 @@
                 </div>
                 <div class="modal-body pt-3">
 
-                    {{-- Category picker --}}
                     <div class="mb-3">
                         <div class="income-section mb-2">
                             <div style="font-size:10px;font-weight:700;color:#22c55e;margin-bottom:8px;">⬆ {{ __('INCOME') }}</div>
@@ -722,14 +966,12 @@
                         </div>
                     </div>
 
-                    {{-- Amount --}}
                     <div class="mb-3">
                         <label class="f-label">{{ __('Amount') }}</label>
                         <input type="number" name="amount" id="edit-amount"
                                class="f-input form-control" min="0.01" step="0.01" required>
                     </div>
 
-                    {{-- Payment method --}}
                     <div class="mb-3">
                         <label class="f-label">{{ __('Payment method') }}</label>
                         <div class="d-flex gap-2 flex-wrap">
@@ -745,13 +987,11 @@
                         </div>
                     </div>
 
-                    {{-- Date --}}
                     <div class="mb-3">
                         <label class="f-label">{{ __('Date') }}</label>
                         <input type="date" name="paid_at" id="edit-paid-at" class="f-input form-control" required>
                     </div>
 
-                    {{-- Notes --}}
                     <div class="mb-1">
                         <label class="f-label">{{ __('Notes') }} <span style="font-weight:400;opacity:.5;">({{ __('optional') }})</span></label>
                         <input type="text" name="notes" id="edit-notes" class="f-input form-control">
@@ -772,32 +1012,36 @@
     </div>
 </div>
 
-{{-- ─── OPEN DRAWER MODAL ──────────────────────────────────────────────── --}}
+{{-- ─── OPEN DRAWER MODAL (multi-currency) ─────────────────────────────── --}}
 <div class="modal fade tx-modal" id="openDrawerModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
         <div class="modal-content">
-            <form method="POST" action="{{ route('company.branches.cash.drawer.open', $branch) }}">
+            <form method="POST" action="{{ route('company.branches.cash.drawer.open', $branch) }}" onsubmit="disableSubmit(this)">
                 @csrf
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">🔓 {{ __('Open Drawer') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body pt-3">
-                    <p class="text-muted" style="font-size:.82rem;">{{ __('Enter the starting cash amount in the drawer.') }}</p>
-                    <div class="mb-3">
-                        <label class="f-label">{{ __('Opening balance') }}</label>
-                        <div class="d-flex gap-2">
-                            <select name="currency" class="f-input form-select" style="max-width:110px;">
+                    <p class="text-muted" style="font-size:.82rem;">{{ __('Enter the starting cash amount for each currency.') }}</p>
+
+                    <div id="openBalances">
+                        <div class="currency-row">
+                            <select name="balances[0][currency]" class="f-input form-select" style="max-width:110px;">
                                 @foreach($currencies as $code => $cur)
-                                <option value="{{ $code }}" {{ $code === $defaultCurrency ? 'selected' : '' }}>
-                                    {{ $cur['symbol'] }} {{ $code }}
-                                </option>
+                                <option value="{{ $code }}" {{ $code === $defaultCurrency ? 'selected' : '' }}>{{ $cur['symbol'] }} {{ $code }}</option>
                                 @endforeach
                             </select>
-                            <input type="number" name="opening_balance" class="f-input form-control"
-                                   min="0" step="0.01" value="0" required>
+                            <input type="number" name="balances[0][opening_amount]" class="f-input form-control"
+                                   min="0" step="0.01" value="0" required placeholder="0.00">
                         </div>
                     </div>
+
+                    <button type="button" class="btn btn-sm mt-2"
+                            style="font-size:11px;font-weight:700;color:#667eea;background:rgba(102,126,234,.1);border:none;border-radius:8px;padding:4px 12px;"
+                            onclick="addCurrencyRow('openBalances','opening_amount')">
+                        + {{ __('Add currency') }}
+                    </button>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
@@ -810,12 +1054,12 @@
     </div>
 </div>
 
-{{-- ─── CLOSE DRAWER MODAL ─────────────────────────────────────────────── --}}
+{{-- ─── CLOSE DRAWER MODAL (multi-currency) ───────────────────────────── --}}
 @if($drawerSession)
 <div class="modal fade tx-modal" id="closeDrawerModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:460px;">
         <div class="modal-content">
-            <form method="POST" action="{{ route('company.branches.cash.drawer.close', [$branch, $drawerSession]) }}">
+            <form method="POST" action="{{ route('company.branches.cash.drawer.close', [$branch, $drawerSession]) }}" onsubmit="disableSubmit(this)">
                 @csrf @method('PUT')
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">🔒 {{ __('Close Drawer') }}</h5>
@@ -824,20 +1068,32 @@
                 <div class="modal-body pt-3">
                     <div class="mb-3 p-3 rounded-3" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);">
                         <div class="d-flex justify-content-between mb-1" style="font-size:.78rem;">
-                            <span style="opacity:.6;">{{ __('Opening balance') }}</span>
-                            <strong>{{ number_format($drawerSession->opening_balance, 2) }} {{ $drawerSession->currency }}</strong>
-                        </div>
-                        <div class="d-flex justify-content-between" style="font-size:.78rem;">
                             <span style="opacity:.6;">{{ __('Opened') }}</span>
-                            <span>{{ $drawerSession->opened_at->diffForHumans() }}</span>
+                            <span>{{ $drawerSession->opened_at->diffForHumans() }}
+                                @if($drawerSession->opened_by_name) · {{ $drawerSession->opened_by_name }} @endif
+                            </span>
                         </div>
                     </div>
-                    <div class="mb-3">
+
+                    <div id="expectedBalances" class="mb-3" style="display:none;"></div>
+
+                    @foreach($drawerSession->balances as $i => $bal)
+                    <div class="mb-3 p-3 rounded-3" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+                        <div class="d-flex justify-content-between mb-2" style="font-size:.82rem;font-weight:700;">
+                            <span>{{ $bal->currency }}</span>
+                            <span style="opacity:.5;">{{ __('Opening') }}: {{ number_format($bal->opening_amount, 2) }}</span>
+                        </div>
+                        <div class="expected-line" data-currency="{{ $bal->currency }}" style="font-size:.78rem;color:#667eea;margin-bottom:8px;display:none;">
+                            {{ __('Expected') }}: <strong class="expected-val">—</strong>
+                        </div>
+                        <input type="hidden" name="balances[{{ $i }}][currency]" value="{{ $bal->currency }}">
                         <label class="f-label">{{ __('Actual cash count') }}</label>
-                        <input type="number" name="closing_balance" class="f-input form-control"
+                        <input type="number" name="balances[{{ $i }}][closing_amount]" class="f-input form-control"
                                min="0" step="0.01" required placeholder="0.00"
-                               style="font-size:1.2rem;font-weight:800;text-align:center;">
+                               style="font-size:1.1rem;font-weight:800;text-align:center;">
                     </div>
+                    @endforeach
+
                     <div class="mb-2">
                         <label class="f-label">{{ __('Notes') }} <span style="font-weight:400;opacity:.5;">({{ __('optional') }})</span></label>
                         <input type="text" name="notes" class="f-input form-control" placeholder="{{ __('e.g. counted by manager') }}">
@@ -862,6 +1118,12 @@
 <script src="{{ asset('backend/assets/vendors/apexcharts/apexcharts.min.js') }}"></script>
 <script>
 (function () {
+
+    // ── Double-submit guard ──────────────────────────────────────────────
+    window.disableSubmit = function(form) {
+        var btns = form.querySelectorAll('button[type="submit"]');
+        btns.forEach(function(b) { b.disabled = true; b.style.opacity = '.5'; });
+    };
 
     // ── Delete confirmation ──────────────────────────────────────────────
     window.confirmDelete = function(action) {
@@ -925,14 +1187,12 @@
         document.getElementById('edit-paid-at').value = tx.paid_at;
         document.getElementById('edit-notes').value = tx.notes || '';
 
-        // Set category
         document.querySelectorAll('#editTxModal .cat-card').forEach(function(c) { c.classList.remove('active'); });
         document.querySelectorAll('.edit-cat-radio').forEach(function(r) {
             r.checked = (r.value === tx.category);
             if (r.checked) r.closest('label').querySelector('.cat-card').classList.add('active');
         });
 
-        // Set payment method
         document.querySelectorAll('#editTxModal .pm-card').forEach(function(c) { c.classList.remove('active'); });
         document.querySelectorAll('.edit-pm-radio').forEach(function(r) {
             r.checked = (r.value === tx.payment_method);
@@ -991,6 +1251,89 @@
         });
     };
 
+    // ── Multi-currency repeater ───────────────────────────────────────────
+    var currencyOptions = @json(collect($currencies)->map(fn($c, $code) => ['code' => $code, 'symbol' => $c['symbol']])->values());
+    var rowCounters = { openBalances: 1 };
+
+    window.addCurrencyRow = function(containerId, fieldName) {
+        var container = document.getElementById(containerId);
+        var idx = rowCounters[containerId]++;
+        var div = document.createElement('div');
+        div.className = 'currency-row';
+
+        var select = '<select name="balances[' + idx + '][currency]" class="f-input form-select" style="max-width:110px;">';
+        currencyOptions.forEach(function(c) {
+            select += '<option value="' + c.code + '">' + c.symbol + ' ' + c.code + '</option>';
+        });
+        select += '</select>';
+
+        div.innerHTML = select +
+            '<input type="number" name="balances[' + idx + '][' + fieldName + ']" class="f-input form-control" min="0" step="0.01" value="0" required placeholder="0.00">' +
+            '<button type="button" class="remove-currency" onclick="this.parentElement.remove()">✕</button>';
+        container.appendChild(div);
+    };
+
+    // ── Bulk select ───────────────────────────────────────────────────────
+    window.updateBulkBar = function() {
+        var checked = document.querySelectorAll('.tx-checkbox:checked');
+        var bar = document.getElementById('bulkBar');
+        var count = document.getElementById('selectedCount');
+        var modalCount = document.getElementById('deleteSelectedCount');
+        if (checked.length > 0) {
+            bar.classList.add('show');
+            count.textContent = checked.length;
+            if (modalCount) modalCount.textContent = checked.length;
+            var ids = Array.from(checked).map(function(c) { return c.value; });
+            document.getElementById('bulkIds').value = JSON.stringify(ids);
+        } else {
+            bar.classList.remove('show');
+        }
+    };
+
+    window.toggleAll = function(checked) {
+        document.querySelectorAll('.tx-checkbox').forEach(function(c) { c.checked = checked; });
+        updateBulkBar();
+    };
+
+    window.uncheckAll = function() {
+        document.getElementById('selectAll').checked = false;
+        toggleAll(false);
+    };
+
+    // ── Load expected balance for close drawer ────────────────────────────
+    @if($drawerSession)
+    var closeModal = document.getElementById('closeDrawerModal');
+    if (closeModal) {
+        closeModal.addEventListener('show.bs.modal', function() {
+            fetch('{{ route("company.branches.cash.drawer.expected", [$branch, $drawerSession]) }}')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    data.balances.forEach(function(b) {
+                        var line = document.querySelector('.expected-line[data-currency="' + b.currency + '"]');
+                        if (line) {
+                            line.style.display = '';
+                            line.querySelector('.expected-val').textContent = parseFloat(b.expected).toLocaleString(undefined, {minimumFractionDigits: 2});
+                        }
+                    });
+                });
+        });
+    }
+    @endif
+
+    // ── Bulk delete form fix: send ids as array ───────────────────────────
+    document.getElementById('bulkDeleteForm').addEventListener('submit', function(e) {
+        var idsField = document.getElementById('bulkIds');
+        var ids = JSON.parse(idsField.value || '[]');
+        idsField.remove();
+        ids.forEach(function(id) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = id;
+            e.target.appendChild(input);
+        });
+    });
+
     // ── ApexCharts ────────────────────────────────────────────────────────
     var chartEl = document.getElementById('cashChart');
     if (chartEl) {
@@ -998,7 +1341,7 @@
         var isDark  = document.documentElement.classList.contains('bk-theme-dark') ||
                       !document.documentElement.classList.contains('bk-theme-light');
 
-        var isAr = {{ $isRtl ?? 'false' }};
+        var isAr = {{ ($isRtl ?? false) ? 'true' : 'false' }};
         var monthsAr = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
         var monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 

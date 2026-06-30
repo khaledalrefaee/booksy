@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('frontend/vendor/bootstrap/css/bootstrap' . ($isAr ? '.rtl' : '') . '.min.css') }}">
 <link rel="stylesheet" href="{{ asset('frontend/vendor/fontawesome-free/css/all.min.css') }}">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}"/>
 <script src="{{ asset('frontend/vendor/modernizr/modernizr.min.js') }}"></script>
 
 <style>
@@ -797,7 +797,7 @@ section{padding:72px 0;}
     .v3-nav-links{display:none;}
 }
 </style>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}"/>
 </head>
 <body>
 
@@ -1332,7 +1332,7 @@ section{padding:72px 0;}
 {{-- SCRIPTS --}}
 <script src="{{ asset('frontend/vendor/jquery/jquery.min.js') }}"></script>
 <script src="{{ asset('frontend/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ asset('vendor/leaflet/leaflet.js') }}"></script>
 
 <script>
 const V3_IS_AR   = {{ $isAr ? 'true' : 'false' }};

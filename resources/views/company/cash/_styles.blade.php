@@ -6,6 +6,9 @@
     border-radius: 22px; padding: 30px 32px 24px; margin-bottom: 24px;
     position: relative; overflow: hidden; color: #fff;
 }
+@media (max-width: 576px) {
+    .cash-hero { padding: 20px 16px 18px; border-radius: 16px; }
+}
 .cash-hero::before {
     content:''; position:absolute; top:-80px; left:-80px;
     width:260px; height:260px; border-radius:50%;
@@ -21,17 +24,27 @@
 .balance-card {
     background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.1);
     border-radius: 16px; padding: 18px 22px; backdrop-filter: blur(4px);
+    overflow: hidden;
 }
-.balance-value { font-size: 30px; font-weight: 900; letter-spacing: -1px; font-family:'Poppins',sans-serif; }
+.balance-value {
+    font-size: clamp(18px, 4vw, 30px); font-weight: 900; letter-spacing: -1px;
+    font-family:'Poppins',sans-serif; word-break: break-word; line-height: 1.2;
+}
+.balance-value span { font-size: clamp(11px, 2vw, 16px) !important; }
 .balance-label { font-size: 11px; opacity: .5; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }
+@media (max-width: 768px) {
+    .balance-card { padding: 14px 16px; }
+    .cash-stat-val { font-size: 12px !important; }
+    .cash-stat-icon { width: 30px; height: 30px; font-size: 14px; }
+}
 
 /* ─── Stat pills ────────────────────────────────────────────────────────── */
-.cash-stat { display:flex; align-items:center; gap:10px; }
+.cash-stat { display:flex; align-items:center; gap:8px; min-width:0; }
 .cash-stat-icon {
     width:36px; height:36px; border-radius:10px; display:flex;
     align-items:center; justify-content:center; font-size:16px; flex-shrink:0;
 }
-.cash-stat-val  { font-size:15px; font-weight:800; }
+.cash-stat-val  { font-size:14px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .cash-stat-lbl  { font-size:10px; opacity:.45; }
 
 /* ─── Period pills ──────────────────────────────────────────────────────── */
@@ -153,7 +166,11 @@
 .drawer-history-card {
     padding:10px 14px; border-radius:10px;
     background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);
-    min-width:130px; text-align:center;
+    min-width:140px; max-width:200px; text-align:center;
+}
+.drawer-history-card > div { word-break:break-word; }
+@media (max-width: 576px) {
+    .drawer-history-card { min-width:120px; max-width:160px; padding:8px 10px; }
 }
 .bk-theme-light .drawer-banner.drawer-open { background:rgba(34,197,94,.04); border-color:rgba(34,197,94,.15); }
 .bk-theme-light .drawer-banner.drawer-closed { background:#f9fafb; border-color:#e5e7eb; }

@@ -20,6 +20,12 @@ use App\Http\Controllers\Company\InvoiceController;
 use App\Http\Controllers\Company\ActivityLogController;
 use App\Http\Controllers\Company\CustomerController;
 use App\Http\Controllers\Company\AttendanceController;
+use App\Http\Controllers\Company\CustomerDebtController;
+use App\Http\Controllers\Company\InventoryController;
+use App\Http\Controllers\Company\RecurringExpenseController;
+use App\Http\Controllers\Company\ReportController;
+use App\Http\Controllers\Company\ProductCategoryController;
+use App\Http\Controllers\Company\StockTransferController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('company')->name('company.')->group(function () {
@@ -78,7 +84,7 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::resource('branches.services', ServiceController::class)->shallow()->except(['show']);
 
         // Employees (nested under branch, shallow)
-        Route::resource('branches.employees', EmployeeController::class)->shallow()->except(['show']);
+        Route::resource('branches.employees', EmployeeController::class)->shallow();
 
         // Cash box — global (all branches)
         Route::get('cash', [CashController::class, 'globalIndex'])->name('cash.global');
@@ -89,6 +95,13 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::post(  'branches/{branch}/cash/drawer/open',              [CashController::class, 'openDrawer'])->name('branches.cash.drawer.open');
         Route::put(   'branches/{branch}/cash/drawer/{session}/close', [CashController::class, 'closeDrawer'])->name('branches.cash.drawer.close');
         Route::put(   'branches/{branch}/cash/drawer/{session}/reconcile', [CashController::class, 'reconcileDrawer'])->name('branches.cash.drawer.reconcile');
+        Route::put(   'branches/{branch}/cash/drawer/{session}/reopen',    [CashController::class, 'reopenDrawer'])->name('branches.cash.drawer.reopen');
+        Route::put(   'branches/{branch}/cash/drawer/{session}/void',      [CashController::class, 'voidDrawer'])->name('branches.cash.drawer.void');
+        Route::put(   'branches/{branch}/cash/drawer/{session}/notes',     [CashController::class, 'updateDrawerNotes'])->name('branches.cash.drawer.update-notes');
+        Route::delete('branches/{branch}/cash/destroy-selected', [CashController::class, 'destroySelected'])->name('branches.cash.destroy-selected');
+        Route::delete('branches/{branch}/cash/destroy-all',      [CashController::class, 'destroyAll'])->name('branches.cash.destroy-all');
+        Route::get(   'branches/{branch}/cash/drawer/archive',   [CashController::class, 'drawerArchive'])->name('branches.cash.drawer.archive');
+        Route::get(   'branches/{branch}/cash/drawer/{session}/expected', [CashController::class, 'expectedBalance'])->name('branches.cash.drawer.expected');
         Route::get(   'branches/{branch}/cash/export/csv',  [CashController::class, 'exportCsv'])->name('branches.cash.export.csv');
         Route::get(   'branches/{branch}/cash/export/pdf',  [CashController::class, 'exportPdf'])->name('branches.cash.export.pdf');
         Route::post(  'branches/{branch}/cash/overpayment', [CashController::class, 'setOverpayment'])->name('branches.cash.overpayment');
@@ -96,8 +109,10 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::delete('branches/{branch}/cash/{payment}',   [CashController::class, 'destroy'])->name('branches.cash.destroy');
 
         // Payroll reports
-        Route::get('payroll',                        [PayrollController::class, 'index'])->name('payroll.index');
-        Route::get('employees/{employee}/payroll',   [PayrollController::class, 'show'])->name('employees.payroll');
+        Route::get('payroll',                            [PayrollController::class, 'index'])->name('payroll.index');
+        Route::get('payroll/export',                     [PayrollController::class, 'exportCsv'])->name('payroll.export');
+        Route::get('employees/{employee}/payroll',       [PayrollController::class, 'show'])->name('employees.payroll');
+        Route::post('employees/{employee}/payroll/pay',  [PayrollController::class, 'markAsPaid'])->name('employees.payroll.pay');
 
         // Employee deductions
         Route::get('deductions',                             [DeductionController::class, 'globalIndex'])->name('deductions.index');
@@ -136,6 +151,7 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
         Route::get('invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
         Route::patch('invoices/{invoice}/status', [InvoiceController::class, 'updateStatus'])->name('invoices.update-status');
+        Route::post('invoices/{invoice}/pay', [InvoiceController::class, 'recordPayment'])->name('invoices.pay');
         Route::patch('invoices/{invoice}/void', [InvoiceController::class, 'void'])->name('invoices.void');
         Route::post('appointments/{appointment}/invoice', [InvoiceController::class, 'storeFromAppointment'])->name('appointments.invoice.store');
 
@@ -143,7 +159,74 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::get( 'customers',              [CustomerController::class, 'index'])->name('customers.index');
         Route::post('customers',              [CustomerController::class, 'store'])->name('customers.store');
         Route::post('customers/import',       [CustomerController::class, 'import'])->name('customers.import');
+        Route::get( 'customers/export/csv',   [CustomerController::class, 'exportCsv'])->name('customers.export.csv');
         Route::get( 'customers/{customer}',   [CustomerController::class, 'show'])->name('customers.show');
+        Route::put( 'customers/{customer}',      [CustomerController::class, 'update'])->name('customers.update');
+        Route::put( 'customers/{customer}/tag', [CustomerController::class, 'updateTag'])->name('customers.update-tag');
+        Route::put( 'customers/{customer}/ban', [CustomerController::class, 'toggleBan'])->name('customers.toggle-ban');
+        Route::delete('customers/{customer}',   [CustomerController::class, 'destroy'])->name('customers.destroy');
+        Route::put('customers/{customer}/branch-note/{branch}', [CustomerController::class, 'updateBranchNote'])->name('customers.branch-note');
+
+        // Treatment Plans
+        Route::post('customers/{customer}/treatment-plans',        [\App\Http\Controllers\Company\TreatmentPlanController::class, 'store'])->name('customers.treatment-plans.store');
+        Route::put( 'treatment-plan-sessions/{session}',           [\App\Http\Controllers\Company\TreatmentPlanController::class, 'updateSession'])->name('treatment-plan-sessions.update');
+        Route::delete('treatment-plans/{treatmentPlan}',           [\App\Http\Controllers\Company\TreatmentPlanController::class, 'destroy'])->name('treatment-plans.destroy');
+
+        // Loyalty Points
+        Route::post('customers/{customer}/loyalty-points',         [\App\Http\Controllers\Company\LoyaltyPointController::class, 'adjust'])->name('customers.loyalty.adjust');
+
+        // Customer Communications
+        Route::post('customers/{customer}/communications',         [\App\Http\Controllers\Company\CustomerCommunicationController::class, 'store'])->name('customers.communications.store');
+
+        // Customer Debts
+        Route::get('debts',                           [CustomerDebtController::class, 'index'])->name('debts.index');
+        Route::post('debts',                          [CustomerDebtController::class, 'store'])->name('debts.store');
+        Route::get('debts/{debt}',                    [CustomerDebtController::class, 'show'])->name('debts.show');
+        Route::post('debts/{debt}/pay',               [CustomerDebtController::class, 'recordPayment'])->name('debts.pay');
+        Route::put('debts/{debt}/waive',              [CustomerDebtController::class, 'waive'])->name('debts.waive');
+
+        // Inventory — static routes (must come before {product} wildcard)
+        Route::get('inventory',                          [InventoryController::class, 'index'])->name('inventory.index');
+        Route::get('inventory/create',                   [InventoryController::class, 'create'])->name('inventory.create');
+        Route::post('inventory',                         [InventoryController::class, 'store'])->name('inventory.store');
+        Route::get('inventory/stock',                    [InventoryController::class, 'stock'])->name('inventory.stock');
+        Route::get('inventory/movements',                [InventoryController::class, 'movements'])->name('inventory.movements');
+        Route::delete('inventory/movements',             [InventoryController::class, 'deleteMovements'])->name('inventory.movements.delete');
+        Route::get('inventory/transfers',                [StockTransferController::class, 'index'])->name('inventory.transfers.index');
+        Route::get('inventory/transfers/create',         [StockTransferController::class, 'create'])->name('inventory.transfers.create');
+        Route::post('inventory/transfers',               [StockTransferController::class, 'store'])->name('inventory.transfers.store');
+
+        // Inventory — Stock actions
+        Route::post('branches/{branch}/stock/add',       [InventoryController::class, 'addStock'])->name('inventory.stock.add');
+        Route::post('branches/{branch}/stock/remove',    [InventoryController::class, 'removeStock'])->name('inventory.stock.remove');
+        Route::post('branches/{branch}/stock/adjust',    [InventoryController::class, 'adjustStock'])->name('inventory.stock.adjust');
+        Route::post('branches/{branch}/stock/sell',      [InventoryController::class, 'sell'])->name('inventory.stock.sell');
+
+        // Inventory — Product wildcard routes (must come after all static routes)
+        Route::get('inventory/{product}',                [InventoryController::class, 'show'])->name('inventory.show');
+        Route::get('inventory/{product}/edit',           [InventoryController::class, 'edit'])->name('inventory.edit');
+        Route::put('inventory/{product}',                [InventoryController::class, 'update'])->name('inventory.update');
+        Route::delete('inventory/{product}',             [InventoryController::class, 'destroy'])->name('inventory.destroy');
+
+        // Inventory — Transfers with wildcard
+        Route::put('inventory/transfers/{transfer}/receive', [StockTransferController::class, 'receive'])->name('inventory.transfers.receive');
+        Route::put('inventory/transfers/{transfer}/cancel',  [StockTransferController::class, 'cancel'])->name('inventory.transfers.cancel');
+
+        // Inventory — Product Categories
+        Route::get('product-categories',                     [ProductCategoryController::class, 'index'])->name('product-categories.index');
+        Route::post('product-categories',                    [ProductCategoryController::class, 'store'])->name('product-categories.store');
+        Route::put('product-categories/{productCategory}',   [ProductCategoryController::class, 'update'])->name('product-categories.update');
+        Route::delete('product-categories/{productCategory}',[ProductCategoryController::class, 'destroy'])->name('product-categories.destroy');
+
+        // Recurring Expenses
+        Route::get('recurring-expenses',                             [RecurringExpenseController::class, 'index'])->name('recurring-expenses.index');
+        Route::post('recurring-expenses',                            [RecurringExpenseController::class, 'store'])->name('recurring-expenses.store');
+        Route::put('recurring-expenses/{recurringExpense}/toggle',   [RecurringExpenseController::class, 'toggle'])->name('recurring-expenses.toggle');
+        Route::delete('recurring-expenses/{recurringExpense}',       [RecurringExpenseController::class, 'destroy'])->name('recurring-expenses.destroy');
+
+        // Reports
+        Route::get('reports/profit-loss',           [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
+        Route::get('reports/employee-performance',  [ReportController::class, 'employeePerformance'])->name('reports.employee-performance');
 
         // Activity log
         Route::get(   'activity-log',          [ActivityLogController::class, 'index'])->name('activity-log.index');

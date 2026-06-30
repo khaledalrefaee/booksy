@@ -1531,9 +1531,9 @@ body.v4-clk #v4-ring{width:30px;height:30px;}
 <script src="{{ asset('frontend/js/theme.init.js') }}"></script>
 
 {{-- GSAP بعد Porto حتى لا تُكتب فوقه من theme.js --}}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+<script src="{{ asset('vendor/gsap/gsap.min.js') }}"></script>
+<script src="{{ asset('vendor/gsap/ScrollTrigger.min.js') }}"></script>
+<script src="{{ asset('vendor/lenis/lenis.min.js') }}"></script>
 
 <script>
 (function(){

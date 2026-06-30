@@ -9,6 +9,7 @@
     @stack('company-styles')
 </head>
 <body>
+    @include('company.partials.loading-skeleton')
     <div class="main-wrapper">
         @include('company.partials.sidebar')
         <div class="page-wrapper">
@@ -21,5 +22,6 @@
     @stack('scripts')
     @stack('company-after-template')
     @include('company.partials.reverb-notifications')
+    @include('company.partials.crud-toasts')
 </body>
 </html>

@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class BranchPayment extends Model
 {
+    use SoftDeletes;
     // direction derived from type: income/tip/other_income → in; expense/refund/adjustment → out
     public const INCOME_TYPES  = ['income', 'tip', 'refund'];
     public const EXPENSE_TYPES = ['expense', 'adjustment'];
@@ -20,6 +22,7 @@ class BranchPayment extends Model
         'repair'        => ['label_key' => 'Repair / Maintenance','icon' => '🔧', 'color' => '#fbbf24', 'type' => 'expense'],
         'personal'      => ['label_key' => 'Personal / Home',    'icon' => '🏠', 'color' => '#60a5fa', 'type' => 'expense'],
         'other_expense' => ['label_key' => 'Other expense',      'icon' => '➖', 'color' => '#f87171', 'type' => 'expense'],
+        'product_sale'  => ['label_key' => 'Product sale',       'icon' => '🛒', 'color' => '#06b6d4', 'type' => 'income'],
     ];
 
     public const PAYMENT_METHODS = [

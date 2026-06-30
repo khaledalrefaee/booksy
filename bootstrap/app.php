@@ -13,6 +13,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('appointments:send-reminders')->everyTenMinutes();
+        $schedule->command('booksy:process-recurring-expenses')->dailyAt('06:00');
     })
     ->withRouting(
         web: __DIR__.'/../routes/web.php',

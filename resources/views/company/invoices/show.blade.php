@@ -227,5 +227,91 @@
             </div>
         </div>
     </div>
+
+    {{-- Payment Tracking --}}
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">💰 {{ __('Invoice Payments') }}</h6>
+
+                    @if($invoice->remaining > 0 && !in_array($invoice->status, ['paid', 'void', 'refunded']))
+                        <form method="POST" action="{{ route('company.invoices.pay', $invoice) }}" class="mb-3 p-3 rounded" style="background:var(--bs-tertiary-bg);">
+                            @csrf
+                            <div class="row g-2 align-items-end">
+                                <div class="col-4">
+                                    <label class="form-label small fw-semibold">{{ __('Amount') }}</label>
+                                    <input type="number" step="0.01" name="amount" value="{{ $invoice->remaining }}"
+                                        max="{{ $invoice->remaining }}" min="0.01" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="col-3">
+                                    <label class="form-label small fw-semibold">{{ __('Method') }}</label>
+                                    <select name="payment_method" class="form-select form-select-sm" required>
+                                        <option value="cash">{{ __('Cash') }}</option>
+                                        <option value="card">{{ __('Card') }}</option>
+                                        <option value="transfer">{{ __('Bank transfer') }}</option>
+                                    </select>
+                                </div>
+                                <div class="col-3">
+                                    <label class="form-label small fw-semibold">{{ __('Notes') }}</label>
+                                    <input type="text" name="notes" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-2">
+                                    <button class="btn btn-sm btn-success w-100">{{ __('Pay') }}</button>
+                                </div>
+                            </div>
+                            <small class="text-muted mt-1 d-block">
+                                {{ __('Remaining balance') }}: <strong>{{ number_format($invoice->remaining, 0) }} {{ $invoice->currency }}</strong>
+                            </small>
+                        </form>
+                    @endif
+
+                    @if($invoice->payments && $invoice->payments->count())
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('Date') }}</th>
+                                    <th>{{ __('Amount') }}</th>
+                                    <th>{{ __('Method') }}</th>
+                                    <th>{{ __('By') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($invoice->payments->sortByDesc('created_at') as $pmt)
+                                    <tr>
+                                        <td class="small">{{ $pmt->created_at->format('d/m H:i') }}</td>
+                                        <td class="fw-bold text-success">+{{ number_format($pmt->amount, 0) }}</td>
+                                        <td class="small">{{ __($pmt->payment_method) }}</td>
+                                        <td class="small">{{ $pmt->recorded_by_name }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @else
+                        <p class="text-muted text-center small mb-0">{{ __('No payments yet.') }}</p>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center py-4">
+                    <div class="mb-2 text-muted small">{{ __('Total') }}</div>
+                    <div class="fs-4 fw-bold">{{ number_format($invoice->total, 0) }} {{ $invoice->currency }}</div>
+                    <div class="d-flex justify-content-center gap-4 mt-3">
+                        <div>
+                            <div class="text-success fs-5 fw-bold">{{ number_format($invoice->amount_paid, 0) }}</div>
+                            <div class="text-muted small">{{ __('Paid Amount') }}</div>
+                        </div>
+                        <div>
+                            <div class="text-danger fs-5 fw-bold">{{ number_format($invoice->remaining, 0) }}</div>
+                            <div class="text-muted small">{{ __('Remaining') }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection

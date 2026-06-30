@@ -52,8 +52,14 @@
                 </h3>
                 <p class="mb-0" style="opacity:.75;font-size:13px;">
                     {{ __('Total deducted') }}:
-                    <strong>{{ number_format($totalDeducted, 2) }}
-                    {{ config('booksy.currencies.'.config('booksy.default_currency').'.symbol', 'ل.س') }}</strong>
+                    @php
+                        $dedByCurrency = $deductions->where('is_sick_leave', false)->groupBy('currency')->map(fn($g) => $g->sum('amount'));
+                        if ($dedByCurrency->isEmpty()) $dedByCurrency = collect([config('booksy.default_currency', 'SYP') => 0]);
+                    @endphp
+                    @foreach($dedByCurrency as $cur => $amt)
+                        @php $sym = config("booksy.currencies.{$cur}.symbol", $cur); @endphp
+                        <strong>{{ number_format($amt, 0) }} {{ $sym }}</strong>{{ !$loop->last ? ' · ' : '' }}
+                    @endforeach
                 </p>
             </div>
             <div class="d-flex gap-2">
@@ -125,7 +131,14 @@
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-body text-center p-3">
                     <div style="font-size:22px;">💸</div>
-                    <div class="fw-bold fs-4 mt-1">{{ number_format($totalDeducted, 0) }}</div>
+                    @php $dedTotals = $deductions->where('is_sick_leave', false)->groupBy('currency')->map(fn($g) => $g->sum('amount')); @endphp
+                    @foreach($dedTotals as $cur => $amt)
+                    @php $sym = config("booksy.currencies.{$cur}.symbol", $cur ?: config('booksy.default_currency')); @endphp
+                    <div class="fw-bold mt-1" style="font-size:{{ $dedTotals->count() > 1 ? '16px' : '24px' }};">{{ number_format($amt, 0) }} <span style="font-size:12px;opacity:.5;">{{ $sym }}</span></div>
+                    @endforeach
+                    @if($dedTotals->isEmpty())
+                    <div class="fw-bold fs-4 mt-1">0</div>
+                    @endif
                     <div class="text-muted small">{{ __('Total deducted') }}</div>
                 </div>
             </div>
@@ -170,9 +183,10 @@
                                 @if($ded->is_sick_leave)
                                     <span class="text-success small">{{ __('No deduction') }}</span>
                                 @elseif($ded->amount)
+                                    @php $sym = config("booksy.currencies.{$ded->currency}.symbol", $ded->currency ?? config('booksy.default_currency')); @endphp
                                     <span class="fw-semibold text-danger">
                                         {{ number_format($ded->amount, 2) }}
-                                        {{ config('booksy.currencies.'.config('booksy.default_currency').'.symbol','ل.س') }}
+                                        <span style="font-size:11px;opacity:.6;">{{ $sym }}</span>
                                     </span>
                                 @else
                                     <span class="text-muted">—</span>

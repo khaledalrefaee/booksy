@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Appointment;
+use App\Models\LoyaltyPointLog;
 use App\Services\StaffNotificationService;
 use App\Services\WhatsappService;
 
@@ -27,6 +28,7 @@ class AppointmentObserver
 
         match ($newStatus) {
             'confirmed' => $this->onConfirmed($appointment),
+            'completed' => $this->onCompleted($appointment),
             'cancelled', 'rejected' => $this->onCancelled($appointment),
             default => null,
         };
@@ -42,6 +44,37 @@ class AppointmentObserver
         dispatch(function () use ($appointment) {
             app(WhatsappService::class)->sendAppointmentConfirmed($appointment);
         })->afterResponse();
+    }
+
+    private function onCompleted(Appointment $appointment): void
+    {
+        if (!$appointment->customer_id) return;
+
+        $customer = $appointment->customer;
+        if (!$customer) return;
+
+        $loyaltyConfig = config('booksy.loyalty', []);
+        $pointsPerVisit = $loyaltyConfig['points_per_visit'] ?? 0;
+        $pointsPerUnit  = $loyaltyConfig['points_per_currency_unit'] ?? 0;
+
+        $totalPoints = $pointsPerVisit;
+
+        if ($pointsPerUnit > 0 && $appointment->total_price > 0) {
+            $totalPoints += (int) floor((float) $appointment->total_price / $pointsPerUnit);
+        }
+
+        if ($totalPoints > 0) {
+            LoyaltyPointLog::create([
+                'customer_id'    => $customer->id,
+                'points'         => $totalPoints,
+                'reason'         => __('Completed appointment'),
+                'reference_type' => Appointment::class,
+                'reference_id'   => $appointment->id,
+                'created_at'     => now(),
+            ]);
+
+            $customer->increment('loyalty_points', $totalPoints);
+        }
     }
 
     private function onCancelled(Appointment $appointment): void

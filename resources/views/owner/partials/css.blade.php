@@ -47,10 +47,10 @@
   <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-custom.css') }}">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-  {{-- DataTables 1.13 + Buttons + Responsive --}}
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+  {{-- DataTables 1.13 + Buttons + Responsive (local) --}}
+  <link rel="stylesheet" href="{{ asset('vendor/datatables/dataTables.bootstrap5.min.css') }}">
+  <link rel="stylesheet" href="{{ asset('vendor/datatables/buttons.bootstrap5.min.css') }}">
+  <link rel="stylesheet" href="{{ asset('vendor/datatables/responsive.bootstrap5.min.css') }}">
 
 
   	<!-- Plugin css for this page form -->

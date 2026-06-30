@@ -13,7 +13,7 @@ class Invoice extends Model
         'booking_group_id', 'appointment_id',
         'customer_name', 'customer_phone', 'customer_email',
         'currency', 'subtotal', 'discount_amount',
-        'vat_rate', 'vat_amount', 'total',
+        'vat_rate', 'vat_amount', 'total', 'amount_paid',
         'payment_method', 'status', 'notes',
         'issued_at', 'paid_at',
         'created_by_type', 'created_by_id', 'created_by_name',
@@ -35,10 +35,12 @@ class Invoice extends Model
     public static function generateNumber(int $companyId): string
     {
         $prefix = 'INV-' . now()->format('Ymd');
-        $last = static::where('company_id', $companyId)
-            ->where('invoice_number', 'like', $prefix . '%')
-            ->count();
-        return $prefix . '-' . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
+        $lastNumber = static::where('company_id', $companyId)
+            ->where('invoice_number', 'like', $prefix . '-%')
+            ->lockForUpdate()
+            ->max(\Illuminate\Support\Facades\DB::raw("CAST(SUBSTRING_INDEX(invoice_number, '-', -1) AS UNSIGNED)"));
+
+        return $prefix . '-' . str_pad(($lastNumber ?? 0) + 1, 4, '0', STR_PAD_LEFT);
     }
 
     public function recalculate(): void
@@ -69,6 +71,40 @@ class Invoice extends Model
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class)->orderBy('sort_order');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(InvoicePayment::class);
+    }
+
+    public function getRemainingAttribute(): float
+    {
+        return round((float) $this->total - (float) $this->amount_paid, 2);
+    }
+
+    public function recordPayment(float $amount, string $method = 'cash', ?string $notes = null, ?string $byName = null): InvoicePayment
+    {
+        $payment = $this->payments()->create([
+            'amount' => $amount,
+            'payment_method' => $method,
+            'notes' => $notes,
+            'recorded_by_name' => $byName,
+        ]);
+
+        $totalPaid = $this->payments()->sum('amount');
+        $this->amount_paid = $totalPaid;
+
+        if ($totalPaid >= (float) $this->total) {
+            $this->status = 'paid';
+            $this->paid_at = now();
+        } elseif ($totalPaid > 0) {
+            $this->status = 'partial';
+        }
+
+        $this->save();
+
+        return $payment;
     }
 
     public function statusBadge(): string

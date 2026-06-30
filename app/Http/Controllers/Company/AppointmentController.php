@@ -252,21 +252,18 @@ class AppointmentController extends Controller
                         : __('Overpayment — added to treasury'),
                     'paid_at'        => now(),
                 ]);
-            } elseif ($diff < 0) {
-                // Underpayment — record as debt note
-                BranchPayment::create([
-                    'company_id'     => $company->id,
-                    'branch_id'      => $appointment->branch_id,
+            } elseif ($diff < 0 && $appointment->customer_id) {
+                // Underpayment — create customer debt record
+                \App\Models\CustomerDebt::create([
+                    'company_id' => $company->id,
+                    'branch_id' => $appointment->branch_id,
+                    'customer_id' => $appointment->customer_id,
                     'appointment_id' => $appointment->id,
-                    'type'           => 'adjustment',
-                    'category'       => 'other_expense',
-                    'amount'         => abs($diff),
-                    'currency'       => $currency,
-                    'payment_method' => $method,
-                    'notes'          => __('Underpayment — customer owes :amount', [
-                        'amount' => number_format(abs($diff), 2) . ' ' . $currency,
-                    ]),
-                    'paid_at'        => now(),
+                    'original_amount' => abs($diff),
+                    'currency' => $currency,
+                    'status' => 'unpaid',
+                    'notes' => __('Underpayment — customer debt recorded'),
+                    'created_by_name' => $company->localizedName(),
                 ]);
             }
         }
