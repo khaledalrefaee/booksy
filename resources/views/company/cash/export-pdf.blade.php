@@ -17,7 +17,7 @@
         body { font-family: DejaVu Sans, sans-serif; font-size:11px; color:#1a1a2e; padding:20px; direction:{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}; }
 
         /* Header */
-        .header-table { width:100%; border-bottom:3px solid #C9A227; padding-bottom:12px; margin-bottom:16px; }
+        .header-table { width:100%; border-bottom:3px solid var(--bk-accent); padding-bottom:12px; margin-bottom:16px; }
         .header-table td { vertical-align:top; }
         .header-title { font-size:18px; font-weight:800; }
         .header-sub { font-size:12px; font-weight:600; margin-top:4px; }

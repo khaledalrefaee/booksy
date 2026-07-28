@@ -10,6 +10,7 @@ class EmployeeDeduction extends Model
     protected $fillable = [
         'employee_id',
         'recorded_by_employee_id',
+        'advance_id',
         'type',
         'is_sick_leave',
         'deduction_date',
@@ -37,6 +38,11 @@ class EmployeeDeduction extends Model
     public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'recorded_by_employee_id');
+    }
+
+    public function advance(): BelongsTo
+    {
+        return $this->belongsTo(EmployeeAdvance::class, 'advance_id');
     }
 
     /** True deductions (not sick leave) */

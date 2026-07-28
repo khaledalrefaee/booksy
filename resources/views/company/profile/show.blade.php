@@ -21,6 +21,98 @@
     <div class="row justify-content-center">
         <div class="col-lg-8">
 
+            {{-- ══ My subscription ══ --}}
+            @php
+                $hasPlan   = $company->plan_id !== null;
+                $active    = $company->isSubscriptionActive();
+                $daysLeft  = $company->plan_expires_at ? (int) now()->startOfDay()->diffInDays($company->plan_expires_at, false) : null;
+                $maxBr     = $company->maxBranches();
+                $maxEmp    = $company->maxEmployees();
+            @endphp
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h6 class="fw-semibold text-muted text-uppercase small mb-0">
+                            <i data-feather="package" style="width:14px;height:14px;" class="me-1"></i>
+                            {{ __('My subscription') }}
+                        </h6>
+                        @if (! $hasPlan)
+                            <span class="badge rounded-pill bg-success">{{ __('Full access') }}</span>
+                        @elseif ($active)
+                            <span class="badge rounded-pill bg-success">{{ __('Active') }}</span>
+                        @else
+                            <span class="badge rounded-pill bg-danger">{{ __('Expired') }}</span>
+                        @endif
+                    </div>
+
+                    <div class="row g-3 mb-1">
+                        <div class="col-sm-4">
+                            <p class="text-muted small mb-1">{{ __('Plan') }}</p>
+                            <p class="fw-bold mb-0">
+                                {{ $hasPlan ? $company->plan?->localizedName() : __('Full access') }}
+                                @if ($hasPlan && (float) $company->plan?->price > 0)
+                                    <span class="text-muted fw-normal small">({{ number_format((float) $company->plan->price, 2) }} {{ $company->plan->currency }})</span>
+                                @endif
+                            </p>
+                        </div>
+                        <div class="col-sm-4">
+                            <p class="text-muted small mb-1">{{ __('Expires at') }}</p>
+                            <p class="fw-bold mb-0">
+                                @if ($company->plan_expires_at)
+                                    {{ $company->plan_expires_at->format('Y-m-d') }}
+                                    @if ($active && $daysLeft !== null)
+                                        <span class="badge rounded-pill {{ $daysLeft <= 7 ? 'bg-warning text-dark' : 'bg-light text-dark border' }} ms-1">
+                                            {{ __(':days day(s) left', ['days' => $daysLeft]) }}
+                                        </span>
+                                    @endif
+                                @else
+                                    {{ __('Never expires') }}
+                                @endif
+                            </p>
+                        </div>
+                        <div class="col-sm-4">
+                            <p class="text-muted small mb-1">{{ __('Usage') }}</p>
+                            <p class="fw-bold mb-0">
+                                {{ __('Branches') }}: {{ $usage['branches'] }}{{ $maxBr !== null ? ' / '.$maxBr : '' }}
+                                <span class="text-muted mx-1">·</span>
+                                {{ __('Employees') }}: {{ $usage['employees'] }}{{ $maxEmp !== null ? ' / '.$maxEmp : '' }}
+                            </p>
+                        </div>
+                    </div>
+
+                    @if ($hasPlan && ! $active)
+                        <div class="alert alert-danger py-2 mt-3 mb-3">
+                            {{ __('Your subscription has expired — renew to restore the features below.') }}
+                        </div>
+                    @endif
+
+                    <hr class="my-3">
+
+                    <p class="text-muted small mb-2">{{ __('Included features') }}
+                        <span class="text-muted">— {{ __('Appointments, customers, branches, services and employees are always included.') }}</span>
+                    </p>
+                    <div class="row g-2">
+                        @foreach ($featureCatalog as $key => $f)
+                            @php $on = $company->hasFeature($key); @endphp
+                            <div class="col-md-4 col-sm-6">
+                                <div class="d-flex align-items-center gap-2 small {{ $on ? '' : 'text-muted opacity-50' }}">
+                                    <i data-feather="{{ $on ? 'check-circle' : 'x-circle' }}"
+                                       class="{{ $on ? 'text-success' : '' }}" style="width:15px;height:15px;flex-shrink:0;"></i>
+                                    <span>{{ $f['label'] }}</span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    @if ($hasPlan)
+                        <p class="text-muted small mt-3 mb-0">
+                            <i data-feather="info" style="width:13px;height:13px;" class="me-1"></i>
+                            {{ __('To upgrade your plan or renew, contact us.') }}
+                        </p>
+                    @endif
+                </div>
+            </div>
+
             <div class="card border-0 shadow-sm rounded-4 mb-4">
                 <div class="card-body p-4 p-md-5">
 
@@ -28,7 +120,7 @@
                     <div class="d-flex align-items-center gap-4 mb-5 pb-4 border-bottom">
                         <div class="position-relative flex-shrink-0">
                             <img id="logo-preview"
-                                 src="{{ $company->logo ? asset('storage/' . $company->logo) : 'https://ui-avatars.com/api/?name=' . urlencode($company->localizedName()) . '&size=96&background=C9A227&color=000&bold=true' }}"
+                                 src="{{ $company->logo ? asset('storage/' . $company->logo) : 'https://ui-avatars.com/api/?name=' . urlencode($company->localizedName()) . '&size=96&background=4B5D34&color=FFFFFF&bold=true' }}"
                                  class="rounded-circle border shadow-sm"
                                  width="96" height="96"
                                  style="object-fit:cover;"

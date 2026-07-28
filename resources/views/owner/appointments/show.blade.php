@@ -27,16 +27,7 @@
                                 <p class="text-muted mb-0 tx-13 mt-1">{{ __('Ends') }} {{ $appointment->end_time->timezone(config('app.timezone'))->format('H:i') }}</p>
                             @endif
                         </div>
-                        @php
-                            $badge = match ($appointment->status) {
-                                'pending' => 'warning',
-                                'confirmed' => 'success',
-                                'completed' => 'primary',
-                                'cancelled', 'rejected', 'no_show' => 'secondary',
-                                default => 'info',
-                            };
-                        @endphp
-                        <span class="badge rounded-pill bg-{{ $badge }} px-3 py-2">{{ __($appointment->status) }}</span>
+                        <x-appointment-status :status="$appointment->status" />
                     </div>
                     <dl class="row mb-0">
                         <dt class="col-sm-4 text-muted">{{ __('Branch') }}</dt>

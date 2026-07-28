@@ -3,7 +3,7 @@
 @push('owner-styles')
 <style>
 .emp-hero {
-    background: linear-gradient(135deg, #c9a227 0%, #a07d10 100%);
+    background: linear-gradient(135deg, var(--bk-accent) 0%, #a07d10 100%);
     border-radius: 20px; padding: 26px 30px;
     margin-bottom: 24px; color: #000;
     position: relative; overflow: hidden;
@@ -23,7 +23,7 @@
 }
 .bk-theme-light .emp-row { border-bottom-color: rgba(0,0,0,.05); }
 .emp-row:last-child { border-bottom: none; }
-.emp-row:hover { background: rgba(201,162,39,.06); }
+.emp-row:hover { background: rgba(12,110,116,.06); }
 [dir="ltr"] .emp-row:hover { transform: translateX(3px); }
 [dir="rtl"] .emp-row:hover { transform: translateX(-3px); }
 .emp-row:hover .emp-actions { opacity: 1; }
@@ -48,7 +48,7 @@
 }
 .btn-act:hover { opacity: .85; }
 .btn-act-leave { background: linear-gradient(135deg,#f093fb,#f5576c); color:#fff !important; }
-.btn-act-edit  { background: linear-gradient(135deg,#c9a227,#f4a642); color:#000 !important; }
+.btn-act-edit  { background: linear-gradient(135deg,var(--bk-accent),var(--bk-accent-hover)); color:#fff !important; }
 .btn-act-del   { background: transparent; color: rgba(255,255,255,.4) !important; border: 1.5px solid rgba(255,255,255,.15); }
 .btn-act-del:hover { border-color: #f5576c; color: #f5576c !important; }
 .bk-theme-light .btn-act-del { color: rgba(0,0,0,.4) !important; border-color: rgba(0,0,0,.15); }
@@ -121,7 +121,7 @@
         <div class="card-body p-0">
             @forelse($employees as $emp)
             @php
-                $palette = ['#c9a227','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1'];
+                $palette = ['#5C7038','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1'];
                 $bg = $palette[$emp->id % count($palette)];
                 $initial = strtoupper(mb_substr($emp->name_en ?? $emp->name_ar ?? '?', 0, 1));
             @endphp

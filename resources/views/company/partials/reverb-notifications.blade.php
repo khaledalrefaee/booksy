@@ -28,7 +28,7 @@
     width: 38px; height: 38px;
     border-radius: 50%;
     background: transparent;
-    border: 1.5px solid rgba(201,162,39,.2);
+    border: 1.5px solid rgba(75,93,52,.2);
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
     position: relative;
@@ -36,9 +36,9 @@
     color: rgba(255,255,255,.6);
 }
 #bk-notif-bell-btn:hover {
-    background: rgba(201,162,39,.1);
-    border-color: rgba(201,162,39,.4);
-    color: #C9A227;
+    background: rgba(75,93,52,.1);
+    border-color: rgba(75,93,52,.4);
+    color: var(--bk-accent);
 }
 #bk-notif-bell-btn svg { transition: transform .3s; }
 #bk-notif-bell-btn.ringing svg { animation: bk-ring .5s ease infinite; }
@@ -76,7 +76,7 @@
     {{ $isAr ? 'left' : 'right' }}: -8px;
     width: 340px;
     background: #1a1a2e;
-    border: 1px solid rgba(201,162,39,.2);
+    border: 1px solid rgba(75,93,52,.2);
     border-radius: 16px;
     box-shadow: 0 16px 50px rgba(0,0,0,.6);
     z-index: 10600;
@@ -99,7 +99,7 @@
     font-size: .9rem; font-weight: 800; color: #fff; margin: 0;
 }
 .bk-notif-panel-head .mark-all {
-    font-size: .7rem; color: #C9A227; cursor: pointer;
+    font-size: .7rem; color: var(--bk-accent); cursor: pointer;
     background: none; border: none; font-family: inherit; font-weight: 600;
 }
 .bk-notif-list { overflow-y: auto; max-height: 400px; }
@@ -111,7 +111,7 @@
     color: rgba(255,255,255,.3);
     font-size: .82rem;
 }
-.bk-notif-empty i { font-size: 2.4rem; color: rgba(201,162,39,.1); display: block; margin-bottom: 10px; }
+.bk-notif-empty i { font-size: 2.4rem; color: rgba(75,93,52,.1); display: block; margin-bottom: 10px; }
 .bk-notif-item {
     display: flex;
     gap: 12px;
@@ -121,21 +121,21 @@
     transition: background .18s;
     position: relative;
 }
-.bk-notif-item:hover { background: rgba(201,162,39,.06); }
-.bk-notif-item.unread { background: rgba(201,162,39,.04); }
+.bk-notif-item:hover { background: rgba(75,93,52,.06); }
+.bk-notif-item.unread { background: rgba(75,93,52,.04); }
 .bk-notif-item.unread::before {
     content: '';
     position: absolute;
     {{ $isAr ? 'right' : 'left' }}: 0;
     top: 0; bottom: 0;
     width: 3px;
-    background: #C9A227;
+    background: var(--bk-accent);
     border-radius: 0 3px 3px 0;
 }
 .bk-notif-av {
     width: 42px; height: 42px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #C9A227, #e8c84a);
+    background: linear-gradient(135deg, var(--bk-accent), #e8c84a);
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
     font-size: 1.1rem; color: #0a0a0a;
@@ -160,7 +160,7 @@
     font-size: .73rem; color: rgba(255,255,255,.55); line-height: 1.45;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.bk-notif-time { font-size: .63rem; color: #C9A227; margin-top: 4px; font-weight: 600; }
+.bk-notif-time { font-size: .63rem; color: var(--bk-accent); margin-top: 4px; font-weight: 600; }
 
 /* ════════════════════════════════════════
    TOAST NOTIFICATIONS (Facebook-style)
@@ -178,9 +178,9 @@
 .bk-fb-toast {
     width: 360px;
     background: #1e1e30;
-    border: 1px solid rgba(201,162,39,.25);
+    border: 1px solid rgba(75,93,52,.25);
     border-radius: 16px;
-    box-shadow: 0 12px 50px rgba(0,0,0,.65), 0 0 0 1px rgba(201,162,39,.08);
+    box-shadow: 0 12px 50px rgba(0,0,0,.65), 0 0 0 1px rgba(75,93,52,.08);
     overflow: hidden;
     pointer-events: all;
     animation: bk-toast-in .35s cubic-bezier(.22,1,.36,1);
@@ -199,7 +199,7 @@
 }
 .bk-toast-progress {
     height: 3px;
-    background: linear-gradient(90deg, #C9A227, #e8c84a);
+    background: linear-gradient(90deg, var(--bk-accent), #e8c84a);
     width: 100%;
     transform-origin: {{ $isAr ? 'right' : 'left' }};
     animation: bk-progress-drain linear forwards;
@@ -213,11 +213,11 @@
 .bk-toast-icon {
     width: 48px; height: 48px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #C9A227, #e8c84a);
+    background: linear-gradient(135deg, var(--bk-accent), #e8c84a);
     display: flex; align-items: center; justify-content: center;
     font-size: 1.3rem; color: #0a0a0a;
     flex-shrink: 0;
-    box-shadow: 0 4px 16px rgba(201,162,39,.4);
+    box-shadow: 0 4px 16px rgba(75,93,52,.4);
     position: relative;
 }
 .bk-toast-icon::after {
@@ -236,7 +236,7 @@
 .bk-toast-content { flex: 1; min-width: 0; }
 .bk-toast-heading {
     display: flex; align-items: center; gap: 6px;
-    font-size: .75rem; font-weight: 900; color: #C9A227; margin-bottom: 4px;
+    font-size: .75rem; font-weight: 900; color: var(--bk-accent); margin-bottom: 4px;
 }
 .bk-toast-heading .bk-dot-live {
     width: 7px; height: 7px;
@@ -252,7 +252,7 @@
 }
 .bk-toast-customer { font-size: .88rem; font-weight: 800; color: #fff; margin-bottom: 3px; }
 .bk-toast-detail   { font-size: .76rem; color: rgba(255,255,255,.55); line-height: 1.5; }
-.bk-toast-time     { font-size: .68rem; color: #C9A227; margin-top: 5px; font-weight: 700; }
+.bk-toast-time     { font-size: .68rem; color: var(--bk-accent); margin-top: 5px; font-weight: 700; }
 .bk-toast-close {
     position: absolute;
     top: 10px; {{ $isAr ? 'left' : 'right' }}: 12px;
@@ -568,7 +568,11 @@
        Connect to Reverb via Echo
     ──────────────────────────────────── */
     try {
-        var echo = new LaravelEcho({
+        /* echo.iife.js exposes the constructor as `Echo` (verified: it is the
+           function itself, not a namespace with .default). `LaravelEcho` never
+           existed, so this threw a ReferenceError that the catch below swallowed
+           — which is why realtime silently never connected. */
+        var echo = new Echo({
             broadcaster:       'reverb',
             key:               '{{ config('broadcasting.connections.reverb.key', env('REVERB_APP_KEY', 'booksy-key-123')) }}',
             wsHost:            '{{ env('REVERB_HOST', 'localhost') }}',

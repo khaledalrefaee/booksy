@@ -1,0 +1,26 @@
+/* Arabic typography for the Company & Owner dashboards.
+   Swap the font here once to change it everywhere (it must exist in /fonts/fonts.css). */
+:root {
+    --bk-font-ar: 'Tajawal', 'Roboto', Helvetica, sans-serif;
+    --bs-font-sans-serif: var(--bk-font-ar);
+    --bs-body-font-family: var(--bk-font-ar);
+}
+
+body,
+h1, h2, h3, h4, h5, h6,
+.btn, button, input, select, textarea, optgroup,
+.form-control, .form-select, .form-label, .form-check-label,
+.dropdown-menu, .nav-link, .nav, .navbar,
+.tooltip, .popover, .badge, .alert, .breadcrumb,
+.table, .card, .modal, .list-group,
+.flatpickr-calendar {
+    font-family: var(--bk-font-ar) !important;
+}
+
+/* Latin numerals & big stat digits read better slightly tighter in Tajawal */
+.bk-stat-num { letter-spacing: 0; }
+
+/* Icon fonts keep their own faces (feather already uses !important in iconfont.css,
+   this is a safety net in case markup uses inline <i> without the class file) */
+.feather, [class^="icon-"], [class*=" icon-"] { font-family: 'feather' !important; }
+.flag-icon { font-family: inherit; }

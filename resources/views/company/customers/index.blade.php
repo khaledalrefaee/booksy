@@ -79,7 +79,7 @@
                 <div class="col-12 col-sm-5">
                     <div class="input-group">
                         <span class="input-group-text bg-transparent border-end-0">
-                            <i data-feather="search" style="width:14px;height:14px;color:#C9A227;"></i>
+                            <i data-feather="search" style="width:14px;height:14px;color:var(--bk-accent);"></i>
                         </span>
                         <input type="text" name="search" class="form-control border-start-0"
                             placeholder="{{ __('Search by name or phone…') }}"
@@ -174,7 +174,7 @@
                                 <img src="{{ asset('storage/' . $c->avatar) }}" alt=""
                                      style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
                             @else
-                                <div style="width:36px;height:36px;border-radius:50%;background:{{ $c->is_banned ? 'rgba(239,68,68,.15)' : 'rgba(201,162,39,.15)' }};color:{{ $c->is_banned ? '#ef4444' : '#C9A227' }};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;">
+                                <div style="width:36px;height:36px;border-radius:50%;background:{{ $c->is_banned ? 'rgba(239,68,68,.15)' : 'rgba(75,93,52,.15)' }};color:{{ $c->is_banned ? '#ef4444' : '#5C7038' }};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;">
                                     {{ $c->is_banned ? '🚫' : mb_substr($c->name, 0, 1) }}
                                 </div>
                             @endif
@@ -203,7 +203,7 @@
                     </div>
                     <div class="col-6 col-md-2 tx-13 text-muted" dir="ltr">{{ $c->phone }}</div>
                     <div class="col-6 col-md-1 text-center text-md-center">
-                        <span style="font-size:12px;font-weight:700;background:rgba(201,162,39,.12);color:#C9A227;padding:3px 10px;border-radius:20px;">
+                        <span style="font-size:12px;font-weight:700;background:rgba(75,93,52,.12);color:var(--bk-accent);padding:3px 10px;border-radius:20px;">
                             {{ $c->total_visits ?? 0 }}
                         </span>
                     </div>
@@ -273,7 +273,7 @@
                     @csrf
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold">
-                            <i data-feather="user-plus" style="width:18px;height:18px;margin-inline-end:6px;color:#C9A227;"></i>
+                            <i data-feather="user-plus" style="width:18px;height:18px;margin-inline-end:6px;color:var(--bk-accent);"></i>
                             {{ __('Add Customer') }}
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -325,7 +325,7 @@
                                 @foreach($branches as $b)
                                 <label style="cursor:pointer;">
                                     <input type="checkbox" name="branch_ids[]" value="{{ $b->id }}" class="d-none branch-chk">
-                                    <span class="pm-card" style="--pm-color:#C9A227;padding:4px 10px;font-size:11px;">
+                                    <span class="pm-card" style="--pm-color:var(--bk-accent);padding:4px 10px;font-size:11px;">
                                         {{ $b->localizedName() }}
                                     </span>
                                 </label>
@@ -406,7 +406,7 @@
                                 @foreach($branches as $b)
                                 <label style="cursor:pointer;">
                                     <input type="checkbox" name="branch_ids[]" value="{{ $b->id }}" class="d-none edit-branch-chk">
-                                    <span class="pm-card" style="--pm-color:#C9A227;padding:4px 10px;font-size:11px;">
+                                    <span class="pm-card" style="--pm-color:var(--bk-accent);padding:4px 10px;font-size:11px;">
                                         {{ $b->localizedName() }}
                                     </span>
                                 </label>
@@ -539,7 +539,7 @@
                                 onclick="sendWA('reminder')">
                             ⏰ {{ __('Appointment reminder') }}
                         </button>
-                        <button type="button" class="btn btn-sm text-start rounded-3 px-3 py-2" style="background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.15);"
+                        <button type="button" class="btn btn-sm text-start rounded-3 px-3 py-2" style="background:rgba(75,93,52,.08);border:1px solid rgba(75,93,52,.15);"
                                 onclick="sendWA('offer')">
                             🎁 {{ __('Special offer') }}
                         </button>
@@ -568,21 +568,21 @@
                     @csrf
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold">
-                            <i data-feather="upload" style="width:18px;height:18px;margin-inline-end:6px;color:#C9A227;"></i>
+                            <i data-feather="upload" style="width:18px;height:18px;margin-inline-end:6px;color:var(--bk-accent);"></i>
                             {{ __('Import Customers') }}
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body pt-3">
-                        <div class="p-3 rounded-3 mb-3" style="background:rgba(201,162,39,.06);border:1px solid rgba(201,162,39,.15);">
-                            <div class="fw-bold tx-12 mb-2" style="color:#C9A227;">{{ __('File format') }}</div>
+                        <div class="p-3 rounded-3 mb-3" style="background:rgba(75,93,52,.06);border:1px solid rgba(75,93,52,.15);">
+                            <div class="fw-bold tx-12 mb-2" style="color:var(--bk-accent);">{{ __('File format') }}</div>
                             <p class="tx-12 text-muted mb-2">
                                 {{ __('Upload an Excel (.xlsx) or CSV file with columns:') }}
                             </p>
                             <div class="d-flex gap-3 mb-1">
-                                <code class="tx-11" style="color:#C9A227;">name</code>
-                                <code class="tx-11" style="color:#C9A227;">phone</code>
-                                <code class="tx-11" style="color:#C9A227;">age</code>
+                                <code class="tx-11" style="color:var(--bk-accent);">name</code>
+                                <code class="tx-11" style="color:var(--bk-accent);">phone</code>
+                                <code class="tx-11" style="color:var(--bk-accent);">age</code>
                                 <span class="text-muted tx-11">({{ __('optional') }})</span>
                             </div>
                             <p class="tx-11 text-muted mb-0">

@@ -69,6 +69,8 @@ class FrontController extends Controller
             ->where('status', 'active')
             ->firstOrFail();
 
+        abort_unless($branch->company->hasFeature('private_booking'), 404);
+
         $branch->load([
             'company.category',
             'company.socialLinks',
@@ -243,7 +245,59 @@ class FrontController extends Controller
             'services' => fn($q) => $q->where('is_active', true),
         ])->marketplace()->whereHas('company', fn($q) => $q->where('status', 'active'))
           ->paginate(12)->withQueryString();
-        return view('front.index4', compact('categories', 'branches'));
+
+        // Real platform stats — the public site must never show made-up numbers
+        $stats = [
+            'salons'   => $branches->total(),
+            'bookings' => \App\Models\Appointment::count(),
+            'services' => \App\Models\Service::where('is_active', true)->count(),
+            'cities'   => \App\Models\Branch::marketplace()->whereNotNull('area_id')->distinct('area_id')->count('area_id'),
+            'rating'   => round((float) \App\Models\Review::where('is_hidden', false)->avg('rating'), 1),
+        ];
+
+        return view('front.index4', compact('categories', 'branches', 'stats'));
+    }
+
+    /**
+     * AJAX: next page of marketplace branches for the homepage "Load More" button.
+     * Mirrors the index4 query and returns rendered cards + paging flags.
+     */
+    public function branchesMore(Request $request)
+    {
+        $branches = \App\Models\Branch::with([
+            'company.category','images','reviews',
+            'services' => fn($q) => $q->where('is_active', true),
+        ])->marketplace()->whereHas('company', fn($q) => $q->where('status', 'active'))
+          ->paginate(12);
+
+        // First card index on this page continues the running number from earlier pages
+        $offset = ($branches->currentPage() - 1) * $branches->perPage();
+
+        $html = '';
+        foreach ($branches as $n => $branch) {
+            $html .= view('front.partials._branch_card', [
+                'branch' => $branch,
+                'i'      => $offset + $n,
+            ])->render();
+        }
+
+        return response()->json([
+            'html'     => $html,
+            'hasMore'  => $branches->hasMorePages(),
+            'nextPage' => $branches->currentPage() + 1,
+        ]);
+    }
+
+    /**
+     * Business Landing — marketing site aimed at salon/studio owners.
+     * All numeric proof comes from real DB counts (never fabricated). The
+     * testimonial quotes below are PLACEHOLDERS: replace with real, consented
+     * customer quotes before launch.
+     */
+    public function business(Request $request)
+    {
+        // Static marketing page — all copy lives in the view (no DB needed).
+        return view('front.business');
     }
 
     public function index2(Request $request)

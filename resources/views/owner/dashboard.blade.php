@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 
 
-@php $ownerTheme = request()->cookie('owner_theme', 'dark'); @endphp
+@php
+    $ownerTheme = request()->cookie('owner_theme', 'dark');
+
+    // Shared nav badge counts (computed once per request; sidebar falls back if unset)
+    try { $bkOwnerPendingAppts = (int) \App\Models\Appointment::where('status', 'pending')->count(); }
+    catch (\Throwable $e) { $bkOwnerPendingAppts = 0; }
+    try { $bkOwnerPendingCompanies = (int) \App\Models\Company::where('status', 'pending')->count(); }
+    catch (\Throwable $e) { $bkOwnerPendingCompanies = 0; }
+@endphp
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}"
       dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}"
       data-bk-theme="{{ $ownerTheme }}"

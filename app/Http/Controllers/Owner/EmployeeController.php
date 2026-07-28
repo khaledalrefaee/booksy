@@ -131,7 +131,8 @@ class EmployeeController extends Controller
     {
         $this->authorizeEmployee($employee);
 
-        $workingHours = $employee->workingHours()->get()->keyBy('day_of_week');
+        // Owner UI edits the first shift only; extra shifts are managed from the company dashboard
+        $workingHours = $employee->workingHours()->where('shift_number', 1)->get()->keyBy('day_of_week');
         $socialLinks  = $employee->socialLinks()->get()->keyBy('platform');
 
         return view('owner.employees.edit', [
@@ -191,8 +192,15 @@ class EmployeeController extends Controller
         foreach (range(0, 6) as $day) {
             $row       = $hours[$day] ?? [];
             $isWorking = ! empty($row['is_working']);
+
+            // Owner UI is single-shift: it manages shift #1. Extra shifts (added from
+            // the company dashboard) are only removed when the whole day is turned off.
+            if (! $isWorking) {
+                $employee->workingHours()->where('day_of_week', $day)->where('shift_number', '>', 1)->delete();
+            }
+
             $employee->workingHours()->updateOrCreate(
-                ['day_of_week' => $day],
+                ['day_of_week' => $day, 'shift_number' => 1],
                 [
                     'is_working' => $isWorking,
                     'start_time' => $isWorking ? ($row['start_time'] ?? null) : null,

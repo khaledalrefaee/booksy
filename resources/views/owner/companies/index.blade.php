@@ -91,6 +91,7 @@
                                           class="company-status-form">
                                         @csrf
                                         @method('PATCH')
+                                        <input type="hidden" name="reason" value="">
                                         <select name="status"
                                                 class="form-select form-select-sm border-0 shadow-none fw-semibold
                                                 @if($company->status === 'active') text-success bg-success-subtle
@@ -98,7 +99,9 @@
                                                 @elseif($company->status === 'suspended') text-danger bg-danger-subtle
                                                 @endif"
                                                 style="min-width: 130px; border-radius: 12px;"
-                                                onchange="this.form.submit()">
+                                                data-company-name="{{ $company->localizedName() }}"
+                                                data-original-status="{{ $company->status }}"
+                                                onchange="bkStatusChanged(this)">
                                             <option value="pending" @selected($company->status === 'pending')>🟡 {{ __('Pending') }}</option>
                                             <option value="active" @selected($company->status === 'active')>🟢 {{ __('Active') }}</option>
                                             <option value="suspended" @selected($company->status === 'suspended')>🔴 {{ __('Suspended') }}</option>
@@ -153,6 +156,40 @@
     @include('owner.companies.create', ['categories' => $categories])
     @include('owner.companies.edit', ['categories' => $categories])
     @include('owner.companies.delete')
+
+    {{-- ── Status-change reason modal ── --}}
+    <div class="modal fade" id="modal-status-reason" tabindex="-1"
+         aria-labelledby="modal-status-reason-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-semibold" id="modal-status-reason-title">
+                        {{ __('Change company status') }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Cancel') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3" id="bk-status-summary"></p>
+
+                    <label for="bk-status-reason" class="form-label fw-semibold">
+                        {{ __('Reason') }}
+                        <span class="text-danger d-none" id="bk-status-reason-required" aria-hidden="true">*</span>
+                    </label>
+                    <textarea class="form-control" id="bk-status-reason" rows="3" maxlength="500"></textarea>
+                    <div class="form-text" id="bk-status-reason-hint"></div>
+                    <div class="invalid-feedback" id="bk-status-reason-error">
+                        {{ __('A reason is required when suspending a company.') }}
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">
+                        {{ __('Cancel') }}
+                    </button>
+                    <button type="button" class="btn rounded-pill" id="bk-status-confirm"></button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @include('owner.partials._datatable', [
@@ -162,6 +199,91 @@
 ])
 
 @push('scripts')
+<script>
+(function () {
+    'use strict';
+
+    const STATUS_LABELS = {
+        pending:   @json(__('Pending')),
+        active:    @json(__('Active')),
+        suspended: @json(__('Suspended')),
+    };
+    const SUMMARY_TEMPLATE = @json(__('Change status of :company from ":from" to ":to".'));
+    const HINT_REQUIRED    = @json(__('The reason is stored in the audit log and shown to the company.'));
+    const HINT_OPTIONAL    = @json(__('Optional — stored in the audit log.'));
+    const CONFIRM_SUSPEND  = @json(__('Suspend company'));
+    const CONFIRM_DEFAULT  = @json(__('Confirm'));
+
+    const modalEl    = document.getElementById('modal-status-reason');
+    const summaryEl  = document.getElementById('bk-status-summary');
+    const reasonEl   = document.getElementById('bk-status-reason');
+    const requiredEl = document.getElementById('bk-status-reason-required');
+    const hintEl     = document.getElementById('bk-status-reason-hint');
+    const confirmBtn = document.getElementById('bk-status-confirm');
+    const modal      = new bootstrap.Modal(modalEl);
+
+    let activeSelect = null;
+    let confirmed    = false;
+
+    window.bkStatusChanged = function (select) {
+        const from = select.dataset.originalStatus;
+        const to   = select.value;
+        if (from === to) return;
+
+        activeSelect = select;
+        confirmed    = false;
+
+        const suspending = to === 'suspended';
+
+        summaryEl.textContent = SUMMARY_TEMPLATE
+            .replace(':company', select.dataset.companyName)
+            .replace(':from', STATUS_LABELS[from] ?? from)
+            .replace(':to', STATUS_LABELS[to] ?? to);
+
+        requiredEl.classList.toggle('d-none', !suspending);
+        hintEl.textContent = suspending ? HINT_REQUIRED : HINT_OPTIONAL;
+
+        confirmBtn.textContent = suspending ? CONFIRM_SUSPEND : CONFIRM_DEFAULT;
+        confirmBtn.classList.toggle('btn-danger', suspending);
+        confirmBtn.classList.toggle('btn-primary', !suspending);
+
+        reasonEl.value = '';
+        reasonEl.classList.remove('is-invalid');
+        modal.show();
+    };
+
+    modalEl.addEventListener('shown.bs.modal', () => reasonEl.focus());
+
+    // Dismiss without confirming → revert the select to its original value
+    modalEl.addEventListener('hidden.bs.modal', () => {
+        if (!confirmed && activeSelect) {
+            activeSelect.value = activeSelect.dataset.originalStatus;
+        }
+        activeSelect = null;
+    });
+
+    reasonEl.addEventListener('input', () => reasonEl.classList.remove('is-invalid'));
+
+    confirmBtn.addEventListener('click', () => {
+        if (!activeSelect) return;
+
+        const suspending = activeSelect.value === 'suspended';
+        const reason     = reasonEl.value.trim();
+
+        if (suspending && reason === '') {
+            reasonEl.classList.add('is-invalid');
+            reasonEl.focus();
+            return;
+        }
+
+        confirmed = true;
+        confirmBtn.disabled = true;
+        activeSelect.form.querySelector('input[name="reason"]').value = reason;
+        activeSelect.form.submit();
+    });
+})();
+</script>
+
     @include('owner.partials.campanias-form-validation-script', [
         'formSelectors' => ['#campania-form-create-modal', '#campania-form-update-modal'],
     ])

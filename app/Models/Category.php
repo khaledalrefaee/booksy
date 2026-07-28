@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasLocalizedNames;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /** Industry / business type for companies (not service catalog categories). */
 class Category extends Model
 {
+    use HasFactory;
     use HasLocalizedNames;
 
     protected $fillable = [

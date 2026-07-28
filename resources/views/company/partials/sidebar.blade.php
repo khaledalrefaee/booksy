@@ -1,421 +1,381 @@
 @php
     $authCompany = Auth::guard('company')->user();
     $sidebarBranches = $authCompany ? $authCompany->branches()->orderBy('sort_order')->get() : collect();
-    $currentBranchId = request()->route('branch')?->id;
-    $onBranchRoute = request()->routeIs('company.branches.show')
-        || request()->routeIs('company.branches.employees.*')
-        || request()->routeIs('company.branches.services.*')
-        || request()->routeIs('company.branches.working-hours.*')
-        || request()->routeIs('company.branches.gallery');
-    // Which branch sub-menu is open? The one matching current route, or none.
-    $openBranchId = $currentBranchId ?? null;
+    $routeBranch = request()->route('branch');
+    $selBranch = $routeBranch ?? $sidebarBranches->first();
+
+    // Which branch-scoped page is active (used for smart branch switching)
+    $activeBranchPage = request()->routeIs('company.branches.show') ? 'overview'
+        : (request()->routeIs('company.branches.services.*') ? 'services'
+        : (request()->routeIs('company.branches.employees.*') ? 'employees'
+        : (request()->routeIs('company.branches.working-hours.*') ? 'hours'
+        : (request()->routeIs('company.branches.gallery') ? 'gallery'
+        : (request()->routeIs('company.branches.cash.index') ? 'cash'
+        : (request()->routeIs('company.branches.cash.drawer.archive') ? 'archive' : null))))));
+
+    $branchData = $sidebarBranches->map(fn ($b) => [
+        'id'   => $b->id,
+        'name' => $b->localizedName(),
+        'urls' => [
+            'overview'  => route('company.branches.show', $b),
+            'services'  => route('company.branches.services.index', $b),
+            'employees' => route('company.branches.employees.index', $b),
+            'hours'     => route('company.branches.working-hours.edit', $b),
+            'gallery'   => route('company.branches.gallery', $b),
+            'cash'      => route('company.branches.cash.index', $b),
+            'archive'   => route('company.branches.cash.drawer.archive', $b),
+        ],
+    ])->values();
+
+    // Shared count from the layout when available (avoids a duplicate query)
+    $pendingCount = $bkPendingCount ?? 0;
+    if (!isset($bkPendingCount) && $authCompany) {
+        try {
+            $pendingCount = (int) $authCompany->branches()
+                ->withCount(['appointments as pc' => fn($q) => $q->where('status', 'pending')])
+                ->get()->sum('pc');
+        } catch (\Throwable $e) {}
+    }
+
+    // Which rail section owns the current route
+    if (request()->routeIs('company.branches.*')) {
+        $activeSection = 'branch';
+    } elseif (request()->routeIs('company.staff.*') || request()->routeIs('company.employee-leaves.*')
+        || request()->routeIs('company.attendance.*') || request()->routeIs('company.payroll.*')
+        || request()->routeIs('company.employees.payroll')
+        || (request()->routeIs('company.deductions.*') && !request()->routeIs('company.employees.deductions.*'))) {
+        $activeSection = 'team';
+    } elseif (request()->routeIs('company.cash.global') || request()->routeIs('company.invoices.*')
+        || request()->routeIs('company.recurring-expenses.*') || request()->routeIs('company.debts.*')
+        || request()->routeIs('company.inventory.*') || request()->routeIs('company.product-categories.*')) {
+        $activeSection = 'finance';
+    } elseif (request()->routeIs('company.reports.*') || request()->routeIs('company.activity-log.*')) {
+        $activeSection = 'reports';
+    } elseif (request()->routeIs('company.service-categories.*') || request()->routeIs('company.resources.*')
+        || request()->routeIs('company.profile.*')) {
+        $activeSection = 'settings';
+    } else {
+        $activeSection = 'home';
+    }
+
+    // Plan feature shortcuts (owner-controlled subscriptions)
+    $feat = fn (string $k) => $authCompany?->hasFeature($k) ?? false;
+
+    $railSections = [
+        'home'   => ['icon' => 'home',    'label' => __('Main')],
+        'branch' => ['icon' => 'map-pin', 'label' => __('Branch')],
+        'team'   => ['icon' => 'users',   'label' => __('Team')],
+    ];
+    if ($feat('finance') || $feat('inventory')) {
+        $railSections['finance'] = ['icon' => 'credit-card', 'label' => __('Finance')];
+    }
+    if ($feat('reports')) {
+        $railSections['reports'] = ['icon' => 'bar-chart-2', 'label' => __('Reports')];
+    }
+    $railSections['settings'] = ['icon' => 'settings', 'label' => __('Settings')];
 @endphp
 
-<style>
-.sidebar .sidebar-body .nav .nav-item.nav-category:not(:first-child) { margin-top: 6px !important; }
-.nav-link-sub {
-    padding-top: 7px !important;
-    padding-bottom: 7px !important;
-    padding-inline-start: 36px !important;
-    font-size: 13px !important;
-}
-.nav-link-sub .sub-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: rgba(255,255,255,.25);
-    flex-shrink: 0;
-    transition: background .2s, transform .2s;
-    margin-inline-end: 8px;
-}
-.nav-link-sub:hover .sub-dot,
-.nav-link-sub.active .sub-dot {
-    background: var(--primary, #667eea);
-    transform: scale(1.3);
-}
-.branch-collapse-toggle {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    padding: 9px 20px;
-    font-size: 13px;
-    font-weight: 600;
-    color: inherit;
-    background: none;
-    border: none;
-    cursor: pointer;
-    text-align: start;
-    border-radius: 6px;
-    transition: background .15s;
-    gap: 8px;
-    opacity: .75;
-}
-.branch-collapse-toggle:hover { background: rgba(255,255,255,.05); opacity:1; }
-.branch-collapse-toggle .caret {
-    margin-inline-start: auto;
-    transition: transform .2s;
-    opacity: .5;
-    flex-shrink: 0;
-}
-.branch-collapse-toggle[aria-expanded="true"] .caret { transform: rotate(180deg); }
-.branch-collapse-list { padding: 0; margin: 0; list-style: none; }
-</style>
-
-<nav class="sidebar">
+<nav class="sidebar bk-sidebar-v3">
     <div class="sidebar-header">
         <a href="{{ route('company.dashboard') }}" class="sidebar-brand">
             Booksy<span>.</span>
         </a>
-        <div class="sidebar-toggler not-active">
-            <span></span><span></span><span></span>
-        </div>
     </div>
 
-    <div class="sidebar-body">
-        <ul class="nav">
+    <div class="sidebar-body bk-sb">
 
-            {{-- ── Profile card ── --}}
-            <li class="nav-item" style="padding:0 8px 8px;">
-                <div style="
-                    display:flex;align-items:center;gap:10px;
-                    padding:12px 14px;border-radius:12px;
-                    background:rgba(201,162,39,.08);
-                    border:1px solid rgba(201,162,39,.15);
-                    margin-bottom:4px;">
-                    <div style="position:relative;flex-shrink:0;">
-                        @if($authCompany?->logo)
-                            <img src="{{ asset('storage/'.$authCompany->logo) }}"
-                                 style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(201,162,39,.4);" alt="">
-                        @else
-                            <img src="https://ui-avatars.com/api/?name={{ urlencode($authCompany?->localizedName() ?? 'Co') }}&size=36&background=C9A227&color=000&bold=true"
-                                 style="width:36px;height:36px;border-radius:50%;" alt="">
-                        @endif
-                        <span style="position:absolute;bottom:1px;right:1px;width:8px;height:8px;background:#2bcf7e;border-radius:50%;border:2px solid var(--sidebar-bg,#0c1427);"></span>
-                    </div>
-                    <div style="overflow:hidden;min-width:0;">
-                        <div style="font-size:.8rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $authCompany?->localizedName() }}</div>
-                        <div style="font-size:.65rem;color:#C9A227;font-weight:700;text-transform:uppercase;letter-spacing:.8px;">Business</div>
-                    </div>
-                </div>
-            </li>
+        {{-- ══ Icon rail ══ --}}
+        <div class="bk-rail" role="tablist" aria-label="{{ __('Main') }}">
+            @foreach($railSections as $key => $sec)
+            <button type="button"
+                    class="bk-rail-item {{ $activeSection === $key ? 'active' : '' }}"
+                    data-bk-section="{{ $key }}"
+                    data-tour="rail-{{ $key }}"
+                    role="tab" aria-selected="{{ $activeSection === $key ? 'true' : 'false' }}"
+                    title="{{ $sec['label'] }}">
+                <i data-feather="{{ $sec['icon'] }}"></i>
+                <span class="bk-rail-label">{{ $sec['label'] }}</span>
+                @if($key === 'home' && $pendingCount > 0)
+                    <span class="bk-rail-dot" aria-hidden="true"></span>
+                @endif
+            </button>
+            @endforeach
 
-            {{-- ══════════════════════════════════════ --}}
-            {{-- ── DAILY OPERATIONS ── --}}
-            {{-- ══════════════════════════════════════ --}}
-            <li class="nav-item nav-category">{{ __('Daily Operations') }}</li>
+            <div class="bk-rail-spacer"></div>
 
-            <li class="nav-item">
+            <a href="{{ route('company.profile.show') }}" class="bk-rail-me" title="{{ __('Profile') }}">
+                @if($authCompany?->logo)
+                    <img src="{{ asset('storage/'.$authCompany->logo) }}" alt="">
+                @else
+                    <img src="https://ui-avatars.com/api/?name={{ urlencode($authCompany?->localizedName() ?? 'Co') }}&size=34&background=4B5D34&color=FFFFFF&bold=true" alt="">
+                @endif
+            </a>
+        </div>
+
+        {{-- ══ Section panel ══ --}}
+        <div class="bk-panel">
+
+            {{-- Home --}}
+            <div class="bk-panel-sec {{ $activeSection === 'home' ? 'active' : '' }}" data-bk-panel="home">
+                <div class="bk-panel-title">{{ __('Daily Operations') }}</div>
                 <a href="{{ route('company.dashboard') }}"
-                   class="nav-link {{ request()->routeIs('company.dashboard') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="home"></i>
-                    <span class="link-title">{{ __('Dashboard') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.dashboard') ? 'active' : '' }}">
+                    <i data-feather="home"></i><span>{{ __('Dashboard') }}</span>
                 </a>
-            </li>
-
-            <li class="nav-item">
+                @feature('leaves')
+                <a href="{{ route('company.team-calendar') }}"
+                   class="bk-pl {{ request()->routeIs('company.team-calendar') ? 'active' : '' }}">
+                    <i data-feather="calendar"></i><span>{{ __('Calendar') }}</span>
+                </a>
+                @endfeature
                 <a href="{{ route('company.appointments.index') }}"
-                   class="nav-link {{ request()->routeIs('company.appointments.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="calendar"></i>
-                    <span class="link-title">{{ __('Appointments') }}</span>
-                    @php
-                        $pendingCount = 0;
-                        if ($authCompany) {
-                            try {
-                                $pendingCount = (int) $authCompany->branches()
-                                    ->withCount(['appointments as pc' => fn($q) => $q->where('status','pending')])
-                                    ->get()->sum('pc');
-                            } catch(\Throwable $e) {}
-                        }
-                    @endphp
+                   class="bk-pl {{ request()->routeIs('company.appointments.*') ? 'active' : '' }}">
+                    <i data-feather="check-square"></i><span>{{ __('Appointments') }}</span>
                     @if($pendingCount > 0)
                         <span class="bk-nav-badge">{{ $pendingCount > 99 ? '99+' : $pendingCount }}</span>
                     @endif
                 </a>
-            </li>
-
-            <li class="nav-item">
                 <a href="{{ route('company.customers.index') }}"
-                   class="nav-link {{ request()->routeIs('company.customers.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="users"></i>
-                    <span class="link-title">{{ __('Customers') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.customers.*') ? 'active' : '' }}">
+                    <i data-feather="users"></i><span>{{ __('Customers') }}</span>
                 </a>
-            </li>
+            </div>
 
-            <li class="nav-item">
-                <a href="#" class="nav-link" style="opacity:.45;cursor:not-allowed;" title="{{ __('Coming soon') }}">
-                    <i class="link-icon" data-feather="clock"></i>
-                    <span class="link-title">{{ __('Waitlist') }}</span>
-                    <span style="font-size:9px;font-weight:700;background:rgba(201,162,39,.15);color:#C9A227;padding:2px 7px;border-radius:20px;margin-inline-start:auto;">
-                        {{ __('Soon') }}
-                    </span>
-                </a>
-            </li>
+            {{-- Branch --}}
+            <div class="bk-panel-sec {{ $activeSection === 'branch' ? 'active' : '' }}" data-bk-panel="branch">
+                <div class="bk-panel-title">{{ __('Branch') }}</div>
 
-            {{-- ══════════════════════════════════════ --}}
-            {{-- ── BRANCHES ── --}}
-            {{-- ══════════════════════════════════════ --}}
-            <li class="nav-item nav-category">{{ __('Branches') }}</li>
-
-            <li class="nav-item">
-                <a href="{{ route('company.branches.index') }}"
-                   class="nav-link {{ request()->routeIs('company.branches.index') || request()->routeIs('company.branches.create') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="grid"></i>
-                    <span class="link-title">{{ __('All Branches') }}</span>
-                </a>
-            </li>
-
-            @foreach($sidebarBranches as $br)
-            @php
-                $brOpen = $openBranchId === $br->id;
-                $brId   = 'br-sub-' . $br->id;
-            @endphp
-            <li class="nav-item">
-                <button class="branch-collapse-toggle bk-branch-toggle"
-                        type="button"
-                        data-target="{{ $brId }}"
-                        aria-expanded="{{ $brOpen ? 'true' : 'false' }}">
-                    <i data-feather="map-pin" style="width:14px;height:14px;flex-shrink:0;opacity:.6;"></i>
-                    <span class="text-truncate">{{ $br->localizedName() }}</span>
-                    <i data-feather="chevron-down" class="caret" style="width:12px;height:12px;"></i>
+                <button type="button" class="bk-branch-switcher" id="bkBranchSwitcher" aria-expanded="false"
+                        aria-label="{{ __('Switch branch') }}">
+                    <i data-feather="map-pin" class="bk-bs-pin"></i>
+                    <span class="bk-bs-name" id="bkBranchName">{{ $selBranch?->localizedName() ?? __('All Branches') }}</span>
+                    <i data-feather="chevron-down" class="caret"></i>
                 </button>
-                <ul class="branch-collapse-list" id="{{ $brId }}"
-                    style="{{ $brOpen ? '' : 'display:none;' }}">
-                    <li class="nav-item">
-                        <a href="{{ route('company.branches.show', $br) }}"
-                           class="nav-link nav-link-sub {{ request()->routeIs('company.branches.show') && $brOpen ? 'active' : '' }}">
-                            <span class="sub-dot"></span>
-                            <span class="link-title">{{ __('Overview') }}</span>
+                <ul class="bk-branch-list" id="bkBranchList" style="display:none;">
+                    <li>
+                        <a href="{{ route('company.branches.index') }}"
+                           class="bk-branch-option bk-branch-option-all {{ request()->routeIs('company.branches.index') || request()->routeIs('company.branches.create') ? 'active' : '' }}">
+                            <i data-feather="grid"></i>
+                            <span>{{ __('All Branches') }}</span>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a href="{{ route('company.branches.services.index', $br) }}"
-                           class="nav-link nav-link-sub {{ request()->routeIs('company.branches.services.*') && $brOpen ? 'active' : '' }}">
-                            <span class="sub-dot"></span>
-                            <span class="link-title">{{ __('Services') }}</span>
-                        </a>
+                    @foreach($sidebarBranches as $br)
+                    <li>
+                        <button type="button"
+                                class="bk-branch-option {{ $selBranch && $selBranch->id === $br->id ? 'active' : '' }}"
+                                data-branch-id="{{ $br->id }}">
+                            <span class="bk-bo-dot"></span>
+                            <span class="text-truncate">{{ $br->localizedName() }}</span>
+                        </button>
                     </li>
-                    <li class="nav-item">
-                        <a href="{{ route('company.branches.employees.index', $br) }}"
-                           class="nav-link nav-link-sub {{ request()->routeIs('company.branches.employees.*') && $brOpen ? 'active' : '' }}">
-                            <span class="sub-dot"></span>
-                            <span class="link-title">{{ __('Employees') }}</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('company.branches.working-hours.edit', $br) }}"
-                           class="nav-link nav-link-sub {{ request()->routeIs('company.branches.working-hours.*') && $brOpen ? 'active' : '' }}">
-                            <span class="sub-dot"></span>
-                            <span class="link-title">{{ __('Working Hours') }}</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('company.branches.gallery', $br) }}"
-                           class="nav-link nav-link-sub {{ request()->routeIs('company.branches.gallery') && $brOpen ? 'active' : '' }}">
-                            <span class="sub-dot"></span>
-                            <span class="link-title">{{ __('Gallery') }}</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('company.branches.cash.index', $br) }}"
-                           class="nav-link nav-link-sub {{ request()->routeIs('company.branches.cash.index') && $brOpen ? 'active' : '' }}">
-                            <span class="sub-dot"></span>
-                            <span class="link-title">{{ __('Cash Register') }}</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('company.branches.cash.drawer.archive', $br) }}"
-                           class="nav-link nav-link-sub {{ request()->routeIs('company.branches.cash.drawer.archive') && $brOpen ? 'active' : '' }}">
-                            <span class="sub-dot"></span>
-                            <span class="link-title">{{ __('Drawer Archive') }}</span>
-                        </a>
-                    </li>
+                    @endforeach
                 </ul>
-            </li>
-            @endforeach
 
-            {{-- ══════════════════════════════════════ --}}
-            {{-- ── TEAM ── --}}
-            {{-- ══════════════════════════════════════ --}}
-            <li class="nav-item nav-category">{{ __('Team') }}</li>
+                @if($selBranch)
+                <a href="{{ route('company.branches.show', $selBranch) }}" data-bk-branch-link="overview"
+                   class="bk-pl {{ $activeBranchPage === 'overview' ? 'active' : '' }}">
+                    <i data-feather="layout"></i><span>{{ __('Overview') }}</span>
+                </a>
+                <a href="{{ route('company.branches.services.index', $selBranch) }}" data-bk-branch-link="services"
+                   data-tour="branch-services"
+                   class="bk-pl {{ $activeBranchPage === 'services' ? 'active' : '' }}">
+                    <i data-feather="scissors"></i><span>{{ __('Services') }}</span>
+                </a>
+                <a href="{{ route('company.branches.employees.index', $selBranch) }}" data-bk-branch-link="employees"
+                   data-tour="branch-employees"
+                   class="bk-pl {{ $activeBranchPage === 'employees' ? 'active' : '' }}">
+                    <i data-feather="users"></i><span>{{ __('Employees') }}</span>
+                </a>
+                <a href="{{ route('company.branches.working-hours.edit', $selBranch) }}" data-bk-branch-link="hours"
+                   class="bk-pl {{ $activeBranchPage === 'hours' ? 'active' : '' }}">
+                    <i data-feather="clock"></i><span>{{ __('Working Hours') }}</span>
+                </a>
+                <a href="{{ route('company.branches.gallery', $selBranch) }}" data-bk-branch-link="gallery"
+                   class="bk-pl {{ $activeBranchPage === 'gallery' ? 'active' : '' }}">
+                    <i data-feather="image"></i><span>{{ __('Gallery') }}</span>
+                </a>
+                @feature('finance')
+                <a href="{{ route('company.branches.cash.index', $selBranch) }}" data-bk-branch-link="cash"
+                   class="bk-pl {{ $activeBranchPage === 'cash' || $activeBranchPage === 'archive' ? 'active' : '' }}">
+                    <i data-feather="credit-card"></i><span>{{ __('Cash Register') }}</span>
+                </a>
+                @endfeature
+                @endif
+            </div>
 
-            <li class="nav-item">
+            {{-- Team --}}
+            <div class="bk-panel-sec {{ $activeSection === 'team' ? 'active' : '' }}" data-bk-panel="team">
+                <div class="bk-panel-title">{{ __('Team') }}</div>
                 <a href="{{ route('company.staff.index') }}"
-                   class="nav-link {{ request()->routeIs('company.staff.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="users"></i>
-                    <span class="link-title">{{ __('Staff Overview') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.staff.*') ? 'active' : '' }}">
+                    <i data-feather="users"></i><span>{{ __('Staff Overview') }}</span>
                 </a>
-            </li>
-
-            <li class="nav-item">
+                @feature('leaves')
                 <a href="{{ route('company.employee-leaves.index') }}"
-                   class="nav-link {{ request()->routeIs('company.employee-leaves.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="user-x"></i>
-                    <span class="link-title">{{ __('Leaves') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.employee-leaves.*') ? 'active' : '' }}">
+                    <i data-feather="user-x"></i><span>{{ __('Leaves') }}</span>
                 </a>
-            </li>
-
-            <li class="nav-item">
+                @endfeature
+                @feature('attendance')
                 <a href="{{ route('company.attendance.index') }}"
-                   class="nav-link {{ request()->routeIs('company.attendance.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="check-circle"></i>
-                    <span class="link-title">{{ __('Attendance') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.attendance.*') ? 'active' : '' }}">
+                    <i data-feather="check-circle"></i><span>{{ __('Attendance') }}</span>
                 </a>
-            </li>
-
-            <li class="nav-item">
+                @endfeature
+                @feature('payroll')
                 <a href="{{ route('company.deductions.index') }}"
-                   class="nav-link {{ request()->routeIs('company.deductions.*') && !request()->routeIs('company.employees.deductions.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="minus-circle"></i>
-                    <span class="link-title">{{ __('Deductions') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.deductions.*') && !request()->routeIs('company.employees.deductions.*') ? 'active' : '' }}">
+                    <i data-feather="minus-circle"></i><span>{{ __('Deductions') }}</span>
                 </a>
-            </li>
-
-            <li class="nav-item">
                 <a href="{{ route('company.payroll.index') }}"
-                   class="nav-link {{ request()->routeIs('company.payroll.*') || request()->routeIs('company.employees.payroll') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="dollar-sign"></i>
-                    <span class="link-title">{{ __('Payroll') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.payroll.*') || request()->routeIs('company.employees.payroll') ? 'active' : '' }}">
+                    <i data-feather="dollar-sign"></i><span>{{ __('Payroll') }}</span>
                 </a>
-            </li>
+                @endfeature
+            </div>
 
-            {{-- ══════════════════════════════════════ --}}
-            {{-- ── FINANCE ── --}}
-            {{-- ══════════════════════════════════════ --}}
-            <li class="nav-item nav-category">{{ __('Finance') }}</li>
-
-            <li class="nav-item">
+            {{-- Finance --}}
+            <div class="bk-panel-sec {{ $activeSection === 'finance' ? 'active' : '' }}" data-bk-panel="finance">
+                <div class="bk-panel-title">{{ __('Finance') }}</div>
+                @feature('finance')
                 <a href="{{ route('company.cash.global') }}"
-                   class="nav-link {{ request()->routeIs('company.cash.global') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="credit-card"></i>
-                    <span class="link-title">{{ __('Cash Registers') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.cash.global') ? 'active' : '' }}">
+                    <i data-feather="credit-card"></i><span>{{ __('Cash Registers') }}</span>
                 </a>
-            </li>
-
-            <li class="nav-item">
                 <a href="{{ route('company.invoices.index') }}"
-                   class="nav-link {{ request()->routeIs('company.invoices.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="file-text"></i>
-                    <span class="link-title">{{ __('Invoices') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.invoices.*') ? 'active' : '' }}">
+                    <i data-feather="file-text"></i><span>{{ __('Invoices') }}</span>
                 </a>
-            </li>
-
-            <li class="nav-item">
                 <a href="{{ route('company.recurring-expenses.index') }}"
-                   class="nav-link {{ request()->routeIs('company.recurring-expenses.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="repeat"></i>
-                    <span class="link-title">{{ __('Recurring Expenses') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.recurring-expenses.*') ? 'active' : '' }}">
+                    <i data-feather="repeat"></i><span>{{ __('Recurring Expenses') }}</span>
                 </a>
-            </li>
-
-            <li class="nav-item">
                 <a href="{{ route('company.debts.index') }}"
-                   class="nav-link {{ request()->routeIs('company.debts.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="alert-circle"></i>
-                    <span class="link-title">{{ __('Customer Debts') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.debts.*') ? 'active' : '' }}">
+                    <i data-feather="alert-circle"></i><span>{{ __('Customer Debts') }}</span>
                 </a>
-            </li>
-
-            <li class="nav-item">
+                @endfeature
+                @feature('inventory')
                 <a href="{{ route('company.inventory.index') }}"
-                   class="nav-link {{ request()->routeIs('company.inventory.*') || request()->routeIs('company.product-categories.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="package"></i>
-                    <span class="link-title">{{ __('Inventory') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.inventory.*') || request()->routeIs('company.product-categories.*') ? 'active' : '' }}">
+                    <i data-feather="package"></i><span>{{ __('Inventory') }}</span>
                 </a>
-            </li>
+                @endfeature
+            </div>
 
-            {{-- ══════════════════════════════════════ --}}
-            {{-- ── REPORTS & SETTINGS ── --}}
-            {{-- ══════════════════════════════════════ --}}
-            <li class="nav-item nav-category">{{ __('Reports') }}</li>
-
-            <li class="nav-item">
-                <a href="{{ route('company.activity-log.index') }}"
-                   class="nav-link {{ request()->routeIs('company.activity-log.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="shield"></i>
-                    <span class="link-title">{{ __('Activity Log') }}</span>
-                </a>
-            </li>
-
-            <li class="nav-item">
+            {{-- Reports --}}
+            <div class="bk-panel-sec {{ $activeSection === 'reports' ? 'active' : '' }}" data-bk-panel="reports">
+                <div class="bk-panel-title">{{ __('Reports') }}</div>
                 <a href="{{ route('company.reports.profit-loss') }}"
-                   class="nav-link {{ request()->routeIs('company.reports.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="bar-chart-2"></i>
-                    <span class="link-title">{{ __('Reports') }}</span>
-                    <span style="font-size:9px;font-weight:700;background:rgba(34,197,94,.2);color:#22c55e;padding:2px 7px;border-radius:20px;margin-inline-start:auto;">
-                        {{ __('Soon') }}
-                    </span>
+                   class="bk-pl {{ request()->routeIs('company.reports.*') ? 'active' : '' }}">
+                    <i data-feather="bar-chart-2"></i><span>{{ __('Reports') }}</span>
                 </a>
-            </li>
-
-            <li class="nav-item nav-category">{{ __('Settings') }}</li>
-
-            <li class="nav-item">
-                <a href="{{ route('company.service-categories.index') }}"
-                   class="nav-link {{ request()->routeIs('company.service-categories.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="tag"></i>
-                    <span class="link-title">{{ __('Service categories') }}</span>
+                <a href="{{ route('company.activity-log.index') }}"
+                   class="bk-pl {{ request()->routeIs('company.activity-log.*') ? 'active' : '' }}">
+                    <i data-feather="shield"></i><span>{{ __('Activity Log') }}</span>
                 </a>
-            </li>
+            </div>
 
-            <li class="nav-item">
+            {{-- Settings --}}
+            <div class="bk-panel-sec {{ $activeSection === 'settings' ? 'active' : '' }}" data-bk-panel="settings">
+                <div class="bk-panel-title">{{ __('Settings') }}</div>
+                <a href="{{ route('company.service-categories.index') }}" data-tour="svc-cats"
+                   class="bk-pl {{ request()->routeIs('company.service-categories.*') ? 'active' : '' }}">
+                    <i data-feather="tag"></i><span>{{ __('Service categories') }}</span>
+                </a>
+                <a href="{{ route('company.resources.index') }}"
+                   class="bk-pl {{ request()->routeIs('company.resources.*') ? 'active' : '' }}">
+                    <i data-feather="grid"></i><span>{{ __('Resources & rooms') }}</span>
+                </a>
                 <a href="{{ route('company.profile.show') }}"
-                   class="nav-link {{ request()->routeIs('company.profile.*') ? 'active' : '' }}">
-                    <i class="link-icon" data-feather="settings"></i>
-                    <span class="link-title">{{ __('Profile') }}</span>
+                   class="bk-pl {{ request()->routeIs('company.profile.*') ? 'active' : '' }}">
+                    <i data-feather="settings"></i><span>{{ __('Profile') }}</span>
                 </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="{{ $authCompany ? route('front.show', $authCompany) : '#' }}" target="_blank" class="nav-link" style="opacity:.55;">
-                    <i class="link-icon" data-feather="external-link"></i>
-                    <span class="link-title">{{ __('View public page') }}</span>
+                <div class="bk-panel-divider"></div>
+                <a href="{{ $authCompany ? route('front.show', $authCompany) : '#' }}" target="_blank" class="bk-pl bk-pl-muted">
+                    <i data-feather="external-link"></i><span>{{ __('View public page') }}</span>
                 </a>
-            </li>
+            </div>
 
-        </ul>
-    </div>
-</nav>
-
-<nav class="settings-sidebar">
-    <div class="sidebar-body">
-        <a href="#" class="settings-sidebar-toggler">
-            <i data-feather="settings"></i>
-        </a>
-        @php($companyTheme = $companyTheme ?? request()->cookie('company_theme', 'dark'))
-        <div class="theme-wrapper">
-            <h6 class="text-muted mb-2">{{ __('Light') }}:</h6>
-            <a class="theme-item{{ $companyTheme === 'light' ? ' active' : '' }}"
-               href="{{ route('company.theme', ['mode' => 'light']) }}" role="button">
-                <img src="{{ asset('backend/assets/images/screenshots/light.jpg') }}" alt="">
-            </a>
-            <h6 class="text-muted mb-2 mt-2">{{ __('Dark') }}:</h6>
-            <a class="theme-item{{ $companyTheme === 'dark' ? ' active' : '' }}"
-               href="{{ route('company.theme', ['mode' => 'dark']) }}" role="button">
-                <img src="{{ asset('backend/assets/images/screenshots/dark.jpg') }}" alt="">
-            </a>
         </div>
     </div>
 </nav>
 
 <script>
-document.querySelectorAll('.bk-branch-toggle').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        var targetId = this.dataset.target;
-        var list = document.getElementById(targetId);
-        var open = this.getAttribute('aria-expanded') === 'true';
+(function () {
+    var BRANCHES    = @json($branchData);
+    var ACTIVE_PAGE = @json($activeBranchPage);
+    var ON_BRANCH_ROUTE = @json((bool) $routeBranch);
+    var STORE_BRANCH = 'bk-current-branch';
 
-        // Close all other branch sub-menus
-        document.querySelectorAll('.bk-branch-toggle').forEach(function(b) {
-            if (b !== btn) {
-                b.setAttribute('aria-expanded', 'false');
-                var otherList = document.getElementById(b.dataset.target);
-                if (otherList) otherList.style.display = 'none';
-            }
+    // ── Rail → panel switching ──
+    function showSection(key) {
+        document.querySelectorAll('.bk-rail-item').forEach(function (b) {
+            var on = b.dataset.bkSection === key;
+            b.classList.toggle('active', on);
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
         });
+        document.querySelectorAll('.bk-panel-sec').forEach(function (p) {
+            p.classList.toggle('active', p.dataset.bkPanel === key);
+        });
+    }
+    window.bkShowSection = showSection;
 
-        // Toggle this one
-        this.setAttribute('aria-expanded', open ? 'false' : 'true');
-        if (list) list.style.display = open ? 'none' : '';
+    document.querySelectorAll('.bk-rail-item').forEach(function (btn) {
+        btn.addEventListener('click', function () { showSection(this.dataset.bkSection); });
     });
-});
+
+    // ── Branch switcher ──
+    function branchById(id) {
+        for (var i = 0; i < BRANCHES.length; i++) {
+            if (String(BRANCHES[i].id) === String(id)) return BRANCHES[i];
+        }
+        return null;
+    }
+
+    function applyBranch(br, clearActive) {
+        var nameEl = document.getElementById('bkBranchName');
+        if (nameEl) nameEl.textContent = br.name;
+        document.querySelectorAll('[data-bk-branch-link]').forEach(function (a) {
+            var key = a.getAttribute('data-bk-branch-link');
+            if (br.urls[key]) a.href = br.urls[key];
+            if (clearActive) a.classList.remove('active');
+        });
+        document.querySelectorAll('.bk-branch-option[data-branch-id]').forEach(function (b) {
+            b.classList.toggle('active', String(b.dataset.branchId) === String(br.id));
+        });
+    }
+
+    var switcher = document.getElementById('bkBranchSwitcher');
+    var list     = document.getElementById('bkBranchList');
+    if (switcher && list) {
+        switcher.addEventListener('click', function () {
+            var open = switcher.getAttribute('aria-expanded') === 'true';
+            switcher.setAttribute('aria-expanded', open ? 'false' : 'true');
+            list.style.display = open ? 'none' : '';
+        });
+        list.querySelectorAll('.bk-branch-option[data-branch-id]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var br = branchById(this.dataset.branchId);
+                if (!br) return;
+                try { localStorage.setItem(STORE_BRANCH, br.id); } catch (e) {}
+                if (ACTIVE_PAGE && br.urls[ACTIVE_PAGE]) {
+                    window.location.href = br.urls[ACTIVE_PAGE];
+                    return;
+                }
+                applyBranch(br, true);
+                switcher.setAttribute('aria-expanded', 'false');
+                list.style.display = 'none';
+            });
+        });
+        // Restore remembered branch (only when not already on a branch-scoped page)
+        if (!ON_BRANCH_ROUTE) {
+            try {
+                var saved = localStorage.getItem(STORE_BRANCH);
+                var br = saved && branchById(saved);
+                if (br) applyBranch(br, false);
+            } catch (e) {}
+        }
+    }
+})();
 </script>

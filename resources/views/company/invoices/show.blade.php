@@ -51,7 +51,7 @@
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
 
                 {{-- Invoice "stamp" header --}}
-                <div class="p-4 pb-3" style="background:linear-gradient(135deg,rgba(201,162,39,.08),transparent);border-bottom:1px solid rgba(255,255,255,.06);">
+                <div class="p-4 pb-3" style="background:linear-gradient(135deg,rgba(75,93,52,.08),transparent);border-bottom:1px solid rgba(255,255,255,.06);">
                     <div class="d-flex justify-content-between align-items-start gap-3">
                         <div>
                             <p class="text-muted tx-11 text-uppercase fw-bold mb-1" style="letter-spacing:.8px;">
@@ -77,7 +77,8 @@
 
                 {{-- Line items --}}
                 <div class="p-4">
-                    <table class="table mb-0" style="font-size:.84rem;">
+                    <div class="table-responsive">
+                    <table class="table mb-0" style="font-size:.84rem;min-width:480px;">
                         <thead>
                             <tr>
                                 <th class="ps-0">{{ __('Service / Item') }}</th>
@@ -119,13 +120,14 @@
                             @endif
                             <tr class="border-top">
                                 <td colspan="3" class="text-end ps-0 pt-3 fw-bold" style="font-size:1rem;">{{ __('Total') }}</td>
-                                <td class="text-end pe-0 pt-3 fw-bold" style="font-size:1.1rem;color:#C9A227;">
+                                <td class="text-end pe-0 pt-3 fw-bold" style="font-size:1.1rem;color:var(--bk-accent);">
                                     {{ number_format((float)$invoice->total, 2) }}
                                     <span class="tx-13 fw-normal text-muted">{{ $invoice->currency }}</span>
                                 </td>
                             </tr>
                         </tfoot>
                     </table>
+                    </div>
                 </div>
 
                 @if($invoice->notes)
@@ -205,46 +207,24 @@
             </div>
         </div>
     </div>
-</div>
-
-{{-- Void Modal --}}
-<div class="modal fade" id="voidModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">{{ __('Void invoice') }}?</h5>
-                <button class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-muted tx-13 pt-2">
-                {{ __('This will permanently mark the invoice as void. This action cannot be undone.') }}
-            </div>
-            <div class="modal-footer border-0">
-                <button class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                <form method="POST" action="{{ route('company.invoices.void', $invoice) }}">
-                    @csrf @method('PATCH')
-                    <button class="btn btn-danger rounded-pill px-4">{{ __('Void') }}</button>
-                </form>
-            </div>
-        </div>
-    </div>
 
     {{-- Payment Tracking --}}
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
+    <div class="row g-4 mt-0">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
                     <h6 class="fw-bold mb-3">💰 {{ __('Invoice Payments') }}</h6>
 
                     @if($invoice->remaining > 0 && !in_array($invoice->status, ['paid', 'void', 'refunded']))
                         <form method="POST" action="{{ route('company.invoices.pay', $invoice) }}" class="mb-3 p-3 rounded" style="background:var(--bs-tertiary-bg);">
                             @csrf
                             <div class="row g-2 align-items-end">
-                                <div class="col-4">
+                                <div class="col-6 col-sm-4">
                                     <label class="form-label small fw-semibold">{{ __('Amount') }}</label>
                                     <input type="number" step="0.01" name="amount" value="{{ $invoice->remaining }}"
                                         max="{{ $invoice->remaining }}" min="0.01" class="form-control form-control-sm" required>
                                 </div>
-                                <div class="col-3">
+                                <div class="col-6 col-sm-3">
                                     <label class="form-label small fw-semibold">{{ __('Method') }}</label>
                                     <select name="payment_method" class="form-select form-select-sm" required>
                                         <option value="cash">{{ __('Cash') }}</option>
@@ -252,11 +232,11 @@
                                         <option value="transfer">{{ __('Bank transfer') }}</option>
                                     </select>
                                 </div>
-                                <div class="col-3">
+                                <div class="col-8 col-sm-3">
                                     <label class="form-label small fw-semibold">{{ __('Notes') }}</label>
                                     <input type="text" name="notes" class="form-control form-control-sm">
                                 </div>
-                                <div class="col-2">
+                                <div class="col-4 col-sm-2">
                                     <button class="btn btn-sm btn-success w-100">{{ __('Pay') }}</button>
                                 </div>
                             </div>
@@ -267,7 +247,8 @@
                     @endif
 
                     @if($invoice->payments && $invoice->payments->count())
-                        <table class="table table-sm mb-0">
+                        <div class="table-responsive">
+                        <table class="table table-sm mb-0" style="min-width:420px;">
                             <thead>
                                 <tr>
                                     <th>{{ __('Date') }}</th>
@@ -287,6 +268,7 @@
                                 @endforeach
                             </tbody>
                         </table>
+                        </div>
                     @else
                         <p class="text-muted text-center small mb-0">{{ __('No payments yet.') }}</p>
                     @endif
@@ -294,8 +276,8 @@
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="card">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-body text-center py-4">
                     <div class="mb-2 text-muted small">{{ __('Total') }}</div>
                     <div class="fs-4 fw-bold">{{ number_format($invoice->total, 0) }} {{ $invoice->currency }}</div>
@@ -310,6 +292,28 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Void Modal --}}
+<div class="modal fade" id="voidModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">{{ __('Void invoice') }}?</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-muted tx-13 pt-2">
+                {{ __('This will permanently mark the invoice as void. This action cannot be undone.') }}
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                <form method="POST" action="{{ route('company.invoices.void', $invoice) }}">
+                    @csrf @method('PATCH')
+                    <button class="btn btn-danger rounded-pill px-4">{{ __('Void') }}</button>
+                </form>
             </div>
         </div>
     </div>

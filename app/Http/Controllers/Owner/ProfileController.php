@@ -34,7 +34,13 @@ class ProfileController extends Controller
             unset($data['password']);
         }
 
-        $owner->update($data);
+        $passwordChanged = array_key_exists('password', $data);
+        $owner->fill($data);
+        \App\Services\Owner\OwnerAudit::recordChanges(
+            $passwordChanged ? 'profile.updated.password-changed' : 'profile.updated',
+            $owner
+        );
+        $owner->save();
 
         return back()->with('success', __('Profile updated successfully.'));
     }

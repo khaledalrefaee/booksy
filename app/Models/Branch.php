@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasLocalizedNames;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,6 +12,7 @@ use Illuminate\Support\Str;
 
 class Branch extends Model
 {
+    use HasFactory;
     use HasLocalizedNames;
 
     protected static function booted(): void
@@ -51,6 +53,9 @@ class Branch extends Model
         'landlines',
         'qr_code',
         'overpayment_to',
+        'loyalty_points_per_visit',
+        'loyalty_points_per_extra_service',
+        'loyalty_points_per_currency_unit',
     ];
 
     public function isMarketplace(): bool { return $this->booking_mode === 'marketplace'; }
@@ -163,6 +168,11 @@ class Branch extends Model
     public function appointments(): HasMany
     {
         return $this->hasMany(Appointment::class);
+    }
+
+    public function resources(): HasMany
+    {
+        return $this->hasMany(Resource::class)->orderBy('sort_order')->orderBy('name_en');
     }
 
     public function waitlistEntries(): HasMany

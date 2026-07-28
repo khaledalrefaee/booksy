@@ -292,6 +292,17 @@
                     </select>
                 </div>
 
+                {{-- Seller (for product sales commission) --}}
+                <div class="mb-3">
+                    <label class="form-label fw-semibold tx-13">🧑‍💼 {{ __('Sold by') }} <span class="text-muted fw-normal tx-11">({{ __('for commission') }})</span></label>
+                    <select name="sold_by_employee_id" class="form-select">
+                        <option value="">{{ __('Not attributed') }}</option>
+                        @foreach(\App\Models\Employee::where('company_id', auth()->guard('company')->id())->where('is_active', true)->orderBy('name_en')->get(['id','name_en','name_ar']) as $seller)
+                            <option value="{{ $seller->id }}">{{ $seller->localizedName() }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <div class="p-2 rounded text-center fw-bold fs-5" style="background:var(--bs-tertiary-bg);" id="slTotal"></div>
             </div>
             <div class="modal-footer border-0 pt-0">

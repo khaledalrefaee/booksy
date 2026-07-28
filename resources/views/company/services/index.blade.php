@@ -2,1334 +2,461 @@
 
 @push('company-styles')
 <style>
-/* Ensure modal content uses theme background */
-#svc-offcanvas .modal-content {
-    background-color: var(--bs-body-bg, #1e2130);
-    color: var(--bs-body-color, #e0e0e0);
-}
-#svc-offcanvas .modal-header { border-color: rgba(255,255,255,.08) !important; }
-.bk-theme-light #svc-offcanvas .modal-content { background-color: #fff; color: #212529; }
-.bk-theme-light #svc-offcanvas .modal-header  { border-color: rgba(0,0,0,.1) !important; }
+/* ═══════════════════════════════════════════════════════════════════════
+   SERVICES WORKBENCH
+   ═══════════════════════════════════════════════════════════════════════ */
+.wb { --wb-line: rgba(255,255,255,.08); --wb-soft: rgba(255,255,255,.04);
+      --wb-hover: rgba(255,255,255,.05); --wb-muted: rgba(255,255,255,.55); }
+.bk-theme-light .wb { --wb-line: rgba(0,0,0,.09); --wb-soft: rgba(0,0,0,.02);
+      --wb-hover: rgba(0,0,0,.03); --wb-muted: rgba(0,0,0,.5); }
 
-/* ── Discount date/time picker ─────────────────────────────── */
-.disc-dt-group {
-    border-radius: 12px;
-    border: 1.5px solid rgba(255,255,255,.08);
-    padding: 11px 12px 10px;
-    transition: border-color .18s;
-}
-.bk-theme-light .disc-dt-group { border-color: rgba(0,0,0,.1); }
-.disc-dt-group.has-error { border-color: #e53935 !important; }
+/* ── Toolbar ─────────────────────────────────────────────────────────── */
+.wb-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:18px; }
+.wb-search { position:relative; flex:1 1 220px; max-width:340px; min-width:160px; }
+.wb-search input { padding-inline-start:36px; }
+.wb-search svg { position:absolute; inset-inline-start:12px; top:50%; transform:translateY(-50%);
+      width:15px; height:15px; opacity:.5; pointer-events:none; }
+.wb-viewtoggle { display:inline-flex; border:1px solid var(--wb-line); border-radius:10px; overflow:hidden; }
+.wb-viewtoggle button { border:0; background:transparent; padding:7px 11px; color:var(--wb-muted);
+      display:flex; align-items:center; cursor:pointer; transition:.15s; }
+.wb-viewtoggle button.active { background:var(--bk-accent); color:#fff; }
 
-.disc-dt-header {
-    display: flex; align-items: center; gap: 5px;
-    font-size: 11px; font-weight: 700; margin-bottom: 9px;
-    text-transform: uppercase; letter-spacing: .4px;
-}
+/* ── Layout: rail + main ─────────────────────────────────────────────── */
+.wb-grid { display:grid; grid-template-columns:238px 1fr; gap:20px; align-items:start; }
+@media (max-width:900px){ .wb-grid { grid-template-columns:1fr; } .wb-rail { display:none; } }
 
-.disc-dt-field {
-    display: flex; align-items: center; gap: 7px;
-    background: rgba(255,255,255,.05);
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 8px; padding: 5px 9px;
-    margin-bottom: 6px;
-}
-.bk-theme-light .disc-dt-field {
-    background: rgba(0,0,0,.03); border-color: rgba(0,0,0,.09);
-}
-.disc-dt-field:last-child { margin-bottom: 0; }
-.disc-dt-field svg { flex-shrink: 0; opacity: .45; }
+.wb-rail { position:sticky; top:12px; border:1px solid var(--wb-line); border-radius:16px;
+      padding:10px; background:var(--wb-soft); }
+.wb-rail-head { display:flex; align-items:center; justify-content:space-between; padding:4px 6px 8px;
+      font-size:11px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--wb-muted); }
+.wb-cat { display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:10px; cursor:pointer;
+      font-size:13px; transition:background .14s; user-select:none; }
+.wb-cat:hover { background:var(--wb-hover); }
+.wb-cat.active { background:rgba(75,93,52,.14); color:var(--bk-accent); font-weight:700; }
+.wb-cat .dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.wb-cat .nm { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.wb-cat .ct { font-size:11px; font-weight:700; padding:1px 8px; border-radius:20px;
+      background:var(--wb-hover); color:var(--wb-muted); }
+.wb-cat .grip { opacity:0; cursor:grab; width:13px; height:13px; }
+.wb-cat:hover .grip { opacity:.4; }
+.wb-cat-add { display:flex; align-items:center; gap:7px; padding:8px 10px; margin-top:4px; font-size:12.5px;
+      color:var(--bk-accent); cursor:pointer; border-radius:10px; font-weight:600; }
+.wb-cat-add:hover { background:var(--wb-hover); }
 
-.disc-dt-field input[type="date"],
-.disc-dt-field input[type="time"] {
-    background: transparent !important;
-    border: none !important; box-shadow: none !important;
-    outline: none !important; padding: 0 !important;
-    font-size: 12px; width: 100%; color: inherit;
-    color-scheme: dark;
-}
-.bk-theme-light .disc-dt-field input[type="date"],
-.bk-theme-light .disc-dt-field input[type="time"] { color-scheme: light; }
+/* ── List (dense) ────────────────────────────────────────────────────── */
+.wb-catblock { margin-bottom:18px; }
+.wb-cathead { display:flex; align-items:center; gap:10px; padding:6px 4px 10px; }
+.wb-cathead .caret { cursor:pointer; display:flex; transition:transform .18s; opacity:.6; }
+.wb-cathead.collapsed .caret { transform:rotate(-90deg); }
+.wb-cathead .dot { width:10px; height:10px; border-radius:50%; }
+.wb-cathead .nm { font-weight:800; font-size:14px; }
+.wb-cathead .ct { font-size:11px; font-weight:700; padding:1px 8px; border-radius:20px;
+      background:var(--wb-hover); color:var(--wb-muted); }
 
-.disc-dt-err {
-    display: none; align-items: center; gap: 4px;
-    margin-top: 5px; font-size: 11px; color: #e53935;
+.wb-rows { display:flex; flex-direction:column; gap:6px; }
+.wb-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+      padding:10px 12px; border:1px solid var(--wb-line); border-radius:12px;
+      background:var(--wb-soft); transition:background .14s, box-shadow .14s, opacity .2s, transform .2s; }
+.wb-row .c-check, .wb-row .c-grip, .wb-row .c-active, .wb-row .c-actions { flex:0 0 auto; }
+.wb-row .c-name { flex:1 1 190px; min-width:0; }
+.wb-row .c-cat  { flex:0 0 122px; }
+.wb-row .c-price{ flex:0 0 116px; text-align:end; }
+.wb-row .c-dur  { flex:0 0 82px; }
+.wb-row .c-actions { margin-inline-start:auto; }
+@media (max-width:640px){
+    .wb-row { gap:6px 10px; }
+    .wb-row .c-grip { display:none; }
+    .wb-row .c-name { flex:1 1 100%; order:1; }
+    .wb-row .c-check { order:0; }
+    .wb-row .c-active { order:0; margin-inline-start:auto; }
+    .wb-row .c-actions { order:0; margin-inline-start:4px; }
+    .wb-row .c-cat  { flex:0 0 auto; order:2; }
+    .wb-row .c-price{ flex:0 0 auto; order:2; text-align:start; }
+    .wb-row .c-dur  { flex:0 0 auto; order:2; margin-inline-start:auto; }
 }
-.disc-dt-err.show { display: flex; }
-/* ── Service card ─────────────────────────────────────── */
-.svc-card {
-    transition: transform .22s cubic-bezier(.22,1,.36,1), box-shadow .22s;
-    height: 100%;
-}
-.svc-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 36px rgba(0,0,0,.25) !important;
-}
+.wb-row:hover { background:var(--wb-hover); }
+.wb-row.sel { border-color:var(--bk-accent); background:rgba(75,93,52,.09); }
+.wb-row.flash { animation:wbflash .9s ease; }
+@keyframes wbflash { 0%{ background:rgba(43,207,126,.28);} 100%{ background:var(--wb-soft);} }
+.wb-row .grip { cursor:grab; opacity:.35; display:flex; justify-content:center; }
+.wb-row .grip:active { cursor:grabbing; }
 
-/* Category dot */
-.svc-cat-dot {
-    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-    display: inline-block;
-}
+.wb-name { min-width:0; }
+.wb-name .t1 { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.wb-name .nm { font-weight:700; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.wb-name .ar { font-size:11.5px; color:var(--wb-muted); direction:rtl; }
+.wb-badges { display:inline-flex; gap:5px; flex-wrap:wrap; }
+.wb-tag { font-size:9.5px; font-weight:800; letter-spacing:.3px; text-transform:uppercase;
+      padding:2px 7px; border-radius:20px; display:inline-flex; align-items:center; gap:3px; }
+.tag-type { background:var(--wb-hover); color:var(--wb-muted); }
+.tag-pkg  { background:rgba(139,92,246,.16); color:#a78bfa; }
+.tag-mem  { background:rgba(59,187,212,.16); color:#3dbbd4; }
+.tag-add  { background:rgba(244,166,66,.16); color:#f4a642; }
+.tag-con  { background:rgba(43,207,126,.16); color:#2bcf7e; }
+.tag-pop  { background:rgba(236,72,153,.15); color:#ec4899; }
+.tag-rec  { background:rgba(75,93,52,.16); color:var(--bk-accent); }
+.tag-off  { background:rgba(255,255,255,.06); color:var(--wb-muted); }
+.bk-theme-light .tag-off { background:rgba(0,0,0,.05); }
+.tag-sale { background:rgba(229,57,53,.15); color:#e53935; }
 
-/* Price display */
-.svc-price-final  { font-weight: 800; font-size: 16px; }
-.svc-price-orig   { font-size: 12px; text-decoration: line-through; opacity: .45; }
-.svc-sale-badge {
-    display: inline-flex; align-items: center;
-    font-size: 10px; font-weight: 700;
-    padding: 2px 7px; border-radius: 20px;
-    background: rgba(229,57,53,.15); color: #e53935;
-}
-.bk-theme-light .svc-sale-badge { background: rgba(229,57,53,.1); color: #c62828; }
+.wb-cat-cell { font-size:12px; color:var(--wb-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.wb-price { font-weight:800; font-size:13.5px; white-space:nowrap; }
+.wb-price .cur { font-size:10px; font-weight:600; opacity:.7; }
+.wb-price .orig { display:block; font-size:10.5px; text-decoration:line-through; opacity:.45; font-weight:600; }
+.wb-price.sale { color:#e53935; }
+.wb-dur { font-size:12px; color:var(--wb-muted); white-space:nowrap; display:inline-flex; align-items:center; gap:4px; }
+.wb-cell-edit { cursor:text; border-radius:6px; padding:2px 5px; margin:-2px -5px; transition:background .12s; }
+.wb-cell-edit:hover { background:var(--wb-hover); box-shadow:inset 0 0 0 1px var(--wb-line); }
+.wb-inline-input { width:100%; border:1px solid var(--bk-accent); border-radius:6px; padding:3px 6px;
+      font-size:13px; background:var(--bs-body-bg,#1e2130); color:inherit; }
 
-/* Duration pill */
-.svc-dur {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 11px; border-radius: 20px;
-    padding: 3px 9px;
-    background: rgba(255,255,255,.07);
-    color: rgba(255,255,255,.55);
-}
-.bk-theme-light .svc-dur {
-    background: rgba(0,0,0,.06); color: rgba(0,0,0,.5);
-}
+/* action menu */
+.wb-actions { position:relative; display:flex; justify-content:flex-end; }
+.wb-iconbtn { border:0; background:transparent; color:var(--wb-muted); cursor:pointer; padding:5px;
+      border-radius:8px; display:flex; }
+.wb-iconbtn:hover { background:var(--wb-hover); color:inherit; }
 
-/* Filter toolbar */
-.svc-toolbar {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-    margin-bottom: 24px;
-}
+/* checkbox + toggle */
+.wb-check { width:17px; height:17px; cursor:pointer; accent-color:var(--bk-accent); }
+.wb-row .form-switch { margin:0; min-height:auto; padding-inline-start:2.4em; }
 
+/* ── Card view ───────────────────────────────────────────────────────── */
+.wb-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; }
+.wb-card { border:1px solid var(--wb-line); border-radius:16px; overflow:hidden; background:var(--wb-soft);
+      display:flex; flex-direction:column; transition:transform .18s, box-shadow .18s; }
+.wb-card:hover { transform:translateY(-3px); box-shadow:0 12px 30px rgba(0,0,0,.22); }
+.wb-card.sel { border-color:var(--bk-accent); }
+.wb-card-icon { height:104px; position:relative; display:flex; align-items:center; justify-content:center; }
+.wb-card-body { padding:13px 14px; display:flex; flex-direction:column; gap:9px; flex:1; }
+.wb-card-body .nm { font-weight:700; font-size:14px; }
+/* Type-icon tile that replaces per-service images in the list */
+.wb-typeicon { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px;
+      border-radius:9px; flex-shrink:0; }
+.wb-row .c-name .t1 { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.wb-row .c-name .ar { padding-inline-start:39px; }
 
-/* Discount type labels */
-.dtype-label {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; border-radius: 10px;
-    border: 1.5px solid rgba(255,255,255,.1);
-    cursor: pointer; flex: 1; transition: all .18s;
-    font-size: 12px;
-}
-.bk-theme-light .dtype-label { border-color: rgba(0,0,0,.12); }
-.dtype-label.selected {
-    border-color: #C9A227 !important;
-    background: rgba(201,162,39,.1) !important;
-}
-.dtype-label .dtype-icon {
-    width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(255,255,255,.06);
-}
-.bk-theme-light .dtype-label .dtype-icon { background: rgba(0,0,0,.05); }
+/* ── Bulk bar ────────────────────────────────────────────────────────── */
+.wb-bulkbar { position:fixed; inset-inline:0; bottom:0; z-index:1045; display:flex; justify-content:center;
+      padding:0 14px 18px; pointer-events:none; transform:translateY(140%); transition:transform .28s cubic-bezier(.22,1,.36,1); }
+.wb-bulkbar.show { transform:translateY(0); }
+.wb-bulkbar-inner { pointer-events:auto; display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:center;
+      background:var(--bs-body-bg,#20232f); border:1px solid var(--wb-line); box-shadow:0 18px 50px rgba(0,0,0,.4);
+      border-radius:16px; padding:10px 12px; max-width:calc(100vw - 24px); }
+.bk-theme-light .wb-bulkbar-inner { background:#fff; }
+.wb-bulkbar .cnt { font-weight:800; font-size:13px; padding:5px 12px; border-radius:20px;
+      background:rgba(75,93,52,.15); color:var(--bk-accent); white-space:nowrap; }
+.wb-bulkbar .btn { font-size:12.5px; }
 
-/* Discount preview */
-#discount-preview {
-    border-radius: 10px; padding: 8px 12px;
-    background: rgba(229,57,53,.07);
-    border: 1px dashed rgba(229,57,53,.3);
-    font-size: 12px;
+/* ── Drawer ──────────────────────────────────────────────────────────── */
+/* The app's compiled Bootstrap build omits the .offcanvas component styles,
+   so we ship a self-contained, RTL-aware offcanvas here. Without this the
+   drawer renders inline in the page flow (visible on load, under the sidebar). */
+#wb-drawer {
+    position: fixed; top: 0; bottom: 0; inset-inline-end: 0;
+    width: 560px; max-width: 100vw;
+    display: flex; flex-direction: column;
+    background: var(--bs-body-bg, #1e2130); color: var(--bs-body-color, #e0e0e0);
+    box-shadow: 0 0 60px rgba(0,0,0,.5);
+    z-index: 1090; visibility: hidden;
+    transform: translateX(100%);
+    /* visibility flips to hidden only AFTER the slide-out finishes */
+    transition: transform .32s cubic-bezier(.22,1,.36,1), visibility 0s .32s;
+    outline: 0;
 }
+[dir="rtl"] #wb-drawer { transform: translateX(-100%); }        /* inline-end = left in RTL */
+/* Driven by our own .wb-open class (not Bootstrap's offcanvas JS, which the app build lacks).
+   RTL-scoped + !important so it decisively beats [dir="rtl"] #wb-drawer and any app CSS. */
+#wb-drawer.wb-open,
+[dir="rtl"] #wb-drawer.wb-open {
+    visibility: visible !important; transform: none !important;
+    transition: transform .32s cubic-bezier(.22,1,.36,1), visibility 0s 0s;
+}
+.bk-theme-light #wb-drawer { background:#fff; color:#212529; }
 
-/* Hide filtered cards */
-.svc-hide { display: none !important; }
+#wb-drawer .wb-drawer-header { display:flex; align-items:center; justify-content:space-between;
+    gap:12px; padding:16px 20px; flex:0 0 auto; }
+#wb-drawer .wb-drawer-title { margin:0; font-size:1.05rem; line-height:1.4; }
+#wb-drawer .wb-drawer-body { flex:1 1 auto; min-height:0; display:flex; padding:0; overflow:hidden; }
+#wb-form { display:flex; flex-direction:column; flex:1 1 auto; min-height:0; width:100%; }
 
-/* Category section */
-.svc-section-title {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 16px; padding-bottom: 10px;
-    border-bottom: 1px solid rgba(255,255,255,.07);
-}
-.bk-theme-light .svc-section-title { border-bottom-color: rgba(0,0,0,.08); }
-.svc-section-title .cat-name { font-weight: 800; font-size: 14px; }
-.svc-section-title .cat-count {
-    font-size: 11px; font-weight: 700;
-    padding: 1px 8px; border-radius: 20px;
-    background: rgba(255,255,255,.08); color: rgba(255,255,255,.6);
-}
-.bk-theme-light .svc-section-title .cat-count {
-    background: rgba(0,0,0,.07); color: rgba(0,0,0,.55);
-}
-/* Discount date range card */
-.svc-discount-range {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(229,57,53,.07);
-    border: 1px solid rgba(229,57,53,.18);
-    border-radius: 10px;
-    padding: 7px 10px;
-}
-.bk-theme-light .svc-discount-range {
-    background: rgba(229,57,53,.05);
-    border-color: rgba(229,57,53,.15);
-}
-.svc-discount-range-col {
-    display: flex; flex-direction: column; flex: 1; min-width: 0;
-}
-.svc-drc-label {
-    font-size: 9px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .5px; color: rgba(229,57,53,.7); margin-bottom: 1px;
-}
-.svc-drc-val {
-    font-size: 11px; font-weight: 700; color: #e53935;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.svc-drc-time {
-    font-size: 10px; color: rgba(229,57,53,.6); font-weight: 600; margin-top: 1px;
-}
-.svc-drc-arrow {
-    flex-shrink: 0; color: rgba(229,57,53,.4); display: flex; align-items: center;
-}
-/* Card divider respects theme */
-.svc-card-divider {
-    border-top: 1px solid rgba(255,255,255,.07);
-}
-.bk-theme-light .svc-card-divider { border-top-color: rgba(0,0,0,.07); }
+/* Own backdrop (the app's Bootstrap build ships no offcanvas backdrop styles) */
+#wb-drawer-backdrop { position:fixed; inset:0; z-index:1085; background:#000; opacity:0;
+    pointer-events:none; transition:opacity .32s ease; }
+#wb-drawer-backdrop.wb-open { opacity:.5; pointer-events:auto; }
+
+.wb-drawer-scroll { flex:1 1 auto; min-height:0; overflow-y:auto; padding:20px 22px 24px; }
+.wb-typechooser { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+@media(max-width:520px){ .wb-typechooser{ grid-template-columns:repeat(2,1fr);} }
+.wb-typeopt { border:1.5px solid var(--wb-line); border-radius:12px; padding:11px 8px; text-align:center;
+      cursor:pointer; transition:.15s; display:flex; flex-direction:column; align-items:center; gap:5px; }
+.wb-typeopt:hover { border-color:var(--bk-accent); }
+.wb-typeopt.sel { border-color:var(--bk-accent); background:rgba(75,93,52,.1); }
+.wb-typeopt .ic { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+      background:var(--wb-hover); }
+.wb-typeopt .lb { font-size:11.5px; font-weight:700; }
+.wb-seg { display:inline-flex; border:1px solid var(--wb-line); border-radius:10px; overflow:hidden; }
+.wb-seg button { border:0; background:transparent; padding:8px 14px; font-size:12.5px; color:var(--wb-muted);
+      cursor:pointer; font-weight:600; }
+.wb-seg button.active { background:var(--bk-accent); color:#fff; }
+.wb-drawer-foot { flex:0 0 auto; display:flex; gap:10px; padding:14px 22px;
+      border-top:1px solid var(--wb-line); background:var(--bs-body-bg,#1e2130); }
+.bk-theme-light .wb-drawer-foot { background:#fff; }
+.wb-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border-radius:20px; cursor:pointer;
+      border:1.5px solid var(--wb-line); font-size:12.5px; transition:.14s; user-select:none; }
+.wb-chip.sel { border-color:var(--bk-accent); background:rgba(75,93,52,.1); color:var(--bk-accent); }
+.wb-chips { display:flex; flex-wrap:wrap; gap:7px; }
+.wb-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--wb-muted);
+      margin-bottom:8px; display:block; }
+.wb-sec { padding:16px 0; border-top:1px solid var(--wb-line); }
+.wb-sec:first-of-type { border-top:0; padding-top:4px; }
+
+/* package builder */
+.wb-pkgitem { display:flex; align-items:center; gap:9px; padding:8px 10px; border:1px solid var(--wb-line);
+      border-radius:10px; background:var(--wb-soft); }
+.wb-pkgitem .nm { flex:1; font-size:12.5px; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.wb-pkgsum { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--wb-muted);
+      background:var(--wb-hover); border-radius:10px; padding:9px 12px; margin-top:10px; }
+.wb-pkgsum b { color:inherit; }
+
+/* misc */
+.wb-empty { text-align:center; padding:56px 20px; color:var(--wb-muted); }
+.wb-empty svg { width:30px; height:30px; margin-bottom:12px; opacity:.5; }
+.wb-hide { display:none !important; }
+.wb-sortghost { opacity:.4; }
+.wb-drop { padding:8px 10px; }
+[dir="rtl"] .wb-cathead .caret { transform:scaleX(-1); }
+[dir="rtl"] .wb-cathead.collapsed .caret { transform:scaleX(-1) rotate(-90deg); }
 </style>
 @endpush
 
 @section('content')
-<div class="page-content">
+<div class="page-content wb">
 
-    {{-- ── Header ──────────────────────────────────────────────── --}}
-    <div class="d-flex justify-content-between align-items-center flex-wrap grid-margin">
+    {{-- Header --}}
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 grid-margin">
         <div>
             <h4 class="mb-1">{{ __('Services') }}</h4>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('company.branches.index') }}">{{ __('Branches') }}</a>
-                    </li>
+                    <li class="breadcrumb-item"><a href="{{ route('company.branches.index') }}">{{ __('Branches') }}</a></li>
                     <li class="breadcrumb-item active">{{ $branch->localizedName() }}</li>
                 </ol>
             </nav>
         </div>
-        <button type="button" class="btn btn-primary btn-icon-text rounded-pill"
-                id="btn-add-service">
-            <i class="btn-icon-prepend" data-feather="plus"></i>
-            {{ __('Add service') }}
-        </button>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="dropdown">
+                <button class="btn btn-light rounded-pill btn-icon-text dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="btn-icon-prepend" data-feather="upload"></i>{{ __('Import / Export') }}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <li><a class="dropdown-item" href="#" id="wb-import-open"><i data-feather="upload" style="width:14px;height:14px;" class="me-2"></i>{{ __('Import (CSV / Excel)') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ route('company.branches.services.export', $branch) }}"><i data-feather="download" style="width:14px;height:14px;" class="me-2"></i>{{ __('Export (CSV / Excel)') }}</a></li>
+                </ul>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-primary rounded-pill btn-icon-text dropdown-toggle" id="wb-add-btn" data-bs-toggle="dropdown">
+                    <i class="btn-icon-prepend" data-feather="plus"></i>{{ __('Add service') }}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow" id="wb-add-menu">
+                    <li><a class="dropdown-item wb-add-type" href="#" data-type="standard"><i data-feather="scissors" style="width:14px;height:14px;" class="me-2"></i>{{ __('Standard service') }}</a></li>
+                    <li><a class="dropdown-item wb-add-type" href="#" data-type="package"><i data-feather="gift" style="width:14px;height:14px;" class="me-2"></i>{{ __('Package / Bundle') }}</a></li>
+                    <li><a class="dropdown-item wb-add-type" href="#" data-type="membership"><i data-feather="award" style="width:14px;height:14px;" class="me-2"></i>{{ __('Membership') }}</a></li>
+                    <li><a class="dropdown-item wb-add-type" href="#" data-type="addon"><i data-feather="plus-circle" style="width:14px;height:14px;" class="me-2"></i>{{ __('Add-on / Extra') }}</a></li>
+                    <li><a class="dropdown-item wb-add-type" href="#" data-type="consultation"><i data-feather="message-circle" style="width:14px;height:14px;" class="me-2"></i>{{ __('Consultation') }}</a></li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     @include('company.partials.flash')
 
-    {{-- ── Stat cards ────────────────────────────────────────────── --}}
-    @php
-        $totalCount  = $services->count();
-        $activeCount = $services->where('is_active', true)->count();
-        $onSaleCount = $services->filter(fn($s) => $s->hasActiveDiscount())->count();
-    @endphp
-    <div class="row g-3 grid-margin bk-a1">
-        <div class="col-sm-4 col-xl-3">
+    {{-- Stat cards --}}
+    <div class="row g-3 grid-margin">
+        <div class="col-6 col-xl-3">
             <div class="bk-stat" data-accent="gold">
-                <div class="bk-stat-left">
-                    <div class="bk-stat-icon bk-icon-gold">
-                        <i data-feather="scissors" style="width:22px;height:22px;"></i>
-                    </div>
-                    <div class="bk-stat-info">
-                        <div class="bk-stat-label">{{ __('Total services') }}</div>
-                    </div>
-                </div>
-                <div class="bk-stat-num" id="stat-total">{{ $totalCount }}</div>
+                <div class="bk-stat-left"><div class="bk-stat-icon bk-icon-gold"><i data-feather="scissors" style="width:22px;height:22px;"></i></div>
+                    <div class="bk-stat-info"><div class="bk-stat-label">{{ __('Total services') }}</div></div></div>
+                <div class="bk-stat-num" id="wb-stat-total">0</div>
                 <div class="bk-stat-bar"><div class="bk-stat-bar-fill" style="width:100%"></div></div>
             </div>
         </div>
-        <div class="col-sm-4 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="bk-stat" data-accent="green">
-                <div class="bk-stat-left">
-                    <div class="bk-stat-icon bk-icon-green">
-                        <i data-feather="check-circle" style="width:22px;height:22px;"></i>
-                    </div>
-                    <div class="bk-stat-info">
-                        <div class="bk-stat-label">{{ __('Active') }}</div>
-                    </div>
-                </div>
-                <div class="bk-stat-num" id="stat-active">{{ $activeCount }}</div>
-                <div class="bk-stat-bar">
-                    <div class="bk-stat-bar-fill" id="stat-active-bar" style="width:{{ $totalCount > 0 ? round($activeCount/$totalCount*100) : 0 }}%"></div>
-                </div>
+                <div class="bk-stat-left"><div class="bk-stat-icon bk-icon-green"><i data-feather="check-circle" style="width:22px;height:22px;"></i></div>
+                    <div class="bk-stat-info"><div class="bk-stat-label">{{ __('Active') }}</div></div></div>
+                <div class="bk-stat-num" id="wb-stat-active">0</div>
+                <div class="bk-stat-bar"><div class="bk-stat-bar-fill" id="wb-stat-active-bar" style="width:0%"></div></div>
             </div>
         </div>
-        @if($onSaleCount > 0)
-        <div class="col-sm-4 col-xl-3">
+        <div class="col-6 col-xl-3">
+            <div class="bk-stat" data-accent="blue">
+                <div class="bk-stat-left"><div class="bk-stat-icon bk-icon-blue"><i data-feather="globe" style="width:22px;height:22px;"></i></div>
+                    <div class="bk-stat-info"><div class="bk-stat-label">{{ __('Online') }}</div></div></div>
+                <div class="bk-stat-num" id="wb-stat-online">0</div>
+                <div class="bk-stat-bar"><div class="bk-stat-bar-fill" id="wb-stat-online-bar" style="width:0%"></div></div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
             <div class="bk-stat" data-accent="red">
-                <div class="bk-stat-left">
-                    <div class="bk-stat-icon bk-icon-red">
-                        <i data-feather="tag" style="width:22px;height:22px;"></i>
-                    </div>
-                    <div class="bk-stat-info">
-                        <div class="bk-stat-label">{{ __('On sale') }}</div>
-                    </div>
-                </div>
-                <div class="bk-stat-num">{{ $onSaleCount }}</div>
-                <div class="bk-stat-bar">
-                    <div class="bk-stat-bar-fill" style="width:{{ $totalCount > 0 ? round($onSaleCount/$totalCount*100) : 0 }}%"></div>
-                </div>
+                <div class="bk-stat-left"><div class="bk-stat-icon bk-icon-red"><i data-feather="tag" style="width:22px;height:22px;"></i></div>
+                    <div class="bk-stat-info"><div class="bk-stat-label">{{ __('On sale') }}</div></div></div>
+                <div class="bk-stat-num" id="wb-stat-sale">0</div>
+                <div class="bk-stat-bar"><div class="bk-stat-bar-fill" id="wb-stat-sale-bar" style="width:0%"></div></div>
             </div>
         </div>
-        @endif
     </div>
 
-    {{-- ── Filter toolbar ──────────────────────────────────────── --}}
-    <div class="svc-toolbar bk-a2">
-        <div class="position-relative" style="flex:1;max-width:280px;min-width:160px;">
-            <i data-feather="search" class="position-absolute text-muted"
-               style="width:14px;height:14px;top:50%;transform:translateY(-50%);
-                      inset-inline-start:12px;pointer-events:none;"></i>
-            <input type="search" id="svc-search" class="form-control rounded-pill"
-                   style="padding-inline-start:36px;"
-                   placeholder="{{ __('Search…') }}" autocomplete="off">
+    {{-- Toolbar --}}
+    <div class="wb-toolbar">
+        <div class="wb-search">
+            <i data-feather="search"></i>
+            <input type="search" id="wb-search" class="form-control rounded-pill" placeholder="{{ __('Search name, price, duration…') }}" autocomplete="off">
         </div>
-
-        <select id="svc-cat-filter" class="form-select rounded-pill" style="width:auto;min-width:155px;">
-            <option value="">{{ __('All categories') }}</option>
-            @foreach($serviceCategories as $cat)
-                <option value="{{ $cat->id }}">{{ $cat->localizedName() }}</option>
-            @endforeach
+        <select id="wb-type-filter" class="form-select rounded-pill" style="width:auto;min-width:140px;">
+            <option value="">{{ __('All types') }}</option>
+            <option value="standard">{{ __('Standard') }}</option>
+            <option value="package">{{ __('Package') }}</option>
+            <option value="membership">{{ __('Membership') }}</option>
+            <option value="addon">{{ __('Add-on') }}</option>
+            <option value="consultation">{{ __('Consultation') }}</option>
         </select>
-
         <div class="bk-filter-tabs">
             <button class="bk-filter-tab active" data-status="">{{ __('All') }}</button>
-            <button class="bk-filter-tab" data-status="1">{{ __('Active') }}</button>
-            <button class="bk-filter-tab" data-status="0">{{ __('Inactive') }}</button>
-            @if($onSaleCount > 0)
-            <button class="bk-filter-tab" data-discount="1">🏷 {{ __('On sale') }}</button>
-            @endif
+            <button class="bk-filter-tab" data-status="active">{{ __('Active') }}</button>
+            <button class="bk-filter-tab" data-status="inactive">{{ __('Inactive') }}</button>
+            <button class="bk-filter-tab" data-status="online">{{ __('Online') }}</button>
+            <button class="bk-filter-tab" data-status="sale">🏷 {{ __('Sale') }}</button>
         </div>
-
-        <span id="svc-count" class="text-muted small ms-auto fw-semibold">
-            {{ $totalCount }} {{ __('services') }}
-        </span>
-    </div>
-
-    {{-- ── Services grouped by category ───────────────────────── --}}
-    @php
-        $grouped    = $services->groupBy('service_category_id');
-        $catPalette = ['#C9A227','#3dbbd4','#2bcf7e','#f4a642','#ec4899','#8b5cf6','#14b8a6','#e53935'];
-        $ci         = 0;
-    @endphp
-
-    @forelse($grouped as $catId => $group)
-        @php
-            $cat   = $group->first()->serviceCategory;
-            $color = $catPalette[$ci % count($catPalette)];
-            $ci++;
-        @endphp
-
-        <div class="svc-category-section grid-margin" data-cat-id="{{ $catId ?: '' }}">
-            <div class="svc-section-title">
-                <span class="svc-cat-dot"
-                      style="background:{{ $color }};box-shadow:0 0 8px {{ $color }}66;"></span>
-                <span class="cat-name">{{ $cat ? $cat->localizedName() : __('Uncategorized') }}</span>
-                <span class="cat-count">{{ $group->count() }}</span>
-            </div>
-
-            <div class="row g-3">
-                @foreach($group as $service)
-                @php
-                    $hasDiscount = $service->hasActiveDiscount();
-                    $finalPrice  = $service->finalPrice();
-                    $durH = intdiv($service->duration_minutes, 60);
-                    $durM = $service->duration_minutes % 60;
-                    $durStr = ($durH > 0 ? $durH . __('h') . ' ' : '') . ($durM > 0 ? $durM . __('m') : '');
-                    $durStr = trim($durStr) ?: ($service->duration_minutes . ' ' . __('min'));
-                @endphp
-                <div class="col-md-6 col-xl-4 svc-card-wrap"
-                     data-name="{{ strtolower(($service->name_en ?? '') . ' ' . ($service->name_ar ?? '')) }}"
-                     data-cat="{{ $service->service_category_id ?? '' }}"
-                     data-active="{{ $service->is_active ? '1' : '0' }}"
-                     data-discount="{{ $hasDiscount ? '1' : '0' }}">
-
-                    <div class="card border-0 svc-card">
-                        <div class="card-body p-3 d-flex flex-column">
-
-                            {{-- Name + toggle --}}
-                            <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
-                                <div class="flex-grow-1 min-w-0">
-                                    <div class="fw-bold text-truncate" style="font-size:14px;">
-                                        {{ $service->name_en ?: $service->name_ar ?: '—' }}
-                                    </div>
-                                    @if($service->name_ar && $service->name_en)
-                                    <div class="text-muted text-truncate mt-1" dir="rtl" style="font-size:12px;">
-                                        {{ $service->name_ar }}
-                                    </div>
-                                    @endif
-                                </div>
-                                <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                                    @if($hasDiscount)
-                                    <span class="svc-sale-badge">
-                                        <i data-feather="tag" style="width:9px;height:9px;margin-inline-end:2px;"></i>
-                                        {{ __('Sale') }}
-                                    </span>
-                                    @endif
-                                    <div class="form-check form-switch mb-0">
-                                        <input class="form-check-input svc-active-toggle" type="checkbox"
-                                               {{ $service->is_active ? 'checked' : '' }}
-                                               data-id="{{ $service->id }}"
-                                               data-url="{{ route('company.services.toggle-active', $service) }}">
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Price --}}
-                            <div class="d-flex align-items-baseline gap-2 flex-wrap mb-3">
-                                @if($hasDiscount)
-                                    <span class="svc-price-final" style="color:#e53935;">
-                                        {{ number_format($finalPrice, 0) }}
-                                        <span style="font-size:11px;font-weight:600;">{{ $service->currency }}</span>
-                                    </span>
-                                    <span class="svc-price-orig">
-                                        {{ number_format($service->price, 0) }} {{ $service->currency }}
-                                    </span>
-                                    <span class="svc-sale-badge">
-                                        @if($service->discount_type === 'percent')
-                                            -{{ rtrim(rtrim(number_format($service->discount_value,1),'0'),'.') }}%
-                                        @else
-                                            -{{ number_format($service->discount_value,0) }}
-                                        @endif
-                                    </span>
-                                @else
-                                    <span class="svc-price-final" style="color:#C9A227;">
-                                        {{ number_format($service->price, 0) }}
-                                        <span style="font-size:11px;font-weight:600;color:inherit;">{{ $service->currency }}</span>
-                                    </span>
-                                @endif
-                            </div>
-
-                            {{-- Duration --}}
-                            <div class="d-flex align-items-center gap-2 flex-wrap mt-auto">
-                                <span class="svc-dur">
-                                    <i data-feather="clock" style="width:11px;height:11px;"></i>
-                                    {{ $durStr }}
-                                </span>
-                            </div>
-
-                            {{-- Discount date range card --}}
-                            @if($hasDiscount && ($service->discount_starts_at || $service->discount_ends_at))
-                            <div class="svc-discount-range mt-2">
-                                <div class="svc-discount-range-col">
-                                    <span class="svc-drc-label">{{ __('Starts') }}</span>
-                                    <span class="svc-drc-val">
-                                        {{ $service->discount_starts_at ? $service->discount_starts_at->format('d M Y') : '—' }}
-                                    </span>
-                                    @if($service->discount_starts_at)
-                                    <span class="svc-drc-time">{{ $service->discount_starts_at->format('H:i') }}</span>
-                                    @endif
-                                </div>
-                                <div class="svc-drc-arrow">
-                                    <i data-feather="arrow-left" style="width:12px;height:12px;"></i>
-                                </div>
-                                <div class="svc-discount-range-col">
-                                    <span class="svc-drc-label">{{ __('Ends') }}</span>
-                                    <span class="svc-drc-val">
-                                        {{ $service->discount_ends_at ? $service->discount_ends_at->format('d M Y') : '—' }}
-                                    </span>
-                                    @if($service->discount_ends_at)
-                                    <span class="svc-drc-time">{{ $service->discount_ends_at->format('H:i') }}</span>
-                                    @endif
-                                </div>
-                            </div>
-                            @endif
-
-                            {{-- Actions --}}
-                            <div class="d-flex gap-2 mt-3 pt-3 svc-card-divider">
-                                <button type="button"
-                                        class="btn btn-sm btn-outline-primary rounded-pill flex-fill js-edit-btn"
-                                        data-id="{{ $service->id }}"
-                                        data-name-en="{{ $service->name_en }}"
-                                        data-name-ar="{{ $service->name_ar }}"
-                                        data-description="{{ $service->description }}"
-                                        data-price="{{ $service->price }}"
-                                        data-currency="{{ $service->currency }}"
-                                        data-duration="{{ $service->duration_minutes }}"
-                                        data-category="{{ $service->service_category_id }}"
-                                        data-active="{{ $service->is_active ? '1' : '0' }}"
-                                        data-discount-type="{{ $service->discount_type }}"
-                                        data-discount-value="{{ $service->discount_value }}"
-                                        data-discount-starts="{{ $service->discount_starts_at ? $service->discount_starts_at->format('Y-m-d\TH:i') : '' }}"
-                                        data-discount-ends="{{ $service->discount_ends_at ? $service->discount_ends_at->format('Y-m-d\TH:i') : '' }}">
-                                    <i data-feather="edit-2" style="width:13px;height:13px;margin-inline-end:4px;"></i>
-                                    {{ __('Edit') }}
-                                </button>
-                                <button type="button"
-                                        class="btn btn-sm btn-outline-danger rounded-pill js-delete-btn"
-                                        data-name="{{ $service->name_en ?: $service->name_ar }}"
-                                        data-url="{{ route('company.services.destroy', $service) }}"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#deleteModal"
-                                        title="{{ __('Delete') }}">
-                                    <i data-feather="trash-2" style="width:13px;height:13px;"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @endforeach
-            </div>
-        </div>
-    @empty
-        <div class="card border-0 grid-margin">
-            <div class="card-body">
-                <div class="bk-empty">
-                    <div class="bk-empty-ic">
-                        <i data-feather="scissors" style="width:26px;height:26px;"></i>
-                    </div>
-                    <p>{{ __('No services for this branch.') }}</p>
-                    <button type="button" class="btn btn-primary rounded-pill px-4 mt-2 js-open-add-modal">
-                        <i data-feather="plus" style="width:14px;height:14px;" class="me-1"></i>
-                        {{ __('Add your first service') }}
-                    </button>
-                </div>
-            </div>
-        </div>
-    @endforelse
-
-    <div id="svc-no-results" class="d-none card border-0">
-        <div class="card-body">
-            <div class="bk-empty">
-                <div class="bk-empty-ic">
-                    <i data-feather="search" style="width:24px;height:24px;"></i>
-                </div>
-                <p>{{ __('No services match your search.') }}</p>
-            </div>
+        <div class="wb-viewtoggle ms-auto" role="group" aria-label="{{ __('View') }}">
+            <button id="wb-view-list" class="active" title="{{ __('List') }}"><i data-feather="list" style="width:16px;height:16px;"></i></button>
+            <button id="wb-view-cards" title="{{ __('Cards') }}"><i data-feather="grid" style="width:16px;height:16px;"></i></button>
         </div>
     </div>
 
+    {{-- Rail + main --}}
+    <div class="wb-grid">
+        <aside class="wb-rail">
+            <div class="wb-rail-head"><span>{{ __('Categories') }}</span></div>
+            <div id="wb-rail-list"></div>
+            <div class="wb-cat-add" id="wb-cat-add"><i data-feather="plus" style="width:14px;height:14px;"></i>{{ __('New category') }}</div>
+        </aside>
+        <main class="min-w-0">
+            <div id="wb-list"></div>
+            <div id="wb-cards" class="wb-cards wb-hide"></div>
+            <div id="wb-empty" class="wb-empty wb-hide">
+                <i data-feather="search"></i>
+                <p class="mb-2">{{ __('No services match your filters.') }}</p>
+            </div>
+        </main>
+    </div>
+
+    {{-- Bulk action bar --}}
+    <div class="wb-bulkbar" id="wb-bulkbar">
+        <div class="wb-bulkbar-inner">
+            <span class="cnt"><span id="wb-bulk-count">0</span> {{ __('selected') }}</span>
+            <button class="btn btn-sm btn-light rounded-pill" data-bulk="activate"><i data-feather="check-circle" style="width:14px;height:14px;" class="me-1"></i>{{ __('Activate') }}</button>
+            <button class="btn btn-sm btn-light rounded-pill" data-bulk="deactivate">{{ __('Deactivate') }}</button>
+            <button class="btn btn-sm btn-primary rounded-pill" data-bulk="copy"><i data-feather="copy" style="width:14px;height:14px;" class="me-1"></i>{{ __('Copy to branches') }}</button>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-light rounded-pill dropdown-toggle" data-bs-toggle="dropdown">{{ __('More') }}</button>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <li><a class="dropdown-item" href="#" data-bulk="show_online"><i data-feather="globe" style="width:14px;height:14px;" class="me-2"></i>{{ __('Show in online booking') }}</a></li>
+                    <li><a class="dropdown-item" href="#" data-bulk="hide_online"><i data-feather="eye-off" style="width:14px;height:14px;" class="me-2"></i>{{ __('Make internal only') }}</a></li>
+                    <li><a class="dropdown-item" href="#" data-bulk="duplicate"><i data-feather="copy" style="width:14px;height:14px;" class="me-2"></i>{{ __('Duplicate') }}</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" data-bulk="move"><i data-feather="folder" style="width:14px;height:14px;" class="me-2"></i>{{ __('Move to category…') }}</a></li>
+                    <li><a class="dropdown-item" href="#" data-bulk="price"><i data-feather="dollar-sign" style="width:14px;height:14px;" class="me-2"></i>{{ __('Change price…') }}</a></li>
+                    <li><a class="dropdown-item" href="#" data-bulk="duration"><i data-feather="clock" style="width:14px;height:14px;" class="me-2"></i>{{ __('Change duration…') }}</a></li>
+                </ul>
+            </div>
+            <button class="btn btn-sm btn-outline-danger rounded-pill" data-bulk="delete"><i data-feather="trash-2" style="width:14px;height:14px;"></i></button>
+            <button class="wb-iconbtn" id="wb-bulk-clear" title="{{ __('Clear selection') }}"><i data-feather="x" style="width:16px;height:16px;"></i></button>
+        </div>
+    </div>
 </div>
-
 @endsection
 
 @push('company-after-template')
-{{-- ── Toast notification ──────────────────────────────────────── --}}
-<div id="bk-toast" style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:9999;min-width:220px;pointer-events:none;opacity:0;transition:opacity .25s;">
-    <div id="bk-toast-inner" class="d-flex align-items-center gap-2 px-4 py-3 rounded-pill shadow-lg">
-        <i id="bk-toast-icon" style="width:18px;height:18px;flex-shrink:0;"></i>
-        <span id="bk-toast-msg" class="fw-semibold" style="font-size:14px;white-space:nowrap;"></span>
-    </div>
-</div>
+@include('company.services.partials.workbench-drawer')
+@include('company.services.partials.workbench-modals')
 
-{{-- ── Modal: Add / Edit ──────────────────────────────────────── --}}
-<div class="modal fade" tabindex="-1" id="svc-offcanvas">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:540px;">
-        <div class="modal-content border-0 rounded-4">
-            <div class="modal-header border-bottom">
-                <h5 class="modal-title fw-bold" id="svc-offcanvas-title">{{ __('Add service') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" style="max-height:78vh;overflow-y:auto;">
-
-        <div id="svc-errors" class="alert alert-danger rounded-3 d-none mb-3" style="font-size:13px;"></div>
-
-        <form id="svc-form" novalidate>
-            @csrf
-            <input type="hidden" name="_method" id="svc-method" value="POST">
-            <input type="hidden" id="svc-edit-id" value="">
-
-            {{-- Category --}}
-            <div class="mb-3">
-                <label class="form-label fw-semibold small">{{ __('Category') }}</label>
-                <select name="service_category_id" id="svc-f-category" class="form-select rounded-3">
-                    <option value="">{{ __('No category') }}</option>
-                    @foreach($serviceCategories as $cat)
-                        <option value="{{ $cat->id }}">{{ $cat->localizedName() }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <hr class="my-3">
-
-            {{-- Names --}}
-            <div class="mb-3">
-                <label class="form-label fw-semibold small">{{ __('Name (EN)') }} <span class="text-danger">*</span></label>
-                <input type="text" name="name_en" id="svc-f-name-en"
-                       class="form-control rounded-3" maxlength="255">
-            </div>
-            <div class="mb-3">
-                <label class="form-label fw-semibold small">{{ __('Name (AR)') }}</label>
-                <input type="text" name="name_ar" id="svc-f-name-ar"
-                       class="form-control rounded-3" dir="rtl" maxlength="255">
-            </div>
-            <div class="mb-3">
-                <label class="form-label fw-semibold small">{{ __('Description') }}</label>
-                <textarea name="description" id="svc-f-desc" class="form-control rounded-3" rows="2"></textarea>
-            </div>
-
-            <hr class="my-3">
-
-            {{-- Price + Currency + Duration --}}
-            <div class="row g-3 mb-3">
-                <div class="col-8">
-                    <label class="form-label fw-semibold small">{{ __('Price') }} <span class="text-danger">*</span></label>
-                    <div class="input-group">
-                        <button type="button"
-                                class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-1 px-3"
-                                data-bs-toggle="dropdown" style="min-width:90px;">
-                            <span id="currency-symbol" class="fw-bold">{{ config('booksy.currencies')[config('booksy.default_currency')]['symbol'] }}</span>
-                            <span id="currency-code" class="text-muted small">{{ config('booksy.default_currency') }}</span>
-                        </button>
-                        <ul class="dropdown-menu shadow" style="max-height:260px;overflow-y:auto;min-width:220px;">
-                            @foreach(config('booksy.currencies') as $code => $info)
-                            <li>
-                                <a class="dropdown-item currency-option d-flex justify-content-between align-items-center py-2
-                                          {{ $code === config('booksy.default_currency') ? 'active' : '' }}"
-                                   href="#" data-code="{{ $code }}" data-symbol="{{ $info['symbol'] }}">
-                                    <span>
-                                        <span class="fw-semibold me-1">{{ $info['symbol'] }}</span>
-                                        {{ app()->getLocale()==='ar' ? $info['name_ar'] : $info['name_en'] }}
-                                    </span>
-                                    <small class="text-muted">{{ $code }}</small>
-                                </a>
-                            </li>
-                            @endforeach
-                        </ul>
-                        <input type="hidden" name="currency" id="currency-input" value="{{ config('booksy.default_currency') }}">
-                        <input type="number" name="price" id="svc-f-price"
-                               class="form-control" min="0" step="0.01" placeholder="0">
-                    </div>
-                </div>
-                <div class="col-4">
-                    <label class="form-label fw-semibold small">{{ __('Duration') }} <span class="text-danger">*</span></label>
-                    <div class="input-group">
-                        <input type="number" name="duration_minutes" id="svc-f-duration"
-                               class="form-control" min="1" max="1440" value="30">
-                        <span class="input-group-text">{{ __('min') }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <hr class="my-3">
-
-            {{-- Discount --}}
-            <div class="mb-3">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="bk-qa-ic" style="width:30px;height:30px;border-radius:8px;">
-                            <i data-feather="tag" style="width:14px;height:14px;"></i>
-                        </div>
-                        <span class="fw-bold" style="font-size:13px;">{{ __('Discount / Promotion') }}</span>
-                    </div>
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input" type="checkbox" id="discount-toggle">
-                    </div>
-                </div>
-
-                <div id="discount-fields" style="display:none;">
-                    {{-- Type --}}
-                    <div class="d-flex gap-2 mb-3">
-                        <label class="dtype-label selected" id="dtype-lbl-percent" style="user-select:none;">
-                            <input type="radio" name="discount_type" value="percent"
-                                   class="js-dtype" style="display:none;" checked>
-                            <div class="dtype-icon">
-                                <i data-feather="percent" style="width:14px;height:14px;color:#C9A227;"></i>
-                            </div>
-                            <div>
-                                <div class="fw-bold">{{ __('Percentage') }}</div>
-                                <div class="text-muted" style="font-size:10px;">{{ __('e.g. 20% off') }}</div>
-                            </div>
-                        </label>
-                        <label class="dtype-label" id="dtype-lbl-fixed" style="user-select:none;">
-                            <input type="radio" name="discount_type" value="fixed"
-                                   class="js-dtype" style="display:none;">
-                            <div class="dtype-icon">
-                                <i data-feather="minus-circle" style="width:14px;height:14px;color:#C9A227;"></i>
-                            </div>
-                            <div>
-                                <div class="fw-bold">{{ __('Fixed amount') }}</div>
-                                <div class="text-muted" style="font-size:10px;">{{ __('e.g. reduce by 25,000') }}</div>
-                            </div>
-                        </label>
-                    </div>
-
-                    {{-- Value --}}
-                    <div class="row g-2 mb-3">
-                        <div class="col-5">
-                            <div class="input-group">
-                                <input type="number" name="discount_value" id="discount_value"
-                                       class="form-control form-control-sm" min="0" step="0.01" placeholder="0">
-                                <span class="input-group-text" id="discount-unit-lbl"
-                                      style="min-width:40px;justify-content:center;">%</span>
-                            </div>
-                        </div>
-                        <div class="col-7 d-flex align-items-center">
-                            <div id="discount-preview" class="d-none w-100">
-                                <span class="text-muted text-decoration-line-through me-1" id="dp-original"></span>
-                                →
-                                <span class="fw-bold ms-1" style="color:#e53935;" id="dp-final"></span>
-                                <span class="svc-sale-badge ms-1" id="dp-badge"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Dates --}}
-                    <div class="row g-2 mb-2">
-                        {{-- Start --}}
-                        <div class="col-6">
-                            <div class="disc-dt-group" id="disc-start-group">
-                                <div class="disc-dt-header" style="color:#2bcf7e;">
-                                    <i data-feather="play-circle" style="width:12px;height:12px;"></i>
-                                    {{ __('Starts at') }}
-                                </div>
-                                <div class="disc-dt-field">
-                                    <i data-feather="calendar" style="width:12px;height:12px;"></i>
-                                    <input type="date" id="disc-start-date">
-                                </div>
-                                <div class="disc-dt-field">
-                                    <i data-feather="clock" style="width:12px;height:12px;"></i>
-                                    <input type="time" id="disc-start-time" value="00:00">
-                                </div>
-                            </div>
-                            <div class="disc-dt-err" id="disc-start-err">
-                                <i data-feather="alert-circle" style="width:11px;height:11px;flex-shrink:0;"></i>
-                                <span id="disc-start-err-text"></span>
-                            </div>
-                            <input type="hidden" name="discount_starts_at" id="discount_starts_at">
-                        </div>
-
-                        {{-- End --}}
-                        <div class="col-6">
-                            <div class="disc-dt-group" id="disc-end-group">
-                                <div class="disc-dt-header" style="color:#e53935;">
-                                    <i data-feather="stop-circle" style="width:12px;height:12px;"></i>
-                                    {{ __('Ends at') }}
-                                </div>
-                                <div class="disc-dt-field">
-                                    <i data-feather="calendar" style="width:12px;height:12px;"></i>
-                                    <input type="date" id="disc-end-date">
-                                </div>
-                                <div class="disc-dt-field">
-                                    <i data-feather="clock" style="width:12px;height:12px;"></i>
-                                    <input type="time" id="disc-end-time" value="23:59">
-                                </div>
-                            </div>
-                            <div class="disc-dt-err" id="disc-end-err">
-                                <i data-feather="alert-circle" style="width:11px;height:11px;flex-shrink:0;"></i>
-                                <span id="disc-end-err-text"></span>
-                            </div>
-                            <input type="hidden" name="discount_ends_at" id="discount_ends_at">
-                        </div>
-                    </div>
-
-                    {{-- Range display --}}
-                    <div id="disc-range" class="d-none rounded-3 px-3 py-2" style="background:rgba(201,162,39,.09);border:1px solid rgba(201,162,39,.25);font-size:12px;color:#C9A227;">
-                        <i data-feather="calendar" style="width:12px;height:12px;vertical-align:middle;margin-inline-end:6px;"></i>
-                        <span id="disc-range-text" class="fw-semibold"></span>
-                    </div>
-                </div>
-            </div>
-
-            <hr class="my-3">
-
-            {{-- Active --}}
-            <div class="form-check form-switch mb-4">
-                <input type="checkbox" class="form-check-input" id="svc-f-active" name="is_active" value="1" checked>
-                <label class="form-check-label fw-semibold small" for="svc-f-active">{{ __('Active') }}</label>
-            </div>
-
-            <div class="d-flex gap-2 pt-3 border-top">
-                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">
-                    {{ __('Cancel') }}
-                </button>
-                <button type="submit" class="btn btn-primary btn-icon-text rounded-pill flex-grow-1" id="svc-submit-btn">
-                    <i class="btn-icon-prepend" data-feather="save"></i>
-                    <span id="svc-submit-label">{{ __('Save service') }}</span>
-                </button>
-            </div>
-        </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- ── Delete modal ────────────────────────────────────────────── --}}
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 rounded-4">
-            <div class="modal-body p-4 text-center">
-                <div class="bk-empty-ic mx-auto mb-3"
-                     style="background:rgba(229,57,53,.12);color:#e53935;animation:none;">
-                    <i data-feather="trash-2" style="width:24px;height:24px;"></i>
-                </div>
-                <h6 class="fw-bold mb-1">{{ __('Delete service?') }}</h6>
-                <p class="text-muted small mb-4" id="delete-modal-name"></p>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-light rounded-pill flex-fill" data-bs-dismiss="modal">
-                        {{ __('Cancel') }}
-                    </button>
-                    <button type="button" class="btn btn-danger rounded-pill flex-fill" id="confirm-delete-btn">
-                        {{ __('Delete') }}
-                    </button>
-                </div>
-            </div>
-        </div>
+{{-- Toast --}}
+<div id="wb-toast" style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:1200;min-width:220px;pointer-events:none;opacity:0;transition:opacity .25s;">
+    <div id="wb-toast-inner" class="d-flex align-items-center gap-2 px-4 py-3 rounded-pill shadow-lg" style="pointer-events:auto;">
+        <i id="wb-toast-icon" style="width:18px;height:18px;flex-shrink:0;"></i>
+        <span id="wb-toast-msg" class="fw-semibold" style="font-size:14px;"></span>
+        <button id="wb-toast-undo" class="btn btn-sm btn-light rounded-pill ms-1 py-0 px-2 wb-hide" style="font-size:12px;">{{ __('Undo') }}</button>
     </div>
 </div>
 @endpush
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-
-    if (window.feather) feather.replace();
-
-    var CSRF = @json(csrf_token());
-
-    var STORE_URL  = @json(route('company.branches.services.store', $branch));
-    var UPDATE_BASE = @json(url('company/services'));
-    var DEFAULT_CUR = @json(config('booksy.default_currency'));
-    var formMode = 'add';
-
-    // ── Refs ──────────────────────────────────────────────────────
-    var offcanvasEl  = document.getElementById('svc-offcanvas');
-    var form         = document.getElementById('svc-form');
-    var titleEl      = document.getElementById('svc-offcanvas-title');
-    var methodInput  = document.getElementById('svc-method');
-    var editIdInput  = document.getElementById('svc-edit-id');
-    var submitLabel  = document.getElementById('svc-submit-label');
-    var submitBtn    = document.getElementById('svc-submit-btn');
-    // Discount date split inputs
-    var discStartDate = document.getElementById('disc-start-date');
-    var discStartTime = document.getElementById('disc-start-time');
-    var discEndDate   = document.getElementById('disc-end-date');
-    var discEndTime   = document.getElementById('disc-end-time');
-
-    // ── Helper: open the add/edit modal ──────────────────────────
-    function openSvcModal() {
-        if (offcanvasEl && window.bootstrap) {
-            bootstrap.Modal.getOrCreateInstance(offcanvasEl).show();
-        }
-    }
-
-    // ── Modal events ──────────────────────────────────────────────
-    if (offcanvasEl) {
-        offcanvasEl.addEventListener('hidden.bs.modal', function () {
-            resetForm();
-        });
-    }
-
-    // Add buttons (header + empty-state)
-    document.querySelectorAll('#btn-add-service, .js-open-add-modal').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            formMode = 'add';
-            resetForm();
-            if (titleEl)     titleEl.textContent = @json(__('Add service'));
-            if (submitLabel) submitLabel.textContent = @json(__('Save service'));
-            openSvcModal();
-        });
-    });
-
-    // Edit buttons: populate data then open modal
-    document.querySelectorAll('.js-edit-btn').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            formMode = 'edit';
-            if (titleEl)     titleEl.textContent = @json(__('Edit service'));
-            if (submitLabel) submitLabel.textContent = @json(__('Save changes'));
-
-            var d = this.dataset;
-            if (editIdInput) editIdInput.value = d.id || '';
-            if (methodInput) methodInput.value = 'PUT';
-
-            setVal('svc-f-name-en',  d.nameEn);
-            setVal('svc-f-name-ar',  d.nameAr);
-            setVal('svc-f-desc',     d.description);
-            setVal('svc-f-price',    d.price);
-            setVal('svc-f-duration', d.duration);
-            setVal('svc-f-category', d.category);
-            setCurrency(d.currency);
-
-            var actChk = document.getElementById('svc-f-active');
-            if (actChk) actChk.checked = d.active === '1';
-
-            populateDiscount(d.discountType, d.discountValue, d.discountStarts, d.discountEnds);
-            clearErrors();
-            openSvcModal();
-            setTimeout(function () { if (window.feather) feather.replace(); }, 80);
-        });
-    });
-
-    function resetForm() {
-        if (!form) return;
-        form.reset();
-        if (editIdInput) editIdInput.value = '';
-        if (methodInput) methodInput.value = 'POST';
-        formMode = 'add';
-        setCurrency(DEFAULT_CUR);
-        var tog = document.getElementById('discount-toggle');
-        var flds = document.getElementById('discount-fields');
-        var dv  = document.getElementById('discount_value');
-        var dp  = document.getElementById('discount-preview');
-        var pr  = document.querySelector('.js-dtype[value="percent"]');
-        if (tog)  tog.checked = false;
-        if (flds) flds.style.display = 'none';
-        if (dv)   dv.value = '';
-        if (dp)   dp.classList.add('d-none');
-        if (pr)   pr.checked = true;
-        highlightDtype('percent');
-        // Reset date/time split fields
-        if (discStartDate) discStartDate.value = '';
-        if (discStartTime) discStartTime.value = '00:00';
-        if (discEndDate)   discEndDate.value   = '';
-        if (discEndTime)   discEndTime.value   = '23:59';
-        var sh = document.getElementById('discount_starts_at');
-        var eh = document.getElementById('discount_ends_at');
-        if (sh) sh.value = ''; if (eh) eh.value = '';
-        var dr = document.getElementById('disc-range');
-        if (dr) dr.classList.add('d-none');
-        ['disc-start-group','disc-end-group'].forEach(function(id){
-            var g = document.getElementById(id); if(g) g.classList.remove('has-error');
-        });
-        ['disc-start-err','disc-end-err'].forEach(function(id){
-            var e = document.getElementById(id); if(e) e.classList.remove('show');
-        });
-        clearErrors();
-    }
-
-    // ── Discount date validation ──────────────────────────────────
-    function syncDiscountHidden() {
-        var sd = discStartDate ? discStartDate.value : '';
-        var st = discStartTime ? (discStartTime.value || '00:00') : '00:00';
-        var ed = discEndDate   ? discEndDate.value   : '';
-        var et = discEndTime   ? (discEndTime.value   || '23:59') : '23:59';
-        var sh = document.getElementById('discount_starts_at');
-        var eh = document.getElementById('discount_ends_at');
-        if (sh) sh.value = sd ? (sd + 'T' + st) : '';
-        if (eh) eh.value = ed ? (ed + 'T' + et) : '';
-        return { sd: sd, st: st, ed: ed, et: et };
-    }
-
-    function validateDiscountDates() {
-        var v       = syncDiscountHidden();
-        var sg      = document.getElementById('disc-start-group');
-        var eg      = document.getElementById('disc-end-group');
-        var seEl    = document.getElementById('disc-start-err');
-        var eeEl    = document.getElementById('disc-end-err');
-        var seTxt   = document.getElementById('disc-start-err-text');
-        var eeTxt   = document.getElementById('disc-end-err-text');
-        var rangeEl = document.getElementById('disc-range');
-        var rangeTxt= document.getElementById('disc-range-text');
-
-        // Reset
-        [sg,eg].forEach(function(g){ if(g) g.classList.remove('has-error'); });
-        [seEl,eeEl].forEach(function(e){ if(e) e.classList.remove('show'); });
-        if (rangeEl) rangeEl.classList.add('d-none');
-
-        var start  = v.sd ? new Date(v.sd + 'T' + v.st) : null;
-        var end    = v.ed ? new Date(v.ed + 'T' + v.et) : null;
-        var now    = new Date();
-        var valid  = true;
-
-        if (start && start < now) {
-            if (sg)    sg.classList.add('has-error');
-            if (seTxt) seTxt.textContent = 'لا يمكن أن يكون وقت البداية في الماضي';
-            if (seEl)  seEl.classList.add('show');
-            valid = false;
-        }
-        if (end && start && end <= start) {
-            if (eg)    eg.classList.add('has-error');
-            if (eeTxt) eeTxt.textContent = 'وقت الانتهاء يجب أن يكون بعد وقت البداية';
-            if (eeEl)  eeEl.classList.add('show');
-            valid = false;
-        }
-
-        // Range display
-        if (start && end && valid && rangeTxt && rangeEl) {
-            var lo  = 'ar';
-            var fd2 = { day: 'numeric', month: 'short' };
-            var ft  = { hour: '2-digit', minute: '2-digit' };
-            rangeTxt.textContent =
-                'من ' + start.toLocaleDateString(lo, fd2) + ' ' + start.toLocaleTimeString(lo, ft) +
-                '  ←  ' + end.toLocaleDateString(lo, fd2) + ' ' + end.toLocaleTimeString(lo, ft);
-            rangeEl.classList.remove('d-none');
-            if (window.feather) feather.replace();
-        }
-        return valid;
-    }
-
-    [discStartDate, discStartTime, discEndDate, discEndTime].forEach(function(el) {
-        if (el) el.addEventListener('change', validateDiscountDates);
-    });
-
-    // ── AJAX form submit ──────────────────────────────────────────
-    if (form) {
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            clearErrors();
-
-            var discTog = document.getElementById('discount-toggle');
-            var discOn  = discTog && discTog.checked;
-
-            // Client-side date validation
-            if (discOn && !validateDiscountDates()) {
-                return;
-            }
-
-            if (submitBtn) submitBtn.disabled = true;
-
-            var url = formMode === 'add'
-                ? STORE_URL
-                : UPDATE_BASE + '/' + (editIdInput ? editIdInput.value : '');
-
-            var fd = new FormData(form);
-            if (!discOn) {
-                fd.set('discount_value', '');
-                fd.set('discount_type', '');
-                fd.delete('discount_starts_at');
-                fd.delete('discount_ends_at');
-            }
-
-            fetch(url, {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
-                body: fd,
-            })
-            .then(function (r) {
-                return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; });
-            })
-            .then(function (res) {
-                if (submitBtn) submitBtn.disabled = false;
-                if (res.ok && res.data.success) {
-                    if (offcanvasEl && window.bootstrap) {
-                        var oc = bootstrap.Modal.getInstance(offcanvasEl);
-                        if (oc) oc.hide();
-                    }
-                    window.location.reload();
-                } else if (res.data && res.data.errors) {
-                    showErrors(res.data.errors);
-                } else {
-                    showErrors({ _: [res.data && res.data.message ? res.data.message : 'حدث خطأ، يرجى المحاولة مجدداً'] });
-                }
-            })
-            .catch(function () {
-                if (submitBtn) submitBtn.disabled = false;
-                showErrors({ _: ['تعذّر الاتصال بالخادم، يرجى المحاولة مجدداً'] });
-            });
-        });
-    }
-
-    // ── Toggle active (AJAX) ──────────────────────────────────────
-    document.querySelectorAll('.svc-active-toggle').forEach(function (chk) {
-        chk.addEventListener('change', function () {
-            var self = this;
-            fetch(this.dataset.url, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': CSRF,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: '_method=PATCH',
-            })
-            .then(function (r) { return r.json(); })
-            .then(function (d) {
-                self.checked = !!d.is_active;
-                var wrap = self.closest('.svc-card-wrap');
-                if (wrap) wrap.dataset.active = d.is_active ? '1' : '0';
-                updateStats(0, d.is_active ? 1 : -1);
-                showToast(d.is_active ? @json(__('Service activated.')) : @json(__('Service deactivated.')), d.is_active ? 'success' : 'warning');
-            })
-            .catch(function () { self.checked = !self.checked; });
-        });
-    });
-
-    // ── Delete modal ──────────────────────────────────────────────
-    var deleteUrl  = '';
-    var deleteWrap = null;
-    var deleteModalEl = document.getElementById('deleteModal');
-
-    if (deleteModalEl) {
-        // Bootstrap passes relatedTarget = the button that triggered the modal
-        deleteModalEl.addEventListener('show.bs.modal', function (e) {
-            var btn = e.relatedTarget;
-            if (!btn) return;
-            deleteUrl  = btn.dataset.url  || '';
-            deleteWrap = btn.closest('.svc-card-wrap');
-            var nm = document.getElementById('delete-modal-name');
-            if (nm) nm.textContent = '"' + (btn.dataset.name || '') + '"';
-            setTimeout(function () { if (window.feather) feather.replace(); }, 50);
-        });
-    }
-
-    var confirmBtn = document.getElementById('confirm-delete-btn');
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', function () {
-            if (!deleteUrl) return;
-            var self = this;
-            var wasActive = deleteWrap && deleteWrap.dataset.active === '1';
-            self.disabled = true;
-            fetch(deleteUrl, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': CSRF,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: '_method=DELETE',
-            })
-            .then(function (r) {
-                if (r.ok) {
-                    if (deleteModalEl && window.bootstrap) {
-                        var m = bootstrap.Modal.getInstance(deleteModalEl);
-                        if (m) m.hide();
-                    }
-                    if (deleteWrap) {
-                        deleteWrap.style.transition = 'opacity .3s, transform .3s';
-                        deleteWrap.style.opacity    = '0';
-                        deleteWrap.style.transform  = 'scale(.92)';
-                        setTimeout(function () { deleteWrap.remove(); applyFilter(); }, 300);
-                    }
-                    updateStats(-1, wasActive ? -1 : 0);
-                    showToast(@json(__('Service deleted successfully.')), 'danger');
-                }
-            })
-            .finally(function () { self.disabled = false; });
-        });
-    }
-
-    // ── Filters ───────────────────────────────────────────────────
-    var countEl = document.getElementById('svc-count');
-    var noRes   = document.getElementById('svc-no-results');
-    var state   = { q: '', cat: '', status: '', discount: '' };
-
-    function debounce(fn, ms) {
-        var t;
-        return function () {
-            var ctx = this, args = arguments;
-            clearTimeout(t);
-            t = setTimeout(function () { fn.apply(ctx, args); }, ms);
-        };
-    }
-
-    function applyFilter() {
-        var q   = state.q.trim().toLowerCase();
-        var vis = 0;
-        document.querySelectorAll('.svc-card-wrap').forEach(function (c) {
-            var ok = (!q              || (c.dataset.name || '').includes(q))
-                  && (!state.cat      || c.dataset.cat      === state.cat)
-                  && (!state.status   || c.dataset.active   === state.status)
-                  && (!state.discount || c.dataset.discount === state.discount);
-            c.classList.toggle('svc-hide', !ok);
-            if (ok) vis++;
-        });
-        document.querySelectorAll('.svc-category-section').forEach(function (sec) {
-            sec.style.display = sec.querySelectorAll('.svc-card-wrap:not(.svc-hide)').length ? '' : 'none';
-        });
-        if (countEl) countEl.textContent = vis + ' ' + @json(__('services'));
-        if (noRes)   noRes.classList.toggle('d-none', vis > 0);
-    }
-
-    var searchEl = document.getElementById('svc-search');
-    if (searchEl) searchEl.addEventListener('input', debounce(function () { state.q = this.value; applyFilter(); }, 200));
-
-    var catFilter = document.getElementById('svc-cat-filter');
-    if (catFilter) catFilter.addEventListener('change', function () { state.cat = this.value; applyFilter(); });
-
-    document.querySelectorAll('.bk-filter-tab[data-status]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            document.querySelectorAll('.bk-filter-tab[data-status]').forEach(function (b) { b.classList.remove('active'); });
-            this.classList.add('active');
-            state.status = this.dataset.status;
-            applyFilter();
-        });
-    });
-
-    document.querySelectorAll('.bk-filter-tab[data-discount]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var nowActive = !this.classList.contains('active');
-            document.querySelectorAll('.bk-filter-tab[data-discount]').forEach(function (b) { b.classList.remove('active'); });
-            if (nowActive) this.classList.add('active');
-            state.discount = nowActive ? this.dataset.discount : '';
-            applyFilter();
-        });
-    });
-
-    // ── Currency picker ───────────────────────────────────────────
-    document.querySelectorAll('.currency-option').forEach(function (el) {
-        el.addEventListener('click', function (e) {
-            e.preventDefault();
-            setCurrency(this.dataset.code, this.dataset.symbol);
-            updateDiscountPreview();
-        });
-    });
-
-    function setCurrency(code, symbol) {
-        if (!code) return;
-        var opt = document.querySelector('.currency-option[data-code="' + code + '"]');
-        var sym = symbol || (opt ? opt.dataset.symbol : code);
-        var ci = document.getElementById('currency-input');
-        var cs = document.getElementById('currency-symbol');
-        var cc = document.getElementById('currency-code');
-        if (ci) ci.value = code;
-        if (cs) cs.textContent = sym;
-        if (cc) cc.textContent = code;
-        document.querySelectorAll('.currency-option').forEach(function (o) { o.classList.remove('active'); });
-        if (opt) opt.classList.add('active');
-        updateDiscountUnit();
-    }
-
-    // ── Discount ──────────────────────────────────────────────────
-    var discTog = document.getElementById('discount-toggle');
-    if (discTog) {
-        discTog.addEventListener('change', function () {
-            var flds = document.getElementById('discount-fields');
-            if (flds) flds.style.display = this.checked ? '' : 'none';
-            if (!this.checked) {
-                var dp = document.getElementById('discount-preview');
-                if (dp) dp.classList.add('d-none');
-            }
-        });
-    }
-
-    document.querySelectorAll('.dtype-label').forEach(function (lbl) {
-        lbl.addEventListener('click', function () {
-            var radio = this.querySelector('.js-dtype');
-            if (!radio) return;
-            radio.checked = true;
-            updateDiscountUnit();
-            updateDiscountPreview();
-            highlightDtype(radio.value);
-        });
-    });
-
-    var dvEl = document.getElementById('discount_value');
-    var prEl = document.getElementById('svc-f-price');
-    if (dvEl) dvEl.addEventListener('input', updateDiscountPreview);
-    if (prEl) prEl.addEventListener('input', updateDiscountPreview);
-
-    function updateDiscountUnit() {
-        var typeEl = document.querySelector('.js-dtype:checked');
-        var unitEl = document.getElementById('discount-unit-lbl');
-        if (!unitEl) return;
-        var cur = (document.getElementById('currency-input') || {}).value || '';
-        unitEl.textContent = (typeEl && typeEl.value === 'fixed') ? cur : '%';
-    }
-
-    function updateDiscountPreview() {
-        var preview = document.getElementById('discount-preview');
-        var tog     = document.getElementById('discount-toggle');
-        if (!preview || !tog || !tog.checked) {
-            if (preview) preview.classList.add('d-none');
-            return;
-        }
-        var typeEl = document.querySelector('.js-dtype:checked');
-        var type   = typeEl ? typeEl.value : 'percent';
-        var dv     = document.getElementById('discount_value');
-        var pv     = document.getElementById('svc-f-price');
-        var val    = dv   ? parseFloat(dv.value)  || 0 : 0;
-        var price  = pv   ? parseFloat(pv.value)  || 0 : 0;
-        if (!val || !price) { preview.classList.add('d-none'); return; }
-        var cur = (document.getElementById('currency-input') || {}).value || '';
-        var fp  = Math.max(0, type === 'percent' ? price * (1 - val / 100) : price - val);
-        var o = document.getElementById('dp-original');
-        var f = document.getElementById('dp-final');
-        var b = document.getElementById('dp-badge');
-        if (o) o.textContent = price.toLocaleString() + ' ' + cur;
-        if (f) f.textContent = fp.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' ' + cur;
-        if (b) b.textContent = type === 'percent' ? '-' + val + '%' : '-' + val.toLocaleString() + ' ' + cur;
-        preview.classList.remove('d-none');
-    }
-
-    function highlightDtype(val) {
-        var lp = document.getElementById('dtype-lbl-percent');
-        var lf = document.getElementById('dtype-lbl-fixed');
-        if (lp) lp.classList.toggle('selected', val === 'percent');
-        if (lf) lf.classList.toggle('selected',   val === 'fixed');
-    }
-
-    function splitDT(dt) {
-        if (!dt) return { d: '', t: '' };
-        var p = dt.split('T');
-        return { d: p[0] || '', t: p[1] ? p[1].slice(0, 5) : '' };
-    }
-
-    function populateDiscount(type, value, starts, ends) {
-        var has  = !!(type && value);
-        var tog  = document.getElementById('discount-toggle');
-        var flds = document.getElementById('discount-fields');
-        var dv   = document.getElementById('discount_value');
-        if (tog)  tog.checked = has;
-        if (flds) flds.style.display = has ? '' : 'none';
-        if (has) {
-            var radio = document.querySelector('.js-dtype[value="' + type + '"]');
-            if (radio) { radio.checked = true; highlightDtype(type); updateDiscountUnit(); }
-            if (dv) dv.value = value || '';
-        } else {
-            var pr = document.querySelector('.js-dtype[value="percent"]');
-            if (pr) pr.checked = true;
-            highlightDtype('percent');
-        }
-        // Populate split date/time fields
-        var sp = splitDT(starts), ep = splitDT(ends);
-        if (discStartDate) discStartDate.value = sp.d;
-        if (discStartTime) discStartTime.value = sp.t || '00:00';
-        if (discEndDate)   discEndDate.value   = ep.d;
-        if (discEndTime)   discEndTime.value   = ep.t || '23:59';
-        syncDiscountHidden();
-        if (has) validateDiscountDates();
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────
-    function showErrors(errors) {
-        var box  = document.getElementById('svc-errors');
-        if (!box) return;
-        var msgs = [];
-        Object.values(errors).forEach(function (arr) {
-            (Array.isArray(arr) ? arr : [arr]).forEach(function (m) { msgs.push(m); });
-        });
-        box.innerHTML = msgs.map(function (m) { return '<div>• ' + m + '</div>'; }).join('');
-        box.classList.remove('d-none');
-    }
-
-    function clearErrors() {
-        var box = document.getElementById('svc-errors');
-        if (box) { box.innerHTML = ''; box.classList.add('d-none'); }
-    }
-
-    function setVal(id, val) {
-        var el = document.getElementById(id);
-        if (el) el.value = (val !== undefined && val !== null) ? val : '';
-    }
-
-    // ── Toast ─────────────────────────────────────────────────────
-    function showToast(msg, type) {
-        var toast = document.getElementById('bk-toast');
-        var inner = document.getElementById('bk-toast-inner');
-        var msgEl = document.getElementById('bk-toast-msg');
-        var iconEl = document.getElementById('bk-toast-icon');
-        if (!toast || !inner || !msgEl) return;
-        var palette = {
-            success: { bg: '#2bcf7e', icon: 'check-circle' },
-            danger:  { bg: '#e53935', icon: 'trash-2'      },
-            warning: { bg: '#f4a642', icon: 'alert-circle'  },
-        };
-        var c = palette[type] || palette.success;
-        inner.style.background = c.bg;
-        inner.style.color = '#fff';
-        msgEl.textContent = msg;
-        if (iconEl) {
-            iconEl.setAttribute('data-feather', c.icon);
-            iconEl.style.color = '#fff';
-            if (window.feather) feather.replace();
-        }
-        toast.style.display = 'block';
-        clearTimeout(toast._t1); clearTimeout(toast._t2);
-        toast._t1 = setTimeout(function () { toast.style.opacity = '1'; }, 10);
-        toast._t2 = setTimeout(function () {
-            toast.style.opacity = '0';
-            setTimeout(function () { toast.style.display = 'none'; }, 260);
-        }, 3200);
-    }
-
-    // ── Live stat counters ────────────────────────────────────────
-    function updateStats(deltaTotal, deltaActive) {
-        var totalEl  = document.getElementById('stat-total');
-        var activeEl = document.getElementById('stat-active');
-        var barEl    = document.getElementById('stat-active-bar');
-        var t = Math.max(0, parseInt(totalEl  ? totalEl.textContent  : 0) + deltaTotal);
-        var a = Math.max(0, Math.min(parseInt(activeEl ? activeEl.textContent : 0) + deltaActive, t));
-        if (totalEl)  totalEl.textContent  = t;
-        if (activeEl) activeEl.textContent = a;
-        if (barEl)    barEl.style.width    = (t > 0 ? Math.round(a / t * 100) : 0) + '%';
-    }
-
-}); // end DOMContentLoaded
+window.WB_BOOT = {
+    branchId: {{ $branch->id }},
+    csrf: @json(csrf_token()),
+    locale: @json(app()->getLocale()),
+    defaultCurrency: @json(config('booksy.default_currency')),
+    currencies: @json(config('booksy.currencies')),
+    services: @json($servicesData),
+    categories: @json($serviceCategories->map(fn($c) => ['id' => $c->id, 'name' => $c->localizedName(), 'sort' => $c->sort_order])->values()),
+    employees: @json($branchEmployees->map(fn($e) => ['id' => $e->id, 'name' => $e->localizedName()])->values()),
+    resources: @json($branchResources->map(fn($r) => ['id' => $r->id, 'name' => $r->localizedName(), 'type' => $r->typeLabel()])->values()),
+    branches: @json($siblingBranches->map(fn($b) => ['id' => $b->id, 'name' => $b->localizedName()])->values()),
+    urls: {
+        store:        @json(route('company.branches.services.store', $branch)),
+        updateBase:   @json(url('company/services')),
+        bulk:         @json(route('company.branches.services.bulk', $branch)),
+        copy:         @json(route('company.branches.services.copy', $branch)),
+        reorder:      @json(route('company.branches.services.reorder', $branch)),
+        import:       @json(route('company.branches.services.import', $branch)),
+        catStore:     @json(route('company.service-categories.store')),
+        catBase:      @json(url('company/service-categories')),
+        catReorder:   @json(route('company.service-categories.reorder')),
+    },
+    t: {
+        // rows / badges
+        internal: @json(__('Internal')), popular: @json(__('Popular')), recommended: @json(__('Rec')),
+        sale: @json(__('Sale')), optional: @json(__('Optional')), remove: @json(__('Remove')),
+        // service types
+        standard: @json(__('Standard')), package: @json(__('Package')), membership: @json(__('Membership')),
+        addon: @json(__('Add-on')), consultation: @json(__('Consultation')),
+        // row actions
+        edit: @json(__('Edit')), duplicate: @json(__('Duplicate')), del: @json(__('Delete')),
+        copyTo: @json(__('Copy to branches…')),
+        showOnline: @json(__('Show in online booking')), hideOnline: @json(__('Make internal only')),
+        // units
+        h: @json(__('h')), m: @json(__('m')), min: @json(__('min')), from: @json(__('from')),
+        // general
+        all: @json(__('All')), uncategorized: @json(__('Uncategorized')),
+        services: @json(__('services')), service: @json(__('service')), selected: @json(__('selected')),
+        // drawer
+        addService: @json(__('Add service')), editService: @json(__('Edit service')),
+        saveService: @json(__('Save service')), saveChanges: @json(__('Save changes')),
+        // notifications
+        created: @json(__('Service created.')), updated: @json(__('Service updated.')),
+        deleted: @json(__('Service deleted.')), duplicated: @json(__('Service duplicated.')),
+        undone: @json(__('Restored.')), changesApplied: @json(__('Changes applied.')),
+        genericError: @json(__('Something went wrong. Please try again.')),
+        confirmDelete: @json(__('Delete this service?')),
+        // inline prompts
+        pickBranch: @json(__('Pick at least one branch')), chooseFile: @json(__('Choose a file')),
+        categorySaved: @json(__('Category saved')), nameRequired: @json(__('Name is required')),
+        noMatches: @json(__('No matches')),
+        newCategory: @json(__('New category')), editCategory: @json(__('Edit category')),
+        moveToCategory: @json(__('Move to category')), changePrice: @json(__('Change price')),
+        changeDuration: @json(__('Change duration')),
+        // copy / import summary fragments
+        copied: @json(__('copied')), added: @json(__('added')), refreshed: @json(__('refreshed')),
+        skipped: @json(__('skipped')), refreshing: @json(__('Refreshing…')),
+        copyFailed: @json(__('Copy failed. Refresh the page and try again.')),
+        nothingCopied: @json(__('Nothing new to copy')),
+        // badge labels
+        mostRequested: @json(__('Most requested')), badgeNew: @json(__('New')),
+        specialOffer: @json(__('Special offer')), premium: @json(__('Premium')),
+    },
+};
 </script>
+<script src="{{ asset('backend/assets/vendors/sortable.min.js') }}"></script>
+<script src="{{ asset('backend/assets/vendors/services-workbench.js') }}?v=4"></script>
 @endpush

@@ -232,6 +232,32 @@
                 </div>
             </div>
 
+            {{-- Product sales commission (independent of comp type) --}}
+            @php $productCommRate = old('comp_product_commission_rate', $compensation?->product_commission_rate ?? ''); @endphp
+            <div class="mt-3 pt-3" style="border-top:1px dashed rgba(255,255,255,.1);">
+                <label class="f-label">🛍️ {{ __('Product sales commission') }} (%)</label>
+                <div class="d-flex align-items-center gap-2 mt-1" style="max-width:180px;">
+                    <input type="number" name="comp_product_commission_rate"
+                           class="f-input form-control" min="0" max="100" step="0.5"
+                           value="{{ $productCommRate == 0 ? '' : $productCommRate }}" placeholder="0">
+                    <span class="f-label mb-0" style="font-size:18px;opacity:.6;">%</span>
+                </div>
+                <div class="tx-11 mt-1" style="opacity:.45;">{{ __('Commission on products this employee sells from the inventory') }}</div>
+            </div>
+
+            {{-- Overtime hourly rate (in salary currency) --}}
+            @php $overtimeRate = old('comp_overtime_hourly_rate', $compensation?->overtime_hourly_rate ?? ''); @endphp
+            <div class="mt-3 pt-3" style="border-top:1px dashed rgba(255,255,255,.1);">
+                <label class="f-label">⚡ {{ __('Overtime hourly rate') }}</label>
+                <div class="d-flex align-items-center gap-2 mt-1" style="max-width:220px;">
+                    <input type="number" name="comp_overtime_hourly_rate"
+                           class="f-input form-control" min="0" step="0.01"
+                           value="{{ $overtimeRate == 0 ? '' : $overtimeRate }}" placeholder="0">
+                    <span class="f-label mb-0" style="font-size:12px;opacity:.6;white-space:nowrap;">{{ __('per hour') }}</span>
+                </div>
+                <div class="tx-11 mt-1" style="opacity:.45;">{{ __('Paid for every overtime hour recorded after the shift end (same currency as the salary). Leave empty to disable.') }}</div>
+            </div>
+
         </div>
     </div>
 </div>

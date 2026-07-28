@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Company;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\EmployeeDeduction;
+use App\Support\Auditor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,28 +28,52 @@ class DeductionController extends Controller
     {
         $company = $this->company();
 
-        $deductions = \App\Models\EmployeeDeduction::whereHas('employee', fn($q) => $q->where('company_id', $company->id))
+        $base = EmployeeDeduction::whereHas('employee', fn ($q) => $q->where('company_id', $company->id));
+
+        $stats = [
+            'absence'   => (clone $base)->where('type', 'absence')->where('is_sick_leave', false)->count(),
+            'tardiness' => (clone $base)->where('type', 'tardiness')->count(),
+            'sick'      => (clone $base)->where('is_sick_leave', true)->count(),
+        ];
+        $totalDeducted = (clone $base)->where('is_sick_leave', false)->sum('amount');
+
+        $deductions = (clone $base)
             ->with(['employee.branch', 'recordedBy'])
             ->orderByDesc('deduction_date')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
-        $totalDeducted = $deductions->where('is_sick_leave', false)->sum('amount');
-
-        return view('company.deductions.index', compact('deductions', 'totalDeducted'));
+        return view('company.deductions.index', compact('deductions', 'totalDeducted', 'stats'));
     }
 
     public function index(Employee $employee): View
     {
         $this->authoriseEmployee($employee);
 
-        $deductions = $employee->deductions()
+        $base = $employee->deductions();
+
+        $stats = [
+            'absence'   => (clone $base)->where('type', 'absence')->where('is_sick_leave', false)->count(),
+            'tardiness' => (clone $base)->where('type', 'tardiness')->count(),
+            'sick'      => (clone $base)->where('is_sick_leave', true)->count(),
+        ];
+
+        // Totals per currency across ALL records (not just the current page)
+        $dedTotals = (clone $base)
+            ->where('is_sick_leave', false)
+            ->selectRaw('currency, SUM(amount) as total')
+            ->groupBy('currency')
+            ->pluck('total', 'currency');
+
+        $totalDeducted = $dedTotals->sum();
+
+        $deductions = (clone $base)
             ->with('recordedBy')
             ->orderByDesc('deduction_date')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
-        $totalDeducted = $deductions->where('is_sick_leave', false)->sum('amount');
-
-        return view('company.employees.deductions.index', compact('employee', 'deductions', 'totalDeducted'));
+        return view('company.employees.deductions.index', compact('employee', 'deductions', 'totalDeducted', 'stats', 'dedTotals'));
     }
 
     public function create(Employee $employee): View
@@ -79,7 +104,7 @@ class DeductionController extends Controller
             'notes'                   => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $employee->deductions()->create([
+        $deduction = $employee->deductions()->create([
             'type'                    => $data['type'],
             'is_sick_leave'           => $request->boolean('is_sick_leave'),
             'deduction_date'          => $data['deduction_date'],
@@ -88,6 +113,11 @@ class DeductionController extends Controller
             'hours'                   => $data['hours'] ?? null,
             'notes'                   => $data['notes'] ?? null,
         ]);
+
+        Auditor::log(
+            "Recorded {$data['type']} deduction for {$employee->localizedName()} — " . ($data['amount'] ?? 0) . ' ' . ($data['currency'] ?? config('booksy.default_currency', 'SYP')),
+            $deduction
+        );
 
         return redirect()
             ->route('company.employees.deductions.index', $employee)
@@ -99,6 +129,7 @@ class DeductionController extends Controller
         abort_unless($deduction->employee->company_id === $this->company()->id, 403);
 
         $employee = $deduction->employee;
+        Auditor::log("Deleted {$deduction->type} deduction for {$employee->localizedName()} — {$deduction->amount} {$deduction->currency}", $deduction);
         $deduction->delete();
 
         return redirect()

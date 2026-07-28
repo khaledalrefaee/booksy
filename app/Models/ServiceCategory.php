@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasLocalizedNames;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ServiceCategory extends Model
 {
+    use HasFactory;
     use HasLocalizedNames;
 
     protected $fillable = [
@@ -34,5 +37,10 @@ class ServiceCategory extends Model
     public function services(): HasMany
     {
         return $this->hasMany(Service::class);
+    }
+
+    public function resources(): BelongsToMany
+    {
+        return $this->belongsToMany(Resource::class, 'resource_service_category');
     }
 }

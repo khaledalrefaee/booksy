@@ -109,6 +109,8 @@
 @section('content')
 <div class="page-content">
 
+    @include('company.partials.team-nav')
+
     {{-- Hero --}}
     <div class="leaves-hero bk-a1">
         <div class="d-flex justify-content-between align-items-start align-items-sm-center flex-wrap gap-3 position-relative" style="z-index:1;">
@@ -118,15 +120,15 @@
             </div>
             <div class="d-flex gap-2">
                 <div class="stat-chip">
-                    <div class="num">{{ $leaves->where('status','pending')->count() }}</div>
+                    <div class="num">{{ $counts['pending'] }}</div>
                     <div class="lbl">{{ __('Pending') }}</div>
                 </div>
                 <div class="stat-chip">
-                    <div class="num">{{ $leaves->where('status','approved')->count() }}</div>
+                    <div class="num">{{ $counts['approved'] }}</div>
                     <div class="lbl">{{ __('Approved') }}</div>
                 </div>
                 <div class="stat-chip">
-                    <div class="num">{{ $leaves->where('status','rejected')->count() }}</div>
+                    <div class="num">{{ $counts['rejected'] }}</div>
                     <div class="lbl">{{ __('Rejected') }}</div>
                 </div>
             </div>
@@ -135,12 +137,55 @@
 
     @include('company.partials.flash')
 
-    {{-- Tabs --}}
-    <div class="lv-tabs bk-a2" id="lvTabs">
-        <button class="lv-tab active" data-filter="all">{{ __('All') }} ({{ $leaves->count() }})</button>
-        <button class="lv-tab" data-filter="pending">{{ __('Pending') }} ({{ $leaves->where('status','pending')->count() }})</button>
-        <button class="lv-tab" data-filter="approved">{{ __('Approved') }} ({{ $leaves->where('status','approved')->count() }})</button>
-        <button class="lv-tab" data-filter="rejected">{{ __('Rejected') }} ({{ $leaves->where('status','rejected')->count() }})</button>
+    {{-- Filters --}}
+    @php
+        $filterBase = array_filter(['employee_id' => $employeeId, 'branch_id' => $branchId, 'month' => $month]);
+        $hasFilters = $employeeId || $branchId || $month || $status;
+    @endphp
+    <form method="GET" action="{{ route('company.employee-leaves.index') }}"
+          class="card border-0 rounded-4 shadow-sm mb-3">
+        <div class="d-flex flex-wrap align-items-end gap-2 px-3 py-3">
+            <div style="flex:1;min-width:160px;">
+                <label class="tx-11 fw-bold text-muted d-block mb-1">{{ __('Employee') }}</label>
+                <select name="employee_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">{{ __('All') }}</option>
+                    @foreach($employeeList as $e)
+                    <option value="{{ $e->id }}" {{ $employeeId == $e->id ? 'selected' : '' }}>{{ $e->localizedName() }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div style="flex:1;min-width:140px;">
+                <label class="tx-11 fw-bold text-muted d-block mb-1">{{ __('Branch') }}</label>
+                <select name="branch_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">{{ __('All branches') }}</option>
+                    @foreach($branches as $b)
+                    <option value="{{ $b->id }}" {{ $branchId == $b->id ? 'selected' : '' }}>{{ $b->localizedName() }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div style="flex:1;min-width:140px;">
+                <label class="tx-11 fw-bold text-muted d-block mb-1">{{ __('Month') }}</label>
+                <input type="month" name="month" value="{{ $month }}" class="form-control form-control-sm" onchange="this.form.submit()">
+            </div>
+            @if($status)<input type="hidden" name="status" value="{{ $status }}">@endif
+            @if($hasFilters)
+            <a href="{{ route('company.employee-leaves.index') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3" style="font-size:12px;">
+                ✕ {{ __('Clear all') }}
+            </a>
+            @endif
+        </div>
+    </form>
+
+    {{-- Status tabs (server-side) --}}
+    <div class="lv-tabs bk-a2">
+        <a href="{{ route('company.employee-leaves.index', $filterBase) }}"
+           class="lv-tab {{ !$status ? 'active' : '' }}" style="text-decoration:none;">{{ __('All') }} ({{ $counts['all'] }})</a>
+        <a href="{{ route('company.employee-leaves.index', $filterBase + ['status' => 'pending']) }}"
+           class="lv-tab {{ $status === 'pending' ? 'active' : '' }}" style="text-decoration:none;">{{ __('Pending') }} ({{ $counts['pending'] }})</a>
+        <a href="{{ route('company.employee-leaves.index', $filterBase + ['status' => 'approved']) }}"
+           class="lv-tab {{ $status === 'approved' ? 'active' : '' }}" style="text-decoration:none;">{{ __('Approved') }} ({{ $counts['approved'] }})</a>
+        <a href="{{ route('company.employee-leaves.index', $filterBase + ['status' => 'rejected']) }}"
+           class="lv-tab {{ $status === 'rejected' ? 'active' : '' }}" style="text-decoration:none;">{{ __('Rejected') }} ({{ $counts['rejected'] }})</a>
     </div>
 
     {{-- Cards --}}
@@ -152,19 +197,42 @@
                 $bg = $palette[$leave->employee_id % count($palette)];
                 $initial = strtoupper(mb_substr($leave->employee->name_en ?? $leave->employee->name_ar ?? '?', 0, 1));
             @endphp
+            @php
+                $typeMeta = $leave->typeMeta();
+                $remaining = $balances[$leave->employee_id] ?? null;
+                $overBalance = $leave->status === 'pending'
+                    && $leave->type === 'annual'
+                    && $remaining !== null
+                    && $leave->daysCount() > $remaining;
+            @endphp
             <div class="lv-card" data-status="{{ $leave->status }}">
                 <div class="lv-avatar" style="background:linear-gradient(135deg,{{ $bg }}bb,{{ $bg }});">{{ $initial }}</div>
 
                 <div class="flex-grow-1" style="min-width:0;">
                     <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
-                        <span class="lv-name">{{ $leave->employee->localizedName() }}</span>
+                        <a href="{{ route('company.employees.show', $leave->employee) }}" class="lv-name"
+                           style="color:inherit;text-decoration:none;"
+                           onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">{{ $leave->employee->localizedName() }}</a>
+                        <span class="lv-badge" style="background:{{ $typeMeta['color'] }}1f;color:{{ $typeMeta['color'] }};">
+                            {{ $typeMeta['icon'] }} {{ __($typeMeta['label_key']) }}
+                        </span>
                         <span class="lv-badge lv-badge-{{ $leave->status }}">
                             @if($leave->status==='approved') ✓ {{ __('Approved') }}
                             @elseif($leave->status==='rejected') ✗ {{ __('Rejected') }}
                             @else ⏳ {{ __('Pending') }}
                             @endif
                         </span>
-                        <span class="days-pill">{{ $leave->daysCount() }} {{ __('day(s)') }}</span>
+                        @if($leave->is_hourly)
+                            <span class="days-pill" style="color:#4facfe;">⏱️ {{ substr($leave->start_hour, 0, 5) }}–{{ substr($leave->end_hour, 0, 5) }} ({{ $leave->hoursCount() }} {{ __('hour(s)') }})</span>
+                        @else
+                            <span class="days-pill">{{ $leave->daysCount() }} {{ __('day(s)') }}</span>
+                        @endif
+                        @if($overBalance)
+                        <span class="lv-badge" style="background:rgba(245,158,11,.14);color:#f59e0b;"
+                              title="{{ __('Remaining balance') }}: {{ $remaining }} {{ __('day(s)') }}">
+                            ⚠️ {{ __('Exceeds balance') }} ({{ $remaining }})
+                        </span>
+                        @endif
                     </div>
                     <div class="lv-dates">
                         <i data-feather="calendar" style="width:11px;height:11px;opacity:.5;"></i>
@@ -196,13 +264,10 @@
                         </button>
                     </form>
                     @endif
-                    <form method="POST" action="{{ route('company.employee-leaves.destroy', $leave) }}"
-                          onsubmit="return confirm('{{ __('Delete this leave request?') }}')">
-                        @csrf @method('DELETE')
-                        <button class="btn-lv btn-lv-del">
-                            <i data-feather="trash-2" style="width:11px;height:11px;"></i>
-                        </button>
-                    </form>
+                    <button type="button" class="btn-lv btn-lv-del"
+                            onclick="bkConfirmDelete('{{ route('company.employee-leaves.destroy', $leave) }}', '{{ addslashes($leave->employee->localizedName()) }} — {{ $leave->start_date->format('d/m') }} → {{ $leave->end_date->format('d/m') }}', '{{ __('Delete this leave request?') }}')">
+                        <i data-feather="trash-2" style="width:11px;height:11px;"></i>
+                    </button>
                 </div>
             </div>
             @empty
@@ -211,25 +276,17 @@
                     <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
                     <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                <p>{{ __('No leave requests yet.') }}</p>
+                <p>{{ $hasFilters ? __('No leave requests match your filters.') : __('No leave requests yet.') }}</p>
             </div>
             @endforelse
         </div>
     </div>
 
+    @if($leaves->hasPages())
+    <div class="mt-3">{{ $leaves->links() }}</div>
+    @endif
+
+    @include('company.partials.confirm-delete-modal')
+
 </div>
-@push('scripts')
-<script>
-document.querySelectorAll('#lvTabs .lv-tab').forEach(tab => {
-    tab.addEventListener('click', function () {
-        document.querySelectorAll('#lvTabs .lv-tab').forEach(t => t.classList.remove('active'));
-        this.classList.add('active');
-        const f = this.dataset.filter;
-        document.querySelectorAll('#lvList .lv-card').forEach(c => {
-            c.style.display = (f === 'all' || c.dataset.status === f) ? 'flex' : 'none';
-        });
-    });
-});
-</script>
-@endpush
 @endsection

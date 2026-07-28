@@ -19,10 +19,25 @@
             <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.4;">
                 {{ $greeting }} 👋
             </div>
-            <div style="font-size:.88rem;font-weight:700;color:#C9A227;">
+            <div style="font-size:.88rem;font-weight:700;color:var(--bk-accent);">
                 {{ $authOwner?->name ?? 'Admin' }}
             </div>
         </div>
+
+        {{-- Global search --}}
+        <form method="GET" action="{{ route('owner.search.index') }}"
+              class="d-none d-md-flex align-items-center me-2" style="min-width:200px;max-width:260px;">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-transparent border-end-0">
+                    <i data-feather="search" style="width:13px;height:13px;opacity:.5;"></i>
+                </span>
+                <input type="text" name="q" class="form-control border-start-0"
+                       placeholder="{{ __('Search') }}…" style="font-size:.8rem;">
+            </div>
+        </form>
+        <a href="{{ route('owner.search.index') }}" class="nav-link d-md-none" style="padding:0 8px;">
+            <i data-feather="search" style="width:18px;height:18px;"></i>
+        </a>
 
         {{-- Action Buttons --}}
         <div class="d-none d-lg-flex align-items-center gap-2 me-2">
@@ -65,8 +80,8 @@
             {{-- Profile --}}
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode($authOwner?->name ?? 'Owner') }}&size=32&background=C9A227&color=000&bold=true"
-                         class="wd-32 ht-32 rounded-circle" style="border:2px solid rgba(201,162,39,.3);" alt="">
+                    <img src="https://ui-avatars.com/api/?name={{ urlencode($authOwner?->name ?? 'Owner') }}&size=32&background=4B5D34&color=FFFFFF&bold=true"
+                         class="wd-32 ht-32 rounded-circle" style="border:2px solid rgba(12,110,116,.3);" alt="">
                     <div class="d-none d-md-block" style="line-height:1.2;text-align:{{ $isAr?'right':'left' }};">
                         <div style="font-size:.78rem;font-weight:700;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                             {{ $authOwner?->name ?? 'Admin' }}
@@ -76,14 +91,14 @@
                 </a>
 
                 <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:220px;border-radius:12px;overflow:hidden;">
-                    <div class="px-4 py-3 border-bottom" style="background:rgba(201,162,39,.07);">
+                    <div class="px-4 py-3 border-bottom" style="background:rgba(12,110,116,.07);">
                         <div class="d-flex align-items-center gap-3">
-                            <img src="https://ui-avatars.com/api/?name={{ urlencode($authOwner?->name ?? 'Owner') }}&size=42&background=C9A227&color=000&bold=true"
+                            <img src="https://ui-avatars.com/api/?name={{ urlencode($authOwner?->name ?? 'Owner') }}&size=42&background=4B5D34&color=FFFFFF&bold=true"
                                  style="width:42px;height:42px;border-radius:50%;flex-shrink:0;" alt="">
                             <div style="min-width:0;">
                                 <div style="font-size:.84rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $authOwner?->name }}</div>
                                 <div style="font-size:.7rem;margin-top:3px;">
-                                    <span style="background:#C9A227;color:#000;border-radius:20px;padding:1px 8px;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">
+                                    <span style="background:var(--bk-accent);color:#000;border-radius:20px;padding:1px 8px;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">
                                         Platform Owner
                                     </span>
                                 </div>
@@ -101,6 +116,15 @@
                             <a href="{{ route('front.index') }}" target="_blank"
                                class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
                                 <i class="icon-sm feather icon-globe"></i> {{ __('View website') }}
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            @php($navTheme = request()->cookie('owner_theme', 'dark'))
+                            <a href="{{ route('owner.theme', ['mode' => $navTheme === 'dark' ? 'light' : 'dark']) }}"
+                               class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
+                                <i class="icon-sm feather icon-{{ $navTheme === 'dark' ? 'sun' : 'moon' }}"></i>
+                                {{ $navTheme === 'dark' ? __('Light mode') : __('Dark mode') }}
                             </a>
                         </li>
                         <li><hr class="dropdown-divider my-1"></li>

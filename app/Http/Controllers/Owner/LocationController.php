@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Country;
 use App\Models\Governorate;
 use App\Models\Area;
+use App\Services\Owner\OwnerAudit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,7 +35,8 @@ class LocationController extends Controller
             'dial_code'  => ['nullable', 'string', 'max:10'],
             'sort_order' => ['integer', 'min:0'],
         ]);
-        Country::create($data);
+        $country = Country::create($data);
+        OwnerAudit::record('location.country.created', $country, null, $data);
         return back()->with('success', __('Country added.'));
     }
 
@@ -47,12 +49,15 @@ class LocationController extends Controller
             'dial_code'  => ['nullable', 'string', 'max:10'],
             'sort_order' => ['integer', 'min:0'],
         ]);
-        $country->update($data);
+        $country->fill($data);
+        OwnerAudit::recordChanges('location.country.updated', $country);
+        $country->save();
         return back()->with('success', __('Country updated.'));
     }
 
     public function destroyCountry(Country $country): RedirectResponse
     {
+        OwnerAudit::record('location.country.deleted', $country, $country->only(['name_en', 'name_ar', 'code']));
         $country->delete();
         return back()->with('success', __('Country deleted.'));
     }
@@ -67,7 +72,8 @@ class LocationController extends Controller
             'name_ar'    => ['required', 'string', 'max:100'],
             'sort_order' => ['integer', 'min:0'],
         ]);
-        Governorate::create($data);
+        $governorate = Governorate::create($data);
+        OwnerAudit::record('location.governorate.created', $governorate, null, $data);
         return back()->with('success', __('Governorate added.'));
     }
 
@@ -79,12 +85,15 @@ class LocationController extends Controller
             'name_ar'    => ['required', 'string', 'max:100'],
             'sort_order' => ['integer', 'min:0'],
         ]);
-        $governorate->update($data);
+        $governorate->fill($data);
+        OwnerAudit::recordChanges('location.governorate.updated', $governorate);
+        $governorate->save();
         return back()->with('success', __('Governorate updated.'));
     }
 
     public function destroyGovernorate(Governorate $governorate): RedirectResponse
     {
+        OwnerAudit::record('location.governorate.deleted', $governorate, $governorate->only(['name_en', 'name_ar', 'country_id']));
         $governorate->delete();
         return back()->with('success', __('Governorate deleted.'));
     }
@@ -99,7 +108,8 @@ class LocationController extends Controller
             'name_ar'        => ['required', 'string', 'max:100'],
             'sort_order'     => ['integer', 'min:0'],
         ]);
-        Area::create($data);
+        $area = Area::create($data);
+        OwnerAudit::record('location.area.created', $area, null, $data);
         return back()->with('success', __('Area added.'));
     }
 
@@ -111,12 +121,15 @@ class LocationController extends Controller
             'name_ar'        => ['required', 'string', 'max:100'],
             'sort_order'     => ['integer', 'min:0'],
         ]);
-        $area->update($data);
+        $area->fill($data);
+        OwnerAudit::recordChanges('location.area.updated', $area);
+        $area->save();
         return back()->with('success', __('Area updated.'));
     }
 
     public function destroyArea(Area $area): RedirectResponse
     {
+        OwnerAudit::record('location.area.deleted', $area, $area->only(['name_en', 'name_ar', 'governorate_id']));
         $area->delete();
         return back()->with('success', __('Area deleted.'));
     }

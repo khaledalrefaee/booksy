@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Appointment\TransitionAppointment;
+use App\Enums\AppointmentStatus;
+use App\Enums\TransitionActor;
 use App\Models\AppointmentConfirmation;
 use App\Services\StaffNotificationService;
-use App\Services\WhatsappService;
-use Illuminate\Http\Request;
 
 class AppointmentConfirmController extends Controller
 {
+    public function __construct(private readonly TransitionAppointment $transition)
+    {
+    }
+
     public function handle(string $token, string $action)
     {
         $confirmation = AppointmentConfirmation::where('token', $token)->first();
@@ -32,9 +37,15 @@ class AppointmentConfirmController extends Controller
         }
 
         if ($action === 'confirm') {
-            if ($appointment->status === 'pending') {
-                $appointment->update(['status' => 'confirmed']);
-            }
+            // attempt(): the state machine already knows a confirm is only legal
+            // from pending, so there is no status check to duplicate here.
+            $this->transition->attempt(
+                $appointment,
+                AppointmentStatus::Confirmed,
+                TransitionActor::Customer,
+                ['meta' => ['source' => 'whatsapp_link']],
+            );
+
             $confirmation->update(['action' => 'confirm', 'acted_at' => now()]);
             StaffNotificationService::customerConfirmedViaWhatsApp($appointment);
 
@@ -46,9 +57,13 @@ class AppointmentConfirmController extends Controller
         }
 
         if ($action === 'cancel') {
-            if (in_array($appointment->status, ['pending', 'confirmed'])) {
-                $appointment->update(['status' => 'cancelled']);
-            }
+            $this->transition->attempt(
+                $appointment,
+                AppointmentStatus::CancelledByCustomer,
+                TransitionActor::Customer,
+                ['meta' => ['source' => 'whatsapp_link']],
+            );
+
             $confirmation->update(['action' => 'cancel', 'acted_at' => now()]);
             StaffNotificationService::customerCancelledViaWhatsApp($appointment);
 

@@ -114,7 +114,7 @@
                 <div class="d-flex align-items-center gap-2 mb-1">
                     <h3 class="fw-bold mb-0" style="font-family:'Poppins',sans-serif;">{{ $branch->localizedName() }}</h3>
                     @if($branch->is_head_office)
-                        <span class="badge rounded-pill" style="background:rgba(201,162,39,.2);color:#C9A227;font-size:10px;">{{ __('Head Office') }}</span>
+                        <span class="badge rounded-pill" style="background:rgba(75,93,52,.2);color:var(--bk-accent);font-size:10px;">{{ __('Head Office') }}</span>
                     @endif
                     <span class="badge rounded-pill bg-{{ $branch->statusColor() }}" style="font-size:10px;">{{ __($branch->statusLabel()) }}</span>
                 </div>
@@ -289,7 +289,7 @@
                         <i data-feather="clock" style="width:12px;height:12px;" class="me-1"></i>{{ __('Working Hours') }}
                     </a>
                     <a href="{{ route('company.branches.gallery', $branch) }}"
-                       class="btn btn-sm rounded-pill px-3" style="font-size:12px;font-weight:600;background:rgba(201,162,39,.12);color:#C9A227;border:none;">
+                       class="btn btn-sm rounded-pill px-3" style="font-size:12px;font-weight:600;background:rgba(75,93,52,.12);color:var(--bk-accent);border:none;">
                         <i data-feather="image" style="width:12px;height:12px;" class="me-1"></i>{{ __('Gallery') }}
                     </a>
                     <a href="{{ route('company.appointments.index', ['branch_id' => $branch->id]) }}"
@@ -325,16 +325,7 @@
                         </thead>
                         <tbody>
                             @foreach($recentAppointments as $appt)
-                            @php
-                                $statusColors = [
-                                    'pending'   => ['rgba(255,193,7,.15)','#ffc107'],
-                                    'confirmed' => ['rgba(79,172,254,.15)','#4facfe'],
-                                    'completed' => ['rgba(43,207,126,.15)','#2bcf7e'],
-                                    'cancelled' => ['rgba(245,87,108,.15)','#f5576c'],
-                                    'no_show'   => ['rgba(108,117,125,.15)','#6c757d'],
-                                ];
-                                [$sbg, $scolor] = $statusColors[$appt->status] ?? ['rgba(108,117,125,.15)','#6c757d'];
-                            @endphp
+                            @php $scolor = $appt->status->color(); @endphp
                             <tr>
                                 <td style="font-weight:600;font-size:12px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                                     {{ $appt->customer?->name ?? __('Guest') }}
@@ -346,8 +337,8 @@
                                     {{ $appt->start_time?->format('M d, H:i') }}
                                 </td>
                                 <td>
-                                    <span class="status-pill" style="background:{{ $sbg }};color:{{ $scolor }};">
-                                        {{ __($appt->status) }}
+                                    <span class="status-pill" style="background:{{ $scolor }}26;color:{{ $scolor }};">
+                                        {{ $appt->status->label() }}
                                     </span>
                                 </td>
                             </tr>

@@ -26,7 +26,9 @@ class EmployeeFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'is_active' => true,
             'is_bookable' => true,
-            'contract_type' => fake()->randomElement(Employee::CONTRACT_TYPES),
+            /* CONTRACT_TYPES maps key => [label_key, icon, color]; the column
+               stores the key, so pick from the keys, not the metadata arrays. */
+            'contract_type' => fake()->randomElement(array_keys(Employee::CONTRACT_TYPES)),
             'hire_date' => fake()->date(),
             'password' => 'password',
         ];

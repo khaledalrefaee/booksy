@@ -18,6 +18,7 @@
 }
 .ded-badge.absence     { background:rgba(239,68,68,.15);  color:#ef4444; }
 .ded-badge.tardiness   { background:rgba(245,158,11,.15); color:#f59e0b; }
+.ded-badge.advance     { background:rgba(6,182,212,.15); color:#06b6d4; }
 .ded-badge.other       { background:rgba(99,102,241,.15); color:#818cf8; }
 .ded-badge.sick        { background:rgba(34,197,94,.15);  color:#22c55e; }
 </style>
@@ -33,10 +34,14 @@
                 <nav aria-label="breadcrumb" class="mb-2">
                     <ol class="breadcrumb mb-0" style="--bs-breadcrumb-divider-color:rgba(255,255,255,.4);">
                         <li class="breadcrumb-item">
+                            @if($employee->branch)
                             <a href="{{ route('company.branches.employees.index', $employee->branch) }}"
                                class="text-decoration-none" style="color:rgba(255,255,255,.65);font-size:13px;">
                                 {{ $employee->branch->localizedName() }}
                             </a>
+                            @else
+                            <span style="color:rgba(255,255,255,.65);font-size:13px;">🏢 {{ __('All branches') }}</span>
+                            @endif
                         </li>
                         <li class="breadcrumb-item">
                             <a href="{{ route('company.employees.edit', $employee) }}"
@@ -96,9 +101,9 @@
     {{-- Summary cards --}}
     <div class="row g-3 mb-4">
         @php
-            $countAbsence   = $deductions->where('type','absence')->where('is_sick_leave',false)->count();
-            $countTardiness = $deductions->where('type','tardiness')->count();
-            $countSick      = $deductions->where('is_sick_leave',true)->count();
+            $countAbsence   = $stats['absence'];
+            $countTardiness = $stats['tardiness'];
+            $countSick      = $stats['sick'];
         @endphp
         <div class="col-6 col-md-3">
             <div class="card border-0 shadow-sm rounded-4 h-100">
@@ -131,7 +136,7 @@
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-body text-center p-3">
                     <div style="font-size:22px;">💸</div>
-                    @php $dedTotals = $deductions->where('is_sick_leave', false)->groupBy('currency')->map(fn($g) => $g->sum('amount')); @endphp
+                    {{-- $dedTotals is computed in the controller across all records --}}
                     @foreach($dedTotals as $cur => $amt)
                     @php $sym = config("booksy.currencies.{$cur}.symbol", $cur ?: config('booksy.default_currency')); @endphp
                     <div class="fw-bold mt-1" style="font-size:{{ $dedTotals->count() > 1 ? '16px' : '24px' }};">{{ number_format($amt, 0) }} <span style="font-size:12px;opacity:.5;">{{ $sym }}</span></div>
@@ -172,7 +177,7 @@
                                     <span class="ded-badge sick">🤒 {{ __('Sick leave') }}</span>
                                 @else
                                     <span class="ded-badge {{ $ded->type }}">
-                                        {{ $ded->type === 'absence' ? '🚫 '.__('Absence') : ($ded->type === 'tardiness' ? '⏰ '.__('Tardiness') : '📌 '.__('Other')) }}
+                                        {{ $ded->type === 'absence' ? '🚫 '.__('Absence') : ($ded->type === 'tardiness' ? '⏰ '.__('Tardiness') : ($ded->type === 'advance' ? '💵 '.__('Advance installment') : '📌 '.__('Other'))) }}
                                     </span>
                                 @endif
                             </td>
@@ -201,11 +206,10 @@
                                 </span>
                             </td>
                             <td class="pe-4 text-end">
-                                <form action="{{ route('company.deductions.destroy', $ded) }}" method="POST"
-                                      onsubmit="return confirm('{{ __('Delete this record?') }}')">
-                                    @csrf @method('DELETE')
-                                    <button class="btn btn-sm btn-outline-danger rounded-pill">{{ __('Delete') }}</button>
-                                </form>
+                                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill"
+                                        onclick="bkConfirmDelete('{{ route('company.deductions.destroy', $ded) }}', '{{ $ded->deduction_date->format('d/m/Y') }} — {{ number_format($ded->amount ?? 0, 0) }}', '{{ __('Delete this record?') }}')">
+                                    {{ __('Delete') }}
+                                </button>
                             </td>
                         </tr>
                         @endforeach
@@ -215,5 +219,11 @@
         </div>
     </div>
     @endif
+
+    @if($deductions->hasPages())
+    <div class="mt-3">{{ $deductions->links() }}</div>
+    @endif
+
+    @include('company.partials.confirm-delete-modal')
 </div>
 @endsection

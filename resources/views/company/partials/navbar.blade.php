@@ -27,14 +27,29 @@
             <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.4;">
                 {{ $greeting }} 👋
             </div>
-            <div style="font-size:.88rem;font-weight:700;color:#C9A227;">
+            <div style="font-size:.88rem;font-weight:700;color:var(--bk-accent);">
                 {{ $authCompany?->localizedName() }}
             </div>
         </div>
 
+        {{-- Global search --}}
+        <form method="GET" action="{{ route('company.search.index') }}"
+              class="d-none d-md-flex align-items-center me-2" style="min-width:200px;max-width:260px;">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-transparent border-end-0">
+                    <i data-feather="search" style="width:13px;height:13px;opacity:.5;"></i>
+                </span>
+                <input type="text" name="q" class="form-control border-start-0"
+                       placeholder="{{ __('Search') }}…" style="font-size:.8rem;">
+            </div>
+        </form>
+        <a href="{{ route('company.search.index') }}" class="nav-link d-md-none" style="padding:0 8px;">
+            <i data-feather="search" style="width:18px;height:18px;"></i>
+        </a>
+
         {{-- Action Buttons --}}
         <div class="d-none d-lg-flex align-items-center gap-1 me-1">
-            <a href="{{ route('company.appointments.create') }}"
+            <a href="{{ route('company.appointments.create') }}" data-tour="new-booking"
                class="btn btn-primary btn-sm rounded-pill d-flex align-items-center gap-1 px-3">
                 <i class="feather icon-plus" style="font-size:13px;line-height:1;"></i>
                 {{ __('New booking') }}
@@ -65,12 +80,12 @@
                     @endif
                 </a>
                 <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:340px;max-height:440px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.08);box-shadow:0 12px 40px rgba(0,0,0,.4);">
-                    <div class="px-4 py-3 d-flex justify-content-between align-items-center" style="background:rgba(201,162,39,.06);border-bottom:1px solid rgba(255,255,255,.06);">
+                    <div class="px-4 py-3 d-flex justify-content-between align-items-center" style="background:rgba(75,93,52,.06);border-bottom:1px solid rgba(255,255,255,.06);">
                         <span class="fw-bold tx-13">🔔 {{ __('Notifications') }}</span>
                         @if($unreadCount > 0)
                         <form method="POST" action="{{ route('company.notifications.read-all') }}" class="d-inline">
                             @csrf
-                            <button type="submit" class="btn btn-sm px-2 py-1 rounded-pill" style="font-size:10px;color:#C9A227;font-weight:700;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.2);">{{ __('Mark all read') }}</button>
+                            <button type="submit" class="btn btn-sm px-2 py-1 rounded-pill" style="font-size:10px;color:var(--bk-accent);font-weight:700;background:rgba(75,93,52,.1);border:1px solid rgba(75,93,52,.2);">{{ __('Mark all read') }}</button>
                         </form>
                         @endif
                     </div>
@@ -90,7 +105,7 @@
                                 @endif
                                 <div class="tx-10 mt-1" style="opacity:.35;">{{ $notif->created_at->diffForHumans() }}</div>
                             </div>
-                            <div style="width:8px;height:8px;border-radius:50%;background:#C9A227;flex-shrink:0;margin-top:6px;"></div>
+                            <div style="width:8px;height:8px;border-radius:50%;background:var(--bk-accent);flex-shrink:0;margin-top:6px;"></div>
                         </a>
                         @empty
                         <div class="text-center py-5" style="opacity:.35;">
@@ -132,10 +147,10 @@
                    data-bs-toggle="dropdown">
                     @if($authCompany?->logo)
                         <img src="{{ asset('storage/'.$authCompany->logo) }}"
-                             class="rounded-circle" style="width:34px;height:34px;object-fit:cover;flex-shrink:0;border:2px solid rgba(201,162,39,.35);" alt="">
+                             class="rounded-circle" style="width:34px;height:34px;object-fit:cover;flex-shrink:0;border:2px solid rgba(75,93,52,.35);" alt="">
                     @else
-                        <img src="https://ui-avatars.com/api/?name={{ urlencode($authCompany?->localizedName() ?? 'Co') }}&size=34&background=C9A227&color=000&bold=true"
-                             class="rounded-circle" style="width:34px;height:34px;flex-shrink:0;border:2px solid rgba(201,162,39,.25);" alt="">
+                        <img src="https://ui-avatars.com/api/?name={{ urlencode($authCompany?->localizedName() ?? 'Co') }}&size=34&background=4B5D34&color=FFFFFF&bold=true"
+                             class="rounded-circle" style="width:34px;height:34px;flex-shrink:0;border:2px solid rgba(75,93,52,.25);" alt="">
                     @endif
                     <div class="d-none d-md-block" style="line-height:1.2;text-align:{{ $isAr?'right':'left' }};">
                         <div style="font-size:.78rem;font-weight:700;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
@@ -146,19 +161,19 @@
                 </a>
 
                 <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:220px;border-radius:12px;overflow:hidden;">
-                    <div class="px-4 py-3 border-bottom" style="background:rgba(201,162,39,.07);">
+                    <div class="px-4 py-3 border-bottom" style="background:rgba(75,93,52,.07);">
                         <a href="{{ route('company.profile.show') }}">
                             <div class="d-flex align-items-center gap-3">
                                 @if($authCompany?->logo)
                                     <img src="{{ asset('storage/'.$authCompany->logo) }}"
                                         style="width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt="">
                                 @else
-                                    <img src="https://ui-avatars.com/api/?name={{ urlencode($authCompany?->localizedName() ?? 'Co') }}&size=42&background=C9A227&color=000&bold=true"
+                                    <img src="https://ui-avatars.com/api/?name={{ urlencode($authCompany?->localizedName() ?? 'Co') }}&size=42&background=4B5D34&color=FFFFFF&bold=true"
                                         style="width:42px;height:42px;border-radius:50%;flex-shrink:0;" alt="">
                                 @endif
                                 <div style="min-width:0;">
                                     <div style="font-size:.84rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $authCompany?->localizedName() }}</div>
-                                    <div style="font-size:.72rem;color:#C9A227;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $authCompany?->email }}</div>
+                                    <div style="font-size:.72rem;color:var(--bk-accent);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $authCompany?->email }}</div>
                                 </div>
                             </div>
                         </a>
@@ -176,6 +191,15 @@
                             <a href="{{ $authCompany ? route('front.show', $authCompany) : '#' }}" target="_blank"
                                class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
                                 <i class="icon-sm feather icon-external-link"></i> {{ __('Public page') }}
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            @php($navTheme = request()->cookie('company_theme', 'dark'))
+                            <a href="{{ route('company.theme', ['mode' => $navTheme === 'dark' ? 'light' : 'dark']) }}"
+                               class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
+                                <i class="icon-sm feather icon-{{ $navTheme === 'dark' ? 'sun' : 'moon' }}"></i>
+                                {{ $navTheme === 'dark' ? __('Light mode') : __('Dark mode') }}
                             </a>
                         </li>
                         <li><hr class="dropdown-divider my-1"></li>

@@ -3,7 +3,7 @@
 @push('owner-styles')
 <style>
 .leave-hero {
-    background: linear-gradient(135deg, #f093fb 0%, #c9a227 100%);
+    background: linear-gradient(135deg, #f093fb 0%, var(--bk-accent) 100%);
     border-radius: 20px; padding: 26px 30px;
     margin-bottom: 24px; color: #fff;
     position: relative; overflow: hidden;
@@ -75,7 +75,7 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 position-relative" style="z-index:1;">
             <div class="d-flex align-items-center gap-3">
                 @php
-                    $palette = ['#c9a227','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1'];
+                    $palette = ['#5C7038','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1'];
                     $bg = $palette[$employee->id % count($palette)];
                 @endphp
                 <div class="leave-emp-avatar" style="background:linear-gradient(135deg,{{ $bg }}bb,{{ $bg }});">

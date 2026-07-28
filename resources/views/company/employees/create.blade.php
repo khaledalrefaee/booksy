@@ -104,7 +104,30 @@
 .day-pill.active { border-color: rgba(102,126,234,.5); background: rgba(102,126,234,.07); }
 .bk-theme-light .day-pill.active { border-color: #667eea; background: rgba(102,126,234,.06); }
 .day-name { font-weight: 700; font-size: 13px; }
-.day-times { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+.day-times { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.shift-row { display: flex; align-items: center; gap: 6px; }
+.shift-del {
+    width: 24px; height: 24px; border-radius: 7px; border: none; cursor: pointer;
+    background: rgba(245,87,108,.12); color: #f5576c; font-weight: 700; font-size: 13px;
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: background .15s;
+}
+.shift-del:hover { background: rgba(245,87,108,.25); }
+.shift-add {
+    align-self: flex-start;
+    border: 1.5px dashed rgba(102,126,234,.4); background: transparent; color: #667eea;
+    border-radius: 9px; padding: 4px 12px; font-size: 11px; font-weight: 700; cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+.shift-add:hover { background: rgba(102,126,234,.08); border-color: #667eea; }
+.shift-hint { font-size: 10px; opacity: .4; }
+.shift-copy {
+    border: 1.5px dashed rgba(255,255,255,.2); background: transparent; color: rgba(255,255,255,.5);
+    border-radius: 9px; padding: 4px 12px; font-size: 11px; font-weight: 700; cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+}
+.bk-theme-light .shift-copy { border-color: rgba(0,0,0,.2); color: rgba(0,0,0,.5); }
+.shift-copy:hover { background: rgba(67,233,123,.08); border-color: #43e97b; color: #43e97b; }
 .day-times input {
     flex: 1; border: 1.5px solid rgba(255,255,255,.1);
     border-radius: 9px; padding: 6px 8px;
@@ -179,7 +202,7 @@
 @section('content')
 @php
     $errKeys    = $errors->keys();
-    $tab1Fields = ['name_en','name_ar','email','phone','role_id','password','bio','image'];
+    $tab1Fields = ['name_en','name_ar','email','phone','phone_number','dial_code','role_id','password','bio','image'];
     $tab2Fields = ['comp_type','comp_base_amount','comp_commission_rate','service_ids'];
     $tab4Fields = ['contract_type','hire_date','contract_end_date','national_id','iban','bank_name','emergency_contact_name','emergency_contact_phone','emergency_contact_relation','qualifications','license_number','license_expiry'];
     $initTab    = 1;
@@ -247,7 +270,7 @@
             </button>
             <button type="button" class="emp-tab-btn{{ $initTab===2 ? ' active' : '' }}" data-tab="2">
                 <i data-feather="scissors"></i>
-                {{ __('Services') }}
+                {{ __('Services & Pay') }}
                 @if($errTab2)<span class="tab-badge">!</span>@endif
             </button>
             <button type="button" class="emp-tab-btn{{ $initTab===3 ? ' active' : '' }}" data-tab="3">
@@ -326,22 +349,31 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="f-label">{{ __('Phone') }} <span class="text-danger">*</span></label>
-                                        <input type="text" name="phone"
-                                               class="f-input form-control @error('phone') is-invalid @enderror"
-                                               value="{{ old('phone') }}">
-                                        @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                        @include('company.partials.phone-field', ['value' => null, 'inputClass' => 'f-input'])
                                     </div>
                                     <div class="col-md-6">
                                         <label class="f-label">{{ __('Role') }} <span class="text-danger">*</span></label>
-                                        <select name="role_id" class="f-input form-select @error('role_id') is-invalid @enderror">
+                                        <select name="role_id" id="role-select" class="f-input form-select @error('role_id') is-invalid @enderror" onchange="toggleBranchScope()">
                                             <option value="">{{ __('Select role…') }}</option>
                                             @foreach($roles as $role)
-                                            <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
+                                            <option value="{{ $role->id }}" data-slug="{{ $role->slug }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
                                                 {{ app()->getLocale()==='ar' ? ($role->label_ar ?: $role->label_en) : ($role->label_en ?: $role->label_ar) }}
                                             </option>
                                             @endforeach
                                         </select>
                                         @error('role_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="col-md-6" id="branch-scope-field" style="display:none;">
+                                        <label class="f-label">{{ __('Branch') }}</label>
+                                        <select name="branch_scope" class="f-input form-select">
+                                            <option value="branch" {{ old('branch_scope', 'branch') === 'branch' ? 'selected' : '' }}>
+                                                📍 {{ $branch->localizedName() }} ({{ __('This branch only') }})
+                                            </option>
+                                            <option value="all" {{ old('branch_scope') === 'all' ? 'selected' : '' }}>
+                                                🏢 {{ __('All branches') }} ({{ __('Company owner') }})
+                                            </option>
+                                        </select>
+                                        @error('branch_scope')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                                     </div>
                                     <div class="col-md-6">
                                         <label class="f-label">{{ __('Password') }} <span class="text-danger">*</span></label>
@@ -350,10 +382,12 @@
                                                    class="f-input form-control @error('password') is-invalid @enderror"
                                                    placeholder="••••••••" style="border-radius:11px 0 0 11px;">
                                             <button class="btn js-toggle-pw" type="button" data-target="#password" tabindex="-1"
-                                                    style="border-radius:0 11px 11px 0;border:1.5px solid rgba(255,255,255,.1);border-left:0;background:rgba(255,255,255,.04);">
+                                                    style="border-radius:0;border:1.5px solid rgba(255,255,255,.1);border-left:0;background:rgba(255,255,255,.04);">
                                                 <i data-feather="eye" style="width:14px;height:14px;"></i>
                                             </button>
+                                         
                                         </div>
+                                        <div id="pw-gen-note-password" style="font-size:11px;color:#43e97b;margin-top:4px;display:none;"></div>
                                         @error('password')<div style="color:#f5576c;font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
                                     </div>
                                     <div class="col-12">
@@ -374,7 +408,7 @@
                             <label class="toggle-row" for="is_active">
                                 <div class="flex-grow-1">
                                     <div class="sec-title">{{ __('Active Employee') }}</div>
-                                    <div class="sec-sub">{{ __('Can receive bookings') }}</div>
+                                  
                                 </div>
                                 <input type="checkbox" class="form-check-input" id="is_active" name="is_active" value="1"
                                        {{ old('is_active','1') ? 'checked' : '' }}
@@ -604,7 +638,17 @@
                                 @endphp
                                 <div class="d-flex flex-column gap-2">
                                     @foreach($dayNames as $dayNum => $names)
-                                    @php $oldRow = old("working_hours.$dayNum", []); $isWorking = !empty($oldRow['is_working']); @endphp
+                                    @php
+                                        $oldRow    = old("working_hours.$dayNum", []);
+                                        $isWorking = !empty($oldRow['is_working']);
+                                        $oldShifts = collect($oldRow['shifts'] ?? []);
+                                        if ($oldShifts->isEmpty()) {
+                                            $oldShifts = collect([[
+                                                'start_time' => $oldRow['start_time'] ?? '09:00',
+                                                'end_time'   => $oldRow['end_time'] ?? '17:00',
+                                            ]]);
+                                        }
+                                    @endphp
                                     <div class="day-pill {{ $isWorking ? 'active' : '' }}" id="pill-{{ $dayNum }}">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <span class="day-name">{{ $locale==='ar' ? $names['ar'] : $names['en'] }}</span>
@@ -616,11 +660,26 @@
                                             </div>
                                         </div>
                                         <div class="day-times" id="times-{{ $dayNum }}" style="{{ $isWorking ? '' : 'display:none;' }}">
-                                            <input type="time" name="working_hours[{{ $dayNum }}][start_time]"
-                                                   value="{{ $oldRow['start_time'] ?? '09:00' }}" {{ !$isWorking ? 'disabled' : '' }}>
-                                            <span class="sep">→</span>
-                                            <input type="time" name="working_hours[{{ $dayNum }}][end_time]"
-                                                   value="{{ $oldRow['end_time'] ?? '17:00' }}" {{ !$isWorking ? 'disabled' : '' }}>
+                                            <div class="d-flex flex-column gap-2 js-shift-rows" id="shifts-{{ $dayNum }}" data-day="{{ $dayNum }}">
+                                                @foreach($oldShifts->values() as $si => $shift)
+                                                <div class="shift-row">
+                                                    <input type="time" name="working_hours[{{ $dayNum }}][shifts][{{ $si }}][start_time]"
+                                                           value="{{ $shift['start_time'] ?? '09:00' }}" {{ !$isWorking ? 'disabled' : '' }}>
+                                                    <span class="sep">→</span>
+                                                    <input type="time" name="working_hours[{{ $dayNum }}][shifts][{{ $si }}][end_time]"
+                                                           value="{{ $shift['end_time'] ?? '17:00' }}" {{ !$isWorking ? 'disabled' : '' }}>
+                                                    <button type="button" class="shift-del" onclick="removeShift(this)" title="{{ __('Remove shift') }}" {{ $oldShifts->count() < 2 ? 'style=display:none;' : '' }}>×</button>
+                                                </div>
+                                                @endforeach
+                                            </div>
+                                            <div class="d-flex gap-2 flex-wrap">
+                                                <button type="button" class="shift-add" onclick="addShift({{ $dayNum }})">
+                                                    + {{ __('Add shift') }} <span class="shift-hint">({{ __('e.g. split day around a break') }})</span>
+                                                </button>
+                                                <button type="button" class="shift-copy" onclick="copyDayToAll({{ $dayNum }})">
+                                                    ⧉ {{ __('Copy to all days') }}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                     @endforeach
@@ -707,6 +766,12 @@
                                     <div class="col-md-6">
                                         <label class="f-label">{{ __('National ID / Residency') }}</label>
                                         <input type="text" name="national_id" class="f-input form-control" value="{{ old('national_id') }}" placeholder="{{ __('e.g. 1234567890') }}" dir="ltr">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="f-label">🏖️ {{ __('Annual Leave Days') }}</label>
+                                        <input type="number" name="annual_leave_days" class="f-input form-control" min="0" max="365"
+                                               value="{{ old('annual_leave_days', 21) }}">
+                                        <div class="tx-11 text-muted mt-1">{{ __('Paid annual leave entitlement per year') }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -829,14 +894,27 @@
 @push('scripts')
 @include('company.employees.partials.image-compressor')
 <script>
-// ── Save loading overlay ──
-document.getElementById('emp-create-form').addEventListener('submit', function () {
+// ── Save loading overlay (only when validation passes — see listener below) ──
+function showSaveOverlay() {
+    if (document.getElementById('save-overlay')) return;
     var overlay = document.createElement('div');
     overlay.id = 'save-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
     overlay.innerHTML = '<div style="text-align:center;color:#fff;"><div class="spinner-border mb-3" style="width:40px;height:40px;border-width:3px;color:#667eea;"></div><div style="font-size:14px;font-weight:600;">{{ __("Saving...") }}</div><div style="font-size:12px;opacity:.5;margin-top:4px;">{{ __("Please wait") }}</div></div>';
     document.body.appendChild(overlay);
-}, true);
+}
+
+// ── Branch scope: "all branches" choice appears only for the company-owner role ──
+function toggleBranchScope() {
+    const roleSel = document.getElementById('role-select');
+    const field   = document.getElementById('branch-scope-field');
+    if (!roleSel || !field) return;
+    const slug    = roleSel.options[roleSel.selectedIndex]?.dataset.slug || '';
+    const isOwner = slug === 'company_owner';
+    field.style.display = isOwner ? '' : 'none';
+    if (!isOwner) field.querySelector('select').value = 'branch';
+}
+toggleBranchScope();
 
 // ── Client-side validation ──
 document.getElementById('emp-create-form').addEventListener('submit', function (e) {
@@ -844,7 +922,7 @@ document.getElementById('emp-create-form').addEventListener('submit', function (
         { name: 'name_en', msg: '{{ app()->getLocale()==="ar" ? "الاسم بالإنجليزية مطلوب" : "Name (English) is required" }}' },
         { name: 'name_ar', msg: '{{ app()->getLocale()==="ar" ? "الاسم بالعربية مطلوب" : "Name (Arabic) is required" }}' },
         { name: 'email',   msg: '{{ app()->getLocale()==="ar" ? "البريد الإلكتروني مطلوب" : "Email is required" }}' },
-        { name: 'phone',   msg: '{{ app()->getLocale()==="ar" ? "رقم الهاتف مطلوب" : "Phone is required" }}' },
+        { name: 'phone_number', msg: '{{ app()->getLocale()==="ar" ? "رقم الهاتف مطلوب" : "Phone is required" }}' },
         { name: 'role_id', msg: '{{ app()->getLocale()==="ar" ? "الدور مطلوب" : "Role is required" }}' },
         { name: 'password',msg: '{{ app()->getLocale()==="ar" ? "كلمة المرور مطلوبة" : "Password is required" }}' },
     ];
@@ -873,12 +951,102 @@ document.getElementById('emp-create-form').addEventListener('submit', function (
 
     if (hasError) {
         e.preventDefault();
+        window.__empSubmitting = false;
+        document.getElementById('save-overlay')?.remove();
         document.querySelector('[data-tab="1"]').click();
         setTimeout(() => {
             document.querySelector('.f-input.is-invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
+    } else {
+        window.__empSubmitting = true;
+        showSaveOverlay();
     }
 });
+
+// ── bfcache: kill stale overlay when returning via browser back/forward ──
+window.addEventListener('pageshow', function () {
+    window.__empSubmitting = false;
+    document.getElementById('save-overlay')?.remove();
+});
+
+// ── Warn before leaving with unsaved changes ──
+window.__empFormDirty = false;
+document.getElementById('emp-create-form').addEventListener('input',  () => window.__empFormDirty = true);
+document.getElementById('emp-create-form').addEventListener('change', () => window.__empFormDirty = true);
+window.addEventListener('beforeunload', function (e) {
+    if (window.__empFormDirty && !window.__empSubmitting) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+
+
+// ── Live email uniqueness check ──
+(function () {
+    const emailInput = document.querySelector('input[name="email"]');
+    if (!emailInput) return;
+    emailInput.addEventListener('blur', function () {
+        const v = this.value.trim();
+        if (!v || !v.includes('@')) return;
+        const input = this;
+        fetch('{{ route('company.employees.check-email') }}?email=' + encodeURIComponent(v))
+            .then(r => r.json())
+            .then(data => {
+                let note = document.getElementById('email-unique-note');
+                if (!note) {
+                    note = document.createElement('div');
+                    note.id = 'email-unique-note';
+                    note.style.cssText = 'font-size:11px;margin-top:4px;';
+                    input.after(note);
+                }
+                if (data.available) {
+                    note.style.color = '#43e97b';
+                    note.textContent = '✓ {{ __('Email available') }}';
+                    input.classList.remove('is-invalid');
+                } else {
+                    note.style.color = '#f5576c';
+                    note.textContent = '✗ {{ __('This email is already in use') }}';
+                    input.classList.add('is-invalid');
+                }
+            })
+            .catch(() => {});
+    });
+})();
+
+// ── Copy one day's shifts to all other days ──
+function copyDayToAll(srcDay) {
+    const src = document.getElementById('shifts-' + srcDay);
+    const shifts = Array.from(src.querySelectorAll('.shift-row')).map(r => {
+        const ins = r.querySelectorAll('input');
+        return { s: ins[0].value || '09:00', e: ins[1].value || '17:00' };
+    });
+    if (!shifts.length) return;
+
+    for (let d = 0; d <= 6; d++) {
+        if (d === srcDay) continue;
+        const toggle = document.getElementById('wt_' + d);
+        if (toggle && !toggle.checked) {
+            toggle.checked = true;
+            toggle.dispatchEvent(new Event('change'));
+        }
+        const wrap = document.getElementById('shifts-' + d);
+        if (!wrap) continue;
+        wrap.innerHTML = '';
+        shifts.forEach((sh, i) => {
+            const row = document.createElement('div');
+            row.className = 'shift-row';
+            row.innerHTML =
+                '<input type="time" name="working_hours[' + d + '][shifts][' + i + '][start_time]" value="' + sh.s + '">' +
+                '<span class="sep">→</span>' +
+                '<input type="time" name="working_hours[' + d + '][shifts][' + i + '][end_time]" value="' + sh.e + '">' +
+                '<button type="button" class="shift-del" onclick="removeShift(this)" title="{{ __('Remove shift') }}">×</button>';
+            wrap.appendChild(row);
+        });
+        refreshShiftRows(wrap);
+    }
+    window.__empFormDirty = true;
+}
 
 // ── Tabs ──
 function switchTab(t) {
@@ -910,6 +1078,40 @@ document.querySelectorAll('.wh-toggle').forEach(t => {
         times.querySelectorAll('input').forEach(i => i.disabled = !this.checked);
     });
 });
+
+// ── Multi-shift rows ──
+function addShift(day) {
+    const wrap = document.getElementById('shifts-' + day);
+    const idx  = wrap.querySelectorAll('.shift-row').length;
+    if (idx >= 4) return;
+    const row = document.createElement('div');
+    row.className = 'shift-row';
+    row.innerHTML =
+        '<input type="time" name="working_hours[' + day + '][shifts][' + idx + '][start_time]" value="14:00">' +
+        '<span class="sep">→</span>' +
+        '<input type="time" name="working_hours[' + day + '][shifts][' + idx + '][end_time]" value="18:00">' +
+        '<button type="button" class="shift-del" onclick="removeShift(this)" title="{{ __('Remove shift') }}">×</button>';
+    wrap.appendChild(row);
+    refreshShiftRows(wrap);
+}
+
+function removeShift(btn) {
+    const wrap = btn.closest('.js-shift-rows');
+    btn.closest('.shift-row').remove();
+    refreshShiftRows(wrap);
+}
+
+function refreshShiftRows(wrap) {
+    const day  = wrap.dataset.day;
+    const rows = wrap.querySelectorAll('.shift-row');
+    rows.forEach((row, i) => {
+        const inputs = row.querySelectorAll('input');
+        inputs[0].name = 'working_hours[' + day + '][shifts][' + i + '][start_time]';
+        inputs[1].name = 'working_hours[' + day + '][shifts][' + i + '][end_time]';
+        const del = row.querySelector('.shift-del');
+        if (del) del.style.display = rows.length > 1 ? '' : 'none';
+    });
+}
 
 // ── Compact service grid logic ──
 function setSvcSelected(chk, selected) {

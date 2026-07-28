@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
+@php($theme = request()->cookie('company_theme', 'dark'))
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}" data-bk-theme="{{ $theme }}" class="bk-theme-{{ $theme }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ __('Register') }} — Booksy Business</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('backend/assets/vendors/core/core.css') }}">
     <link rel="stylesheet" href="{{ asset('backend/assets/fonts/feather-font/css/iconfont.css') }}">
     <link rel="stylesheet" href="{{ asset('backend/assets/vendors/flag-icon-css/css/flag-icon.min.css') }}">
@@ -17,6 +16,14 @@
         <link rel="stylesheet" href="{{ asset($theme === 'light' ? 'backend/assets/css/demo1/style.css' : 'backend/assets/css/demo2/style.css') }}">
     @endif
     <link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}" />
+    <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-custom.css') }}?v={{ @filemtime(public_path('backend/assets/css/booksy-custom.css')) ?: '1' }}">
+    @if(app()->getLocale() === 'ar')
+        <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-arabic.css') }}">
+    @endif
+    <style>
+        .noble-ui-logo, .noble-ui-logo:hover { color: {{ $theme === 'light' ? '#1a1a1a' : '#f5f5f5' }}; }
+        .noble-ui-logo span { color: var(--bk-accent); font-weight: 700; }
+    </style>
 </head>
 <body>
 <div class="main-wrapper">

@@ -39,6 +39,12 @@ class BranchController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        if (! $this->company()->canAddBranch()) {
+            return redirect()
+                ->route('company.branches.index')
+                ->with('error', __('You have reached the maximum number of branches allowed by your plan.'));
+        }
+
         $data = $request->validate([
             'name_en'         => ['required', 'string', 'max:255'],
             'name_ar'         => ['nullable', 'string', 'max:255'],
@@ -60,9 +66,16 @@ class BranchController extends Controller
             'landlines'       => ['nullable', 'array'],
             'landlines.*'     => ['nullable', 'string', 'max:30'],
             'landline_codes'  => ['nullable', 'array'],
-            'social_links'    => ['nullable', 'array'],
-            'social_links.*'  => ['nullable', 'string', 'max:500'],
+            'social_links'                    => ['nullable', 'array'],
+            'social_links.*'                  => ['nullable', 'string', 'max:500'],
+            'loyalty_points_per_visit'         => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'loyalty_points_per_extra_service' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'loyalty_points_per_currency_unit' => ['nullable', 'integer', 'min:0'],
         ]);
+
+        $data['loyalty_points_per_visit']         = $data['loyalty_points_per_visit'] ?? 10;
+        $data['loyalty_points_per_extra_service'] = $data['loyalty_points_per_extra_service'] ?? 5;
+        $data['loyalty_points_per_currency_unit'] = $data['loyalty_points_per_currency_unit'] ?? 10000;
 
         $this->validatePhoneDigits($request->input('phones', []), $request->input('phone_codes', []));
 
@@ -207,9 +220,16 @@ class BranchController extends Controller
             'landlines'       => ['nullable', 'array'],
             'landlines.*'     => ['nullable', 'string', 'max:30'],
             'landline_codes'  => ['nullable', 'array'],
-            'social_links'    => ['nullable', 'array'],
-            'social_links.*'  => ['nullable', 'string', 'max:500'],
+            'social_links'                    => ['nullable', 'array'],
+            'social_links.*'                  => ['nullable', 'string', 'max:500'],
+            'loyalty_points_per_visit'         => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'loyalty_points_per_extra_service' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'loyalty_points_per_currency_unit' => ['nullable', 'integer', 'min:0'],
         ]);
+
+        $data['loyalty_points_per_visit']         = $data['loyalty_points_per_visit'] ?? 0;
+        $data['loyalty_points_per_extra_service'] = $data['loyalty_points_per_extra_service'] ?? 0;
+        $data['loyalty_points_per_currency_unit'] = $data['loyalty_points_per_currency_unit'] ?? 0;
 
         $this->validatePhoneDigits($request->input('phones', []), $request->input('phone_codes', []));
 
@@ -239,6 +259,9 @@ class BranchController extends Controller
             'booking_mode'   => $data['booking_mode'],
             'latitude'       => $data['latitude'] ?? null,
             'longitude'      => $data['longitude'] ?? null,
+            'loyalty_points_per_visit'         => $data['loyalty_points_per_visit'],
+            'loyalty_points_per_extra_service' => $data['loyalty_points_per_extra_service'],
+            'loyalty_points_per_currency_unit' => $data['loyalty_points_per_currency_unit'],
         ]);
 
         // Sync social links
@@ -442,6 +465,9 @@ class BranchController extends Controller
             $code  = trim($codes[$i] ?? $default);
             $rules = $dialRules[$code] ?? null;
             if (! $rules) continue;
+
+            /* إذا الرقم يحتوي dial code مدمج (يبدأ بـ +) نتجاهله — سبق التحقق منه */
+            if (str_starts_with($num, '+')) continue;
 
             /* استخرج الأرقام فقط (بدون مسافات أو شرطات) */
             $digits = preg_replace('/\D/', '', $num);

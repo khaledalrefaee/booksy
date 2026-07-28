@@ -31,7 +31,7 @@
                 <div class="col-sm-5">
                     <div class="input-group">
                         <span class="input-group-text bg-transparent border-end-0">
-                            <i data-feather="search" style="width:14px;height:14px;color:#C9A227;"></i>
+                            <i data-feather="search" style="width:14px;height:14px;color:var(--bk-accent);"></i>
                         </span>
                         <input type="text" name="search" class="form-control border-start-0"
                             placeholder="{{ __('Search action or user…') }}"

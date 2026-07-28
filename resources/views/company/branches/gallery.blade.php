@@ -15,7 +15,7 @@
     content: '';
     position: absolute; top: -60px; right: -60px;
     width: 220px; height: 220px; border-radius: 50%;
-    background: rgba(201,162,39,.08);
+    background: rgba(75,93,52,.08);
     pointer-events: none;
 }
 [dir="rtl"] .gl-hero::before { right: auto; left: -60px; }

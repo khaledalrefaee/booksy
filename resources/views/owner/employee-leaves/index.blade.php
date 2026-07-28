@@ -110,7 +110,7 @@
 .bk-theme-light .empty-leaves p { color: rgba(0,0,0,.4); }
 
 .company-tag {
-    background: rgba(201,162,39,.12); color: #c9a227; border-radius: 6px;
+    background: rgba(12,110,116,.12); color: var(--bk-accent); border-radius: 6px;
     padding: 1px 7px; font-size: 10px; font-weight: 700;
 }
 </style>
@@ -174,7 +174,7 @@
         <div class="card-body p-0">
             @forelse($leaves as $leave)
             @php
-                $palette  = ['#c9a227','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1'];
+                $palette  = ['#5C7038','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1'];
                 $bg       = $palette[$leave->employee_id % count($palette)];
                 $initial  = strtoupper(mb_substr($leave->employee->name_en ?? $leave->employee->name_ar ?? '?', 0, 1));
                 $locale   = app()->getLocale();

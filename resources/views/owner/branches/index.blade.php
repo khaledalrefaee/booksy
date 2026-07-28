@@ -73,7 +73,7 @@
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center gap-3">
                                             <div class="wd-36 ht-36 rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                                                 style="background:rgba(201,162,39,.12);color:#C9A227;border:1px solid rgba(201,162,39,.2);">
+                                                 style="background:rgba(12,110,116,.12);color:var(--bk-accent);border:1px solid rgba(12,110,116,.2);">
                                                 <i data-feather="map-pin" style="width:15px;height:15px;"></i>
                                             </div>
                                             <div>
@@ -91,7 +91,7 @@
                                     <td>
                                         @if($branch->is_head_office)
                                             <span class="badge rounded-pill fw-semibold tx-11"
-                                                  style="background:rgba(201,162,39,.15);color:#C9A227;border:1px solid rgba(201,162,39,.25);">
+                                                  style="background:rgba(12,110,116,.15);color:var(--bk-accent);border:1px solid rgba(12,110,116,.25);">
                                                 <i data-feather="star" style="width:10px;height:10px;"></i> {{ __('نعم') }}
                                             </span>
                                         @else
@@ -200,7 +200,7 @@
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     @if($branch->is_head_office)
-                        <span class="badge rounded-pill fw-semibold tx-11" style="background:rgba(201,162,39,.15);color:#C9A227;border:1px solid rgba(201,162,39,.25);">
+                        <span class="badge rounded-pill fw-semibold tx-11" style="background:rgba(12,110,116,.15);color:var(--bk-accent);border:1px solid rgba(12,110,116,.25);">
                             <i data-feather="star" style="width:10px;height:10px;"></i> {{ __('المقر الرئيسي') }}
                         </span>
                     @endif
@@ -387,7 +387,7 @@
     color:rgba(255,255,255,.4); cursor:pointer; transition:all .18s;
 }
 .bk-theme-light .bk-vt-btn { color:rgba(0,0,0,.4); }
-.bk-vt-btn.active { background:#C9A227; color:#000 !important; }
+.bk-vt-btn.active { background:var(--bk-accent); color:#000 !important; }
 .bk-vt-btn:hover:not(.active) { background:rgba(255,255,255,.08); color:rgba(255,255,255,.8); }
 .bk-theme-light .bk-vt-btn:hover:not(.active) { background:rgba(0,0,0,.06); color:rgba(0,0,0,.8); }
 
@@ -399,25 +399,25 @@
     transition:box-shadow .25s, border-color .25s;
 }
 .bk-theme-light .bk-branch-card { background:#fff; border-color:rgba(0,0,0,.07); box-shadow:0 2px 12px rgba(0,0,0,.06); }
-.bk-branch-card:hover { box-shadow:0 8px 32px rgba(0,0,0,.2); border-color:rgba(201,162,39,.2); }
-.bk-theme-light .bk-branch-card:hover { box-shadow:0 8px 28px rgba(0,0,0,.1); border-color:rgba(201,162,39,.15); }
+.bk-branch-card:hover { box-shadow:0 8px 32px rgba(0,0,0,.2); border-color:rgba(12,110,116,.2); }
+.bk-theme-light .bk-branch-card:hover { box-shadow:0 8px 28px rgba(0,0,0,.1); border-color:rgba(12,110,116,.15); }
 
 .bk-branch-card-header {
     display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
     padding:20px 24px;
     border-bottom:1px solid rgba(255,255,255,.06);
-    background:linear-gradient(135deg,rgba(201,162,39,.05),transparent);
+    background:linear-gradient(135deg,rgba(12,110,116,.05),transparent);
 }
 .bk-theme-light .bk-branch-card-header { border-bottom-color:rgba(0,0,0,.05); }
 
 .bk-branch-avatar {
     width:46px; height:46px; border-radius:14px; flex-shrink:0;
-    background:rgba(201,162,39,.15); color:#C9A227;
+    background:rgba(12,110,116,.15); color:var(--bk-accent);
     display:flex; align-items:center; justify-content:center;
-    border:1px solid rgba(201,162,39,.2);
+    border:1px solid rgba(12,110,116,.2);
 }
 .bk-branch-name { font-size:1rem; font-weight:800; font-family:'Poppins',sans-serif; }
-.bk-branch-company { font-size:.73rem; color:#C9A227; margin-top:2px; display:flex; align-items:center; gap:4px; }
+.bk-branch-company { font-size:.73rem; color:var(--bk-accent); margin-top:2px; display:flex; align-items:center; gap:4px; }
 
 /* ── Branch Tabs ── */
 .bk-branch-tabs {
@@ -433,13 +433,13 @@
 .bk-theme-light .bk-branch-tab { color:rgba(0,0,0,.45); }
 .bk-branch-tab:hover { color:rgba(255,255,255,.8); }
 .bk-theme-light .bk-branch-tab:hover { color:rgba(0,0,0,.8); }
-.bk-branch-tab.active { color:#C9A227 !important; border-bottom-color:#C9A227; }
+.bk-branch-tab.active { color:var(--bk-accent) !important; border-bottom-color:var(--bk-accent); }
 .bk-branch-tab-count {
     background:rgba(255,255,255,.08); border-radius:20px;
     padding:1px 7px; font-size:.65rem; font-weight:800;
 }
 .bk-theme-light .bk-branch-tab-count { background:rgba(0,0,0,.06); color:rgba(0,0,0,.6); }
-.bk-branch-tab.active .bk-branch-tab-count { background:rgba(201,162,39,.2); color:#C9A227; }
+.bk-branch-tab.active .bk-branch-tab-count { background:rgba(12,110,116,.2); color:var(--bk-accent); }
 
 .bk-branch-panel { display:none; padding:20px 24px; }
 .bk-branch-panel.active { display:block; }
@@ -466,15 +466,15 @@
     text-decoration:none; transition:all .18s;
 }
 .bk-theme-light .bk-branch-item-action { background:rgba(0,0,0,.04); color:rgba(0,0,0,.35); }
-.bk-branch-item-action:hover { background:#C9A227; color:#000 !important; }
+.bk-branch-item-action:hover { background:var(--bk-accent); color:#000 !important; }
 
 .bk-branch-add-btn {
     display:inline-flex; align-items:center; gap:6px; padding:7px 16px; border-radius:20px;
     font-size:.76rem; font-weight:700;
-    background:rgba(201,162,39,.1); color:#C9A227 !important;
-    border:1px solid rgba(201,162,39,.2); text-decoration:none; transition:all .2s;
+    background:rgba(12,110,116,.1); color:var(--bk-accent) !important;
+    border:1px solid rgba(12,110,116,.2); text-decoration:none; transition:all .2s;
 }
-.bk-branch-add-btn:hover { background:#C9A227; color:#000 !important; box-shadow:0 4px 14px rgba(201,162,39,.3); }
+.bk-branch-add-btn:hover { background:var(--bk-accent); color:#000 !important; box-shadow:0 4px 14px rgba(12,110,116,.3); }
 
 .bk-branch-empty {
     display:flex; flex-direction:column; align-items:center;

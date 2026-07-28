@@ -208,7 +208,7 @@ $isAr     = $locale === 'ar';
                 <div class="row g-3 mb-3">
                     <div class="col-sm-5">
                         <label class="form-label fw-semibold tx-12 mb-1">
-                            <i data-feather="user" style="width:12px;height:12px;color:#C9A227;"></i>
+                            <i data-feather="user" style="width:12px;height:12px;color:var(--bk-accent);"></i>
                             {{ __('Customer name') }} <span class="text-danger">*</span>
                         </label>
                         <input type="text"
@@ -219,7 +219,7 @@ $isAr     = $locale === 'ar';
                     </div>
                     <div class="col-sm-4">
                         <label class="form-label fw-semibold tx-12 mb-1">
-                            <i data-feather="phone" style="width:12px;height:12px;color:#C9A227;"></i>
+                            <i data-feather="phone" style="width:12px;height:12px;color:var(--bk-accent);"></i>
                             {{ __('Phone') }}
                         </label>
                         <input type="tel"
@@ -229,7 +229,7 @@ $isAr     = $locale === 'ar';
                     </div>
                     <div class="col-sm-3">
                         <label class="form-label fw-semibold tx-12 mb-1">
-                            <i data-feather="calendar" style="width:12px;height:12px;color:#C9A227;"></i>
+                            <i data-feather="calendar" style="width:12px;height:12px;color:var(--bk-accent);"></i>
                             {{ __('Age') }}
                         </label>
                         <input type="number"
@@ -273,7 +273,7 @@ $isAr     = $locale === 'ar';
                     <option value="">{{ __('Any') }}</option>
                 </select>
             </div>
-            <div class="col-6 col-sm-4">
+            <div class="col-12 col-sm-4">
                 <label class="form-label fw-semibold tx-11 mb-1">
                     <i data-feather="clock" style="width:11px;height:11px;color:#f59e0b;"></i>
                     {{ __('Date & time') }}
@@ -350,6 +350,11 @@ $isAr     = $locale === 'ar';
     var branchEmployees = [];
     var personCount     = 0;
 
+    /* ── Prefill from calendar quick-action (?employee_id=&start_time=) ── */
+    var _qs           = new URLSearchParams(location.search);
+    var prefillEmp    = _qs.get('employee_id');
+    var prefillStart  = _qs.get('start_time'); // e.g. 2026-07-06T14:30
+
     /* ── Step indicator update ── */
     function updateSteps() {
         var branchSelected = !!document.querySelector('input[name="branch_id"]:checked');
@@ -396,6 +401,10 @@ $isAr     = $locale === 'ar';
             personCount = 0;
             addPersonBtn.disabled = false;
             addPerson();
+            /* ?group=1 (from the appointments add-menu): start as a group booking */
+            if (new URLSearchParams(location.search).get('group') === '1' && personCount === 1) {
+                addPerson();
+            }
             updateSteps();
         });
     }
@@ -466,6 +475,10 @@ $isAr     = $locale === 'ar';
             empSel.appendChild(new Option(e.name, e.id));
         });
 
+        if (prefillEmp && personIdx === 0 && svcIdx === 0) {
+            empSel.value = prefillEmp;
+        }
+
         svcSel.addEventListener('change', function () {
             var opt = svcSel.options[svcSel.selectedIndex];
             var hint = row.querySelector('.svc-hint');
@@ -495,8 +508,13 @@ $isAr     = $locale === 'ar';
         }
 
         var fpInput = row.querySelector('.fp-datetime');
+        var defaultDate = new Date(Date.now() + 3600000);
+        if (prefillStart && personIdx === 0 && svcIdx === 0) {
+            var pd = new Date(prefillStart);
+            if (!isNaN(pd.getTime())) defaultDate = pd;
+        }
         flatpickr(fpInput, Object.assign({}, fpOpts, {
-            defaultDate: new Date(Date.now() + 3600000)
+            defaultDate: defaultDate
         }));
 
         feather.replace();
@@ -510,8 +528,8 @@ $isAr     = $locale === 'ar';
         var badge = card.querySelector('.bk-person-services-count');
         if (badge) {
             badge.textContent = count + ' ' + T.services;
-            badge.style.background = count > 0 ? 'rgba(201,162,39,.15)' : 'rgba(255,255,255,.08)';
-            badge.style.color = count > 0 ? '#C9A227' : 'var(--cal-text-muted, #94a3b8)';
+            badge.style.background = count > 0 ? 'rgba(75,93,52,.15)' : 'rgba(255,255,255,.08)';
+            badge.style.color = count > 0 ? '#5C7038' : 'var(--cal-text-muted, #94a3b8)';
         }
     }
 
@@ -617,7 +635,7 @@ $isAr     = $locale === 'ar';
     color: var(--cal-text-muted, #64748b);
     transition: all .25s;
 }
-.bk-step.active { color: #C9A227; }
+.bk-step.active { color: var(--bk-accent); }
 .bk-step.completed { color: #10b981; }
 .bk-step-num {
     width: 26px;
@@ -633,9 +651,9 @@ $isAr     = $locale === 'ar';
     transition: all .25s;
 }
 .bk-step.active .bk-step-num {
-    background: linear-gradient(135deg, #C9A227, #d4af37);
+    background: linear-gradient(135deg, var(--bk-accent), #d4af37);
     color: #fff;
-    box-shadow: 0 2px 8px rgba(201,162,39,.4);
+    box-shadow: 0 2px 8px rgba(75,93,52,.4);
 }
 .bk-step.completed .bk-step-num {
     background: #10b981;
@@ -656,7 +674,7 @@ $isAr     = $locale === 'ar';
     transition: border-color .2s, box-shadow .2s;
 }
 .bk-create-card:hover {
-    border-color: rgba(201,162,39,.2) !important;
+    border-color: rgba(75,93,52,.2) !important;
 }
 
 /* Section title */
@@ -672,8 +690,8 @@ $isAr     = $locale === 'ar';
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(201,162,39,.12);
-    color: #C9A227;
+    background: rgba(75,93,52,.12);
+    color: var(--bk-accent);
     flex-shrink: 0;
 }
 
@@ -697,14 +715,14 @@ $isAr     = $locale === 'ar';
     text-align: center;
 }
 .bk-branch-card:hover {
-    border-color: rgba(201,162,39,.3);
-    background: rgba(201,162,39,.06);
+    border-color: rgba(75,93,52,.3);
+    background: rgba(75,93,52,.06);
     transform: translateY(-2px);
 }
 .bk-branch-card.selected {
-    border-color: #C9A227;
-    background: rgba(201,162,39,.1);
-    box-shadow: 0 4px 16px rgba(201,162,39,.25);
+    border-color: var(--bk-accent);
+    background: rgba(75,93,52,.1);
+    box-shadow: 0 4px 16px rgba(75,93,52,.25);
 }
 .bk-branch-icon {
     width: 40px;
@@ -713,11 +731,11 @@ $isAr     = $locale === 'ar';
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(201,162,39,.12);
-    color: #C9A227;
+    background: rgba(75,93,52,.12);
+    color: var(--bk-accent);
 }
 .bk-branch-card.selected .bk-branch-icon {
-    background: #C9A227;
+    background: var(--bk-accent);
     color: #fff;
 }
 .bk-branch-name {
@@ -760,8 +778,8 @@ $isAr     = $locale === 'ar';
     transition: border-color .2s, box-shadow .2s;
 }
 .bk-input:focus {
-    border-color: rgba(201,162,39,.4) !important;
-    box-shadow: 0 0 0 3px rgba(201,162,39,.1) !important;
+    border-color: rgba(75,93,52,.4) !important;
+    box-shadow: 0 0 0 3px rgba(75,93,52,.1) !important;
 }
 .bk-select {
     border-radius: 10px !important;
@@ -771,8 +789,8 @@ $isAr     = $locale === 'ar';
     resize: none;
 }
 .bk-textarea:focus {
-    border-color: rgba(201,162,39,.4) !important;
-    box-shadow: 0 0 0 3px rgba(201,162,39,.1) !important;
+    border-color: rgba(75,93,52,.4) !important;
+    box-shadow: 0 0 0 3px rgba(75,93,52,.1) !important;
 }
 
 /* Add service button */
@@ -812,8 +830,8 @@ $isAr     = $locale === 'ar';
     cursor: not-allowed;
 }
 .bk-add-person-btn:not(:disabled):hover {
-    border-color: rgba(201,162,39,.3);
-    background: rgba(201,162,39,.04);
+    border-color: rgba(75,93,52,.3);
+    background: rgba(75,93,52,.04);
     transform: translateY(-1px);
 }
 .bk-add-person-inner {
@@ -848,8 +866,8 @@ $isAr     = $locale === 'ar';
     margin-inline-end: 6px;
 }
 .bk-svc-price {
-    background: rgba(201,162,39,.1) !important;
-    color: #C9A227 !important;
+    background: rgba(75,93,52,.1) !important;
+    color: var(--bk-accent) !important;
 }
 
 /* Payment options */
@@ -873,12 +891,12 @@ $isAr     = $locale === 'ar';
     color: var(--cal-text, #e2e8f0);
 }
 .bk-pay-opt input:checked + .bk-pay-card {
-    border-color: #C9A227;
-    background: rgba(201,162,39,.08);
-    box-shadow: 0 2px 8px rgba(201,162,39,.15);
+    border-color: var(--bk-accent);
+    background: rgba(75,93,52,.08);
+    box-shadow: 0 2px 8px rgba(75,93,52,.15);
 }
 .bk-pay-card:hover {
-    border-color: rgba(201,162,39,.25);
+    border-color: rgba(75,93,52,.25);
 }
 
 /* Summary card */
@@ -891,9 +909,9 @@ $isAr     = $locale === 'ar';
     align-items: center;
     gap: 10px;
     padding: 14px 20px;
-    background: linear-gradient(135deg, rgba(201,162,39,.08), rgba(201,162,39,.02));
+    background: linear-gradient(135deg, rgba(75,93,52,.08), rgba(75,93,52,.02));
     border-bottom: 1px solid var(--cal-border, rgba(255,255,255,.06));
-    color: #C9A227;
+    color: var(--bk-accent);
     font-size: .88rem;
 }
 .bk-empty-summary {
@@ -967,23 +985,23 @@ $isAr     = $locale === 'ar';
     font-weight: 800;
 }
 .bk-summary-total span:last-child {
-    color: #C9A227;
+    color: var(--bk-accent);
     font-size: 1.15rem;
 }
 
 /* Submit button */
 .bk-submit-btn {
-    background: linear-gradient(135deg, #C9A227, #d4af37) !important;
+    background: linear-gradient(135deg, var(--bk-accent), #d4af37) !important;
     color: #fff !important;
     border: none !important;
     border-radius: 12px !important;
     font-size: .88rem !important;
-    box-shadow: 0 4px 16px rgba(201,162,39,.35);
+    box-shadow: 0 4px 16px rgba(75,93,52,.35);
     transition: all .25s;
 }
 .bk-submit-btn:not(:disabled):hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(201,162,39,.45);
+    box-shadow: 0 6px 20px rgba(75,93,52,.45);
 }
 .bk-submit-btn:disabled {
     opacity: .5;
@@ -1004,7 +1022,7 @@ $isAr     = $locale === 'ar';
     background: #f9fafb;
 }
 .bk-theme-light .bk-branch-card:hover {
-    background: rgba(201,162,39,.04);
+    background: rgba(75,93,52,.04);
 }
 .bk-theme-light .bk-branch-name {
     color: #1e293b;

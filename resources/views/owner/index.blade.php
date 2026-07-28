@@ -40,6 +40,61 @@
 
 @include('owner.partials.flash')
 
+{{-- ════ ACTION NEEDED ════ --}}
+@php $canBilling = \Illuminate\Support\Facades\Gate::allows('owner-can', 'billing.view'); @endphp
+@if(($alerts['pending_companies'] ?? 0) > 0 || ($canBilling && (($alerts['expiring_soon'] ?? 0) + ($alerts['expired'] ?? 0)) > 0))
+<div class="row g-3 mb-4">
+    @if($alerts['pending_companies'] > 0)
+    <div class="col-md-4">
+        <a href="{{ route('owner.companies.index', ['status' => 'pending']) }}"
+           class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none border-start border-warning border-4">
+            <div class="card-body d-flex align-items-center gap-3 py-3">
+                <div class="rounded-3 bg-warning-subtle text-warning d-flex align-items-center justify-content-center flex-shrink-0" style="width:44px;height:44px;">
+                    <i data-feather="user-plus" style="width:20px;height:20px;"></i>
+                </div>
+                <div>
+                    <div class="fw-bold tx-18">{{ $alerts['pending_companies'] }}</div>
+                    <div class="text-muted tx-13">{{ __('Companies awaiting approval') }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
+    @if($canBilling && $alerts['expiring_soon'] > 0)
+    <div class="col-md-4">
+        <a href="{{ route('owner.subscriptions.index', ['state' => 'expiring_soon']) }}"
+           class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none border-start border-info border-4">
+            <div class="card-body d-flex align-items-center gap-3 py-3">
+                <div class="rounded-3 bg-info-subtle text-info d-flex align-items-center justify-content-center flex-shrink-0" style="width:44px;height:44px;">
+                    <i data-feather="clock" style="width:20px;height:20px;"></i>
+                </div>
+                <div>
+                    <div class="fw-bold tx-18">{{ $alerts['expiring_soon'] }}</div>
+                    <div class="text-muted tx-13">{{ __('Subscriptions expiring within 7 days') }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
+    @if($canBilling && $alerts['expired'] > 0)
+    <div class="col-md-4">
+        <a href="{{ route('owner.subscriptions.index', ['state' => 'expired']) }}"
+           class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none border-start border-danger border-4">
+            <div class="card-body d-flex align-items-center gap-3 py-3">
+                <div class="rounded-3 bg-danger-subtle text-danger d-flex align-items-center justify-content-center flex-shrink-0" style="width:44px;height:44px;">
+                    <i data-feather="x-circle" style="width:20px;height:20px;"></i>
+                </div>
+                <div>
+                    <div class="fw-bold tx-18">{{ $alerts['expired'] }}</div>
+                    <div class="text-muted tx-13">{{ __('Expired subscriptions to follow up') }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
+</div>
+@endif
+
 {{-- ════ STAT CARDS — horizontal style ════ --}}
 <div class="row g-3 mb-4">
 
@@ -251,9 +306,8 @@
                 </div>
                 @forelse($recentAppointments->take(7) as $row)
                 @php
-                    $ic = ['pending'=>'#f4a642','confirmed'=>'#2bcf7e','completed'=>'#3dbbd4'][$row->status] ?? '#555';
+                    $ic  = $row->status->color();
                     $ini = strtoupper(substr($row->customer?->name ?? 'C', 0, 1));
-                    $bc  = 'bk-badge-'.($row->status ?? 'cancelled');
                 @endphp
                 <a href="{{ route('owner.appointments.show', $row) }}"
                    style="display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.05);text-decoration:none;transition:background .15s;"
@@ -265,7 +319,7 @@
                     </div>
                     <div style="text-align:right;flex-shrink:0;">
                         <div style="font-size:.7rem;color:rgba(255,255,255,.3);">{{ $row->start_time?->format('M j H:i') }}</div>
-                        <span class="bk-badge {{ $bc }} mt-1 d-inline-flex">{{ __($row->status ?? '') }}</span>
+                        <x-appointment-status :status="$row->status" class="bk-badge mt-1 d-inline-flex" />
                     </div>
                 </a>
                 @empty
@@ -290,13 +344,10 @@
                 </div>
 
                 @if($recentAppointments->count())
-                @php
-                    $byStatus = $recentAppointments->countBy('status');
-                    $scColors = ['pending'=>'#f4a642','confirmed'=>'#2bcf7e','completed'=>'#3dbbd4','cancelled'=>'rgba(255,255,255,.07)','rejected'=>'rgba(255,255,255,.07)','no_show'=>'rgba(255,255,255,.07)'];
-                @endphp
+                @php $byStatus = $recentAppointments->countBy(fn ($a) => $a->status->value); @endphp
                 <div class="bk-color-bar">
                     @foreach($byStatus as $st => $cnt)
-                    <span style="flex:{{ $cnt }};background:{{ $scColors[$st] ?? '#888' }};"></span>
+                    <span style="flex:{{ $cnt }};background:{{ \App\Enums\AppointmentStatus::from($st)->color() }};"></span>
                     @endforeach
                 </div>
                 @endif
@@ -314,7 +365,6 @@
                         </thead>
                         <tbody>
                             @forelse($recentAppointments as $row)
-                            @php $bc = 'bk-badge-'.($row->status ?? 'cancelled'); @endphp
                             <tr class="bk-table-row"
                                 onclick="location.href='{{ route('owner.appointments.show', $row) }}'">
                                 <td class="text-muted tx-12 fw-semibold">#{{ $row->id }}</td>
@@ -326,7 +376,7 @@
                                     <div>{{ $row->start_time?->format('d M') }}</div>
                                     <small class="opacity-50">{{ $row->start_time?->format('H:i') }}</small>
                                 </td>
-                                <td><span class="bk-badge {{ $bc }}">{{ __($row->status ?? '') }}</span></td>
+                                <td><x-appointment-status :status="$row->status" class="bk-badge" /></td>
                                 <td class="tx-13">{{ $row->customer?->name ?? '—' }}</td>
                             </tr>
                             @empty
@@ -377,7 +427,7 @@ var isDark = p.theme !== 'light';
 var isRtl  = p.rtl === true;
 var charts  = p.charts || {};
 var labels  = p.labels || {};
-var gold = '#C9A227';
+var gold = '{{ request()->cookie('owner_theme','dark') === 'light' ? '#4B5D34' : '#A6BC7E' }}';
 var c = isDark
     ? {text:'#b8c3d9', grid:'rgba(255,255,255,.06)', card:'#0c1427', muted:'#7987a1'}
     : {text:'#333',    grid:'rgba(0,0,0,.07)',       card:'#fff',    muted:'#888'};
@@ -476,7 +526,7 @@ function renderDonut(){
     var pending   = st.pending   || 0;
     var confirmed = st.confirmed || 0;
     var completed = st.completed || 0;
-    var other     = (st.cancelled||0)+(st.rejected||0)+(st.no_show||0);
+    var other     = (st.cancelled_total||0)+(st.no_show||0);
     var realTotal = pending + confirmed + completed + other;
     var isEmpty   = realTotal === 0;
     var series    = isEmpty ? [1] : [pending, confirmed, completed, other];

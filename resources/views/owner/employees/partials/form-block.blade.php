@@ -126,7 +126,7 @@
             @include('partials.social-links-form', [
                 'savedLinks'       => collect(),
                 'inputPrefix'      => "{$pfx}[social_links]",
-                'accentColor'      => '#c9a227',
+                'accentColor'      => '#5C7038',
                 'allowedPlatforms' => ['whatsapp', 'facebook', 'instagram'],
             ])
         </div>

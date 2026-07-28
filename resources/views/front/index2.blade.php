@@ -23,7 +23,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, shrink-to-fit=no">
 <title>{{ $isAr ? 'بوكسي – احجز موعدك' : 'Booksy – Book Top Salons & Clinics' }} (V2)</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,700&family=Poppins:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('frontend/vendor/bootstrap/css/bootstrap' . ($isAr ? '.rtl' : '') . '.min.css') }}">
 <link rel="stylesheet" href="{{ asset('frontend/vendor/fontawesome-free/css/all.min.css') }}">
 <link rel="stylesheet" href="{{ asset('frontend/vendor/animate/animate.compat.css') }}">

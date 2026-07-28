@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Enums\AppointmentStatus;
+use App\Enums\CustomerTier;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Customer extends Model
 {
+    use HasFactory;
     public const TAGS = [
         'vip'     => ['label_key' => 'VIP',      'icon' => '⭐', 'color' => '#C9A227'],
         'regular' => ['label_key' => 'Regular',   'icon' => '👤', 'color' => '#667eea'],
@@ -73,6 +77,22 @@ class Customer extends Model
 
     // ── Relationships ────────────────────────────────────────────────────
     public function appointments(): HasMany     { return $this->hasMany(Appointment::class); }
+
+    /**
+     * The badge reception sees: VIP / Loyal / Regular / New.
+     *
+     * Reads `visits_count` when the query loaded it — callers listing customers
+     * must use withCount('appointments as visits_count') or this falls back to a
+     * per-row query. The tag column wins when the salon set one.
+     */
+    public function tier(): CustomerTier
+    {
+        $visits = $this->visits_count ?? $this->appointments()
+            ->where('status', AppointmentStatus::Completed->value)
+            ->count();
+
+        return CustomerTier::resolve($this->tag, (int) $visits);
+    }
     public function branchNotes(): HasMany      { return $this->hasMany(CustomerBranchNote::class); }
     public function treatmentPlans(): HasMany   { return $this->hasMany(TreatmentPlan::class); }
     public function loyaltyPointLogs(): HasMany { return $this->hasMany(LoyaltyPointLog::class); }

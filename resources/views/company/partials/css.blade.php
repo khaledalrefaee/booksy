@@ -3,9 +3,7 @@
 <meta http-equiv="X-UA-Compatible" content="ie=edge">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>Booksy Business</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('backend/assets/vendors/core/core.css') }}">
 <link rel="stylesheet" href="{{ asset('backend/assets/vendors/flatpickr/flatpickr.min.css') }}">
 <link rel="stylesheet" href="{{ asset('backend/assets/fonts/feather-font/css/iconfont.css') }}">
@@ -25,5 +23,7 @@
     @endif
 @endif
 <link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}" />
-<link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-custom.css') }}">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-custom.css') }}?v={{ @filemtime(public_path('backend/assets/css/booksy-custom.css')) ?: '1' }}">
+@if(app()->getLocale() === 'ar')
+    <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-arabic.css') }}">
+@endif

@@ -43,9 +43,9 @@
                 <div class="card-body p-4 text-center">
                     @if($customer->avatar)
                         <img src="{{ asset('storage/' . $customer->avatar) }}" alt=""
-                             style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:16px;border:3px solid rgba(201,162,39,.3);">
+                             style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:16px;border:3px solid rgba(75,93,52,.3);">
                     @else
-                        <div style="width:80px;height:80px;border-radius:50%;background:rgba(201,162,39,.15);color:#C9A227;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;margin:0 auto 16px;border:3px solid rgba(201,162,39,.3);">
+                        <div style="width:80px;height:80px;border-radius:50%;background:rgba(75,93,52,.15);color:var(--bk-accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;margin:0 auto 16px;border:3px solid rgba(75,93,52,.3);">
                             {{ mb_substr($customer->name, 0, 1) }}
                         </div>
                     @endif
@@ -74,7 +74,7 @@
 
                     {{-- Loyalty & Debt row --}}
                     <div class="d-flex justify-content-center gap-3 flex-wrap mb-2">
-                        <span style="font-size:12px;font-weight:700;background:rgba(201,162,39,.12);color:#C9A227;padding:3px 10px;border-radius:12px;">
+                        <span style="font-size:12px;font-weight:700;background:rgba(75,93,52,.12);color:var(--bk-accent);padding:3px 10px;border-radius:12px;">
                             ⭐ {{ number_format($customer->loyalty_points ?? 0) }} {{ __('pts') }}
                         </span>
                         @if($customer->debt > 0)
@@ -122,7 +122,7 @@
                     </div>
                     <div class="d-flex flex-wrap gap-1">
                         @foreach($customer->linkedBranches as $lb)
-                        <span style="font-size:11px;font-weight:600;background:rgba(201,162,39,.10);color:#C9A227;padding:2px 8px;border-radius:10px;">
+                        <span style="font-size:11px;font-weight:600;background:rgba(75,93,52,.10);color:var(--bk-accent);padding:2px 8px;border-radius:10px;">
                             {{ $lb->localizedName() }}
                         </span>
                         @endforeach
@@ -178,11 +178,11 @@
                     @foreach($topServices as $ts)
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <div class="d-flex align-items-center gap-2">
-                            <div style="width:8px;height:8px;border-radius:50%;background:#C9A227;flex-shrink:0;"></div>
-                            <span class="tx-13 fw-semibold">{{ $ts['service']?->name ?? '—' }}</span>
+                            <div style="width:8px;height:8px;border-radius:50%;background:var(--bk-accent);flex-shrink:0;"></div>
+                            <span class="tx-13 fw-semibold">{{ $ts['service']?->localizedName() ?? '—' }}</span>
                         </div>
-                        <span style="font-size:11px;font-weight:700;background:rgba(201,162,39,.12);color:#C9A227;padding:2px 8px;border-radius:12px;">
-                            {{ $ts['count'] }} {{ __('visits') }}
+                        <span style="font-size:11px;font-weight:700;background:rgba(75,93,52,.12);color:var(--bk-accent);padding:2px 8px;border-radius:12px;">
+                            {{ trans_choice('{1} :count visit|[2,*] :count visits', $ts['count'], ['count' => $ts['count']]) }}
                         </span>
                     </div>
                     @endforeach
@@ -238,7 +238,7 @@
                             <div class="tx-11 fw-bold text-muted text-uppercase" style="letter-spacing:.8px;">
                                 {{ __('Treatment Plans') }}
                             </div>
-                            <span style="font-size:12px;font-weight:700;background:rgba(201,162,39,.12);color:#C9A227;padding:3px 10px;border-radius:20px;">
+                            <span style="font-size:12px;font-weight:700;background:rgba(75,93,52,.12);color:var(--bk-accent);padding:3px 10px;border-radius:20px;">
                                 {{ $customer->treatmentPlans->count() }}
                             </span>
                         </div>
@@ -368,7 +368,7 @@
                         <div class="tx-11 fw-bold text-muted text-uppercase" style="letter-spacing:.8px;">
                             {{ __('Visit History') }}
                         </div>
-                        <span style="font-size:12px;font-weight:700;background:rgba(201,162,39,.12);color:#C9A227;padding:3px 10px;border-radius:20px;">
+                        <span style="font-size:12px;font-weight:700;background:rgba(75,93,52,.12);color:var(--bk-accent);padding:3px 10px;border-radius:20px;">
                             {{ $appointments->total() }}
                         </span>
                     </div>
@@ -381,7 +381,7 @@
                                 <div class="text-muted tx-11">{{ $appt->start_time->format('H:i') }}</div>
                             </div>
                             <div class="col-6 col-sm-3">
-                                <div class="tx-13 fw-semibold">{{ $appt->service?->name ?? '—' }}</div>
+                                <div class="tx-13 fw-semibold">{{ $appt->service?->localizedName() ?? '—' }}</div>
                                 <div class="text-muted tx-11">{{ $appt->employee?->name ?? '' }}</div>
                             </div>
                             <div class="col-6 col-sm-2 tx-12 text-muted">
@@ -395,7 +395,7 @@
                                 @endif
                             </div>
                             <div class="col-3 col-sm-2 text-end">
-                                <span class="bk-badge bk-badge-{{ $appt->status }}">{{ __(ucfirst($appt->status)) }}</span>
+                                <span class="bk-badge bk-badge-{{ $appt->status }}">{{ __(ucfirst(str_replace('_', ' ', $appt->status))) }}</span>
                             </div>
                         </div>
                     </div>
@@ -480,7 +480,7 @@
                             <div class="tx-11 fw-bold text-muted text-uppercase" style="letter-spacing:.8px;">
                                 ⭐ {{ __('Loyalty Points') }}
                             </div>
-                            <span style="font-size:12px;font-weight:700;background:rgba(201,162,39,.12);color:#C9A227;padding:3px 10px;border-radius:20px;">
+                            <span style="font-size:12px;font-weight:700;background:rgba(75,93,52,.12);color:var(--bk-accent);padding:3px 10px;border-radius:20px;">
                                 {{ number_format($customer->loyalty_points ?? 0) }}
                             </span>
                         </div>
@@ -580,7 +580,7 @@
                     @php
                         $commIcons = ['call'=>'phone','sms'=>'message-square','email'=>'mail','whatsapp'=>'message-circle','note'=>'file-text'];
                         $commIcon = $commIcons[$comm->type] ?? 'message-square';
-                        $dirColor = $comm->direction === 'outgoing' ? '#667eea' : '#C9A227';
+                        $dirColor = $comm->direction === 'outgoing' ? '#667eea' : '#5C7038';
                     @endphp
                     <div class="px-4 py-3" style="border-bottom:1px solid rgba(255,255,255,.04);">
                         <div class="d-flex gap-3">

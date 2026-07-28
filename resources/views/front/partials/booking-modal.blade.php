@@ -495,7 +495,7 @@ window.BookingModal = (function(){
             s.slot = null;
             s.cache[s.date] = null;
             _fetchSlots(s.date, false);
-            alert(IS_AR ? 'هذا الوقت محجوز للتو! اختر وقتاً آخر.' : 'Slot just taken! Pick another time.');
+            alert(res.message || (IS_AR ? 'هذا الوقت محجوز للتو! اختر وقتاً آخر.' : 'Slot just taken! Pick another time.'));
         } else {
             btn.innerHTML = IS_AR ? 'تأكيد' : 'Confirm';
             btn.classList.add('on');

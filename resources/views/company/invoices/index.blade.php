@@ -19,7 +19,7 @@
                 <div class="col-sm-4">
                     <div class="input-group">
                         <span class="input-group-text bg-transparent border-end-0">
-                            <i data-feather="search" style="width:14px;height:14px;color:#C9A227;"></i>
+                            <i data-feather="search" style="width:14px;height:14px;color:var(--bk-accent);"></i>
                         </span>
                         <input type="text" name="search" class="form-control border-start-0"
                             placeholder="{{ __('Invoice # / customer / phone…') }}"
@@ -60,8 +60,8 @@
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body p-0">
 
-            {{-- Column headers --}}
-            <div class="px-4 py-2 border-bottom" style="border-color:rgba(255,255,255,.06)!important;">
+            {{-- Column headers (desktop only) --}}
+            <div class="px-4 py-2 border-bottom d-none d-md-block" style="border-color:rgba(255,255,255,.06)!important;">
                 <div class="row gx-3 align-items-center">
                     <div class="col-2"><span class="tx-11 fw-bold text-muted text-uppercase" style="letter-spacing:.8px;">{{ __('Invoice #') }}</span></div>
                     <div class="col-3"><span class="tx-11 fw-bold text-muted text-uppercase" style="letter-spacing:.8px;">{{ __('Customer') }}</span></div>
@@ -74,11 +74,35 @@
 
             @forelse($invoices as $inv)
             <a href="{{ route('company.invoices.show', $inv) }}"
-               class="d-block px-4 py-3 bk-table-row text-decoration-none"
+               class="d-block px-3 px-md-4 py-3 bk-table-row text-decoration-none"
                style="border-bottom:1px solid rgba(255,255,255,.04);">
-                <div class="row gx-3 align-items-center">
+
+                {{-- Mobile card layout --}}
+                <div class="d-md-none">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold" style="color:var(--bk-accent);font-size:.9rem;">{{ $inv->invoice_number }}</span>
+                        <span class="bk-badge bk-inv-status-{{ $inv->status }}">{{ __(ucfirst($inv->status)) }}</span>
+                    </div>
+                    <div class="fw-semibold tx-13">{{ $inv->customer_name ?? '—' }}</div>
+                    @if($inv->customer_phone)
+                        <div class="text-muted tx-11">{{ $inv->customer_phone }}</div>
+                    @endif
+                    <div class="d-flex justify-content-between align-items-end mt-2">
+                        <span class="tx-11 text-muted">
+                            {{ $inv->branch?->localizedName() ?? '—' }}<br>
+                            {{ $inv->created_at->format('d M Y') }}
+                        </span>
+                        <span class="fw-bold tx-13">
+                            {{ number_format((float)$inv->total, 2) }}
+                            <span class="tx-11 text-muted fw-normal">{{ $inv->currency }}</span>
+                        </span>
+                    </div>
+                </div>
+
+                {{-- Desktop row layout --}}
+                <div class="row gx-3 align-items-center d-none d-md-flex">
                     <div class="col-2">
-                        <span class="fw-bold" style="color:#C9A227;font-size:.84rem;">{{ $inv->invoice_number }}</span>
+                        <span class="fw-bold" style="color:var(--bk-accent);font-size:.84rem;">{{ $inv->invoice_number }}</span>
                     </div>
                     <div class="col-3">
                         <div class="fw-semibold tx-13">{{ $inv->customer_name ?? '—' }}</div>

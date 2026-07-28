@@ -107,7 +107,11 @@
                         <nav aria-label="breadcrumb" class="mb-1">
                             <ol class="breadcrumb mb-0" style="--bs-breadcrumb-divider-color:rgba(255,255,255,.4);">
                                 <li class="breadcrumb-item">
+                                    @if($employee->branch)
                                     <a href="{{ route('company.branches.employees.index', $employee->branch) }}" class="text-decoration-none" style="color:rgba(255,255,255,.6);font-size:12px;">{{ $employee->branch->localizedName() }}</a>
+                                    @else
+                                    <span style="color:rgba(255,255,255,.6);font-size:12px;">🏢 {{ __('All branches') }}</span>
+                                    @endif
                                 </li>
                                 <li class="breadcrumb-item active" style="color:rgba(255,255,255,.4);font-size:12px;">{{ __('Profile') }}</li>
                             </ol>
@@ -121,9 +125,17 @@
                                 {{ $locale === 'ar' ? ($employee->role->label_ar ?: $employee->role->label_en) : ($employee->role->label_en ?: $employee->role->label_ar) }}
                             </span>
                             @endif
+                            @php $currentLeave = $employee->is_active ? $employee->currentLeave() : null; @endphp
+                            @if($currentLeave)
+                            <span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:8px;background:rgba(245,158,11,.2);color:#fbbf24;">
+                                🏖️ {{ __('On leave') }} — {{ __(($currentLeave->typeMeta())['label_key']) }}
+                                ({{ __('until') }} {{ $currentLeave->is_hourly ? substr($currentLeave->end_hour, 0, 5) : $currentLeave->end_date->format('d/m/Y') }})
+                            </span>
+                            @else
                             <span style="font-size:11px;font-weight:600;color:{{ $employee->is_active ? '#43e97b' : '#6c757d' }};">
                                 ● {{ $employee->is_active ? __('Active') : __('Inactive') }}
                             </span>
+                            @endif
                             @if($contractMeta)
                             <span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:8px;background:{{ $contractMeta['color'] }}20;color:{{ $contractMeta['color'] }};">
                                 {{ $contractMeta['icon'] }} {{ __($contractMeta['label_key']) }}
@@ -139,9 +151,17 @@
                     <a href="{{ route('company.employees.edit', $employee) }}" class="btn btn-sm rounded-pill px-3" style="background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.3);font-weight:600;font-size:12px;">
                         <i data-feather="edit-2" style="width:12px;height:12px;"></i> {{ __('Edit') }}
                     </a>
+                    @unless($employee->isTerminated())
+                    <button type="button" class="btn btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#offboardModal"
+                            style="background:rgba(239,68,68,.15);color:#fca5a5;border:1.5px solid rgba(239,68,68,.35);font-weight:600;font-size:12px;">
+                        <i data-feather="user-x" style="width:12px;height:12px;"></i> {{ __('Offboard') }}
+                    </button>
+                    @endunless
+                    @if($employee->branch)
                     <a href="{{ route('company.branches.employees.index', $employee->branch) }}" class="btn btn-sm rounded-pill px-3" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1.5px solid rgba(255,255,255,.2);font-weight:600;font-size:12px;">
                         <i data-feather="arrow-left" style="width:12px;height:12px;"></i> {{ __('Back') }}
                     </a>
+                    @endif
                 </div>
             </div>
 
@@ -176,6 +196,69 @@
     </div>
 
     @include('company.partials.flash')
+
+    {{-- Offboarded banner --}}
+    @if($employee->isTerminated())
+    @php $termMeta = $employee->terminationMeta(); @endphp
+    <div class="d-flex align-items-center gap-3 px-4 py-3 rounded-4 mb-3 flex-wrap" style="background:rgba(239,68,68,.08);border:1.5px solid rgba(239,68,68,.25);">
+        <span style="font-size:22px;">{{ $termMeta['icon'] ?? '🚫' }}</span>
+        <div style="flex:1;min-width:200px;">
+            <div class="fw-bold tx-13" style="color:#ef4444;">
+                {{ __('Offboarded') }} — {{ $termMeta ? __($termMeta['label_key']) : '' }}
+                · {{ $employee->termination_date->translatedFormat('d M Y') }}
+            </div>
+            @if($employee->termination_reason)
+            <div class="tx-12 text-muted mt-1">{{ $employee->termination_reason }}</div>
+            @endif
+            <div class="tx-11 mt-1" style="color:#f59e0b;">
+                🏖️ {{ __('Unused annual leave at exit') }}: <strong>{{ max(0, $annualRemaining) }}</strong> {{ __('day(s)') }}
+                &nbsp;·&nbsp;
+                <a href="{{ route('company.employees.payroll', $employee) }}" style="color:#f59e0b;">{{ __('Review final dues in payroll') }} ←</a>
+            </div>
+        </div>
+        <button type="button" class="btn btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#reinstateModal"
+                style="background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.3);font-size:11px;font-weight:700;">
+            ↩️ {{ __('Reinstate') }}
+        </button>
+    </div>
+
+    {{-- Reinstate Modal --}}
+    <div class="modal fade" id="reinstateModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+            <div class="modal-content" style="border-radius:18px;background:var(--card-bg, #1a1f2e);">
+                <form method="POST" action="{{ route('company.employees.reinstate', $employee) }}">
+                    @csrf
+                    <div class="modal-body text-center p-4">
+                        <div style="font-size:42px;margin-bottom:10px;">↩️</div>
+                        <h6 class="fw-bold mb-1">{{ __('Reinstate this employee?') }}</h6>
+                        <p class="text-muted small mb-3">{{ $employee->localizedName() }}</p>
+
+                        <div class="p-3 rounded-3 mb-3 text-start" style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);">
+                            <div class="d-flex justify-content-between tx-12 mb-1">
+                                <span class="text-muted">{{ __('Offboarded') }}</span>
+                                <strong>{{ $termMeta ? __($termMeta['label_key']) : '—' }} · {{ $employee->termination_date->format('d/m/Y') }}</strong>
+                            </div>
+                            @if($employee->termination_reason)
+                            <div class="tx-11 text-muted mt-1">💬 {{ $employee->termination_reason }}</div>
+                            @endif
+                        </div>
+
+                        <div class="tx-11 text-muted mb-3" style="opacity:.75;">
+                            ✅ {{ __('The termination record will be cleared and the employee becomes active again. Enable booking from the edit page if needed.') }}
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                            <button type="submit" class="btn btn-sm rounded-pill px-4 fw-bold" style="background:#22c55e;color:#fff;border:none;">
+                                ↩️ {{ __('Reinstate') }}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
 
     <div class="row g-3">
         {{-- LEFT: Info cards --}}
@@ -336,10 +419,41 @@
                         <span class="info-val fw-bold">{{ number_format($comp->base_amount, 0) }} {{ $comp->currency }} / {{ __($comp->pay_period) }}</span>
                     </div>
                     @endif
-                    @if(in_array($comp->type, ['commission', 'mixed']) && $comp->commission_type === 'flat')
+                    @if(in_array($comp->type, ['commission', 'mixed']))
+                        @if($comp->commission_type === 'flat')
+                        <div class="info-row">
+                            <span class="info-label">📊 {{ __('Commission') }}</span>
+                            <span class="info-val">{{ rtrim(rtrim(number_format($comp->commission_rate, 2), '0'), '.') }}%</span>
+                        </div>
+                        @elseif($comp->commission_type === 'per_service')
+                        <div class="info-row">
+                            <span class="info-label">📊 {{ __('Commission') }}</span>
+                            <span class="info-val">{{ __('Per service') }}</span>
+                        </div>
+                        @if($employee->serviceCommissions->isNotEmpty())
+                        <div class="px-3 pb-2 d-flex flex-wrap gap-1">
+                            @foreach($employee->serviceCommissions as $sc)
+                            @php $scService = $services->firstWhere('id', $sc->service_id); @endphp
+                            @if($scService)
+                            <span style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:8px;background:rgba(102,126,234,.1);color:#8da2f0;border:1px solid rgba(102,126,234,.25);">
+                                {{ $locale === 'ar' ? ($scService->name_ar ?: $scService->name_en) : ($scService->name_en ?: $scService->name_ar) }}
+                                — {{ rtrim(rtrim(number_format($sc->rate, 2), '0'), '.') }}%
+                            </span>
+                            @endif
+                            @endforeach
+                        </div>
+                        @endif
+                        @else
+                        <div class="info-row">
+                            <span class="info-label">📊 {{ __('Commission') }}</span>
+                            <span class="info-val text-muted">{{ __('Not set') }}</span>
+                        </div>
+                        @endif
+                    @endif
+                    @if((float) $comp->product_commission_rate > 0)
                     <div class="info-row">
-                        <span class="info-label">📊 {{ __('Commission') }}</span>
-                        <span class="info-val">{{ $comp->commission_rate }}%</span>
+                        <span class="info-label">🛍️ {{ __('Product commission') }}</span>
+                        <span class="info-val">{{ rtrim(rtrim(number_format($comp->product_commission_rate, 2), '0'), '.') }}%</span>
                     </div>
                     @endif
                 </div>
@@ -375,12 +489,18 @@
                         <span class="tx-11 fw-bold text-muted text-uppercase" style="letter-spacing:.8px;">🕐 {{ __('Working Hours') }}</span>
                     </div>
                     @php $dayNames = \App\Models\EmployeeWorkingHour::$dayNames; @endphp
-                    @foreach($employee->workingHours as $wh)
+                    @foreach($employee->workingHours->groupBy('day_of_week') as $dayNum => $dayShifts)
+                    @php $working = $dayShifts->where('is_working', true)->sortBy('shift_number')->values(); @endphp
                     <div class="info-row">
-                        <span class="info-label" style="width:70px;">{{ $locale === 'ar' ? $dayNames[$wh->day_of_week]['ar'] : $dayNames[$wh->day_of_week]['en'] }}</span>
+                        <span class="info-label" style="width:70px;">{{ $locale === 'ar' ? $dayNames[$dayNum]['ar'] : $dayNames[$dayNum]['en'] }}</span>
                         <span class="info-val">
-                            @if($wh->is_working)
-                                <span style="color:#43e97b;font-weight:600;">{{ substr($wh->start_time, 0, 5) }} — {{ substr($wh->end_time, 0, 5) }}</span>
+                            @if($working->isNotEmpty())
+                                @foreach($working as $wh)
+                                    <span style="color:#43e97b;font-weight:600;">{{ substr($wh->start_time, 0, 5) }} — {{ substr($wh->end_time, 0, 5) }}</span>@if(!$loop->last)<span style="opacity:.35;font-size:11px;"> · </span>@endif
+                                @endforeach
+                                @if($working->count() > 1)
+                                    <span style="font-size:10px;opacity:.4;">({{ $working->count() }} {{ __('shifts') }})</span>
+                                @endif
                             @else
                                 <span style="opacity:.3;">{{ __('Day Off') }}</span>
                             @endif
@@ -403,6 +523,9 @@
                 </button>
                 <button type="button" class="emp-show-tab" data-tab="deductions">
                     <i data-feather="minus-circle" style="width:13px;height:13px;"></i> {{ __('Deductions') }}
+                </button>
+                <button type="button" class="emp-show-tab" data-tab="attendance">
+                    <i data-feather="check-circle" style="width:13px;height:13px;"></i> {{ __('Attendance') }}
                 </button>
             </div>
 
@@ -427,7 +550,7 @@
                                     <div class="text-muted tx-11">{{ $appt->start_time->format('H:i') }}</div>
                                 </div>
                                 <div class="col-6 col-sm-3">
-                                    <div class="tx-13 fw-semibold">{{ $appt->service?->name ?? '—' }}</div>
+                                    <div class="tx-13 fw-semibold">{{ $appt->service?->localizedName() ?? '—' }}</div>
                                     <div class="text-muted tx-11">{{ $appt->customer?->name ?? '' }}</div>
                                 </div>
                                 <div class="col-6 col-sm-2 tx-12 text-muted d-none d-sm-block">{{ $appt->branch?->localizedName() ?? '—' }}</div>
@@ -463,13 +586,37 @@
                                 <i data-feather="plus" style="width:11px;height:11px;"></i> {{ __('Add Leave') }}
                             </a>
                         </div>
+
+                        {{-- Annual balance summary --}}
+                        @php
+                            $totalDays = (int) $employee->annual_leave_days;
+                            $usedPct   = $totalDays > 0 ? min(100, round($annualUsed / $totalDays * 100)) : 0;
+                            $balColor  = $annualRemaining <= 0 ? '#ef4444' : ($annualRemaining <= 5 ? '#f59e0b' : '#22c55e');
+                        @endphp
+                        <div class="px-4 py-3 d-flex align-items-center gap-3 flex-wrap" style="border-bottom:1px solid rgba(255,255,255,.04);background:rgba(102,126,234,.04);">
+                            <span style="font-size:18px;">🏖️</span>
+                            <div style="flex:1;min-width:140px;">
+                                <div class="tx-11 text-muted">{{ __('Annual leave balance') }} {{ now()->year }}</div>
+                                <div class="d-flex align-items-baseline gap-1">
+                                    <span class="fw-bold" style="font-size:17px;color:{{ $balColor }};">{{ $annualRemaining }}</span>
+                                    <span class="tx-11 text-muted">/ {{ $totalDays }} {{ __('day(s)') }} {{ __('remaining') }}</span>
+                                </div>
+                            </div>
+                            <div style="flex:1 1 100px;height:7px;border-radius:5px;background:rgba(255,255,255,.08);overflow:hidden;min-width:80px;">
+                                <div style="height:100%;width:{{ $usedPct }}%;border-radius:5px;background:{{ $balColor }};"></div>
+                            </div>
+                            <span class="tx-11 text-muted">{{ $annualUsed }} {{ __('day(s)') }} {{ __('used') }}</span>
+                        </div>
+
                         @forelse($leaves as $leave)
+                        @php $typeMeta = $leave->typeMeta(); @endphp
                         <div class="px-4 py-3" style="border-bottom:1px solid rgba(255,255,255,.04);">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <div>
-                                    <span class="fw-semibold tx-13">{{ __('Day Off') }}</span>
+                                    <span class="fw-semibold tx-13" style="color:{{ $typeMeta['color'] }};">{{ $typeMeta['icon'] }} {{ __($typeMeta['label_key']) }}</span>
                                     <span class="text-muted tx-12 {{ $locale === 'ar' ? 'me-2' : 'ms-2' }}">
                                         {{ $leave->start_date->format('d/m') }} — {{ $leave->end_date->format('d/m/Y') }}
+                                        · {{ $leave->daysCount() }} {{ __('day(s)') }}
                                     </span>
                                 </div>
                                 <span class="bk-badge bk-badge-{{ $leave->status ?? 'pending' }}">{{ __(ucfirst($leave->status ?? 'Pending')) }}</span>
@@ -516,8 +663,138 @@
                 </div>
             </div>
 
+            {{-- Attendance tab --}}
+            <div class="emp-show-pane" id="pane-attendance">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-0">
+                        <div class="px-4 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-bottom:1px solid rgba(255,255,255,.06);">
+                            <span class="tx-11 fw-bold text-muted text-uppercase" style="letter-spacing:.8px;">{{ __('Attendance History') }} — {{ __('last :n records', ['n' => 30]) }}</span>
+                            <a href="{{ route('company.attendance.report', ['branch_id' => $employee->branch_id]) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3" style="font-size:11px;">
+                                📊 {{ __('Full report') }}
+                            </a>
+                        </div>
+                        @forelse($attendanceHistory as $rec)
+                        <div class="px-4 py-3" style="border-bottom:1px solid rgba(255,255,255,.04);">
+                            <div class="row gx-3 align-items-center">
+                                <div class="col-4 col-sm-3">
+                                    <div class="fw-semibold tx-13">{{ $rec->date->translatedFormat('d M Y') }}</div>
+                                    <div class="text-muted tx-11">{{ $rec->date->translatedFormat('l') }}</div>
+                                </div>
+                                <div class="col-2 text-center">
+                                    @if($rec->check_in)
+                                        <div class="tx-13 fw-bold" style="color:#22c55e;">{{ $rec->check_in->format('h:i A') }}</div>
+                                        <div class="tx-11 text-muted" style="font-size:9px;">{{ __('Check In') }}</div>
+                                    @else
+                                        <span style="opacity:.25;">—</span>
+                                    @endif
+                                </div>
+                                <div class="col-2 text-center">
+                                    @if($rec->check_out)
+                                        <div class="tx-13 fw-bold" style="color:#667eea;">{{ $rec->check_out->format('h:i A') }}</div>
+                                        <div class="tx-11 text-muted" style="font-size:9px;">{{ __('Check Out') }}</div>
+                                    @else
+                                        <span style="opacity:.25;">—</span>
+                                    @endif
+                                </div>
+                                <div class="col-2 text-center">
+                                    @php
+                                        $stColors = ['on_time' => '#22c55e', 'late' => '#f59e0b', 'absent' => '#ef4444', 'day_off' => '#94a3b8'];
+                                        $stColor  = $stColors[$rec->status] ?? '#94a3b8';
+                                        $stLabel  = $rec->status === 'on_time' ? __('On Time') : ($rec->status === 'late' ? __('Late') : ($rec->status === 'absent' ? __('Absent') : __('Day Off')));
+                                    @endphp
+                                    <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:{{ $stColor }}1f;color:{{ $stColor }};">{{ $stLabel }}</span>
+                                    @if($rec->status === 'late' && $rec->late_minutes > 0)
+                                        <div style="font-size:9px;color:#f59e0b;margin-top:2px;">{{ $rec->late_minutes }} {{ __('min') }}</div>
+                                    @endif
+                                </div>
+                                <div class="col-2 text-center d-none d-sm-block">
+                                    @if($rec->location_status)
+                                        @php $locColors = ['inside' => '#22c55e', 'nearby' => '#f59e0b', 'outside' => '#ef4444']; @endphp
+                                        <span style="font-size:10px;font-weight:700;color:{{ $locColors[$rec->location_status] ?? '#94a3b8' }};">
+                                            ● {{ __($rec->location_status === 'inside' ? 'Inside' : ($rec->location_status === 'nearby' ? 'Nearby' : 'Outside')) }}
+                                        </span>
+                                    @else
+                                        <span style="opacity:.25;">—</span>
+                                    @endif
+                                </div>
+                            </div>
+                            @if($rec->notes)
+                            <div class="text-muted tx-11 mt-1">💬 {{ $rec->notes }}</div>
+                            @endif
+                        </div>
+                        @empty
+                        <div class="bk-empty py-4">
+                            <p class="tx-12 text-muted mb-0">{{ __('No attendance records yet.') }}</p>
+                        </div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
+
+    {{-- Offboard Modal --}}
+    @unless($employee->isTerminated())
+    <div class="modal fade" id="offboardModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+            <div class="modal-content" style="border-radius:18px;background:var(--card-bg, #1a1f2e);">
+                <form method="POST" action="{{ route('company.employees.offboard', $employee) }}">
+                    @csrf
+                    <div class="modal-header border-0 pb-0 px-4 pt-3">
+                        <h6 class="modal-title fw-bold">👋 {{ __('Offboard employee') }} — {{ $employee->localizedName() }}</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4 pt-3">
+                        {{-- Settlement summary --}}
+                        <div class="p-3 rounded-3 mb-3" style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);">
+                            <div class="fw-bold tx-12 mb-2" style="color:#f59e0b;">📋 {{ __('End-of-service summary') }}</div>
+                            <div class="d-flex justify-content-between tx-12 mb-1">
+                                <span class="text-muted">🏖️ {{ __('Unused annual leave') }}</span>
+                                <strong>{{ max(0, $annualRemaining) }} {{ __('day(s)') }}</strong>
+                            </div>
+                            @if($employee->hire_date)
+                            <div class="d-flex justify-content-between tx-12 mb-1">
+                                <span class="text-muted">📅 {{ __('Service duration') }}</span>
+                                <strong>{{ $employee->hire_date->diffForHumans(now(), true) }}</strong>
+                            </div>
+                            @endif
+                            <div class="d-flex justify-content-between tx-12">
+                                <span class="text-muted">💰 {{ __('Final dues') }}</span>
+                                <a href="{{ route('company.employees.payroll', $employee) }}" class="fw-bold" style="color:#f59e0b;">{{ __('Review in payroll') }} ←</a>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold tx-12">{{ __('Termination type') }} <span class="text-danger">*</span></label>
+                            <select name="termination_type" class="form-select form-select-sm" required>
+                                @foreach(\App\Models\Employee::TERMINATION_TYPES as $key => $meta)
+                                <option value="{{ $key }}">{{ $meta['icon'] }} {{ __($meta['label_key']) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold tx-12">{{ __('Last working day') }} <span class="text-danger">*</span></label>
+                            <input type="date" name="termination_date" class="form-control form-control-sm" value="{{ today()->toDateString() }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold tx-12">{{ __('Reason') }} <span class="text-muted fw-normal">({{ __('optional') }})</span></label>
+                            <textarea name="termination_reason" class="form-control form-control-sm" rows="2"
+                                      placeholder="{{ __('Describe the reason…') }}"></textarea>
+                        </div>
+                        <div class="tx-11 text-muted mb-3" style="opacity:.75;">
+                            ⚠️ {{ __('The employee will be deactivated and removed from booking. Their history, payroll and records are kept. You can reinstate them anytime.') }}
+                        </div>
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                            <button type="submit" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold">{{ __('Confirm offboarding') }}</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endunless
 </div>
 
 @push('scripts')

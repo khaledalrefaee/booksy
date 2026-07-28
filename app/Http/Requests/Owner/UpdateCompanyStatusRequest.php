@@ -19,6 +19,17 @@ class UpdateCompanyStatusRequest extends FormRequest
     {
         return [
             'status' => ['required', 'string', Rule::in(['pending', 'active', 'suspended'])],
+            'reason' => ['required_if:status,suspended', 'nullable', 'string', 'max:500'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'reason.required_if' => __('A reason is required when suspending a company.'),
         ];
     }
 }

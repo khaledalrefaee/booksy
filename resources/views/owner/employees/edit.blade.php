@@ -3,7 +3,7 @@
 @push('owner-styles')
 <style>
 .emp-form-hero {
-    background: linear-gradient(135deg, #f4a642 0%, #c9a227 100%);
+    background: linear-gradient(135deg, var(--bk-accent-hover) 0%, var(--bk-accent) 100%);
     border-radius: 20px; padding: 26px 30px;
     margin-bottom: 24px; color: #000;
     position: relative; overflow: hidden;
@@ -44,23 +44,23 @@
     transition: border-color .2s, background .2s, box-shadow .2s; outline: none;
 }
 .f-input::placeholder { color: rgba(255,255,255,.25); }
-.f-input:focus { border-color: #c9a227; background: rgba(201,162,39,.07); box-shadow: 0 0 0 3px rgba(201,162,39,.15); }
+.f-input:focus { border-color: var(--bk-accent); background: rgba(12,110,116,.07); box-shadow: 0 0 0 3px rgba(12,110,116,.15); }
 .bk-theme-light .f-input { background: #f8f9fa; border-color: #dee2e6; color: #212529; }
 .bk-theme-light .f-input::placeholder { color: rgba(0,0,0,.3); }
-.bk-theme-light .f-input:focus { background: #fff; border-color: #c9a227; box-shadow: 0 0 0 3px rgba(201,162,39,.12); }
+.bk-theme-light .f-input:focus { background: #fff; border-color: var(--bk-accent); box-shadow: 0 0 0 3px rgba(12,110,116,.12); }
 .f-input.is-invalid { border-color: #f5576c !important; }
 
 .day-pill { border-radius: 11px; border: 1.5px solid rgba(255,255,255,.09); padding: 11px 13px; transition: all .2s; background: rgba(255,255,255,.03); }
 .bk-theme-light .day-pill { border-color: #e8ecf1; background: #fafbfc; }
-.day-pill.active { border-color: rgba(201,162,39,.5); background: rgba(201,162,39,.07); }
-.bk-theme-light .day-pill.active { border-color: #c9a227; background: rgba(201,162,39,.06); }
+.day-pill.active { border-color: rgba(12,110,116,.5); background: rgba(12,110,116,.07); }
+.bk-theme-light .day-pill.active { border-color: var(--bk-accent); background: rgba(12,110,116,.06); }
 .day-name { font-weight: 700; font-size: 12px; }
 .day-times { display: flex; align-items: center; gap: 5px; margin-top: 9px; }
 .day-times input {
     flex: 1; border: 1.5px solid rgba(255,255,255,.1); border-radius: 9px; padding: 5px 7px;
     font-size: 12px; text-align: center; background: rgba(255,255,255,.05); color: inherit; outline: none;
 }
-.day-times input:focus { border-color: #c9a227; }
+.day-times input:focus { border-color: var(--bk-accent); }
 .day-times input:disabled { opacity: .3; cursor: not-allowed; }
 .bk-theme-light .day-times input { background: #fff; border-color: #dee2e6; color: #212529; }
 .day-times .sep { color: rgba(255,255,255,.3); font-size: 11px; flex-shrink: 0; }
@@ -74,11 +74,11 @@
 .bk-theme-light .toggle-row { background: #f8f9fa; border-color: #dee2e6; }
 
 .btn-submit-main {
-    background: linear-gradient(135deg, #c9a227, #f4a642);
+    background: linear-gradient(135deg, var(--bk-accent), var(--bk-accent-hover));
     color: #000; border: none; border-radius: 13px;
     padding: 12px 36px; font-weight: 700; font-size: 14px;
     cursor: pointer; width: 100%;
-    box-shadow: 0 4px 18px rgba(201,162,39,.3);
+    box-shadow: 0 4px 18px rgba(12,110,116,.3);
     transition: opacity .2s, transform .15s;
     display: flex; align-items: center; justify-content: center; gap: 8px;
 }
@@ -126,8 +126,8 @@
             <div class="card border-0 sec-card bk-a2">
                 <div class="card-body p-0">
                     <div class="sec-header">
-                        <div class="sec-icon" style="background:rgba(201,162,39,.15);">
-                            <i data-feather="user" style="width:15px;height:15px;color:#c9a227;"></i>
+                        <div class="sec-icon" style="background:rgba(12,110,116,.15);">
+                            <i data-feather="user" style="width:15px;height:15px;color:var(--bk-accent);"></i>
                         </div>
                         <div>
                             <div class="sec-title">{{ __('Basic Information') }}</div>
@@ -266,7 +266,7 @@
                     @include('partials.social-links-form', [
                         'savedLinks'       => $socialLinks,
                         'inputPrefix'      => 'social_links',
-                        'accentColor'      => '#c9a227',
+                        'accentColor'      => '#5C7038',
                         'allowedPlatforms' => ['whatsapp', 'facebook', 'instagram'],
                     ])
                 </div>

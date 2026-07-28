@@ -18,13 +18,17 @@ class EmployeeCompensation extends Model
         'pay_period',
         'commission_type',
         'commission_rate',
+        'product_commission_rate',
+        'overtime_hourly_rate',
     ];
 
     protected function casts(): array
     {
         return [
-            'base_amount'     => 'decimal:2',
-            'commission_rate' => 'decimal:2',
+            'base_amount'             => 'decimal:2',
+            'commission_rate'         => 'decimal:2',
+            'product_commission_rate' => 'decimal:2',
+            'overtime_hourly_rate'    => 'decimal:2',
         ];
     }
 

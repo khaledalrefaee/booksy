@@ -13,6 +13,7 @@ class AttendanceRecord extends Model
         'status', 'check_in_lat', 'check_in_lng', 'check_in_distance',
         'check_out_lat', 'check_out_lng', 'check_out_distance',
         'location_status', 'notes', 'late_minutes',
+        'overtime_minutes', 'early_leave_minutes',
     ];
 
     protected function casts(): array
@@ -28,6 +29,8 @@ class AttendanceRecord extends Model
             'check_in_distance' => 'integer',
             'check_out_distance'=> 'integer',
             'late_minutes'      => 'integer',
+            'overtime_minutes'  => 'integer',
+            'early_leave_minutes' => 'integer',
         ];
     }
 

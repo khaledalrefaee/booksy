@@ -13,8 +13,15 @@ class ProfileController extends Controller
 {
     public function show(): View
     {
+        $company = Auth::guard('company')->user()->load('plan');
+
         return view('company.profile.show', [
-            'company' => Auth::guard('company')->user(),
+            'company'        => $company,
+            'featureCatalog' => \App\Models\Plan::featureCatalog(),
+            'usage'          => [
+                'branches'  => $company->branches()->count(),
+                'employees' => $company->employees()->count(),
+            ],
         ]);
     }
 

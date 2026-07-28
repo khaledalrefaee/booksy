@@ -37,12 +37,83 @@ class EmployeeController extends Controller
         abort_unless($employee->company_id === $this->company()->id, 403);
     }
 
+    /** AJAX: live email-uniqueness check while typing in the employee form. */
+    public function checkEmail(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $email  = trim((string) $request->query('email'));
+        $except = $request->query('except');
+
+        if ($email === '') {
+            return response()->json(['available' => true]);
+        }
+
+        $exists = Employee::where('email', $email)
+            ->when($except, fn ($q) => $q->where('id', '!=', $except))
+            ->exists();
+
+        return response()->json(['available' => ! $exists]);
+    }
+
+    /**
+     * Reject shifts whose end is not after their start, and overlapping shifts
+     * on the same day. Runs after the base validate() call.
+     */
+    private function validateShiftTimes(Request $request): void
+    {
+        $errors   = [];
+        $dayNames = EmployeeWorkingHour::$dayNames;
+        $langKey  = app()->getLocale() === 'ar' ? 'ar' : 'en';
+
+        foreach ($request->input('working_hours', []) as $day => $row) {
+            if (empty($row['is_working'])) {
+                continue;
+            }
+
+            $shifts = collect($row['shifts'] ?? [])
+                ->filter(fn ($s) => ! empty($s['start_time']) && ! empty($s['end_time']))
+                ->map(fn ($s) => ['start' => substr($s['start_time'], 0, 5), 'end' => substr($s['end_time'], 0, 5)])
+                ->sortBy('start')
+                ->values();
+
+            if ($shifts->isEmpty() && ! empty($row['start_time']) && ! empty($row['end_time'])) {
+                $shifts = collect([['start' => substr($row['start_time'], 0, 5), 'end' => substr($row['end_time'], 0, 5)]]);
+            }
+
+            $dayName = $dayNames[(int) $day][$langKey] ?? $day;
+
+            foreach ($shifts as $i => $shift) {
+                if ($shift['end'] <= $shift['start']) {
+                    $errors["working_hours.$day"] = __(':day: shift end time must be after its start time.', ['day' => $dayName]);
+                    break;
+                }
+                if ($i > 0 && $shift['start'] < $shifts[$i - 1]['end']) {
+                    $errors["working_hours.$day"] = __(':day: shifts overlap each other.', ['day' => $dayName]);
+                    break;
+                }
+            }
+        }
+
+        if ($errors) {
+            throw \Illuminate\Validation\ValidationException::withMessages($errors);
+        }
+    }
+
     public function index(Branch $branch): View
     {
         $this->authoriseBranch($branch);
 
-        $query = $branch->employees()
-            ->with(['role', 'compensation', 'serviceCommissions']);
+        // Employees of this branch + company-wide employees (branch_id NULL = all branches)
+        $branchScope = fn () => Employee::where('company_id', $branch->company_id)
+            ->where(fn ($q) => $q->where('branch_id', $branch->id)->orWhereNull('branch_id'));
+
+        $query = $branchScope()
+            ->with([
+                'role', 'compensation', 'serviceCommissions',
+                // Just what currentLeave() needs: approved leaves covering today
+                'leaves' => fn ($q) => $q->where('status', 'approved')
+                    ->whereDate('start_date', '<=', today())
+                    ->whereDate('end_date', '>=', today()),
+            ]);
 
         $employees = $query
             ->withCount([
@@ -62,16 +133,26 @@ class EmployeeController extends Controller
                 'total_price'
             )
             ->orderBy('name_en')
-            ->get();
+            ->paginate(50)
+            ->withQueryString();
 
-        $alerts = $branch->employees()
+        // Branch-wide counts for the header & filter chips (not just the current page)
+        $totalCount    = $branchScope()->count();
+        $activeCount   = $branchScope()->where('is_active', true)->count();
+        $inactiveCount = $totalCount - $activeCount;
+        $roles         = Role::whereIn('id', $branchScope()->whereNotNull('role_id')->distinct()->pluck('role_id'))->get();
+
+        $alerts = $branchScope()
             ->where(function ($q) {
                 $q->whereNotNull('license_expiry')
                   ->orWhereNotNull('contract_end_date');
             })
             ->get(['id', 'name_en', 'name_ar', 'license_expiry', 'contract_end_date']);
 
-        return view('company.employees.index', compact('branch', 'employees', 'alerts'));
+        return view('company.employees.index', compact(
+            'branch', 'employees', 'alerts',
+            'totalCount', 'activeCount', 'inactiveCount', 'roles'
+        ));
     }
 
     public function create(Branch $branch): View
@@ -93,12 +174,20 @@ class EmployeeController extends Controller
     {
         $this->authoriseBranch($branch);
 
+        if (! $branch->company->canAddEmployee()) {
+            return redirect()
+                ->route('company.branches.employees.index', $branch)
+                ->with('error', __('You have reached the maximum number of employees allowed by your plan.'));
+        }
+
         $data = $request->validate([
             'name_en'              => ['required', 'string', 'max:255'],
             'name_ar'              => ['required', 'string', 'max:255'],
             'email'                => ['required', 'email', 'unique:employees,email'],
-            'phone'                => ['required', 'string', 'max:30'],
+            'dial_code'            => ['required', 'string', 'max:5'],
+            'phone_number'         => ['required', 'string', 'max:15'],
             'role_id'              => ['required', 'exists:roles,id'],
+            'branch_scope'         => ['nullable', 'in:branch,all'],
             'password'             => ['required', 'string', 'min:8'],
             'bio'                  => ['nullable', 'string', 'max:1000'],
             'image'                => ['nullable', 'image', 'max:10240'],
@@ -119,16 +208,22 @@ class EmployeeController extends Controller
             'comp_commission_rate'  => ['nullable', 'numeric', 'min:0', 'max:100'],
             'comp_service_rates'    => ['nullable', 'array'],
             'comp_service_rates.*'  => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'comp_product_commission_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'comp_overtime_hourly_rate'    => ['nullable', 'numeric', 'min:0'],
             'working_hours'              => ['nullable', 'array'],
             'working_hours.*.is_working' => ['nullable', 'boolean'],
             'working_hours.*.start_time' => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
             'working_hours.*.end_time'   => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
+            'working_hours.*.shifts'                => ['nullable', 'array', 'max:4'],
+            'working_hours.*.shifts.*.start_time'   => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
+            'working_hours.*.shifts.*.end_time'     => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
             'social_links'               => ['nullable', 'array'],
             'social_links.*'             => ['nullable', 'string', 'max:500'],
             // HR fields
             'contract_type'              => ['nullable', 'in:' . implode(',', array_keys(Employee::CONTRACT_TYPES))],
             'hire_date'                  => ['nullable', 'date'],
             'contract_end_date'          => ['nullable', 'date', 'after_or_equal:hire_date'],
+            'annual_leave_days'         => ['nullable', 'integer', 'min:0', 'max:365'],
             'national_id'               => ['nullable', 'string', 'max:30'],
             'iban'                      => ['nullable', 'string', 'max:40'],
             'bank_name'                 => ['nullable', 'string', 'max:255'],
@@ -140,16 +235,30 @@ class EmployeeController extends Controller
             'license_expiry'            => ['nullable', 'date'],
         ]);
 
+        $this->validateShiftTimes($request);
+
+        // All-branches employee (branch_id NULL) — company-owner role only
+        $branchScope = $data['branch_scope'] ?? 'branch';
+        if ($branchScope === 'all') {
+            $role = Role::find($data['role_id']);
+            if ($role?->slug !== 'company_owner') {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'branch_scope' => __('Only the company owner role can be assigned to all branches.'),
+                ]);
+            }
+        }
+
         $imagePath = $request->hasFile('image')
             ? $this->storeAsWebP($request->file('image'))
             : null;
 
-        $employee = $branch->employees()->create([
+        $employee = Employee::create([
+            'branch_id'   => $branchScope === 'all' ? null : $branch->id,
             'company_id'  => $this->company()->id,
             'name_en'     => $data['name_en'],
             'name_ar'     => $data['name_ar'] ?? null,
             'email'       => $data['email'] ?? null,
-            'phone'       => $data['phone'] ?? null,
+            'phone'       => $this->buildPhone($request),
             'role_id'     => $data['role_id'],
             'password'    => Hash::make($data['password']),
             'bio'         => $data['bio'] ?? null,
@@ -159,6 +268,7 @@ class EmployeeController extends Controller
             'contract_type'              => $data['contract_type'] ?? null,
             'hire_date'                  => $data['hire_date'] ?? null,
             'contract_end_date'          => $data['contract_end_date'] ?? null,
+            'annual_leave_days'         => $data['annual_leave_days'] ?? 21,
             'national_id'               => $data['national_id'] ?? null,
             'iban'                      => $data['iban'] ?? null,
             'bank_name'                 => $data['bank_name'] ?? null,
@@ -191,9 +301,13 @@ class EmployeeController extends Controller
     {
         $this->authoriseEmployee($employee);
 
-        $branch   = $employee->branch;
+        $branches = $this->company()->branches()->orderBy('sort_order')->get();
+        $branch   = $employee->branch ?? $branches->first();
         $roles    = Role::query()->orderBy('label_en')->get();
-        $services = Service::where('branch_id', $branch->id)
+
+        // Null branch_id = works across all branches → offer every branch's services
+        $serviceBranchIds = $employee->branch_id ? [$employee->branch_id] : $branches->pluck('id')->all();
+        $services = Service::whereIn('branch_id', $serviceBranchIds)
                         ->where('is_active', true)
                         ->with('serviceCategory')
                         ->orderBy('name_en')
@@ -208,12 +322,13 @@ class EmployeeController extends Controller
         ]);
         $compensation        = $employee->compensation;
         $serviceCommissions  = $employee->serviceCommissions()->pluck('rate', 'service_id')->toArray();
-        $workingHours        = $employee->workingHours()->get()->keyBy('day_of_week');
+        $workingHours        = $employee->workingHours()->orderBy('shift_number')->get()->groupBy('day_of_week');
         $socialLinks         = $employee->socialLinks()->get()->keyBy('platform');
 
         return view('company.employees.edit', [
             'employee'           => $employee,
             'branch'             => $branch,
+            'branches'           => $branches,
             'roles'              => $roles,
             'services'           => $services,
             'selectedServiceIds' => $selectedServiceIds,
@@ -233,8 +348,10 @@ class EmployeeController extends Controller
             'name_en'               => ['required', 'string', 'max:255'],
             'name_ar'               => ['required', 'string', 'max:255'],
             'email'                 => ['required', 'email', "unique:employees,email,{$employee->id}"],
-            'phone'                 => ['required', 'string', 'max:30'],
+            'dial_code'             => ['required', 'string', 'max:5'],
+            'phone_number'          => ['required', 'string', 'max:15'],
             'role_id'               => ['required', 'exists:roles,id'],
+            'branch_id'             => ['nullable', 'string', 'max:20'],
             'password'              => ['nullable', 'string', 'min:8'],
             'bio'                   => ['nullable', 'string', 'max:1000'],
             'image'                 => ['nullable', 'image', 'max:10240'],
@@ -250,6 +367,9 @@ class EmployeeController extends Controller
             'working_hours.*.is_working' => ['nullable', 'boolean'],
             'working_hours.*.start_time' => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
             'working_hours.*.end_time'   => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
+            'working_hours.*.shifts'                => ['nullable', 'array', 'max:4'],
+            'working_hours.*.shifts.*.start_time'   => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
+            'working_hours.*.shifts.*.end_time'     => ['nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
             'social_links'               => ['nullable', 'array'],
             'social_links.*'             => ['nullable', 'string', 'max:500'],
             // Compensation
@@ -261,10 +381,13 @@ class EmployeeController extends Controller
             'comp_commission_rate'       => ['nullable', 'numeric', 'min:0', 'max:100'],
             'comp_service_rates'         => ['nullable', 'array'],
             'comp_service_rates.*'       => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'comp_product_commission_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'comp_overtime_hourly_rate'    => ['nullable', 'numeric', 'min:0'],
             // HR fields
             'contract_type'              => ['nullable', 'in:' . implode(',', array_keys(Employee::CONTRACT_TYPES))],
             'hire_date'                  => ['nullable', 'date'],
             'contract_end_date'          => ['nullable', 'date', 'after_or_equal:hire_date'],
+            'annual_leave_days'         => ['nullable', 'integer', 'min:0', 'max:365'],
             'national_id'               => ['nullable', 'string', 'max:30'],
             'iban'                      => ['nullable', 'string', 'max:40'],
             'bank_name'                 => ['nullable', 'string', 'max:255'],
@@ -276,11 +399,39 @@ class EmployeeController extends Controller
             'license_expiry'            => ['nullable', 'date'],
         ]);
 
+        $this->validateShiftTimes($request);
+
+        // Branch transfer: a concrete branch of this company, or 'all' (= NULL,
+        // works across all branches) — allowed only for the company-owner role.
+        $company     = $this->company();
+        $oldBranchId = $employee->branch_id;
+        $newBranchId = $oldBranchId;
+
+        if (! empty($data['branch_id'])) {
+            if ($data['branch_id'] === 'all') {
+                $role = Role::find($data['role_id']);
+                if ($role?->slug !== 'company_owner') {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'branch_id' => __('Only the company owner role can be assigned to all branches.'),
+                    ]);
+                }
+                $newBranchId = null;
+            } else {
+                $newBranchId = (int) $data['branch_id'];
+                if (! $company->branches()->whereKey($newBranchId)->exists()) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'branch_id' => __('Invalid branch.'),
+                    ]);
+                }
+            }
+        }
+
         $updateData = [
+            'branch_id'   => $newBranchId,
             'name_en'     => $data['name_en'],
             'name_ar'     => $data['name_ar'] ?? null,
             'email'       => $data['email'] ?? null,
-            'phone'       => $data['phone'] ?? null,
+            'phone'       => $this->buildPhone($request),
             'role_id'     => $data['role_id'],
             'bio'         => $data['bio'] ?? null,
             'is_active'   => $request->boolean('is_active'),
@@ -288,6 +439,7 @@ class EmployeeController extends Controller
             'contract_type'              => $data['contract_type'] ?? $employee->contract_type,
             'hire_date'                  => $data['hire_date'] ?? $employee->hire_date,
             'contract_end_date'          => $data['contract_end_date'] ?? $employee->contract_end_date,
+            'annual_leave_days'         => $data['annual_leave_days'] ?? $employee->annual_leave_days,
             'national_id'               => $data['national_id'] ?? $employee->national_id,
             'iban'                      => $data['iban'] ?? $employee->iban,
             'bank_name'                 => $data['bank_name'] ?? $employee->bank_name,
@@ -312,8 +464,19 @@ class EmployeeController extends Controller
 
         $employee->update($updateData);
 
-        // Sync services with optional per-employee price & duration overrides
-        $employee->services()->sync($this->buildServiceSyncData($request));
+        // Sync services with optional per-employee price & duration overrides.
+        // Only services of the employee's (new) branch are kept — on transfer,
+        // services of the old branch are dropped automatically.
+        $allowedServiceIds = Service::whereIn(
+                'branch_id',
+                $newBranchId ? [$newBranchId] : $company->branches()->pluck('id')
+            )->pluck('id')->flip();
+        $serviceSync = array_filter(
+            $this->buildServiceSyncData($request),
+            fn ($serviceId) => $allowedServiceIds->has((int) $serviceId),
+            ARRAY_FILTER_USE_KEY
+        );
+        $employee->services()->sync($serviceSync);
 
         // Sync compensation
         $this->syncCompensation($employee, $request);
@@ -324,8 +487,18 @@ class EmployeeController extends Controller
         // Sync social links
         SocialLink::syncFor($employee, $request->input('social_links', []));
 
+        if ($newBranchId !== $oldBranchId) {
+            $branchName = fn ($id) => $id
+                ? Branch::find($id)?->localizedName() ?? "#{$id}"
+                : __('All branches');
+            \App\Support\Auditor::log(
+                "Transferred {$employee->localizedName()} from {$branchName($oldBranchId)} to {$branchName($newBranchId)}",
+                $employee
+            );
+        }
+
         return redirect()
-            ->route('company.branches.employees.index', $employee->branch)
+            ->route('company.branches.employees.index', $employee->branch ?? $company->branches()->orderBy('sort_order')->first())
             ->with('success', __('Employee updated successfully.'));
     }
 
@@ -343,6 +516,8 @@ class EmployeeController extends Controller
                 'pay_period'      => $request->input('comp_pay_period', 'monthly'),
                 'commission_type' => in_array($type, ['commission', 'mixed']) ? $request->input('comp_commission_type') : null,
                 'commission_rate' => ($request->input('comp_commission_type') === 'flat') ? $request->input('comp_commission_rate') : null,
+                'product_commission_rate' => (float) $request->input('comp_product_commission_rate', 0),
+                'overtime_hourly_rate'    => (float) $request->input('comp_overtime_hourly_rate', 0) ?: null,
             ]
         );
 
@@ -372,19 +547,117 @@ class EmployeeController extends Controller
     private function syncWorkingHours(Employee $employee, array $hours): void
     {
         foreach (range(0, 6) as $day) {
-            $row        = $hours[$day] ?? [];
-            $isWorking  = ! empty($row['is_working']);
-            $start      = $isWorking && isset($row['start_time']) ? substr($row['start_time'], 0, 5) : null;
-            $end        = $isWorking && isset($row['end_time'])   ? substr($row['end_time'],   0, 5) : null;
-            $employee->workingHours()->updateOrCreate(
-                ['day_of_week' => $day],
-                [
-                    'is_working' => $isWorking,
-                    'start_time' => $start,
-                    'end_time'   => $end,
-                ]
-            );
+            $row       = $hours[$day] ?? [];
+            $isWorking = ! empty($row['is_working']);
+
+            // Collect shifts: new multi-shift format, falling back to the legacy single start/end pair
+            $shifts = collect($row['shifts'] ?? [])
+                ->filter(fn ($s) => ! empty($s['start_time']) && ! empty($s['end_time']))
+                ->values();
+
+            if ($shifts->isEmpty() && ! empty($row['start_time']) && ! empty($row['end_time'])) {
+                $shifts = collect([['start_time' => $row['start_time'], 'end_time' => $row['end_time']]]);
+            }
+
+            $employee->workingHours()->where('day_of_week', $day)->delete();
+
+            if (! $isWorking || $shifts->isEmpty()) {
+                $employee->workingHours()->create([
+                    'day_of_week'  => $day,
+                    'is_working'   => false,
+                    'shift_number' => 1,
+                ]);
+                continue;
+            }
+
+            foreach ($shifts->sortBy('start_time')->values() as $i => $shift) {
+                $employee->workingHours()->create([
+                    'day_of_week'  => $day,
+                    'is_working'   => true,
+                    'shift_number' => $i + 1,
+                    'start_time'   => substr($shift['start_time'], 0, 5),
+                    'end_time'     => substr($shift['end_time'], 0, 5),
+                ]);
+            }
         }
+    }
+
+    /**
+     * Offboarding: record resignation/termination with reason & date and
+     * deactivate the employee. The settlement summary (leave balance, dues)
+     * is shown in the confirmation modal before this runs.
+     */
+    public function offboard(Request $request, Employee $employee): RedirectResponse
+    {
+        $this->authoriseEmployee($employee);
+
+        $data = $request->validate([
+            'termination_type'   => ['required', 'in:' . implode(',', array_keys(Employee::TERMINATION_TYPES))],
+            'termination_date'   => ['required', 'date'],
+            'termination_reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $employee->update([
+            'termination_date'   => $data['termination_date'],
+            'termination_type'   => $data['termination_type'],
+            'termination_reason' => $data['termination_reason'] ?? null,
+            'is_active'          => false,
+            'is_bookable'        => false,
+        ]);
+
+        $typeLabel = __(Employee::TERMINATION_TYPES[$data['termination_type']]['label_key']);
+        \App\Support\Auditor::log(
+            "Offboarded {$employee->localizedName()} — {$typeLabel} ({$data['termination_date']})",
+            $employee
+        );
+
+        return redirect()
+            ->route('company.employees.show', $employee)
+            ->with('success', __('Employee offboarded — :type', ['type' => $typeLabel]));
+    }
+
+    /** Undo offboarding: clear the termination record and reactivate. */
+    public function reinstate(Employee $employee): RedirectResponse
+    {
+        $this->authoriseEmployee($employee);
+
+        $employee->update([
+            'termination_date'   => null,
+            'termination_type'   => null,
+            'termination_reason' => null,
+            'is_active'          => true,
+        ]);
+
+        \App\Support\Auditor::log("Reinstated {$employee->localizedName()}", $employee);
+
+        return back()->with('success', __('Employee reinstated successfully.'));
+    }
+
+    /** Combine dial_code + phone_number into the stored phone format (same as CustomerController). */
+    private function buildPhone(Request $request): string
+    {
+        $dialCode    = $request->input('dial_code', config('booksy.default_dial_code', '+963'));
+        $phoneNumber = preg_replace('/[^0-9]/', '', $request->input('phone_number', ''));
+
+        if (str_starts_with($phoneNumber, '0')) {
+            $phoneNumber = substr($phoneNumber, 1);
+        }
+
+        $dialCodes = config('booksy.dial_codes', []);
+        if (isset($dialCodes[$dialCode])) {
+            $min = $dialCodes[$dialCode]['digits_min'];
+            $max = $dialCodes[$dialCode]['digits_max'];
+            $len = strlen($phoneNumber);
+            if ($len < $min || $len > $max) {
+                $country = $dialCodes[$dialCode]['name_ar'] ?? $dialCodes[$dialCode]['name_en'];
+                $msg = ($min === $max)
+                    ? __('Phone number for :country must be exactly :n digits.', ['country' => $country, 'n' => $min])
+                    : __('Phone number for :country must be between :min and :max digits.', ['country' => $country, 'min' => $min, 'max' => $max]);
+                throw \Illuminate\Validation\ValidationException::withMessages(['phone_number' => $msg]);
+            }
+        }
+
+        return ltrim($dialCode, '+') . $phoneNumber;
     }
 
     private function buildServiceSyncData(Request $request): array
@@ -493,12 +766,18 @@ class EmployeeController extends Controller
 
         $leaves = $employee->leaves()->orderByDesc('start_date')->limit(5)->get();
         $deductions = $employee->deductions()->orderByDesc('created_at')->limit(5)->get();
+        $attendanceHistory = $employee->attendanceRecords()->orderByDesc('date')->limit(30)->get();
+
+        $employee->load('leaves');
+        $annualUsed      = $employee->annualLeaveUsed();
+        $annualRemaining = $employee->annualLeaveRemaining();
 
         return view('company.employees.show', compact(
             'employee', 'services',
             'appointmentsThisMonth', 'revenueThisMonth', 'completedThisMonth',
             'totalAppointments', 'totalRevenue', 'appointments',
-            'attendanceStats', 'leaves', 'deductions'
+            'attendanceStats', 'leaves', 'deductions', 'attendanceHistory',
+            'annualUsed', 'annualRemaining'
         ));
     }
 

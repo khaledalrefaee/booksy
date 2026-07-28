@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AppointmentStatus;
 use App\Observers\AppointmentObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
@@ -21,11 +22,13 @@ class Appointment extends Model
         'customer_name',
         'customer_phone',
         'employee_id',
+        'resource_id',
         'service_id',
         'start_time',
         'end_time',
         'status',
         'total_price',
+        'tip_amount',
         'payment_status',
         'notes',
         'rejection_reason',
@@ -46,9 +49,11 @@ class Appointment extends Model
     protected function casts(): array
     {
         return [
+            'status'            => AppointmentStatus::class,
             'start_time'        => 'datetime',
             'end_time'          => 'datetime',
             'total_price'       => 'decimal:2',
+            'tip_amount'        => 'decimal:2',
             'handled_at'        => 'datetime',
             'status_changed_at' => 'datetime',
         ];
@@ -79,6 +84,11 @@ class Appointment extends Model
         return $this->belongsTo(Service::class);
     }
 
+    public function resource(): BelongsTo
+    {
+        return $this->belongsTo(Resource::class);
+    }
+
     public function handledBy(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'handled_by_employee_id');
@@ -92,6 +102,12 @@ class Appointment extends Model
     public function waitlistEntries(): HasMany
     {
         return $this->hasMany(WaitlistEntry::class);
+    }
+
+    /** Full status history, oldest first. */
+    public function transitions(): HasMany
+    {
+        return $this->hasMany(AppointmentTransition::class)->orderBy('created_at');
     }
 
     public function branchPayments(): HasMany

@@ -24,14 +24,9 @@
             </select>
             <select name="status" class="bk-ssb-select" style="min-width:130px;" onchange="document.getElementById(\'bk-sf-form\').submit()">
                 <option value="">' . __('كل الحالات') . '</option>
-                ' . collect([
-                    'pending'   => 'قيد الانتظار',
-                    'confirmed' => 'مؤكد',
-                    'rejected'  => 'مرفوض',
-                    'cancelled' => 'ملغى',
-                    'completed' => 'مكتمل',
-                    'no_show'   => 'لم يحضر',
-                ])->map(fn($label, $st) => '<option value="' . $st . '" ' . ($filterStatus === $st ? 'selected' : '') . '>' . $label . '</option>')->implode('') . '
+                ' . collect(\App\Enums\AppointmentStatus::cases())
+                    ->map(fn($case) => '<option value="' . $case->value . '" ' . ($filterStatus === $case->value ? 'selected' : '') . '>' . e($case->label()) . '</option>')
+                    ->implode('') . '
             </select>
             <input type="date" name="date_from" value="' . e($filterDateFrom) . '"
                    class="bk-ssb-date" style="min-width:130px;" onchange="document.getElementById(\'bk-sf-form\').submit()">
@@ -75,18 +70,7 @@
                                 <td>{{ $row->branch?->localizedName() ?? '—' }}</td>
                                 <td>{{ $row->service?->localizedName() ?? '—' }}</td>
                                 <td>{{ $row->customer?->name ?? '—' }}</td>
-                                <td>
-                                    @php
-                                        $badge = match ($row->status) {
-                                            'pending' => 'warning',
-                                            'confirmed' => 'success',
-                                            'completed' => 'primary',
-                                            'cancelled', 'rejected', 'no_show' => 'secondary',
-                                            default => 'info',
-                                        };
-                                    @endphp
-                                    <span class="badge rounded-pill bg-{{ $badge }}">{{ __($row->status) }}</span>
-                                </td>
+                                <td><x-appointment-status :status="$row->status" /></td>
                                 <td><span class="text-muted">{{ __($row->payment_status) }}</span></td>
                                 <td class="text-end pe-4">
                                     <a href="{{ route('owner.appointments.show', $row) }}" class="btn btn-sm btn-outline-primary rounded-pill">{{ __('Details') }}</a>

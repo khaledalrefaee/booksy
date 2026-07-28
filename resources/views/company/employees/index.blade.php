@@ -45,7 +45,7 @@
 .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 .emp-actions {
     display: flex; align-items: center; gap: 6px; flex-shrink: 0;
-    opacity: 0; transition: opacity .2s;
+    opacity: .85; transition: opacity .2s;
 }
 .emp-scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .emp-scroll-wrap::-webkit-scrollbar { height: 4px; }
@@ -131,17 +131,12 @@
                     </ol>
                 </nav>
                 <h3 class="fw-bold mb-1" style="font-family:'Poppins',sans-serif;">{{ __('Employees') }}</h3>
-                @php
-                    $activeCount = $employees->where('is_active', true)->count();
-                    $inactiveCount = $employees->where('is_active', false)->count();
-                    $roles = $employees->pluck('role')->filter()->unique('id');
-                @endphp
                 <p class="mb-0" style="color:rgba(255,255,255,.65);font-size:13px;">
                     <span style="color:#43e97b;font-weight:700;">{{ $activeCount }}</span> {{ __('active') }}
                     @if($inactiveCount > 0)
                         · <span style="color:#6c757d;font-weight:700;">{{ $inactiveCount }}</span> {{ __('inactive') }}
                     @endif
-                    · {{ $employees->count() }} {{ __('total in') }} {{ $branch->localizedName() }}
+                    · {{ $totalCount }} {{ __('total in') }} {{ $branch->localizedName() }}
                 </p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
@@ -165,13 +160,24 @@
 
     {{-- License & Contract alerts --}}
     @php
+        // Days remaining from today until the given date (positive = in the future)
+        $daysLeft = fn ($date) => (int) now()->startOfDay()->diffInDays($date->copy()->startOfDay());
         $expiredLicenses = $alerts->filter(fn($e) => $e->license_expiry && $e->license_expiry->isPast());
-        $expiringLicenses = $alerts->filter(fn($e) => $e->license_expiry && !$e->license_expiry->isPast() && $e->license_expiry->diffInDays(now()) <= 30);
+        $expiringLicenses = $alerts->filter(fn($e) => $e->license_expiry && !$e->license_expiry->isPast() && $daysLeft($e->license_expiry) <= 45);
         $expiredContracts = $alerts->filter(fn($e) => $e->contract_end_date && $e->contract_end_date->isPast());
-        $expiringContracts = $alerts->filter(fn($e) => $e->contract_end_date && !$e->contract_end_date->isPast() && $e->contract_end_date->diffInDays(now()) <= 30);
+        $expiringContracts = $alerts->filter(fn($e) => $e->contract_end_date && !$e->contract_end_date->isPast() && $daysLeft($e->contract_end_date) <= 45);
+        $hrAlertsCount = $expiredLicenses->count() + $expiringLicenses->count() + $expiredContracts->count() + $expiringContracts->count();
     @endphp
-    @if($expiredLicenses->isNotEmpty() || $expiringLicenses->isNotEmpty() || $expiredContracts->isNotEmpty() || $expiringContracts->isNotEmpty())
-    <div class="mb-3 d-flex flex-column gap-2">
+    @if($hrAlertsCount > 0)
+    <div class="mb-3">
+        <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+            <span class="tx-12 fw-bold" style="color:#f59e0b;">⚠️ {{ __('Contract & license alerts') }} ({{ $hrAlertsCount }})</span>
+            <button type="button" id="hr-alerts-toggle" onclick="toggleHrAlerts()" class="btn btn-sm rounded-pill px-3"
+                    style="font-size:11px;font-weight:700;border:1px solid rgba(245,158,11,.4);color:#f59e0b;background:transparent;">
+                {{ __('Hide') }}
+            </button>
+        </div>
+        <div id="hr-alerts-body" class="d-flex flex-column gap-2">
         @foreach($expiredLicenses as $emp)
         <div class="d-flex align-items-center gap-3 px-4 py-3 rounded-4" style="background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.25);">
             <span style="font-size:20px;">🚨</span>
@@ -193,7 +199,7 @@
                 <div class="tx-12 text-muted">
                     {{ app()->getLocale()==='ar' ? ($emp->name_ar ?: $emp->name_en) : ($emp->name_en ?: $emp->name_ar) }}
                     — {{ __('expires on') }} {{ $emp->license_expiry->translatedFormat('d M Y') }}
-                    ({{ (int) $emp->license_expiry->diffInDays(now()) }} {{ __('days left') }})
+                    ({{ $daysLeft($emp->license_expiry) }} {{ __('days left') }})
                 </div>
             </div>
             <a href="{{ route('company.employees.edit', $emp) }}" class="btn btn-sm btn-outline-warning rounded-pill px-3" style="font-size:11px;flex-shrink:0;">{{ __('Renew') }}</a>
@@ -220,13 +226,26 @@
                 <div class="tx-12 text-muted">
                     {{ app()->getLocale()==='ar' ? ($emp->name_ar ?: $emp->name_en) : ($emp->name_en ?: $emp->name_ar) }}
                     — {{ __('expires on') }} {{ $emp->contract_end_date->translatedFormat('d M Y') }}
-                    ({{ (int) $emp->contract_end_date->diffInDays(now()) }} {{ __('days left') }})
+                    ({{ $daysLeft($emp->contract_end_date) }} {{ __('days left') }})
                 </div>
             </div>
             <a href="{{ route('company.employees.edit', $emp) }}" class="btn btn-sm btn-outline-warning rounded-pill px-3" style="font-size:11px;flex-shrink:0;">{{ __('Renew') }}</a>
         </div>
         @endforeach
+        </div>
     </div>
+    <script>
+        function hrAlertsSetHidden(hidden) {
+            document.getElementById('hr-alerts-body').classList.toggle('d-none', hidden);
+            document.getElementById('hr-alerts-toggle').textContent = hidden ? @json(__('Show')) : @json(__('Hide'));
+        }
+        function toggleHrAlerts() {
+            const hidden = ! document.getElementById('hr-alerts-body').classList.contains('d-none');
+            hrAlertsSetHidden(hidden);
+            localStorage.setItem('hrAlertsHidden', hidden ? '1' : '0');
+        }
+        if (localStorage.getItem('hrAlertsHidden') === '1') hrAlertsSetHidden(true);
+    </script>
     @endif
 
     {{-- Search & Filters --}}
@@ -243,7 +262,7 @@
         </div>
         <div class="d-flex flex-wrap gap-2 px-4 pb-3" id="emp-filters">
             <button type="button" class="emp-filter-btn active" data-filter="all" onclick="setFilter('all')">
-                {{ __('All') }} <span class="emp-filter-count">{{ $employees->count() }}</span>
+                {{ __('All') }} <span class="emp-filter-count">{{ $totalCount }}</span>
             </button>
             <button type="button" class="emp-filter-btn" data-filter="active" onclick="setFilter('active')">
                 <span class="status-dot" style="background:#43e97b;"></span> {{ __('Active') }} <span class="emp-filter-count">{{ $activeCount }}</span>
@@ -290,7 +309,20 @@
                                 {{ app()->getLocale()==='ar' ? ($emp->role->label_ar ?: $emp->role->label_en) : ($emp->role->label_en ?: $emp->role->label_ar) }}
                             </span>
                         @endif
-                        @if($emp->is_active)
+                        @php $onLeave = $emp->is_active ? $emp->currentLeave() : null; @endphp
+                        @if($emp->isTerminated())
+                            <span class="d-flex align-items-center gap-1" style="font-size:11px;font-weight:600;color:#ef4444;"
+                                  title="{{ $emp->termination_reason }}">
+                                <span class="status-dot" style="background:#ef4444;"></span>{{ ($emp->terminationMeta())['icon'] ?? '🚫' }} {{ __('Offboarded') }}
+                                ({{ $emp->termination_date->format('d/m/Y') }})
+                            </span>
+                        @elseif($onLeave)
+                            <span class="d-flex align-items-center gap-1" style="font-size:11px;font-weight:600;color:#f59e0b;"
+                                  title="{{ __(($onLeave->typeMeta())['label_key']) }}">
+                                <span class="status-dot" style="background:#f59e0b;"></span>🏖️ {{ __('On leave') }}
+                                ({{ __('until') }} {{ $onLeave->is_hourly ? substr($onLeave->end_hour, 0, 5) : $onLeave->end_date->format('d/m') }})
+                            </span>
+                        @elseif($emp->is_active)
                             <span class="d-flex align-items-center gap-1" style="font-size:11px;font-weight:600;color:#43e97b;">
                                 <span class="status-dot" style="background:#43e97b;"></span>{{ __('Active') }}
                             </span>
@@ -370,6 +402,10 @@
             @endforelse
         </div>
     </div>
+
+    @if($employees->hasPages())
+    <div class="mt-3">{{ $employees->links() }}</div>
+    @endif
 
     {{-- No results --}}
     <div id="emp-no-results" class="d-none">

@@ -80,6 +80,11 @@
 
                         <hr class="my-4">
 
+                        {{-- Required resources --}}
+                        @include('company.services.partials.resource-fields')
+
+                        <hr class="my-4">
+
                         {{-- Active --}}
                         <div class="form-check form-switch mb-4">
                             <input type="checkbox" class="form-check-input" id="is_active"

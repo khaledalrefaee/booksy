@@ -2,6 +2,7 @@
 
 namespace App\Services\Owner;
 
+use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Models\Branch;
 use App\Models\BranchWorkingHour;
@@ -199,7 +200,10 @@ final class DashboardStatisticsService
             'daily'   => $dailyData,
             'monthly' => $monthlyData,
             'status'  => ['labels' => [], 'values' => []],
-            'by_status' => ['pending' => 0, 'confirmed' => 0, 'completed' => 0, 'cancelled' => 0],
+            'by_status' => array_fill_keys(
+                [...array_column(AppointmentStatus::cases(), 'value'), 'cancelled_total'],
+                0,
+            ),
             'revenue' => ['labels' => $monthlyLabels, 'total' => $monthlyZeros],
             'sparkline' => [
                 'total'     => array_slice($zeros, -11),
@@ -426,14 +430,18 @@ final class DashboardStatisticsService
 
         $rows = $query->groupBy('status')->pluck('cnt', 'status');
 
-        return [
-            'pending'   => (int) ($rows['pending']   ?? 0),
-            'confirmed' => (int) ($rows['confirmed']  ?? 0),
-            'completed' => (int) ($rows['completed']  ?? 0),
-            'cancelled' => (int) ($rows['cancelled']  ?? 0),
-            'rejected'  => (int) ($rows['rejected']   ?? 0),
-            'no_show'   => (int) ($rows['no_show']    ?? 0),
-        ];
+        $counts = [];
+
+        foreach (AppointmentStatus::cases() as $case) {
+            $counts[$case->value] = (int) ($rows[$case->value] ?? 0);
+        }
+
+        // Kept for the dashboard's "other" bucket, which does not care which
+        // side called the cancellation off.
+        $counts['cancelled_total'] = collect(AppointmentStatus::cancelled())
+            ->sum(fn (AppointmentStatus $s) => $counts[$s->value]);
+
+        return $counts;
     }
 
     /**

@@ -315,8 +315,14 @@ class InventoryController extends Controller
             'product_id' => ['required', 'exists:products,id'],
             'quantity' => ['required', 'integer', 'min:1'],
             'payment_method' => ['nullable', 'in:cash,card,bank_transfer'],
+            'sold_by_employee_id' => ['nullable', 'exists:employees,id'],
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
+
+        if (! empty($data['sold_by_employee_id'])) {
+            $seller = \App\Models\Employee::find($data['sold_by_employee_id']);
+            abort_unless($seller && $seller->company_id === $this->company()->id, 403);
+        }
 
         $product = Product::findOrFail($data['product_id']);
         abort_unless($product->company_id === $this->company()->id, 403);
@@ -343,7 +349,7 @@ class InventoryController extends Controller
                 'currency' => $product->currency,
                 'payment_method' => $data['payment_method'] ?? 'cash',
                 'notes' => $product->localizedName() . ' × ' . $data['quantity'],
-                'recorded_by_employee_id' => null,
+                'recorded_by_employee_id' => $data['sold_by_employee_id'] ?? null,
                 'paid_at' => now(),
             ]);
         });

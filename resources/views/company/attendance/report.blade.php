@@ -15,7 +15,9 @@
 @section('content')
 <div class="page-content">
 
-@php $avatarColors = ['#C9A227','#667eea','#22c55e','#ef4444','#f59e0b','#a78bfa','#fb923c','#06b6d4']; @endphp
+@include('company.partials.team-nav')
+
+@php $avatarColors = ['#5C7038','#667eea','#22c55e','#ef4444','#f59e0b','#a78bfa','#fb923c','#06b6d4']; @endphp
 
 {{-- Hero --}}
 <div class="rpt-hero">
@@ -64,8 +66,10 @@
                 <div class="col-1 text-center"><span class="tx-11 fw-bold text-muted text-uppercase" style="color:#22c55e;">{{ __('Present') }}</span></div>
                 <div class="col-1 text-center"><span class="tx-11 fw-bold text-muted text-uppercase" style="color:#f59e0b;">{{ __('Late') }}</span></div>
                 <div class="col-1 text-center"><span class="tx-11 fw-bold text-muted text-uppercase" style="color:#ef4444;">{{ __('Absent') }}</span></div>
+                <div class="col-1 text-center"><span class="tx-11 fw-bold text-muted text-uppercase" style="color:#f093fb;">{{ __('Leave') }}</span></div>
+                <div class="col-1 text-center"><span class="tx-11 fw-bold text-muted text-uppercase" style="color:#22c55e;">⚡ {{ __('OT') }}</span></div>
                 <div class="col-2 text-center"><span class="tx-11 fw-bold text-muted text-uppercase">{{ __('Attendance %') }}</span></div>
-                <div class="col-2 text-center"><span class="tx-11 fw-bold text-muted text-uppercase">{{ __('Avg Late') }}</span></div>
+                <div class="col-1 text-center"><span class="tx-11 fw-bold text-muted text-uppercase">{{ __('Avg Late') }}</span></div>
             </div>
         </div>
 
@@ -86,13 +90,23 @@
                                 {{ mb_substr($emp->name_ar ?: $emp->name_en, 0, 1) }}
                             </div>
                         @endif
-                        <div class="fw-bold tx-13">{{ $emp->name_ar ?: $emp->name_en }}</div>
+                        <a href="{{ route('company.employees.show', $emp) }}" class="fw-bold tx-13"
+                           style="color:inherit;text-decoration:none;"
+                           onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">{{ $emp->name_ar ?: $emp->name_en }}</a>
                     </div>
                 </div>
                 <div class="col-1 text-center fw-bold tx-13">{{ $r['working_days'] }}</div>
                 <div class="col-1 text-center fw-bold tx-13" style="color:#22c55e;">{{ $r['present'] }}</div>
                 <div class="col-1 text-center fw-bold tx-13" style="color:#f59e0b;">{{ $r['late'] }}</div>
                 <div class="col-1 text-center fw-bold tx-13" style="color:#ef4444;">{{ $r['absent'] }}</div>
+                <div class="col-1 text-center fw-bold tx-13" style="color:#f093fb;">{{ $r['on_leave'] ?: '—' }}</div>
+                <div class="col-1 text-center">
+                    @if($r['overtime_min'] > 0)
+                        <span class="tx-12 fw-bold" style="color:#22c55e;">{{ round($r['overtime_min'] / 60, 1) }} {{ __('hr') }}</span>
+                    @else
+                        <span class="tx-12" style="opacity:.3;">—</span>
+                    @endif
+                </div>
                 <div class="col-2 text-center">
                     <div class="d-flex align-items-center justify-content-center gap-2">
                         <div class="rpt-bar-bg">
@@ -101,10 +115,8 @@
                         <span class="fw-bold tx-12" style="color:{{ $pctColor }};">{{ $r['pct'] }}%</span>
                     </div>
                 </div>
-                <div class="col-2 text-center">
-                    @if($r['avg_late'] >= 60)
-                        <span class="tx-12 fw-bold" style="color:#f59e0b;">{{ intdiv($r['avg_late'], 60) }} {{ __('hr') }} {{ $r['avg_late'] % 60 }} {{ __('min') }}</span>
-                    @elseif($r['avg_late'] > 0)
+                <div class="col-1 text-center">
+                    @if($r['avg_late'] > 0)
                         <span class="tx-12 fw-bold" style="color:#f59e0b;">{{ $r['avg_late'] }} {{ __('min') }}</span>
                     @else
                         <span class="tx-12" style="opacity:.3;">—</span>
@@ -119,6 +131,18 @@
         </div>
         @endforelse
     </div>
+</div>
+
+{{-- How the numbers are computed --}}
+<div class="tx-11 text-muted mt-3 px-2" style="line-height:2;opacity:.75;">
+    ℹ️ <strong>{{ __('How these numbers are computed') }}:</strong>
+    <span style="opacity:.9;">
+        {{ __('Days = scheduled working days elapsed this month, excluding public holidays and approved leave days.') }}
+        · {{ __('Absent = days marked absent + past working days with no check-in.') }}
+        · {{ __('Attendance % = present days ÷ working days.') }}
+        · {{ __('Avg late = average lateness minutes on late days only.') }}
+        · {{ __('OT = total overtime hours recorded after shift end.') }}
+    </span>
 </div>
 </div>
 @endsection

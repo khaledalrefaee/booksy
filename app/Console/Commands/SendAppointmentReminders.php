@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
 use App\Services\WhatsappService;
 use Illuminate\Console\Command;
@@ -23,7 +24,7 @@ class SendAppointmentReminders extends Command
         $windowEnd   = now()->addMinutes($minutes + 5);
 
         $appointments = Appointment::query()
-            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereIn('status', [AppointmentStatus::Pending->value, AppointmentStatus::Confirmed->value])
             ->whereBetween('start_time', [$windowStart, $windowEnd])
             ->whereNotNull('customer_phone')
             ->with(['branch', 'service'])

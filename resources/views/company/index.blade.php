@@ -14,6 +14,31 @@
 
 <div class="page-content">
 
+{{-- ════ SUBSCRIPTION EXPIRY BANNER ════ --}}
+@php
+    $bkSubDays = $company->plan_id !== null && $company->plan_expires_at
+        ? (int) now()->startOfDay()->diffInDays($company->plan_expires_at, false)
+        : null;
+@endphp
+@if ($company->plan_id !== null && ! $company->isSubscriptionActive())
+    <div class="alert alert-danger d-flex align-items-center gap-2 rounded-4 mb-3">
+        <i data-feather="alert-triangle" style="width:18px;height:18px;flex-shrink:0;"></i>
+        <div>
+            <strong>{{ __('Your subscription has expired.') }}</strong>
+            {{ __('Some features are disabled until you renew.') }}
+            <a href="{{ route('company.profile.show') }}" class="alert-link">{{ __('View my subscription') }}</a>
+        </div>
+    </div>
+@elseif ($bkSubDays !== null && $bkSubDays <= 7)
+    <div class="alert alert-warning d-flex align-items-center gap-2 rounded-4 mb-3">
+        <i data-feather="clock" style="width:18px;height:18px;flex-shrink:0;"></i>
+        <div>
+            <strong>{{ __('Your subscription expires in :days day(s).', ['days' => $bkSubDays]) }}</strong>
+            <a href="{{ route('company.profile.show') }}" class="alert-link">{{ __('View my subscription') }}</a>
+        </div>
+    </div>
+@endif
+
 {{-- ════ HERO HEADER ════ --}}
 <div class="bk-hero bk-a1">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
@@ -260,9 +285,7 @@
                             @foreach($recentAppointments as $i => $row)
                             @php
                                 $initial = strtoupper(substr($row->customer?->name ?? 'C', 0, 1));
-                                $icColors = ['pending'=>'#f4a642','confirmed'=>'#2bcf7e','completed'=>'#3dbbd4','cancelled'=>'#555','rejected'=>'#555','no_show'=>'#555'];
-                                $ic = $icColors[$row->status] ?? '#888';
-                                $bc = 'bk-badge-'.($row->status ?? 'cancelled');
+                                $ic = $row->status->color();
                             @endphp
                             <tr class="bk-table-row" onclick="location.href='{{ route('company.appointments.show', $row) }}'">
                                 <td class="text-muted tx-12 fw-semibold">{{ $i + 1 }}</td>
@@ -296,7 +319,7 @@
                                     <div>{{ $row->start_time?->format('d/m/Y') }} <span class="opacity-50">{{ $row->start_time?->format('H:i') }}</span></div>
                                     <small class="bk-reltime opacity-75" data-ts="{{ $row->start_time?->format('Y-m-d\TH:i:s') }}" style="font-size:.68rem;"></small>
                                 </td>
-                                <td><span class="bk-badge {{ $bc }}">{{ __($row->status ?? '') }}</span></td>
+                                <td><x-appointment-status :status="$row->status" class="bk-badge" /></td>
                                 <td>
                                     <a href="{{ route('company.appointments.show', $row) }}"
                                        class="btn btn-sm btn-outline-secondary rounded-pill px-3 tx-11"
@@ -353,10 +376,12 @@ var isRtl  = p.rtl === true;
 var charts  = p.charts || {};
 var labels  = p.labels || {};
 
-var gold = '#C9A227';
+/* Brand accent for charts — gold highlight on olive surfaces (matches front identity) */
+var gold = '{{ request()->cookie('company_theme','dark') === 'light' ? '#C7A15A' : '#D8B873' }}';
+var olive = '{{ request()->cookie('company_theme','dark') === 'light' ? '#4B5D34' : '#A6BC7E' }}';
 var c = isDark
-    ? {text:'#b8c3d9', grid:'rgba(255,255,255,.06)', card:'#0c1427', muted:'#7987a1'}
-    : {text:'#333',    grid:'rgba(0,0,0,.07)',       card:'#fff',    muted:'#888'};
+    ? {text:'#BFC2AD', grid:'rgba(255,255,255,.06)', card:'#252C1B', muted:'#8B9078'}
+    : {text:'#4B4E42', grid:'rgba(0,0,0,.07)',       card:'#FFFFFF', muted:'#7B7C6D'};
 
 /* ── Counter animation ── */
 function runCounters(){

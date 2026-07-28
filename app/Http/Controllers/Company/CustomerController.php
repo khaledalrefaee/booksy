@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Company;
 
+use App\Enums\AppointmentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\BranchPayment;
 use App\Models\Customer;
 use App\Models\CustomerBranchNote;
 use App\Support\Auditor;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +25,49 @@ class CustomerController extends Controller
         return Auth::guard('company')->user();
     }
 
+    /**
+     * Lightweight JSON lookup used by searchable customer pickers (e.g. "Record Debt" modal).
+     */
+    public function searchJson(Request $request): JsonResponse
+    {
+        $company   = $this->company();
+        $branchIds = $company->branches()->pluck('id');
+        $q         = trim((string) $request->input('q', ''));
+
+        $customers = Customer::query()
+            ->where(fn ($w) => $w->whereHas('appointments', fn ($a) => $a->whereIn('branch_id', $branchIds))
+                ->orWhereDoesntHave('appointments'))
+            ->when($q !== '', fn ($w) => $w->where(fn ($inner) => $inner
+                ->where('name', 'like', "%{$q}%")
+                ->orWhere('phone', 'like', "%{$q}%")))
+            // One aggregate instead of a tier query per row.
+            ->withCount(['appointments as visits_count' => fn ($a) => $a
+                ->whereIn('branch_id', $branchIds)
+                ->where('status', AppointmentStatus::Completed->value)])
+            ->orderBy('name')
+            ->limit(15)
+            ->get(['id', 'name', 'phone', 'tag']);
+
+        return response()->json($customers->map(function (Customer $c) {
+            $tier = $c->tier();
+
+            return [
+                'id'     => $c->id,
+                'text'   => $c->phone ? "{$c->name} — {$c->phone}" : $c->name,
+                'name'   => $c->name,
+                'phone'  => $c->phone,
+                'visits' => (int) $c->visits_count,
+                // Lets the picker show who it is dealing with before they commit.
+                'tier'   => [
+                    'value' => $tier->value,
+                    'label' => $tier->label(),
+                    'color' => $tier->color(),
+                    'icon'  => $tier->iconPath(),
+                ],
+            ];
+        }));
+    }
+
     public function index(Request $request): View
     {
         $company   = $this->company();
@@ -31,11 +76,16 @@ class CustomerController extends Controller
 
         $branchScope = fn($q) => $q->whereIn('branch_id', $branchIds);
 
-        $query = Customer::query()
+        $baseQuery = Customer::query()
             ->where(fn($q) => $q
                 ->whereHas('appointments', $branchScope)
                 ->orWhereDoesntHave('appointments')
-            )
+            );
+
+        // Total count before any filters
+        $totalCustomers = (clone $baseQuery)->count();
+
+        $query = (clone $baseQuery)
             ->withCount(['appointments as total_visits' => $branchScope])
             ->withMax(['appointments as last_visit' => $branchScope], 'start_time')
             ->withSum(['appointments as total_spent' => fn($q) => $q->whereIn('branch_id', $branchIds)->where('status', 'completed')], 'total_price');
@@ -67,14 +117,14 @@ class CustomerController extends Controller
         }
 
         if ($request->input('inactive') === '1') {
-            $query->having('last_visit', '<', now()->subDays(config('booksy.miss_you_days', 30)));
+            $inactiveCutoff = now()->subDays(config('booksy.miss_you_days', 30));
+            $query->whereHas('appointments', fn($q) => $q->whereIn('branch_id', $branchIds))
+                  ->whereDoesntHave('appointments', fn($q) => $q->whereIn('branch_id', $branchIds)->where('start_time', '>=', $inactiveCutoff));
         }
 
         if ($request->input('has_debt') === '1') {
-            $query->whereHas('treatmentPlans', fn($q) => $q->where('status', 'active'));
+            $query->where('debt', '>', 0);
         }
-
-        $totalCustomers = (clone $query)->count();
 
         $newThisMonth = Customer::query()
             ->whereHas('appointments', fn($q) => $q->whereIn('branch_id', $branchIds)->where('start_time', '>=', now()->startOfMonth()))

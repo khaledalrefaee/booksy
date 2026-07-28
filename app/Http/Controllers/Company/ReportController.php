@@ -24,8 +24,7 @@ class ReportController extends Controller
     {
         $company = $this->company();
         $branchId = $request->input('branch_id');
-        $month = $request->integer('month', now()->month);
-        $year = $request->integer('year', now()->year);
+        [$month, $year] = $this->safeMonthYear($request);
 
         $from = Carbon::create($year, $month, 1)->startOfDay();
         $to = $from->copy()->endOfMonth()->endOfDay();
@@ -176,8 +175,7 @@ class ReportController extends Controller
     public function employeePerformance(Request $request): View
     {
         $company = $this->company();
-        $month = $request->integer('month', now()->month);
-        $year = $request->integer('year', now()->year);
+        [$month, $year] = $this->safeMonthYear($request);
         $branchId = $request->input('branch_id');
 
         $from = Carbon::create($year, $month, 1)->startOfDay();

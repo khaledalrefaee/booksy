@@ -10,10 +10,14 @@ class CustomerCommunication extends Model
     public $timestamps = false;
 
     public const TYPES = [
-        'whatsapp' => ['label_key' => 'WhatsApp', 'icon' => '💬', 'color' => '#25D366'],
-        'call'     => ['label_key' => 'Call',      'icon' => '📞', 'color' => '#667eea'],
-        'sms'      => ['label_key' => 'SMS',       'icon' => '📱', 'color' => '#f59e0b'],
-        'note'     => ['label_key' => 'Note',      'icon' => '📝', 'color' => '#64748b'],
+        'whatsapp'     => ['label_key' => 'WhatsApp',     'icon' => '💬', 'color' => '#25D366'],
+        'call'         => ['label_key' => 'Call',          'icon' => '📞', 'color' => '#667eea'],
+        'sms'          => ['label_key' => 'SMS',           'icon' => '📱', 'color' => '#f59e0b'],
+        'note'         => ['label_key' => 'Note',          'icon' => '📝', 'color' => '#64748b'],
+        'booking'      => ['label_key' => 'Booking',       'icon' => '📅', 'color' => '#3b82f6'],
+        'confirmation' => ['label_key' => 'Confirmation',  'icon' => '✅', 'color' => '#22c55e'],
+        'cancellation' => ['label_key' => 'Cancellation',  'icon' => '❌', 'color' => '#ef4444'],
+        'completion'   => ['label_key' => 'Completion',    'icon' => '🎉', 'color' => '#a855f7'],
     ];
 
     public const DIRECTIONS = [

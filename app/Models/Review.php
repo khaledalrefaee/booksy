@@ -14,6 +14,8 @@ class Review extends Model
         'customer_id',
         'rating',
         'comment',
+        'is_hidden',
+        'hidden_reason',
         'reviewable_type',
         'reviewable_id',
     ];
@@ -21,7 +23,8 @@ class Review extends Model
     protected function casts(): array
     {
         return [
-            'rating' => 'integer',
+            'rating'    => 'integer',
+            'is_hidden' => 'boolean',
         ];
     }
 

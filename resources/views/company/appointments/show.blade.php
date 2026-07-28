@@ -16,7 +16,7 @@
                 <a href="{{ route('company.invoices.show', $appointment->invoice) }}" class="btn btn-outline-success rounded-pill">
                     <i data-feather="file-text" style="width:14px;"></i> {{ __('Invoice') }}
                 </a>
-            @elseif($appointment->status === 'completed')
+            @elseif($appointment->status === \App\Enums\AppointmentStatus::Completed)
                 <form method="POST" action="{{ route('company.appointments.invoice.store', $appointment) }}">
                     @csrf
                     <button class="btn btn-outline-primary rounded-pill">
@@ -43,15 +43,7 @@
                                 <p class="text-muted mb-0 tx-13 mt-1">{{ __('Ends') }} {{ $appointment->end_time->format('H:i') }}</p>
                             @endif
                         </div>
-                        @php
-                            $badge = match($appointment->status) {
-                                'pending'   => 'warning',
-                                'confirmed' => 'success',
-                                'completed' => 'primary',
-                                default     => 'secondary',
-                            };
-                        @endphp
-                        <span class="badge rounded-pill bg-{{ $badge }} px-3 py-2 fs-6">{{ __($appointment->status) }}</span>
+                        <x-appointment-status :status="$appointment->status" class="fs-6" />
                     </div>
 
                     <dl class="row mb-0">
@@ -79,6 +71,13 @@
                         </dd>
                         <dt class="col-sm-4 text-muted">{{ __('Staff') }}</dt>
                         <dd class="col-sm-8">{{ $appointment->employee?->localizedName() ?? '—' }}</dd>
+                        @if($appointment->resource)
+                            <dt class="col-sm-4 text-muted">{{ __('Resource') }}</dt>
+                            <dd class="col-sm-8">
+                                {{ $appointment->resource->localizedName() }}
+                                <span class="badge bg-secondary-subtle text-secondary ms-1">{{ $appointment->resource->typeLabel() }}</span>
+                            </dd>
+                        @endif
                         <dt class="col-sm-4 text-muted">{{ __('Total') }}</dt>
                         <dd class="col-sm-8 fw-semibold">
                             {{ number_format((float)$appointment->total_price, 2) }}
@@ -95,6 +94,23 @@
                             @endphp
                             <span class="badge rounded-pill bg-{{ $payBadge }}">{{ __($appointment->payment_status) }}</span>
                         </dd>
+                        @if($appointment->status === \App\Enums\AppointmentStatus::Completed)
+                        <dt class="col-sm-4 text-muted">💵 {{ __('Tip') }}</dt>
+                        <dd class="col-sm-8">
+                            <form method="POST" action="{{ route('company.appointments.tip', $appointment) }}" class="d-flex align-items-center gap-2" style="max-width:260px;">
+                                @csrf @method('PATCH')
+                                <input type="number" name="tip_amount" min="0" step="0.01"
+                                       value="{{ (float) $appointment->tip_amount > 0 ? $appointment->tip_amount : '' }}"
+                                       placeholder="0" class="form-control form-control-sm" style="max-width:120px;">
+                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-3" style="font-size:11px;">
+                                    {{ (float) $appointment->tip_amount > 0 ? __('Update') : __('Save') }}
+                                </button>
+                                @if((float) $appointment->tip_amount > 0)
+                                <span class="tx-11 text-success fw-bold">✓ {{ __('Goes to :name', ['name' => $appointment->employee?->localizedName() ?? '—']) }}</span>
+                                @endif
+                            </form>
+                        </dd>
+                        @endif
                     </dl>
 
                     @if($appointment->notes)
@@ -117,11 +133,13 @@
 
             {{-- Status change --}}
             @php
-                $allowedTransitions = match($appointment->status) {
-                    'pending'   => ['confirmed', 'cancelled', 'rejected'],
-                    'confirmed' => ['completed', 'cancelled', 'no_show'],
-                    default     => [],
-                };
+                // The server's state machine decides what is offered, so this
+                // panel can never present a move the backend would reject.
+                $allowedTransitions = \App\States\AppointmentStateMachine::allowedFor(
+                    $appointment->status,
+                    \App\Enums\TransitionActor::Company,
+                );
+                $needsReason = \App\Enums\AppointmentStatus::CancelledBySalon;
             @endphp
 
             @if(count($allowedTransitions) > 0)
@@ -134,30 +152,23 @@
 
                         <div class="d-flex flex-wrap gap-2 mb-3">
                             @foreach($allowedTransitions as $newStatus)
-                                @php
-                                    $btnClass = match($newStatus) {
-                                        'confirmed' => 'btn-success',
-                                        'completed' => 'btn-primary',
-                                        'cancelled' => 'btn-outline-secondary',
-                                        'rejected'  => 'btn-outline-danger',
-                                        'no_show'   => 'btn-outline-warning',
-                                        default     => 'btn-secondary',
-                                    };
-                                @endphp
                                 <button type="button"
-                                    class="btn btn-sm {{ $btnClass }} rounded-pill js-status-btn"
-                                    data-status="{{ $newStatus }}">
-                                    {{ __($newStatus) }}
+                                    class="btn btn-sm rounded-pill js-status-btn"
+                                    style="border:1px solid {{ $newStatus->color() }};color:{{ $newStatus->color() }};"
+                                    data-status="{{ $newStatus->value }}"
+                                    data-needs-reason="{{ $newStatus === $needsReason ? '1' : '0' }}"
+                                    data-collects-payment="{{ $newStatus === \App\Enums\AppointmentStatus::Completed ? '1' : '0' }}">
+                                    {{ $newStatus->label() }}
                                 </button>
                             @endforeach
                         </div>
 
                         <input type="hidden" name="status" id="selected-status">
 
-                        {{-- Rejection reason (shown only when rejected selected) --}}
+                        {{-- Reason — required for a salon-side cancellation --}}
                         <div id="rejection-reason-wrap" class="d-none mb-3">
-                            <label class="form-label fw-semibold">{{ __('Rejection reason') }} <span class="text-danger">*</span></label>
-                            <textarea name="rejection_reason" class="form-control" rows="3" placeholder="{{ __('Reason for rejection...') }}"></textarea>
+                            <label class="form-label fw-semibold">{{ __('Reason') }} <span class="text-danger">*</span></label>
+                            <textarea name="reason" class="form-control" rows="3" placeholder="{{ __('Why is the salon cancelling?') }}"></textarea>
                         </div>
 
                         @error('status')<div class="text-danger small mb-2">{{ $message }}</div>@enderror
@@ -171,63 +182,46 @@
             </div>
             @endif
 
-            {{-- Status audit trail --}}
-            @if($appointment->status_changed_at)
-            @php
-                $auditTypeMap = [
-                    'company'  => ['icon'=>'🏢','label-ar'=>'مدير الشركة', 'label-en'=>'Company Admin'],
-                    'employee' => ['icon'=>'👤','label-ar'=>'موظف',        'label-en'=>'Employee'],
-                    'owner'    => ['icon'=>'👑','label-ar'=>'المالك',       'label-en'=>'Owner'],
-                    'customer' => ['icon'=>'🙋','label-ar'=>'العميل',       'label-en'=>'Customer'],
-                ];
-                $auditType = $auditTypeMap[$appointment->status_changed_by_type] ?? ['icon'=>'❓','label-ar'=>'غير معروف','label-en'=>'Unknown'];
-                $auditLabel = app()->getLocale() === 'ar' ? $auditType['label-ar'] : $auditType['label-en'];
-                $tz = config('app.timezone');
-            @endphp
-            <div class="card border-0 shadow-sm rounded-4 mb-4" style="border-left:3px solid #7c3aed !important;">
+            {{-- Status timeline — the full history, not just the last hop --}}
+            @if($appointment->transitions->isNotEmpty())
+            <div class="card border-0 shadow-sm rounded-4 mb-4" style="border-left:3px solid var(--bk-accent) !important;">
                 <div class="card-body p-4">
                     <h6 class="mb-3 d-flex align-items-center gap-2">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                        {{ app()->getLocale() === 'ar' ? 'سجل تغيير الحالة' : 'Status Change Audit' }}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--bk-accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        {{ app()->getLocale() === 'ar' ? 'مسار الموعد' : 'Appointment timeline' }}
                     </h6>
-                    <div class="d-flex flex-column gap-2">
-                        <div class="d-flex align-items-center gap-2" style="font-size:.85rem;">
-                            <span style="font-size:1.1rem;">{{ $auditType['icon'] }}</span>
-                            <div>
-                                <span class="text-muted">{{ app()->getLocale() === 'ar' ? 'تم بواسطة:' : 'Changed by:' }}</span>
-                                <strong class="ms-1">{{ $appointment->status_changed_by_name ?? '—' }}</strong>
-                                <span class="badge rounded-pill ms-1" style="background:#7c3aed22;color:#7c3aed;font-size:.68rem;font-weight:700;">{{ $auditLabel }}</span>
-                            </div>
-                        </div>
-                        <div style="font-size:.82rem;color:var(--text-muted, #6c757d);">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-1"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            {{ $appointment->status_changed_at->format('Y-m-d H:i') }}
-                        </div>
-                        @if($appointment->status_previous)
-                        <div style="font-size:.8rem;">
-                            <span class="text-muted">{{ app()->getLocale() === 'ar' ? 'الحالة السابقة:' : 'Previous status:' }}</span>
-                            @php
-                                $prevColor = match($appointment->status_previous) {
-                                    'pending'=>'#f59e0b','confirmed'=>'#10b981','completed'=>'#6366f1',
-                                    'cancelled'=>'#6b7280','rejected'=>'#ef4444','no_show'=>'#94a3b8', default=>'#94a3b8'
-                                };
-                            @endphp
-                            <span class="badge rounded-pill ms-1" style="background:{{ $prevColor }}22;color:{{ $prevColor }};font-size:.7rem;font-weight:700;">
-                                {{ __($appointment->status_previous) }}
-                            </span>
-                            <span class="mx-1">→</span>
-                            @php
-                                $curColor = match($appointment->status) {
-                                    'pending'=>'#f59e0b','confirmed'=>'#10b981','completed'=>'#6366f1',
-                                    'cancelled'=>'#6b7280','rejected'=>'#ef4444','no_show'=>'#94a3b8', default=>'#94a3b8'
-                                };
-                            @endphp
-                            <span class="badge rounded-pill" style="background:{{ $curColor }}22;color:{{ $curColor }};font-size:.7rem;font-weight:700;">
-                                {{ __($appointment->status) }}
-                            </span>
-                        </div>
-                        @endif
-                    </div>
+
+                    <ol class="list-unstyled mb-0 d-flex flex-column gap-3">
+                        @foreach($appointment->transitions as $t)
+                            <li class="d-flex gap-3">
+                                <span style="width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0;
+                                             background:{{ $t->to_status->color() }};
+                                             box-shadow:0 0 0 3px {{ $t->to_status->color() }}26;"></span>
+                                <div style="font-size:.82rem;line-height:1.5;">
+                                    <div>
+                                        @if($t->from_status)
+                                            <span class="text-muted">{{ $t->from_status->label() }}</span>
+                                            <span class="mx-1">→</span>
+                                        @endif
+                                        <strong>{{ $t->to_status->label() }}</strong>
+                                    </div>
+                                    <div class="text-muted" style="font-size:.75rem;">
+                                        {{ $t->created_at->format('Y-m-d H:i') }}
+                                        · {{ $t->actor_name ?: $t->actor_type->label() }}
+                                        @if($t->automatic)
+                                            <span class="badge rounded-pill ms-1"
+                                                  style="background:var(--bk-accent);color:#fff;font-size:.62rem;">
+                                                {{ app()->getLocale() === 'ar' ? 'تلقائي' : 'auto' }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                    @if($t->reason)
+                                        <div class="text-muted fst-italic" style="font-size:.75rem;">“{{ $t->reason }}”</div>
+                                    @endif
+                                </div>
+                            </li>
+                        @endforeach
+                    </ol>
                 </div>
             </div>
             @endif
@@ -275,7 +269,7 @@
             </div>
             <form method="POST" action="{{ route('company.appointments.update-status', $appointment) }}" id="payment-form">
                 @csrf @method('PATCH')
-                <input type="hidden" name="status" value="completed">
+                <input type="hidden" name="status" value="{{ \App\Enums\AppointmentStatus::Completed->value }}">
 
                 <div class="modal-body px-4 py-3">
 
@@ -367,21 +361,17 @@
 
             var status = btn.dataset.status;
 
-            // ── Intercept "completed" → show payment modal ─────────────────
-            if (status === 'completed') {
-                var modal = new bootstrap.Modal(document.getElementById('paymentModal'));
-                modal.show();
+            // Which move takes payment and which needs a reason is decided
+            // server-side and rendered onto the button — no status names here.
+            if (btn.dataset.collectsPayment === '1') {
+                new bootstrap.Modal(document.getElementById('paymentModal')).show();
                 return; // don't show the regular submit button
             }
 
             selectedInput.value = status;
             submitBtn.classList.remove('d-none');
 
-            if (status === 'rejected') {
-                rejectionWrap.classList.remove('d-none');
-            } else {
-                rejectionWrap.classList.add('d-none');
-            }
+            rejectionWrap.classList.toggle('d-none', btn.dataset.needsReason !== '1');
         });
     });
 

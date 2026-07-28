@@ -11,6 +11,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | No-show grace period
+    |--------------------------------------------------------------------------
+    | Minutes past an appointment's start time before appointments:flag-no-shows
+    | marks it as a no-show. Only applies while nobody has checked the customer in.
+    */
+    'no_show_grace_minutes' => (int) env('BOOKSY_NO_SHOW_GRACE_MINUTES', 20),
+
+    /*
+    |--------------------------------------------------------------------------
     | Supported currencies
     | code => ['name_en', 'name_ar', 'symbol']
     |--------------------------------------------------------------------------
@@ -71,9 +80,17 @@ return [
     'miss_you_days' => 30,
 
     'whatsapp' => [
+        // 'local' = self-hosted Node service (whatsapp-web.js), 'meta' = official WhatsApp Cloud API
+        'driver'  => env('WHATSAPP_DRIVER', 'local'),
         'url'     => env('WHATSAPP_SERVICE_URL', 'http://127.0.0.1:3001'),
         'api_key' => env('WHATSAPP_API_KEY', 'booksy-wa-secret-2026'),
         'reminder_minutes' => (int) env('WHATSAPP_REMINDER_MINUTES', 60),
+        // Meta Cloud API credentials (used when driver = meta)
+        'meta' => [
+            'token'           => env('WHATSAPP_META_TOKEN', ''),
+            'phone_number_id' => env('WHATSAPP_META_PHONE_ID', ''),
+            'api_version'     => env('WHATSAPP_META_API_VERSION', 'v21.0'),
+        ],
     ],
 
 ];

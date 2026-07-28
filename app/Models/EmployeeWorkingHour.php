@@ -13,13 +13,15 @@ class EmployeeWorkingHour extends Model
         'is_working',
         'start_time',
         'end_time',
+        'shift_number',
     ];
 
     protected function casts(): array
     {
         return [
-            'day_of_week' => 'integer',
-            'is_working'  => 'boolean',
+            'day_of_week'  => 'integer',
+            'is_working'   => 'boolean',
+            'shift_number' => 'integer',
         ];
     }
 

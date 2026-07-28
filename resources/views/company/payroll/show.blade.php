@@ -46,6 +46,7 @@
 }
 .ded-badge.absence   { background: rgba(239,68,68,.12);  color: #ef4444; }
 .ded-badge.tardiness { background: rgba(245,158,11,.12); color: #f59e0b; }
+.ded-badge.advance   { background: rgba(6,182,212,.12); color: #06b6d4; }
 .ded-badge.other     { background: rgba(99,102,241,.12); color: #818cf8; }
 .net-box {
     border-radius: 16px; padding: 20px 24px;
@@ -60,6 +61,41 @@
     text-decoration: none; transition: background .15s;
 }
 .month-nav a:hover { background: rgba(255,255,255,.3); }
+
+/* ── Deductions table → stacked cards on phones ── */
+@media (max-width: 640px) {
+    .ded-table thead { display: none; }
+    .ded-table tbody, .ded-table tr, .ded-table td { display: block; width: 100%; }
+    .ded-table tr {
+        padding: 12px 18px;
+        border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .bk-theme-light .ded-table tr { border-bottom-color: rgba(0,0,0,.07); }
+    .ded-table tr:last-child { border-bottom: none; }
+    .ded-table td {
+        padding: 3px 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        max-width: none !important;
+        background: transparent !important;
+    }
+    .ded-table td.text-end { text-align: start !important; }
+    .ded-table td.ps-4, .ded-table td.pe-4 { padding-inline: 0 !important; }
+}
+
+/* ── Print: show only the payslip ── */
+#payslip-print { display: none; }
+@media print {
+    body * { visibility: hidden !important; }
+    #payslip-print, #payslip-print * { visibility: visible !important; }
+    #payslip-print {
+        display: block !important;
+        position: absolute; top: 0; left: 0; right: 0;
+        background: #fff; color: #000;
+        padding: 24px; font-size: 13px;
+    }
+    @page { margin: 12mm; }
+}
 </style>
 @endpush
 
@@ -97,7 +133,7 @@
             <h3 class="fw-bold mb-1" style="font-family:'Poppins',sans-serif;">
                 {{ $employee->localizedName() }}
             </h3>
-            <p class="mb-0" style="opacity:.7;font-size:13px;">{{ $employee->branch->localizedName() }}</p>
+            <p class="mb-0" style="opacity:.7;font-size:13px;">{{ $employee->branch?->localizedName() ?? __('All branches') }}</p>
         </div>
 
         {{-- Month navigator --}}
@@ -119,9 +155,29 @@
 
 @include('company.partials.flash')
 
+{{-- Final settlement notice for offboarded employees --}}
+@if($employee->isTerminated())
+@php $termMeta = $employee->terminationMeta(); @endphp
+<div class="d-flex align-items-center gap-3 px-4 py-3 rounded-4 mb-3 flex-wrap" style="background:rgba(245,158,11,.08);border:1.5px solid rgba(245,158,11,.3);">
+    <span style="font-size:22px;">{{ $termMeta['icon'] ?? '🚫' }}</span>
+    <div style="flex:1;min-width:200px;">
+        <div class="fw-bold tx-13" style="color:#f59e0b;">
+            {{ __('End-of-service settlement') }} — {{ $termMeta ? __($termMeta['label_key']) : '' }} · {{ $employee->termination_date->translatedFormat('d M Y') }}
+        </div>
+        <div class="tx-12 text-muted mt-1">
+            {{ __('The base salary is computed up to the last working day only. The net pay below is the final dues.') }}
+            · 🏖️ {{ __('Unused annual leave') }}: <strong>{{ max(0, $employee->annualLeaveRemaining()) }}</strong> {{ __('day(s)') }}
+        </div>
+    </div>
+    <a href="{{ route('company.employees.show', $employee) }}" class="btn btn-sm rounded-pill px-3" style="font-size:11px;border:1px solid rgba(245,158,11,.4);color:#f59e0b;">
+        {{ __('View profile') }}
+    </a>
+</div>
+@endif
+
 {{-- Summary cards ────────────────────────────────────────────────────────── --}}
 <div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
+    <div class="col-12 col-md-6 col-lg-3">
         <div class="pay-stat-card card border-0 h-100">
             <div class="card-body p-3">
                 <div class="pay-stat-icon" style="background:rgba(102,126,234,.12);">💰</div>
@@ -130,7 +186,7 @@
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-12 col-md-6 col-lg-3">
         <div class="pay-stat-card card border-0 h-100">
             <div class="card-body p-3">
                 <div class="pay-stat-icon" style="background:rgba(67,233,123,.12);">📊</div>
@@ -148,7 +204,7 @@
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-12 col-md-6 col-lg-3">
         <div class="pay-stat-card card border-0 h-100">
             <div class="card-body p-3">
                 <div class="pay-stat-icon" style="background:rgba(239,68,68,.12);">📉</div>
@@ -166,7 +222,7 @@
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg-3">
+    <div class="col-12 col-md-6 col-lg-3">
         <div class="pay-stat-card card border-0 h-100" style="border-color:rgba(67,233,123,.25) !important;">
             <div class="card-body p-3">
                 <div class="pay-stat-icon" style="background:rgba(67,233,123,.12);">✅</div>
@@ -322,7 +378,7 @@
     </div>
     @else
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 pay-table">
+        <table class="table table-hover align-middle mb-0 pay-table ded-table">
             <thead class="table-light">
                 <tr>
                     <th class="ps-4">{{ __('Date') }}</th>
@@ -339,6 +395,7 @@
                         <span class="ded-badge {{ $ded->type }}">
                             @if($ded->type === 'absence') 🚫 {{ __('Absence') }}
                             @elseif($ded->type === 'tardiness') ⏰ {{ __('Tardiness') }}
+                            @elseif($ded->type === 'advance') 💵 {{ __('Advance installment') }}
                             @else 📌 {{ __('Other') }}
                             @endif
                         </span>
@@ -384,6 +441,33 @@
                 </div>
                 @endif
 
+                {{-- Tips in salary currency --}}
+                @if(($tipsInSalaryCurrency ?? 0) > 0)
+                <div style="opacity:.3;font-size:20px;">+</div>
+                <div>
+                    <div style="font-size:11px;opacity:.45;">💵 {{ __('Tips') }} ({{ $currency }})</div>
+                    <div style="font-size:16px;font-weight:700;color:#4facfe;">{{ number_format($tipsInSalaryCurrency,0) }} {{ $currSymbol }}</div>
+                </div>
+                @endif
+
+                {{-- Product sales commission in salary currency --}}
+                @if(($productCommInSalaryCurrency ?? 0) > 0)
+                <div style="opacity:.3;font-size:20px;">+</div>
+                <div>
+                    <div style="font-size:11px;opacity:.45;">🛍️ {{ __('Product commission') }} ({{ $productCommissionRate }}%)</div>
+                    <div style="font-size:16px;font-weight:700;color:#a78bfa;">{{ number_format($productCommInSalaryCurrency,0) }} {{ $currSymbol }}</div>
+                </div>
+                @endif
+
+                {{-- Overtime pay --}}
+                @if(($overtimePay ?? 0) > 0)
+                <div style="opacity:.3;font-size:20px;">+</div>
+                <div>
+                    <div style="font-size:11px;opacity:.45;">⚡ {{ __('Overtime') }} ({{ round($overtimeMinutes / 60, 1) }} {{ __('hr') }})</div>
+                    <div style="font-size:16px;font-weight:700;color:#fbbf24;">{{ number_format($overtimePay,0) }} {{ $currSymbol }}</div>
+                </div>
+                @endif
+
                 {{-- Deductions in salary currency --}}
                 @if($deductedInSalaryCurrency > 0)
                 <div style="opacity:.3;font-size:20px;">−</div>
@@ -420,6 +504,11 @@
             </div>
         </div>
         <div class="col-auto d-flex gap-2 flex-wrap">
+            <a href="{{ route('company.advances.index', ['employee_id' => $employee->id]) }}"
+               class="btn btn-sm rounded-pill px-4"
+               style="background:rgba(245,158,11,.15);color:#f59e0b;border:1.5px solid rgba(245,158,11,.3);font-weight:700;">
+                💵 {{ __('Grant advance') }}
+            </a>
             <button onclick="window.print()" class="btn btn-sm rounded-pill px-4"
                     style="background:rgba(67,233,123,.15);color:#22c55e;border:1.5px solid rgba(67,233,123,.3);font-weight:700;">
                 <i data-feather="printer" style="width:13px;height:13px;"></i>
@@ -458,7 +547,14 @@
                         <div class="text-muted tx-11">
                             {{ $period['paidAt']->translatedFormat('d M Y — H:i') }}
                             · {{ number_format($period['amount'], 0) }} {{ $currSymbol }}
+                            @php $pm = \App\Models\BranchPayment::PAYMENT_METHODS[$period['paidMethod'] ?? ''] ?? null; @endphp
+                            @if($pm)
+                                · {{ $pm['icon'] }} {{ __($pm['label_key']) }}
+                            @endif
                         </div>
+                        @if($period['paidNotes'] ?? null)
+                        <div class="text-muted tx-11" style="opacity:.7;">📝 {{ $period['paidNotes'] }}</div>
+                        @endif
                     @else
                         <div class="text-muted tx-11">
                             {{ $period['apptsCount'] }} {{ __('appts') }}
@@ -523,12 +619,21 @@
                             <span class="fw-bold tx-13">{{ $period['label'] }}</span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
-                            <span class="tx-12 text-muted">{{ __('Net amount') }}</span>
+                            <span class="tx-12 text-muted">{{ __('Computed net') }}</span>
                             <span class="fw-bold" style="font-size:18px;color:#22c55e;">{{ number_format($periodAmount, 0) }} {{ $currSymbol }}</span>
                         </div>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold tx-13">💰 {{ __('Amount to pay') }} ({{ $currSymbol }})</label>
+                        <input type="number" name="amount" step="0.01" min="0.01"
+                               class="form-control fw-bold" style="font-size:16px;"
+                               value="{{ $periodAmount }}">
+                        <div class="tx-11 text-muted mt-1">
+                            {{ __('You can adjust the amount — e.g. pay the full week, add a bonus, or round it. Any change is noted on the payment.') }}
+                        </div>
+                    </div>
                     <p class="text-muted tx-12 mb-3">
-                        {{ __('This will deduct :amount :currency from the branch cash box and record it as a salary expense.', ['amount' => number_format($periodAmount, 0), 'currency' => $currSymbol]) }}
+                        {{ __('The paid amount is deducted from the branch cash box and recorded as a salary expense.') }}
                     </p>
                     <div class="mb-3">
                         <label class="form-label fw-semibold tx-13">{{ __('Payment method') }}</label>
@@ -557,6 +662,111 @@
 </div>
 @endif
 @endforeach
+
+{{-- ══ Print-only payslip ══ --}}
+<div id="payslip-print" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #000;padding-bottom:12px;margin-bottom:16px;">
+        <div>
+            <div style="font-size:18px;font-weight:800;">{{ auth()->guard('company')->user()->localizedName() ?? auth()->guard('company')->user()->name ?? '' }}</div>
+            <div style="font-size:12px;color:#555;">{{ $employee->branch?->localizedName() ?? __('All branches') }}</div>
+        </div>
+        <div style="text-align:end;">
+            <div style="font-size:16px;font-weight:800;">{{ __('Payslip') }}</div>
+            <div style="font-size:12px;color:#555;">{{ $monthName }}</div>
+        </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px;">
+        <tr>
+            <td style="padding:4px 0;color:#555;width:35%;">{{ __('Employee') }}</td>
+            <td style="padding:4px 0;font-weight:700;">{{ $employee->localizedName() }}</td>
+        </tr>
+        @if($employee->role)
+        <tr>
+            <td style="padding:4px 0;color:#555;">{{ __('Role') }}</td>
+            <td style="padding:4px 0;">{{ app()->getLocale()==='ar' ? ($employee->role->label_ar ?: $employee->role->label_en) : ($employee->role->label_en ?: $employee->role->label_ar) }}</td>
+        </tr>
+        @endif
+        @if($employee->iban)
+        <tr>
+            <td style="padding:4px 0;color:#555;">IBAN</td>
+            <td style="padding:4px 0;font-family:monospace;" dir="ltr">{{ $employee->iban }}</td>
+        </tr>
+        @endif
+        <tr>
+            <td style="padding:4px 0;color:#555;">{{ __('Pay period') }}</td>
+            <td style="padding:4px 0;">{{ $payPeriod === 'weekly' ? __('Weekly') : ($payPeriod === 'daily' ? __('Daily') : __('Monthly')) }}</td>
+        </tr>
+    </table>
+
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+            <tr style="border-bottom:1.5px solid #000;">
+                <th style="text-align:start;padding:7px 4px;">{{ __('Item') }}</th>
+                <th style="text-align:end;padding:7px 4px;">{{ __('Amount') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="border-bottom:1px solid #ddd;">
+                <td style="padding:7px 4px;">{{ __('Base salary') }}</td>
+                <td style="padding:7px 4px;text-align:end;font-weight:700;">{{ number_format($baseSalary, 0) }} {{ $currSymbol }}</td>
+            </tr>
+            @foreach($commissionsByCurrency as $cur => $amount)
+            @php $sym = config("booksy.currencies.{$cur}.symbol", $cur); @endphp
+            <tr style="border-bottom:1px solid #ddd;">
+                <td style="padding:7px 4px;">{{ __('Commissions') }} ({{ $appointments->count() }} {{ __('appointments') }})</td>
+                <td style="padding:7px 4px;text-align:end;font-weight:700;">+{{ number_format($amount, 2) }} {{ $sym }}</td>
+            </tr>
+            @endforeach
+            @foreach(($tipsByCurrency ?? collect()) as $cur => $amount)
+            @php $sym = config("booksy.currencies.{$cur}.symbol", $cur); @endphp
+            <tr style="border-bottom:1px solid #ddd;">
+                <td style="padding:7px 4px;">{{ __('Tips') }}</td>
+                <td style="padding:7px 4px;text-align:end;font-weight:700;">+{{ number_format($amount, 2) }} {{ $sym }}</td>
+            </tr>
+            @endforeach
+            @foreach(($productCommByCurrency ?? collect()) as $cur => $amount)
+            @php $sym = config("booksy.currencies.{$cur}.symbol", $cur); @endphp
+            <tr style="border-bottom:1px solid #ddd;">
+                <td style="padding:7px 4px;">{{ __('Product commission') }} ({{ $productCommissionRate }}%)</td>
+                <td style="padding:7px 4px;text-align:end;font-weight:700;">+{{ number_format($amount, 2) }} {{ $sym }}</td>
+            </tr>
+            @endforeach
+            @foreach($deductionsByCurrency as $cur => $amt)
+            @php $sym = config("booksy.currencies.{$cur}.symbol", $cur); @endphp
+            <tr style="border-bottom:1px solid #ddd;">
+                <td style="padding:7px 4px;">{{ __('Deductions') }} ({{ $deductions->count() }} {{ __('records') }})</td>
+                <td style="padding:7px 4px;text-align:end;font-weight:700;">-{{ number_format($amt, 2) }} {{ $sym }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+        <tfoot>
+            <tr style="border-top:2px solid #000;">
+                <td style="padding:9px 4px;font-weight:800;font-size:14px;">{{ __('Net pay') }}</td>
+                <td style="padding:9px 4px;text-align:end;font-weight:800;font-size:15px;">{{ number_format($netPay, 0) }} {{ $currSymbol }}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    @if($deductions->isNotEmpty())
+    <div style="margin-top:14px;font-size:11px;">
+        <div style="font-weight:700;margin-bottom:5px;">{{ __('Deductions this month') }}:</div>
+        @foreach($deductions as $ded)
+        <div style="color:#555;padding:2px 0;">
+            • {{ $ded->deduction_date->format('d/m/Y') }} —
+            {{ $ded->type === 'absence' ? __('Absence') : ($ded->type === 'tardiness' ? __('Tardiness') : ($ded->type === 'advance' ? __('Advance installment') : __('Other'))) }}
+            @if($ded->notes) ({{ $ded->notes }}) @endif
+            : {{ number_format($ded->amount, 2) }} {{ config("booksy.currencies.{$ded->currency}.symbol", $ded->currency) }}
+        </div>
+        @endforeach
+    </div>
+    @endif
+
+    <div style="display:flex;justify-content:space-between;margin-top:28px;padding-top:10px;border-top:1px solid #ccc;font-size:10px;color:#777;">
+        <span>{{ __('Printed on') }}: {{ now()->translatedFormat('d M Y — H:i') }}</span>
+        <span>{{ collect($periods)->where('paid', true)->count() }}/{{ count($periods) }} {{ __('paid') }}</span>
+    </div>
+</div>
 
 </div>
 @endsection

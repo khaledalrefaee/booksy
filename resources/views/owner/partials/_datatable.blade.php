@@ -41,8 +41,8 @@ div.dt-length { display: none !important; }
 
 /* Sort icons */
 table.dataTable thead th.sorting { cursor: pointer; user-select: none; }
-table.dataTable thead th.sorting_asc::after  { color: #C9A227 !important; opacity: 1 !important; }
-table.dataTable thead th.sorting_desc::after { color: #C9A227 !important; opacity: 1 !important; }
+table.dataTable thead th.sorting_asc::after  { color: var(--bk-accent) !important; opacity: 1 !important; }
+table.dataTable thead th.sorting_desc::after { color: var(--bk-accent) !important; opacity: 1 !important; }
 
 /* Export buttons */
 .dt-buttons {

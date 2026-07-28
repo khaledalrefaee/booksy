@@ -8,6 +8,8 @@ use App\Http\Requests\Owner\UpdateCompanyRequest;
 use App\Http\Requests\Owner\UpdateCompanyStatusRequest;
 use App\Models\Category;
 use App\Models\Company;
+use App\Models\Plan;
+use App\Services\Owner\OwnerAudit;
 use App\Support\CategoryUploadedImage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -58,6 +60,7 @@ class CompanyController extends Controller
     {
         $company->load([
             'category',
+            'plan',
             'branches' => fn ($query) => $query->orderBy('sort_order')->with([
                 'workingHours' => fn ($q) => $q->orderBy('day_of_week')->orderBy('shift_number'),
                 'services' => fn ($q) => $q->orderByLocalizedName(),
@@ -80,12 +83,60 @@ class CompanyController extends Controller
             'waitlist' => $company->waitlistEntries()->count(),
         ];
 
-        return view('owner.companies.show', compact('company', 'stats'));
+        $plans          = Plan::query()->where('is_active', true)->orderBy('sort_order')->orderBy('price')->get();
+        $featureCatalog = Plan::featureCatalog();
+
+        $companyPayments = $company->subscriptionPayments()
+            ->latest('paid_at')->latest('id')
+            ->limit(30)
+            ->get();
+
+        $companyAuditLogs = \App\Models\OwnerAuditLog::query()
+            ->with('owner')
+            ->where('auditable_type', $company->getMorphClass())
+            ->where('auditable_id', $company->id)
+            ->latest('id')
+            ->limit(30)
+            ->get();
+
+        return view('owner.companies.show', compact('company', 'stats', 'plans', 'featureCatalog', 'companyPayments', 'companyAuditLogs'));
+    }
+
+    public function updateSubscription(Request $request, Company $company): RedirectResponse
+    {
+        $validated = $request->validate([
+            'plan_id'         => ['nullable', 'integer', 'exists:plans,id'],
+            'plan_expires_at' => ['nullable', 'date'],
+            'overrides'       => ['nullable', 'array'],
+            'overrides.*'     => ['nullable', 'in:,1,0'],
+        ]);
+
+        // Keep only explicit on/off overrides; empty string means "follow the plan"
+        $overrides = collect($validated['overrides'] ?? [])
+            ->filter(fn ($v, $k) => in_array($k, Plan::featureKeys(), true) && ($v === '1' || $v === '0'))
+            ->map(fn ($v) => $v === '1')
+            ->all();
+
+        $company->fill([
+            'plan_id'           => $validated['plan_id'] ?? null,
+            'plan_expires_at'   => $validated['plan_expires_at'] ?? null,
+            'feature_overrides' => $overrides ?: null,
+        ]);
+
+        OwnerAudit::recordChanges('company.subscription-update', $company);
+        $company->save();
+
+        return redirect()
+            ->route('owner.companies.show', $company)
+            ->with('success', __('Subscription updated successfully.'));
     }
 
     public function updateStatus(UpdateCompanyStatusRequest $request, Company $company): RedirectResponse
     {
-        $company->update(['status' => $request->validated('status')]);
+        $company->fill(['status' => $request->validated('status')]);
+
+        OwnerAudit::recordChanges('company.status-update', $company, $request->validated('reason'));
+        $company->save();
 
         return redirect()
             ->route('owner.companies.index')
@@ -113,7 +164,9 @@ class CompanyController extends Controller
             );
         }
 
-        Company::query()->create($data);
+        $company = Company::query()->create($data);
+
+        OwnerAudit::record('company.create', $company, new: collect($data)->except('password')->all());
 
         return redirect()
             ->route('owner.companies.index')
@@ -144,6 +197,7 @@ class CompanyController extends Controller
             );
         }
 
+        OwnerAudit::recordChanges('company.update', $company);
         $company->save();
 
         return redirect()
@@ -156,6 +210,8 @@ class CompanyController extends Controller
         if ($company->logo) {
             Storage::disk('public')->delete($company->logo);
         }
+
+        OwnerAudit::record('company.delete', $company, old: ['email' => $company->email, 'status' => $company->status]);
 
         $company->delete();
 

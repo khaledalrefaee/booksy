@@ -18,6 +18,7 @@ class BranchPayment extends Model
         'tip'           => ['label_key' => 'Tip',                'icon' => '💝', 'color' => '#f472b6', 'type' => 'income'],
         'other_income'  => ['label_key' => 'Other income',       'icon' => '➕', 'color' => '#34d399', 'type' => 'income'],
         'salary'        => ['label_key' => 'Salary payment',     'icon' => '💰', 'color' => '#a78bfa', 'type' => 'expense'],
+        'advance'       => ['label_key' => 'Salary advance',     'icon' => '💵', 'color' => '#f59e0b', 'type' => 'expense'],
         'product'       => ['label_key' => 'Products / Supplies','icon' => '📦', 'color' => '#fb923c', 'type' => 'expense'],
         'repair'        => ['label_key' => 'Repair / Maintenance','icon' => '🔧', 'color' => '#fbbf24', 'type' => 'expense'],
         'personal'      => ['label_key' => 'Personal / Home',    'icon' => '🏠', 'color' => '#60a5fa', 'type' => 'expense'],

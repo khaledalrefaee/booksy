@@ -115,11 +115,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
+                <div class="mb-3 position-relative">
                     <label class="form-label fw-semibold">{{ __('Customer') }} *</label>
-                    <select name="customer_id" class="form-select" required>
-                        <option value="">{{ __('Select...') }}</option>
-                    </select>
+                    <input type="text" id="debtCustomerSearch" class="form-control" autocomplete="off"
+                        placeholder="{{ __('Search by phone or name') }}" required>
+                    <input type="hidden" name="customer_id" id="debtCustomerId">
+                    <div id="debtCustomerResults" class="list-group shadow-sm"
+                        style="position:absolute; inset-inline-start:0; inset-inline-end:0; top:100%; z-index:1060; max-height:220px; overflow-y:auto; display:none;"></div>
                     <small class="text-muted">{{ __('Search by phone or name') }}</small>
                 </div>
                 <div class="mb-3">
@@ -155,4 +157,103 @@
         </form>
     </div>
 </div>
+
+@push('scripts')
+<script>
+(function () {
+    const input   = document.getElementById('debtCustomerSearch');
+    const hidden  = document.getElementById('debtCustomerId');
+    const results = document.getElementById('debtCustomerResults');
+    if (!input) return;
+
+    const searchUrl = @json(route('company.customers.search-json'));
+    let debounceTimer = null;
+    let activeIndex = -1;
+
+    function closeResults() {
+        results.style.display = 'none';
+        results.innerHTML = '';
+        activeIndex = -1;
+    }
+
+    function selectCustomer(id, text) {
+        hidden.value = id;
+        input.value = text;
+        input.setCustomValidity('');
+        closeResults();
+    }
+
+    function renderResults(items) {
+        results.innerHTML = '';
+        if (!items.length) {
+            const empty = document.createElement('div');
+            empty.className = 'list-group-item text-muted small';
+            empty.textContent = @json(__('No results found'));
+            results.appendChild(empty);
+            results.style.display = 'block';
+            return;
+        }
+        items.forEach((item, idx) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'list-group-item list-group-item-action';
+            btn.textContent = item.text;
+            btn.dataset.index = idx;
+            btn.addEventListener('click', () => selectCustomer(item.id, item.text));
+            results.appendChild(btn);
+        });
+        results.style.display = 'block';
+    }
+
+    input.addEventListener('input', function () {
+        hidden.value = '';
+        const q = input.value.trim();
+        clearTimeout(debounceTimer);
+        if (q.length < 1) { closeResults(); return; }
+        debounceTimer = setTimeout(() => {
+            fetch(searchUrl + '?q=' + encodeURIComponent(q), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            })
+                .then((r) => r.json())
+                .then(renderResults)
+                .catch(() => closeResults());
+        }, 250);
+    });
+
+    input.addEventListener('keydown', function (e) {
+        const items = results.querySelectorAll('.list-group-item-action');
+        if (!items.length) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIndex = Math.min(activeIndex + 1, items.length - 1);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIndex = Math.max(activeIndex - 1, 0);
+        } else if (e.key === 'Enter') {
+            if (activeIndex >= 0 && items[activeIndex]) {
+                e.preventDefault();
+                items[activeIndex].click();
+            }
+            return;
+        } else {
+            return;
+        }
+        items.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+        items[activeIndex].scrollIntoView({ block: 'nearest' });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (e.target !== input && !results.contains(e.target)) closeResults();
+    });
+
+    document.querySelector('#newDebtModal form').addEventListener('submit', function (e) {
+        if (!hidden.value) {
+            e.preventDefault();
+            input.setCustomValidity(@json(__('Please select a customer from the list')));
+            input.reportValidity();
+        }
+    });
+})();
+</script>
+@endpush
 @endsection

@@ -130,8 +130,8 @@
     border-color: rgba(0,0,0,.1);
 }
 .bk-ssb-search-inner:focus-within {
-    border-color: #C9A227;
-    box-shadow: 0 0 0 3px rgba(201,162,39,.15);
+    border-color: var(--bk-accent);
+    box-shadow: 0 0 0 3px rgba(12,110,116,.15);
 }
 .bk-ssb-icon {
     position: absolute; left: 10px;
@@ -165,7 +165,7 @@
     outline: none; cursor: pointer; appearance: auto;
     background-color: rgba(255,255,255,.07); color: #e2e8f0;
 }
-.bk-ssb-select:focus { border-color: #C9A227; box-shadow: 0 0 0 3px rgba(201,162,39,.15); }
+.bk-ssb-select:focus { border-color: var(--bk-accent); box-shadow: 0 0 0 3px rgba(12,110,116,.15); }
 .bk-theme-light .bk-ssb-select { background-color: #f5f6fa; color: #1e293b; border-color: rgba(0,0,0,.12); }
 .bk-ssb-select option { background-color: #1e2a3b; color: #e2e8f0; }
 .bk-theme-light .bk-ssb-select option { background-color: #fff; color: #1e293b; }
@@ -189,7 +189,7 @@
     border-radius: 10px; border: 1px solid rgba(255,255,255,.12);
     outline: none; background-color: rgba(255,255,255,.07); color: #e2e8f0; color-scheme: dark;
 }
-.bk-ssb-date:focus { border-color: #C9A227; box-shadow: 0 0 0 3px rgba(201,162,39,.15); }
+.bk-ssb-date:focus { border-color: var(--bk-accent); box-shadow: 0 0 0 3px rgba(12,110,116,.15); }
 .bk-theme-light .bk-ssb-date { background-color: #f5f6fa; color: #1e293b; border-color: rgba(0,0,0,.12); color-scheme: light; }
 
 /* Reset */

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\BranchPayment;
 use App\Models\RecurringExpense;
+use App\Support\Auditor;
 use Illuminate\Console\Command;
 
 class ProcessRecurringExpenses extends Command
@@ -32,6 +33,8 @@ class ProcessRecurringExpenses extends Command
                 'notes' => $expense->title . ($expense->notes ? " — {$expense->notes}" : ''),
                 'paid_at' => now(),
             ]);
+
+            Auditor::log("Auto-posted recurring expense: {$expense->title} — {$expense->amount} {$expense->currency}", $expense);
 
             $expense->advanceNextDue();
             $count++;

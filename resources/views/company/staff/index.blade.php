@@ -5,6 +5,8 @@
 
 <div class="page-content">
 
+@include('company.partials.team-nav')
+
 {{-- ══ HERO ══ --}}
 <div class="bk-hero bk-a1">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
@@ -58,7 +60,7 @@
                     <i data-feather="scissors" style="width:11px;height:11px;margin-inline-end:4px;"></i>
                     {{ $services->count() }} {{ __('services') }}
                 </span>
-                <span class="badge rounded-pill px-3 py-2" style="background:rgba(201,162,39,.12);color:#C9A227;font-size:.72rem;">
+                <span class="badge rounded-pill px-3 py-2" style="background:rgba(75,93,52,.12);color:var(--bk-accent);font-size:.72rem;">
                     <i data-feather="image" style="width:11px;height:11px;margin-inline-end:4px;"></i>
                     {{ $images->count() }} {{ __('photos') }}
                 </span>
@@ -97,7 +99,7 @@
                 type="button" role="tab" onclick="setTab('gallery')">
             <i data-feather="image" style="width:14px;height:14px;"></i>
             {{ __('Gallery') }}
-            <span class="badge rounded-pill ms-1" style="background:rgba(201,162,39,.15);color:#C9A227;font-size:.65rem;">
+            <span class="badge rounded-pill ms-1" style="background:rgba(75,93,52,.15);color:var(--bk-accent);font-size:.65rem;">
                 {{ $images->count() }}
             </span>
         </button>
@@ -193,7 +195,7 @@
                         <div class="d-flex align-items-center flex-wrap gap-2">
                             <span style="font-weight:600;font-size:.875rem;">{{ $svcName }}</span>
                             @if($catName)
-                                <span style="font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(201,162,39,.12);color:#C9A227;">
+                                <span style="font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(75,93,52,.12);color:var(--bk-accent);">
                                     {{ $catName }}
                                 </span>
                             @endif
@@ -261,7 +263,7 @@
                 </div>
                 <a href="{{ route('company.branches.gallery', $branchId) }}"
                    class="btn btn-sm rounded-pill px-3"
-                   style="font-size:.72rem;font-weight:600;background:rgba(201,162,39,.12);color:#C9A227;border:none;">
+                   style="font-size:.72rem;font-weight:600;background:rgba(75,93,52,.12);color:var(--bk-accent);border:none;">
                     <i data-feather="external-link" style="width:11px;height:11px;margin-inline-end:4px;"></i>{{ __('Manage') }}
                 </a>
             </div>
@@ -332,7 +334,7 @@
     border: none;
     transition: opacity .15s, background .15s;
 }
-.nav-tabs .nav-link.active { opacity: 1; border-bottom: 2px solid #C9A227 !important; }
+.nav-tabs .nav-link.active { opacity: 1; border-bottom: 2px solid var(--bk-accent) !important; }
 .nav-tabs .nav-link:hover:not(.active) { opacity: .85; background: rgba(255,255,255,.04); }
 
 /* Gallery */
