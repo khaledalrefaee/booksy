@@ -1,7 +1,7 @@
 const express = require('express');
 let baileys;
 try { baileys = require('baileys'); } catch(e) { baileys = require('@whiskeysockets/baileys'); }
-const { makeWASocket, useMultiFileAuthState, DisconnectReason } = baileys;
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = baileys;
 const pino = require('pino');
 const QRCode = require('qrcode');
 const path = require('path');
@@ -37,7 +37,11 @@ async function connectWhatsApp() {
         console.log('🔌 Connecting to WhatsApp...');
         const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
+        const { version } = await fetchLatestBaileysVersion();
+        console.log('📦 Using WhatsApp Web version:', version.join('.'));
+
         sock = makeWASocket({
+            version,
             auth: state,
             printQRInTerminal: false,
             logger: pino({ level: 'silent' }),

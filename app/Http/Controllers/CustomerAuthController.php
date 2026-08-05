@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\OtpCode;
+use App\Services\WhatsappService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -11,7 +12,7 @@ use Illuminate\Support\Str;
 class CustomerAuthController extends Controller
 {
     /** Step 1: Send OTP */
-    public function sendOtp(Request $request): JsonResponse
+    public function sendOtp(Request $request, WhatsappService $whatsapp): JsonResponse
     {
         $request->validate(['phone' => 'required|string|min:9|max:20']);
 
@@ -34,11 +35,20 @@ class CustomerAuthController extends Controller
             'expires_at' => now()->addMinutes(4),
         ]);
 
-        // TODO: send real SMS. For now return code in dev mode.
+        // Deliver the code over WhatsApp (no company gate — this is account auth).
+        $message = "🔐 *رمز الدخول إلى Booksy*\n\n"
+            . "رمز التحقق الخاص بك هو:\n\n"
+            . "*{$code}*\n\n"
+            . "الرمز صالح لمدة 4 دقائق. لا تشاركه مع أي أحد.";
+
+        $sent = $whatsapp->send($phone, $message, null, null, 'otp');
+
+        // In local dev, always allow the flow and surface the code in the UI even
+        // if the WhatsApp gateway isn't connected.
         $isDev = app()->environment('local');
 
         return response()->json([
-            'sent'    => true,
+            'sent'    => $sent || $isDev,
             'phone'   => $phone,
             'dev_code'=> $isDev ? $code : null, // shown in UI during development
         ]);
