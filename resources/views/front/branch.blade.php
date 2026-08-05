@@ -1,1241 +1,736 @@
-<!DOCTYPE html>
 @php
-    $isAr    = app()->getLocale() === 'ar';
-    $dir     = $isAr ? 'rtl' : 'ltr';
-    $lang    = $isAr ? 'ar' : 'en';
-    $brName  = $isAr ? ($branch->name_ar ?: $branch->name_en) : $branch->name_en;
-    $coName  = $isAr ? ($company->name_ar ?? $company->name_en) : ($company->name_en ?? '');
-    $catName = $isAr ? ($company->category->name_ar ?? '') : ($company->category->name_en ?? '');
+    $isAr = app()->getLocale() === 'ar';
+    $t = fn($ar, $en) => $isAr ? $ar : $en;
+    $currency = $isAr ? 'ل.س' : 'SYP';
 
-    // Day labels
-    $dayNames = $isAr
-        ? ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت']
-        : ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    $todayDow = (int)\Carbon\Carbon::now()->dayOfWeek;
-    $nowTime  = \Carbon\Carbon::now()->format('H:i');
+    $brName  = $isAr ? ($branch->name_ar ?: $branch->name_en) : ($branch->name_en ?: $branch->name_ar);
+    $coName  = $isAr ? ($company->name_ar ?: $company->name_en) : ($company->name_en ?: $company->name_ar);
+    $catName = $company->category ? ($isAr ? $company->category->name_ar : $company->category->name_en) : null;
+    $city    = $branch->governorate?->localizedName() ?? $branch->area?->localizedName();
 
-    // Is open now?
-    $isOpenNow = false;
-    foreach($branch->workingHours as $wh) {
-        if((int)$wh->day_of_week === $todayDow && $wh->is_open) {
-            if($wh->open_time && $wh->close_time) {
-                if($nowTime >= $wh->open_time && $nowTime <= $wh->close_time) { $isOpenNow = true; break; }
-            } else { $isOpenNow = true; break; }
+    $totalRev  = $reviews->count();
+    $avg       = $totalRev ? round($reviews->avg('rating'), 1) : null;
+    $breakdown = [];
+    for ($s = 5; $s >= 1; $s--) { $breakdown[$s] = $reviews->where('rating', $s)->count(); }
+
+    $activeServices = $branch->services->where('is_active', true);
+    $minPrice = $activeServices->pluck('price')->filter(fn($p) => $p > 0)->min();
+
+    $empData = $branch->employees->map(fn($e) => [
+        'id'    => $e->id,
+        'name'  => $isAr ? ($e->name_ar ?: $e->name_en) : ($e->name_en ?: $e->name_ar),
+        'image' => $e->image ? asset('storage/'.$e->image) : null,
+        'cats'  => $e->serviceCategories->pluck('id')->toArray(),
+    ])->values();
+
+    // gallery
+    $imgs = $allImages->map(fn($i) => asset('storage/'.$i->path))->values();
+    if ($imgs->isEmpty() && $company->logo) { $imgs = collect([asset('storage/'.$company->logo)]); }
+
+    // working hours
+    $dayNames = $isAr ? ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت']
+                      : ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    $whByDay  = $branch->workingHours->groupBy('day_of_week');
+    $todayDow = now()->dayOfWeek;
+    $todayOpen = $whByDay->get($todayDow, collect())->where('is_open', true);
+    $isOpenNow = false; $todayLabel = $t('مغلق اليوم', 'Closed today');
+    if ($todayOpen->isNotEmpty()) {
+        $wh = $todayOpen->first();
+        $fmt = fn($v) => $v ? \Carbon\Carbon::createFromFormat('H:i:s', $v)->format('g:i A') : '';
+        $todayLabel = $fmt($wh->open_time).' – '.$fmt($wh->close_time);
+        $nowT = now()->format('H:i:s');
+        $isOpenNow = $wh->open_time && $wh->close_time && $nowT >= $wh->open_time && $nowT <= $wh->close_time;
+    }
+
+    $catIcon = function ($slug) {
+        $slug = strtolower($slug ?? '');
+        $map = ['hair'=>'scissors','salon'=>'scissors','barber'=>'user','spa'=>'sparkles','massage'=>'sparkles','clinic'=>'shield','dental'=>'shield','skin'=>'sparkles','laser'=>'zap','beauty'=>'sparkles','makeup'=>'sparkles','nail'=>'heart','lash'=>'star','brow'=>'star','gym'=>'zap','tattoo'=>'award','wedding'=>'gift'];
+        foreach ($map as $k => $v) { if (str_contains($slug, $k)) return $v; }
+        return 'grid';
+    };
+@endphp
+
+<x-front.layout
+    variant="customer"
+    :map-fab="false"
+    ogType="business.business"
+    :ogImage="$imgs->first()"
+    :title="$brName.' — '.$coName.' | GlowRez'"
+    :description="$city
+        ? $t('احجز موعدك في '.$brName.' - '.$city.' عبر GlowRez — خدمات وأسعار وتقييمات وحجز فوري.', 'Book at '.$brName.' in '.$city.' on GlowRez — services, prices, reviews and instant booking.')
+        : $t('احجز موعدك في '.$brName.' عبر GlowRez — خدمات وأسعار وتقييمات وحجز فوري.', 'Book at '.$brName.' on GlowRez — services, prices, reviews and instant booking.')">
+
+<x-slot:head>
+@php
+    $schemaDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    $openingSpec = [];
+    foreach ($whByDay as $dow => $rows) {
+        $open = $rows->where('is_open', true)->first();
+        if ($open && $open->open_time && $open->close_time && isset($schemaDays[$dow])) {
+            $openingSpec[] = [
+                '@type'     => 'OpeningHoursSpecification',
+                'dayOfWeek' => 'https://schema.org/'.$schemaDays[$dow],
+                'opens'     => substr($open->open_time, 0, 5),
+                'closes'    => substr($open->close_time, 0, 5),
+            ];
         }
     }
-    // Group working hours by day
-    $whByDay = $branch->workingHours->groupBy('day_of_week');
+    $localBusiness = array_filter([
+        '@type'       => 'HealthAndBeautyBusiness',
+        '@id'         => url()->current().'#business',
+        'name'        => $brName.($coName && $coName !== $brName ? ' — '.$coName : ''),
+        'url'         => url()->current(),
+        'image'       => $imgs->take(4)->all() ?: null,
+        'description' => $isAr ? ('احجز موعدك في '.$brName.' عبر GlowRez.') : ('Book your appointment at '.$brName.' on GlowRez.'),
+        'telephone'   => $branch->phone ?: null,
+        'priceRange'  => $minPrice ? number_format((float)$minPrice).'+ SYP' : null,
+        'currenciesAccepted' => 'SYP',
+        'address'     => array_filter([
+            '@type'           => 'PostalAddress',
+            'streetAddress'   => $branch->address ?: null,
+            'addressLocality' => $city ?: null,
+            'addressCountry'  => 'SY',
+        ]),
+        'geo'         => ($branch->latitude && $branch->longitude) ? [
+            '@type'     => 'GeoCoordinates',
+            'latitude'  => (float)$branch->latitude,
+            'longitude' => (float)$branch->longitude,
+        ] : null,
+        'openingHoursSpecification' => $openingSpec ?: null,
+        'aggregateRating' => $totalRev > 0 ? [
+            '@type'       => 'AggregateRating',
+            'ratingValue' => (string)$avg,
+            'reviewCount' => (string)$totalRev,
+            'bestRating'  => '5', 'worstRating' => '1',
+        ] : null,
+    ], fn($v) => !is_null($v));
 
-    // Category icon/gradient
-    $catIcons = [
-        'salon'=>'fas fa-cut','spa'=>'fas fa-spa','clinic'=>'fas fa-clinic-medical',
-        'beauty'=>'fas fa-magic','nail'=>'fas fa-hand-sparkles','hair'=>'fas fa-cut',
-        'skin'=>'fas fa-leaf','dental'=>'fas fa-tooth','gym'=>'fas fa-dumbbell',
-        'massage'=>'fas fa-hot-tub','barber'=>'fas fa-user-tie','lash'=>'fas fa-eye',
-        'brow'=>'fas fa-smile','tattoo'=>'fas fa-pen-nib','wedding'=>'fas fa-ring',
-        'laser'=>'fas fa-bolt',
+    $crumbs = [
+        ['name' => $t('الرئيسية','Home'), 'url' => route('front.index')],
+        ['name' => $t('الأماكن','Venues'), 'url' => route('front.venues')],
     ];
-    $catGradients = [
-        'salon'=>'linear-gradient(135deg,#7f1d52,#4a0f30)',
-        'hair'=>'linear-gradient(135deg,#7f1d52,#4a0f30)',
-        'barber'=>'linear-gradient(135deg,#1c1917,#0c0a09)',
-        'spa'=>'linear-gradient(135deg,#064e3b,#022c22)',
-        'massage'=>'linear-gradient(135deg,#064e3b,#022c22)',
-        'clinic'=>'linear-gradient(135deg,#1e3a5f,#0c1f36)',
-        'dental'=>'linear-gradient(135deg,#155e75,#083344)',
-        'laser'=>'linear-gradient(135deg,#1e3a5f,#172554)',
-        'beauty'=>'linear-gradient(135deg,#5b21b6,#2e1065)',
-        'makeup'=>'linear-gradient(135deg,#5b21b6,#2e1065)',
-        'lash'=>'linear-gradient(135deg,#831843,#4a044e)',
-        'brow'=>'linear-gradient(135deg,#831843,#4a044e)',
-        'nail'=>'linear-gradient(135deg,#9d174d,#500724)',
-        'gym'=>'linear-gradient(135deg,#92400e,#451a03)',
-        'tattoo'=>'linear-gradient(135deg,#1f2937,#030712)',
-        'wedding'=>'linear-gradient(135deg,#7c2d12,#431407)',
+    if ($catName) { $crumbs[] = ['name' => $catName, 'url' => route('front.venues', ['category' => $company->category->slug ?? null])]; }
+    $crumbs[] = ['name' => $brName, 'url' => url()->current()];
+    $breadcrumbLd = [
+        '@context' => 'https://schema.org',
+        '@type'    => 'BreadcrumbList',
+        'itemListElement' => collect($crumbs)->values()->map(fn($c, $i) => [
+            '@type' => 'ListItem', 'position' => $i + 1, 'name' => $c['name'], 'item' => $c['url'],
+        ])->all(),
     ];
-    $sl = strtolower($company->category->slug ?? '');
-    $catIcon = 'fas fa-store';
-    $catGradient = 'linear-gradient(135deg,#713f12,#3f1f07)';
-    foreach($catIcons as $k=>$v){ if(str_contains($sl,$k)){ $catIcon=$v; break; } }
-    foreach($catGradients as $k=>$v){ if(str_contains($sl,$k)){ $catGradient=$v; break; } }
-
-    // Build employee data for JS
-    $empData = $branch->employees->map(function($e) use ($isAr) {
-        return [
-            'id'    => $e->id,
-            'name'  => $isAr ? ($e->name_ar ?: $e->name_en) : ($e->name_en ?: $e->name_ar),
-            'image' => $e->image ? asset('storage/'.$e->image) : null,
-            'cats'  => $e->serviceCategories->pluck('id')->toArray(),
-        ];
-    })->toArray();
-
-    // Build service data for JS
-    $svcData = $branch->services->map(function($s) use ($isAr) {
-        return [
-            'id'       => $s->id,
-            'name'     => $isAr ? ($s->name_ar ?: $s->name_en) : $s->name_en,
-            'price'    => $s->price,
-            'duration' => $s->duration_minutes,
-            'catId'    => $s->service_category_id,
-        ];
-    })->toArray();
 @endphp
-<html lang="{{ $lang }}" dir="{{ $dir }}">
-<head>
-<meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, shrink-to-fit=no">
-<title>{{ $brName }} — {{ $coName }} | Booksy</title>
-<meta name="description" content="{{ $isAr ? 'احجز موعدك في '.$brName.' على بوكسي.' : 'Book an appointment at '.$brName.' on Booksy.' }}">
+<script type="application/ld+json">{!! json_encode(['@context'=>'https://schema.org'] + $localBusiness, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+<script type="application/ld+json">{!! json_encode($breadcrumbLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+</x-slot:head>
 
-<link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
-<link rel="stylesheet" href="{{ asset('frontend/vendor/bootstrap/css/bootstrap' . ($isAr ? '.rtl' : '') . '.min.css') }}">
-<link rel="stylesheet" href="{{ asset('frontend/vendor/fontawesome-free/css/all.min.css') }}">
-<link rel="stylesheet" href="{{ asset('frontend/vendor/animate/animate.compat.css') }}">
-<link rel="stylesheet" href="{{ asset('frontend/vendor/owl.carousel/assets/owl.carousel.min.css') }}">
-<link rel="stylesheet" href="{{ asset('frontend/vendor/owl.carousel/assets/owl.theme.default.min.css') }}">
-<link rel="stylesheet" href="{{ asset('frontend/vendor/magnific-popup/magnific-popup.min.css') }}">
-<link rel="stylesheet" href="{{ asset('frontend/css/theme.css') }}">
-<link rel="stylesheet" href="{{ asset('frontend/css/theme-elements.css') }}">
-<link rel="stylesheet" href="{{ asset('frontend/css/skins/skin-booksy.css') }}">
-<script src="{{ asset('frontend/vendor/modernizr/modernizr.min.js') }}"></script>
-
+<x-slot:styles>
+<link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}">
 <style>
-@if($isAr)
-body,p,li,td,input,select,textarea,.form-control{font-family:'Tajawal',sans-serif!important;}
-h1,h2,h3,h4,h5,h6{font-family:'Tajawal',sans-serif!important;font-weight:800;}
-@endif
-html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;}
-.section{background-color:transparent!important;}
-.main,.body{background:#0a0a0a!important;}
+/* ── branch detail (page-scoped br-*) ── */
+.br-wrap{ padding-top:calc(var(--bk-nav-h) + 20px); }
+.br-crumb{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); color:var(--bk-text-muted); margin-bottom:16px; }
+.br-crumb a{ color:var(--bk-text-muted); } .br-crumb a:hover{ color:var(--bk-accent); }
+.br-crumb svg{ width:14px; height:14px; opacity:.6; }
 
-/* ── Navbar ── */
-#bk-navbar{background:#0a0a0a;border-bottom:1px solid rgba(201,162,39,.15);height:68px;z-index:1050;transition:box-shadow .3s;}
-#bk-navbar.scrolled{box-shadow:0 4px 30px rgba(0,0,0,.6);border-bottom-color:rgba(201,162,39,.25);}
-#bk-navbar .navbar-brand{font-family:'Poppins',sans-serif;font-size:1.75rem;font-weight:900;color:#fff;letter-spacing:-1px;text-decoration:none;}
-#bk-navbar .navbar-brand span{color:#C9A227;}
-#bk-navbar .navbar-toggler{border:1px solid rgba(201,162,39,.35);padding:6px 10px;color:#C9A227;background:transparent;}
-#bk-navbar .navbar-toggler:focus{box-shadow:none;}
-#bk-navbar .nav-link{color:rgba(255,255,255,.7)!important;font-family:'Poppins',sans-serif;font-size:.86rem;font-weight:500;padding:.5rem .9rem!important;border-radius:6px;transition:all .2s;}
-#bk-navbar .nav-link:hover{color:#C9A227!important;background:rgba(201,162,39,.07);}
-.bk-lang{color:#C9A227;border:1px solid rgba(201,162,39,.4);border-radius:20px;padding:5px 14px;font-size:.8rem;font-weight:700;font-family:'Poppins',sans-serif;text-decoration:none;transition:all .2s;white-space:nowrap;}
-.bk-lang:hover{background:#C9A227;color:#0a0a0a;}
-.bk-login-link{color:rgba(255,255,255,.65);font-family:'Poppins',sans-serif;font-size:.84rem;font-weight:500;text-decoration:none;transition:color .2s;white-space:nowrap;}
-.bk-login-link:hover{color:#C9A227;}
-.bk-register-btn{background:#C9A227;color:#0a0a0a!important;border:none;border-radius:22px;padding:8px 20px;font-size:.83rem;font-weight:700;font-family:'Poppins',sans-serif;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .22s;white-space:nowrap;}
-.bk-register-btn:hover{background:#e8c84a;box-shadow:0 4px 18px rgba(201,162,39,.35);}
-@media(max-width:991px){#bk-navbar .navbar-collapse{background:#111;border:1px solid rgba(201,162,39,.12);border-radius:12px;padding:16px;margin-top:10px;}}
+/* gallery */
+.br-gallery{ display:grid; grid-template-columns:2fr 1fr 1fr; grid-template-rows:1fr 1fr; gap:10px; border-radius:var(--bk-r-lg); overflow:hidden; height:clamp(280px,42vw,460px); }
+.br-gallery .g{ position:relative; overflow:hidden; background:var(--bk-surface-2); cursor:pointer; }
+.br-gallery .g:first-child{ grid-row:1/3; }
+.br-gallery .g img{ width:100%; height:100%; object-fit:cover; transition:transform var(--bk-t-slow) var(--bk-ease); }
+.br-gallery .g:hover img{ transform:scale(1.05); }
+.br-gallery .g-more{ position:absolute; inset:0; display:grid; place-items:center; background:color-mix(in srgb,#000 45%,transparent); color:#fff; font-family:var(--bk-font-ui); font-weight:700; font-size:1.1rem; }
+.br-gallery-single{ grid-template-columns:1fr; grid-template-rows:1fr; }
+.br-gallery-single .g:first-child{ grid-row:1; }
+.br-gallery .g-ph{ width:100%; height:100%; display:grid; place-items:center; color:color-mix(in srgb,var(--bk-accent) 30%,transparent); }
+@media (max-width:760px){ .br-gallery{ grid-template-columns:1fr 1fr; grid-template-rows:1fr; height:240px; } .br-gallery .g:first-child{ grid-row:1; grid-column:1/3; } .br-gallery .g:nth-child(n+3){ display:none; } }
 
-/* ── Cover ── */
-#bk-cover{height:500px;position:relative;background:#111;overflow:hidden;margin-top:68px;}
-#bk-cover .cover-img{width:100%;height:100%;object-fit:cover;}
-#bk-cover::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.2) 0%,rgba(10,10,10,.85) 100%);}
-.bk-cover-no-img{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:5rem;color:rgba(201,162,39,.15);background:{{ $catGradient }};}
+/* head */
+.br-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; margin:22px 0 4px; }
+.br-title{ font-size:var(--bk-fs-h1); }
+.br-head-meta{ display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; margin-top:12px; font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); color:var(--bk-text-soft); }
+.br-head-meta .it{ display:inline-flex; align-items:center; gap:6px; }
+.br-head-meta svg{ width:16px; height:16px; color:var(--bk-accent); }
+.br-rate-pill{ display:inline-flex; align-items:center; gap:6px; font-weight:700; color:var(--bk-text); }
+.br-rate-pill svg{ color:var(--bk-star); }
+.br-open{ display:inline-flex; align-items:center; gap:6px; font-weight:600; }
+.br-open.on{ color:var(--bk-success); } .br-open.off{ color:var(--bk-danger); }
+.br-open .dot{ width:8px; height:8px; border-radius:50%; background:currentColor; }
+.br-head-actions{ display:flex; gap:8px; }
+.br-icon-btn{ width:44px; height:44px; border-radius:var(--bk-r-pill); border:1px solid var(--bk-border); background:var(--bk-surface); color:var(--bk-text-soft); display:grid; place-items:center; cursor:pointer; transition:all var(--bk-t) ease; }
+.br-icon-btn:hover{ color:var(--bk-accent); border-color:var(--bk-accent); }
+.br-icon-btn.is-on{ color:var(--bk-danger); border-color:var(--bk-danger); }
 
-/* Cover slideshow */
-.bk-cover-slide{position:absolute;inset:0;opacity:0;transition:opacity 1s ease;}
-.bk-cover-slide.active{opacity:1;}
-.bk-cover-slide img{width:100%;height:100%;object-fit:cover;}
-.bk-cover-dots{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:5;display:flex;gap:7px;}
-.bk-cover-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);border:none;cursor:pointer;transition:all .25s;}
-.bk-cover-dot.active{background:#C9A227;width:22px;border-radius:4px;}
+/* layout */
+.br-layout{ display:grid; grid-template-columns:1fr 380px; gap:var(--bk-s10); align-items:start; margin-top:var(--bk-s10); }
+@media (max-width:980px){ .br-layout{ grid-template-columns:1fr; } .br-aside{ display:none; } }
 
-/* ── Profile bar ── */
-.bk-profile-bar{
-    background:#111;border-bottom:1px solid rgba(201,162,39,.1);
-    padding:22px 0;position:relative;z-index:10;
-}
-.bk-pb-logo{
-    width:80px;height:80px;border-radius:16px;object-fit:cover;
-    border:2px solid rgba(201,162,39,.4);background:#1a1a1a;flex-shrink:0;
-    display:flex;align-items:center;justify-content:center;overflow:hidden;
-}
-.bk-pb-logo img{width:100%;height:100%;object-fit:cover;}
-.bk-pb-name{font-size:1.55rem;font-weight:800;color:#fff;font-family:'Poppins',sans-serif;line-height:1.2;}
-.bk-pb-sub{font-size:.84rem;color:rgba(255,255,255,.45);font-family:'Poppins',sans-serif;}
-.bk-pb-badge{
-    display:inline-flex;align-items:center;gap:5px;
-    padding:4px 13px;border-radius:20px;font-size:.7rem;font-weight:700;
-    font-family:'Poppins',sans-serif;
-}
-.bk-pb-badge.cat{background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.3);color:#C9A227;}
-.bk-pb-badge.open{background:rgba(5,150,105,.15);border:1px solid rgba(5,150,105,.4);color:#34d399;}
-.bk-pb-badge.closed{background:rgba(185,28,28,.15);border:1px solid rgba(185,28,28,.4);color:#f87171;}
-.bk-pb-book-btn{
-    background:#C9A227;color:#0a0a0a;border:none;border-radius:12px;
-    padding:12px 28px;font-weight:800;font-size:.92rem;font-family:'Poppins',sans-serif;
-    cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .22s;
-    text-decoration:none;white-space:nowrap;
-}
-.bk-pb-book-btn:hover{background:#e8c84a;box-shadow:0 6px 24px rgba(201,162,39,.4);color:#0a0a0a;text-decoration:none;}
+/* sub-tabs */
+.br-tabs{ position:sticky; top:calc(var(--bk-nav-h) - 2px); z-index:5; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:10px 0; margin-bottom:8px; background:color-mix(in srgb,var(--bk-bg) 90%,transparent); backdrop-filter:blur(10px); }
+.br-tabs::-webkit-scrollbar{ display:none; }
+.br-tab{ flex:0 0 auto; padding:9px 16px; border-radius:var(--bk-r-pill); border:1px solid transparent; background:transparent; color:var(--bk-text-soft); font-family:var(--bk-font-ui); font-weight:600; font-size:var(--bk-fs-sm); cursor:pointer; white-space:nowrap; transition:all var(--bk-t) ease; }
+.br-tab:hover{ color:var(--bk-accent); }
+.br-tab.is-active{ background:var(--bk-accent-wash); color:var(--bk-accent); }
 
-/* ── Sticky tabs ── */
-#bk-tabs-bar{
-    background:#0d0d0d;border-bottom:1px solid rgba(201,162,39,.12);
-    position:sticky;top:68px;z-index:40;overflow-x:auto;
-    scrollbar-width:none;
-}
-#bk-tabs-bar::-webkit-scrollbar{display:none;}
-.bk-tabs-inner{display:flex;gap:0;width:max-content;min-width:100%;}
-.bk-tab-btn{
-    padding:16px 24px;font-size:.84rem;font-weight:600;
-    color:rgba(255,255,255,.5);font-family:'Poppins',sans-serif;
-    border:none;background:transparent;cursor:pointer;
-    border-bottom:2.5px solid transparent;white-space:nowrap;
-    transition:all .22s;display:flex;align-items:center;gap:7px;
-}
-.bk-tab-btn:hover{color:rgba(255,255,255,.8);}
-.bk-tab-btn.active{color:#C9A227;border-bottom-color:#C9A227;}
+.br-block{ scroll-margin-top:calc(var(--bk-nav-h) + 60px); margin-bottom:var(--bk-s12); }
+.br-block-title{ font-family:var(--bk-font-display); font-weight:800; font-size:var(--bk-fs-h3); margin-bottom:var(--bk-s5); }
+.br-desc{ font-family:var(--bk-font-ui); color:var(--bk-text-soft); line-height:1.8; }
 
-/* ── Main layout ── */
-.bk-main-grid{
-    display:grid;
-    grid-template-columns:1fr 380px;
-    gap:28px;
-    padding:32px 0 80px;
-    align-items:start;
-}
-@media(max-width:991px){.bk-main-grid{grid-template-columns:1fr;}}
+/* services */
+.br-svc-cat{ margin-bottom:var(--bk-s6); }
+.br-svc-cat-h{ font-family:var(--bk-font-ui); font-weight:700; font-size:1rem; color:var(--bk-text); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.br-svc-cat-h svg{ width:18px; height:18px; color:var(--bk-accent); }
+.br-svc{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px; border:1px solid var(--bk-border); border-radius:var(--bk-r); background:var(--bk-surface); margin-bottom:10px; transition:border-color var(--bk-t) ease,box-shadow var(--bk-t) ease; }
+.br-svc:hover{ border-color:color-mix(in srgb,var(--bk-accent) 30%,var(--bk-border)); box-shadow:var(--bk-shadow-sm); }
+.br-svc-info{ min-width:0; }
+.br-svc-nm{ font-family:var(--bk-font-ui); font-weight:600; color:var(--bk-text); }
+.br-svc-meta{ display:flex; align-items:center; gap:12px; margin-top:6px; font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); color:var(--bk-text-muted); }
+.br-svc-meta svg{ width:14px; height:14px; }
+.br-svc-price{ color:var(--bk-gold-strong); font-weight:700; }
+.br-svc-add{ flex-shrink:0; }
+.br-svc-add.is-added{ background:var(--bk-accent-wash); color:var(--bk-accent); border-color:var(--bk-accent); }
 
-/* ── Content sections ── */
-.bk-section-head{
-    display:flex;align-items:center;gap:12px;margin-bottom:22px;
-}
-.bk-section-head h3{
-    font-size:1.3rem;font-weight:800;color:#fff;font-family:'Poppins',sans-serif;margin:0;
-}
-.bk-section-head::after{
-    content:'';flex:1;height:1px;
-    background:linear-gradient({{ $isAr?'left':'right' }},rgba(201,162,39,.25),transparent);
-}
-.bk-cat-label{
-    font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;
-    color:#C9A227;font-family:'Poppins',sans-serif;margin-bottom:14px;
-    display:flex;align-items:center;gap:7px;
-}
-.bk-cat-label::before{content:'';width:18px;height:2px;background:#C9A227;border-radius:1px;}
+/* team — horizontal rail of circular avatars (Fresha-style) */
+.br-staff{ display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:6px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+.br-staff::-webkit-scrollbar{ display:none; }
+.br-staff-card{ flex:0 0 auto; width:148px; scroll-snap-align:start; text-align:center; padding:22px 14px; border:1px solid var(--bk-border); border-radius:var(--bk-r-lg); background:var(--bk-surface); transition:transform var(--bk-t) var(--bk-ease),box-shadow var(--bk-t) ease; }
+.br-staff-card:hover{ transform:translateY(-4px); box-shadow:var(--bk-shadow); }
+.br-staff-av{ width:76px; height:76px; border-radius:50%; margin:0 auto 12px; overflow:hidden; background:var(--bk-accent-wash); color:var(--bk-accent); display:grid; place-items:center; font-family:var(--bk-font-display); font-weight:800; font-size:1.5rem; }
+.br-staff-av img{ width:100%; height:100%; object-fit:cover; }
+.br-staff-nm{ font-family:var(--bk-font-ui); font-weight:700; color:var(--bk-text); }
+.br-staff-rl{ font-family:var(--bk-font-ui); font-size:var(--bk-fs-xs); color:var(--bk-text-muted); margin-top:2px; }
 
-/* ── Service card ── */
-.bk-svc-card{
-    background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:16px;
-    padding:18px;display:flex;gap:16px;align-items:flex-start;
-    transition:border-color .28s,box-shadow .28s,transform .28s;margin-bottom:12px;
-    position:relative;overflow:hidden;
-}
-.bk-svc-card::before{
-    content:'';position:absolute;inset:0;
-    background:linear-gradient(135deg,rgba(201,162,39,.04) 0%,transparent 60%);
-    opacity:0;transition:opacity .28s;pointer-events:none;
-}
-.bk-svc-card:hover{border-color:rgba(201,162,39,.35);box-shadow:0 10px 32px rgba(0,0,0,.4);transform:translateY(-2px);}
-.bk-svc-card:hover::before{opacity:1;}
-.bk-svc-card .icon{
-    width:52px;height:52px;border-radius:14px;flex-shrink:0;
-    background:linear-gradient(135deg,rgba(201,162,39,.15),rgba(201,162,39,.06));
-    border:1px solid rgba(201,162,39,.25);
-    display:flex;align-items:center;justify-content:center;font-size:1.35rem;color:#C9A227;
-    box-shadow:0 2px 10px rgba(201,162,39,.12);
-}
-.bk-svc-card .info{flex:1;min-width:0;}
-.bk-svc-card .info h5{font-size:.95rem;font-weight:700;color:#fff;margin:0 0 5px;font-family:'Poppins',sans-serif;line-height:1.3;}
-.bk-svc-card .info .desc{font-size:.78rem;color:rgba(255,255,255,.38);margin:0 0 10px;line-height:1.6;
-    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.bk-svc-card .meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
-.bk-svc-card .price{font-size:1rem;font-weight:800;color:#C9A227;font-family:'Poppins',sans-serif;}
-.bk-svc-card .dur{font-size:.74rem;color:rgba(255,255,255,.3);display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.04);padding:3px 8px;border-radius:20px;}
-.bk-svc-card .dur i{font-size:.65rem;color:rgba(201,162,39,.6);}
-.bk-svc-card .add-btn{
-    background:transparent;border:1.5px solid rgba(201,162,39,.35);color:#C9A227;
-    border-radius:10px;padding:8px 18px;font-size:.8rem;font-weight:700;
-    font-family:'Poppins',sans-serif;cursor:pointer;transition:all .22s;white-space:nowrap;flex-shrink:0;
-    align-self:center;
-}
-.bk-svc-card .add-btn:hover,.bk-svc-card .add-btn.added{
-    background:#C9A227;color:#0a0a0a;border-color:#C9A227;box-shadow:0 4px 14px rgba(201,162,39,.3);
-}
-.bk-popular-badge{
-    position:absolute;top:0;{{ $isAr?'left':'right' }}:14px;
-    background:linear-gradient(135deg,#C9A227,#e8c84a);color:#0a0a0a;font-size:.58rem;font-weight:900;
-    padding:4px 12px;border-radius:0 0 10px 10px;font-family:'Poppins',sans-serif;
-    letter-spacing:.4px;text-transform:uppercase;box-shadow:0 3px 10px rgba(201,162,39,.3);
-}
+/* reviews */
+.br-rev-summary{ display:flex; gap:32px; align-items:center; flex-wrap:wrap; padding:22px; border:1px solid var(--bk-border); border-radius:var(--bk-r-lg); background:var(--bk-surface); margin-bottom:22px; }
+.br-rev-big{ text-align:center; }
+.br-rev-big .n{ font-family:var(--bk-font-display); font-weight:800; font-size:3rem; color:var(--bk-text); line-height:1; }
+.br-rev-big .s{ color:var(--bk-star); display:flex; gap:2px; justify-content:center; margin:6px 0; }
+.br-rev-big .s svg{ width:16px; height:16px; }
+.br-rev-big .c{ font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); color:var(--bk-text-muted); }
+.br-rev-bars{ flex:1; min-width:200px; display:flex; flex-direction:column; gap:6px; }
+.br-rev-bar{ display:flex; align-items:center; gap:10px; font-family:var(--bk-font-ui); font-size:var(--bk-fs-xs); color:var(--bk-text-muted); }
+.br-rev-bar .track{ flex:1; height:7px; border-radius:4px; background:var(--bk-surface-3); overflow:hidden; }
+.br-rev-bar .fill{ height:100%; background:var(--bk-grad-gold); border-radius:4px; }
+.br-rev{ padding:18px 0; border-bottom:1px solid var(--bk-border); }
+.br-rev:last-child{ border-bottom:0; }
+.br-rev-top{ display:flex; align-items:center; gap:12px; }
+.br-rev-av{ width:42px; height:42px; border-radius:50%; background:var(--bk-accent-wash); color:var(--bk-accent); display:grid; place-items:center; font-weight:700; flex-shrink:0; }
+.br-rev-nm{ font-family:var(--bk-font-ui); font-weight:600; color:var(--bk-text); }
+.br-rev-dt{ font-family:var(--bk-font-ui); font-size:var(--bk-fs-xs); color:var(--bk-text-muted); }
+.br-rev-stars{ display:flex; gap:2px; color:var(--bk-star); margin-inline-start:auto; }
+.br-rev-stars svg{ width:14px; height:14px; }
+.br-rev p{ font-family:var(--bk-font-ui); color:var(--bk-text-soft); line-height:1.7; margin-top:10px; }
 
-/* ── Gallery ── */
-.bk-gallery-grid{
-    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
-}
-@media(max-width:576px){.bk-gallery-grid{grid-template-columns:repeat(2,1fr);}}
-.bk-gallery-item{
-    border-radius:12px;overflow:hidden;aspect-ratio:1;
-    position:relative;cursor:pointer;background:#1a1a1a;
-}
-.bk-gallery-item img{width:100%;height:100%;object-fit:cover;transition:transform .4s,filter .4s;}
-.bk-gallery-item:hover img{transform:scale(1.06);filter:brightness(1.1);}
-.bk-gallery-item::after{
-    content:'\f00e';font-family:'Font Awesome 5 Free';font-weight:900;
-    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    font-size:1.6rem;color:#fff;background:rgba(201,162,39,.35);
-    opacity:0;transition:opacity .3s;
-}
-.bk-gallery-item:hover::after{opacity:1;}
+/* hours + map */
+.br-hours{ display:flex; flex-direction:column; gap:2px; border:1px solid var(--bk-border); border-radius:var(--bk-r); overflow:hidden; }
+.br-hours .row{ display:flex; align-items:center; justify-content:space-between; padding:11px 16px; font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); }
+.br-hours .row:nth-child(odd){ background:var(--bk-surface); } .br-hours .row:nth-child(even){ background:var(--bk-surface-2); }
+.br-hours .row.today{ background:var(--bk-accent-wash); color:var(--bk-accent); font-weight:700; }
+.br-hours .closed{ color:var(--bk-danger); }
+#br-map{ height:300px; width:100%; border-radius:var(--bk-r-lg); overflow:hidden; border:1px solid var(--bk-border); margin-top:16px; }
 
-/* ── Team cards ── */
-.bk-emp-card{
-    background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:16px;
-    padding:22px;text-align:center;transition:border-color .28s,transform .28s;
-}
-.bk-emp-card:hover{border-color:rgba(201,162,39,.3);transform:translateY(-5px);}
-.bk-emp-card .photo{
-    width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 12px;
-    border:2.5px solid rgba(201,162,39,.4);display:block;background:#1a1a1a;
-    display:flex;align-items:center;justify-content:center;
-}
-.bk-emp-card .photo img{width:80px;height:80px;border-radius:50%;object-fit:cover;}
-.bk-emp-card .photo-icon{width:80px;height:80px;border-radius:50%;margin:0 auto 12px;background:rgba(201,162,39,.1);border:2px solid rgba(201,162,39,.25);display:flex;align-items:center;justify-content:center;font-size:2rem;color:rgba(201,162,39,.5);}
-.bk-emp-card h5{font-size:.92rem;font-weight:700;color:#fff;font-family:'Poppins',sans-serif;margin:0 0 3px;}
-.bk-emp-card .role{font-size:.74rem;color:rgba(255,255,255,.4);margin-bottom:10px;}
-.bk-emp-card .spec-chips{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:14px;}
-.bk-emp-card .spec-chip{background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.18);border-radius:20px;padding:3px 9px;font-size:.62rem;font-weight:600;color:rgba(201,162,39,.8);font-family:'Poppins',sans-serif;}
-.bk-emp-book-btn{
-    background:transparent;border:1.5px solid rgba(201,162,39,.35);color:#C9A227;
-    border-radius:8px;padding:7px 18px;font-size:.78rem;font-weight:700;
-    font-family:'Poppins',sans-serif;cursor:pointer;transition:all .22s;width:100%;
-}
-.bk-emp-book-btn:hover{background:#C9A227;color:#0a0a0a;border-color:#C9A227;}
+/* aside booking panel */
+.br-aside-inner{ position:sticky; top:calc(var(--bk-nav-h) + 16px); }
+.br-book{ border:1px solid var(--bk-border); border-radius:var(--bk-r-lg); background:var(--bk-surface); box-shadow:var(--bk-shadow-sm); overflow:hidden; }
+.br-book-head{ padding:18px 20px; border-bottom:1px solid var(--bk-border); display:flex; align-items:center; justify-content:space-between; }
+.br-book-head h3{ font-family:var(--bk-font-ui); font-weight:700; font-size:1.02rem; }
+.br-book-head .cnt{ font-family:var(--bk-font-ui); font-size:var(--bk-fs-xs); font-weight:700; color:var(--bk-accent-ink); background:var(--bk-accent-fill); border-radius:var(--bk-r-pill); padding:2px 9px; }
+.br-book-body{ padding:16px 20px; max-height:46vh; overflow-y:auto; }
+.br-book-empty{ text-align:center; color:var(--bk-text-muted); font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); padding:28px 8px; }
+.br-book-empty svg{ width:34px; height:34px; color:color-mix(in srgb,var(--bk-accent) 40%,transparent); margin-bottom:10px; }
+.br-bi{ padding:12px 0; border-bottom:1px solid var(--bk-border); }
+.br-bi:last-child{ border-bottom:0; }
+.br-bi-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.br-bi-nm{ font-family:var(--bk-font-ui); font-weight:600; font-size:.92rem; color:var(--bk-text); }
+.br-bi-pr{ font-family:var(--bk-font-ui); font-weight:700; font-size:.9rem; color:var(--bk-gold-strong); white-space:nowrap; }
+.br-bi-rm{ background:none; border:0; color:var(--bk-text-muted); cursor:pointer; padding:2px; display:grid; place-items:center; }
+.br-bi-rm:hover{ color:var(--bk-danger); }
+.br-bi-emp{ width:100%; margin-top:8px; padding:8px 12px; border:1px solid var(--bk-border); border-radius:var(--bk-r-sm); background:var(--bk-surface-2); color:var(--bk-text); font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); }
+.br-book-foot{ padding:16px 20px; border-top:1px solid var(--bk-border); }
+.br-book-tot{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; font-family:var(--bk-font-ui); }
+.br-book-tot .l{ color:var(--bk-text-muted); font-size:var(--bk-fs-sm); }
+.br-book-tot .p{ font-family:var(--bk-font-display); font-weight:800; font-size:1.3rem; color:var(--bk-text); }
+.br-book-tot .d{ font-size:var(--bk-fs-xs); color:var(--bk-text-muted); }
 
-/* ── Reviews ── */
-.bk-rating-overview{
-    background:#141414;border:1px solid rgba(201,162,39,.15);border-radius:16px;
-    padding:24px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-bottom:24px;
-}
-.bk-rating-big{font-size:3.5rem;font-weight:900;color:#C9A227;font-family:'Poppins',sans-serif;line-height:1;}
-.bk-rev-card{
-    background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:14px;
-    padding:18px;margin-bottom:12px;
-}
-.bk-rev-card .auth-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-.bk-rev-card .av{width:38px;height:38px;border-radius:50%;background:rgba(201,162,39,.15);border:1.5px solid rgba(201,162,39,.25);display:flex;align-items:center;justify-content:center;color:#C9A227;font-size:1rem;flex-shrink:0;}
-.bk-rev-card .name{font-size:.88rem;font-weight:700;color:#fff;font-family:'Poppins',sans-serif;}
-.bk-rev-card .date{font-size:.7rem;color:rgba(255,255,255,.3);}
-.bk-rev-card .stars{display:flex;gap:2px;margin-bottom:8px;}
-.bk-rev-card .stars i{font-size:.7rem;color:#C9A227;}
-.bk-rev-card p{font-size:.84rem;color:rgba(255,255,255,.6);margin:0;}
+/* mobile booking bar + sheet */
+.br-bar{ position:fixed; inset-inline:0; inset-block-end:0; z-index:var(--bk-z-nav); display:none; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:var(--bk-surface); border-top:1px solid var(--bk-border); box-shadow:0 -8px 24px rgba(0,0,0,.1); }
+.br-bar.show{ display:flex; }
+.br-bar-info .p{ font-family:var(--bk-font-display); font-weight:800; font-size:1.1rem; color:var(--bk-text); }
+.br-bar-info .l{ font-family:var(--bk-font-ui); font-size:var(--bk-fs-xs); color:var(--bk-text-muted); }
+@media (max-width:980px){ .br-bar.has{ display:flex; } }
+.br-sheet-ov{ position:fixed; inset:0; z-index:var(--bk-z-modal); display:none; background:color-mix(in srgb,#000 50%,transparent); backdrop-filter:blur(4px); }
+.br-sheet-ov.open{ display:block; }
+.br-sheet{ position:fixed; inset-inline:0; inset-block-end:0; z-index:calc(var(--bk-z-modal) + 1); transform:translateY(100%); transition:transform var(--bk-t) var(--bk-ease); background:var(--bk-surface); border-radius:var(--bk-r-xl) var(--bk-r-xl) 0 0; max-height:82vh; display:flex; flex-direction:column; }
+.br-sheet.open{ transform:none; }
+.br-sheet-h{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--bk-border); }
+.br-sheet-b{ padding:16px 20px; overflow-y:auto; }
 
-/* ── Booking cart (right sidebar) ── */
-.bk-cart-sticky{
-    position:sticky;top:calc(68px + 60px);
-    background:#111;border:1px solid rgba(201,162,39,.2);border-radius:20px;
-    overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.45);
-}
-.bk-cart-head{
-    background:linear-gradient(135deg,rgba(201,162,39,.18),rgba(201,162,39,.06));
-    border-bottom:1px solid rgba(201,162,39,.15);padding:18px 22px;
-    display:flex;align-items:center;gap:10px;
-}
-.bk-cart-head h4{font-size:1rem;font-weight:800;color:#fff;font-family:'Poppins',sans-serif;margin:0;}
-.bk-cart-badge{
-    background:#C9A227;color:#0a0a0a;border-radius:50%;width:24px;height:24px;
-    font-size:.72rem;font-weight:900;display:flex;align-items:center;justify-content:center;
-    font-family:'Poppins',sans-serif;box-shadow:0 2px 8px rgba(201,162,39,.35);
-}
-.bk-cart-body{padding:18px 22px;}
-.bk-cart-empty{text-align:center;padding:32px 10px;color:rgba(255,255,255,.3);}
-.bk-cart-empty i{font-size:2.5rem;color:rgba(201,162,39,.1);display:block;margin-bottom:12px;}
-.bk-cart-empty p{font-size:.82rem;margin:0;line-height:1.6;}
-.bk-cart-item{
-    background:#181818;border:1px solid rgba(255,255,255,.07);border-radius:12px;
-    padding:14px;margin-bottom:10px;position:relative;
-    transition:border-color .2s;
-}
-.bk-cart-item:hover{border-color:rgba(201,162,39,.2);}
-.bk-cart-item .svc-name{font-size:.88rem;font-weight:700;color:#fff;font-family:'Poppins',sans-serif;margin-bottom:7px;padding-{{ $isAr?'left':'right' }}:22px;}
-.bk-cart-item .svc-meta{display:flex;gap:10px;font-size:.75rem;color:rgba(255,255,255,.4);}
-.bk-cart-item .svc-price{color:#C9A227;font-weight:800;}
-.bk-cart-item .remove-btn{
-    position:absolute;top:10px;{{ $isAr?'left':'right' }}:10px;
-    width:22px;height:22px;border-radius:50%;
-    background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);
-    color:rgba(248,113,113,.6);cursor:pointer;font-size:.65rem;
-    transition:all .2s;display:flex;align-items:center;justify-content:center;
-}
-.bk-cart-item .remove-btn:hover{background:rgba(248,113,113,.2);color:#f87171;border-color:#f87171;}
-.bk-cart-item .emp-select{
-    width:100%;margin-top:10px;padding:8px 12px;
-    background:#141414;border:1px solid rgba(255,255,255,.1);border-radius:9px;
-    color:rgba(255,255,255,.75);font-size:.78rem;font-family:'Poppins',sans-serif;
-    cursor:pointer;outline:none;transition:border-color .2s;
-    appearance:none;-webkit-appearance:none;
-}
-.bk-cart-item .emp-select:focus{border-color:rgba(201,162,39,.5);}
-.bk-cart-total{
-    border-top:1px solid rgba(201,162,39,.12);padding-top:16px;margin-top:4px;
-}
-.bk-cart-total .row-t{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-family:'Poppins',sans-serif;}
-.bk-cart-total .lbl{font-size:.8rem;color:rgba(255,255,255,.4);}
-.bk-cart-total .val{font-size:.9rem;font-weight:700;color:#fff;}
-.bk-cart-total .val.gold{color:#C9A227;font-size:1.05rem;}
-.bk-confirm-btn{
-    width:100%;background:linear-gradient(135deg,#C9A227,#e8c84a);color:#0a0a0a;border:none;border-radius:14px;
-    padding:15px;font-weight:800;font-size:.95rem;font-family:'Poppins',sans-serif;
-    cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;
-    transition:all .25s;margin-top:16px;text-decoration:none;
-    box-shadow:0 4px 18px rgba(201,162,39,.25);letter-spacing:.2px;
-}
-.bk-confirm-btn:hover{box-shadow:0 8px 28px rgba(201,162,39,.45);transform:translateY(-2px);color:#0a0a0a;text-decoration:none;filter:brightness(1.06);}
-.bk-confirm-btn:disabled,.bk-confirm-btn[disabled]{opacity:.4;cursor:not-allowed;box-shadow:none;transform:none;}
+/* lightbox */
+.br-lb{ position:fixed; inset:0; z-index:var(--bk-z-toast); display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.9); }
+.br-lb.open{ display:flex; }
+.br-lb img{ max-width:92vw; max-height:86vh; border-radius:var(--bk-r); }
+.br-lb-x,.br-lb-nav{ position:absolute; background:rgba(255,255,255,.12); border:0; color:#fff; width:48px; height:48px; border-radius:50%; display:grid; place-items:center; cursor:pointer; }
+.br-lb-x{ top:20px; inset-inline-end:20px; } .br-lb-nav.prev{ inset-inline-start:16px; } .br-lb-nav.next{ inset-inline-end:16px; }
+.br-lb-nav{ top:50%; transform:translateY(-50%); }
 
-/* ── Floating cart button (mobile) ── */
-.bk-float-cart{
-    display:none;
-    position:fixed;bottom:24px;{{ $isAr?'left':'right' }}:20px;z-index:900;
-    background:linear-gradient(135deg,#C9A227,#e8c84a);color:#0a0a0a;
-    width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;
-    align-items:center;justify-content:center;font-size:1.25rem;
-    box-shadow:0 6px 24px rgba(201,162,39,.5);transition:transform .22s,box-shadow .22s;
-}
-.bk-float-cart:hover{transform:scale(1.08);box-shadow:0 10px 32px rgba(201,162,39,.6);}
-.bk-float-cart .cart-cnt{
-    position:absolute;top:-2px;{{ $isAr?'left':'right' }}:-2px;
-    background:#ef4444;color:#fff;border-radius:50%;width:20px;height:20px;
-    font-size:.62rem;font-weight:900;display:flex;align-items:center;justify-content:center;
-    border:2px solid #0a0a0a;
-}
-@media(max-width:991px){
-    .bk-float-cart{display:flex;}
-    .bk-cart-sticky{display:none;}
-    #bk-cart{display:none;}
-}
+/* booking modal → olive identity + our dark theme (higher specificity beats the partial's own rule) */
+html #bk-modal{ --bk-sel:var(--bk-accent); --bk-sel-text:#fff; --bk-gold:#8A6317; }
+html[data-bk-theme="dark"] #bk-modal{ --bk-bg:#252C1B; --bk-card:#2E3623; --bk-border:rgba(255,255,255,.09); --bk-text:#F0EEE3; --bk-text2:#8B9078; --bk-sel:#A6BC7E; --bk-sel-text:#121509; --bk-slot-bg:#2E3623; --bk-slot-border:rgba(255,255,255,.1); --bk-gold:#D8B873; }
+.leaflet-container{ background:var(--bk-surface-2); font-family:var(--bk-font-ui); }
 
-/* ── Mobile cart sheet ── */
-#bk-mobile-cart{
-    display:none;position:fixed;inset:0;z-index:10000;
-}
-#bk-mobile-cart .overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);}
-#bk-mobile-cart .sheet{
-    position:absolute;bottom:0;left:0;right:0;
-    background:#111;border-radius:24px 24px 0 0;
-    border-top:1px solid rgba(201,162,39,.2);
-    padding:0 0 30px;max-height:85vh;overflow-y:auto;
-}
-#bk-mobile-cart .sheet-handle{width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:4px;margin:12px auto 0;}
-#bk-mobile-cart .sheet-head{padding:14px 22px;border-bottom:1px solid rgba(201,162,39,.1);display:flex;align-items:center;gap:10px;}
-#bk-mobile-cart .sheet-body{padding:18px 22px;}
+/* ── Fresha-style refinements (shorter, smoother, mobile-first) ── */
+.br-hidden{ display:none !important; }
+.br-svc-showall,.br-hours-toggle{ margin-top:10px; }
 
-/* ── Info section ── */
-.bk-info-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;}
-.bk-info-icon{width:36px;height:36px;border-radius:9px;background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.18);display:flex;align-items:center;justify-content:center;color:#C9A227;font-size:.9rem;flex-shrink:0;}
-.bk-info-row .text{font-size:.84rem;color:rgba(255,255,255,.65);font-family:'Poppins',sans-serif;line-height:1.5;padding-top:6px;}
-.bk-info-row .text a{color:#C9A227;text-decoration:none;}
-.bk-wh-table{width:100%;border-collapse:collapse;font-size:.8rem;font-family:'Poppins',sans-serif;}
-.bk-wh-table tr{border-bottom:1px solid rgba(255,255,255,.04);}
-.bk-wh-table tr.today{background:rgba(201,162,39,.06);}
-.bk-wh-table td{padding:7px 10px;color:rgba(255,255,255,.55);}
-.bk-wh-table td:first-child{font-weight:600;color:rgba(255,255,255,.8);}
-.bk-wh-table tr.today td:first-child{color:#C9A227;}
-.bk-map-wrap{border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.07);}
+/* service category chips */
+.br-svc-tabs{ display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; scrollbar-width:none; padding-bottom:4px; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; }
+.br-svc-tabs::-webkit-scrollbar{ display:none; }
+.br-svc-tab{ flex:0 0 auto; scroll-snap-align:start; padding:9px 16px; border-radius:var(--bk-r-pill); border:1px solid var(--bk-border); background:var(--bk-surface); color:var(--bk-text-soft); font-family:var(--bk-font-ui); font-weight:600; font-size:var(--bk-fs-sm); white-space:nowrap; cursor:pointer; transition:all var(--bk-t) ease; }
+.br-svc-tab:hover{ border-color:color-mix(in srgb,var(--bk-accent) 45%,transparent); color:var(--bk-accent); }
+.br-svc-tab.is-active{ background:var(--bk-accent); color:var(--bk-accent-ink); border-color:var(--bk-accent); }
+
+.br-gallery{ position:relative; }
+.br-photos-badge{ position:absolute; inset-block-end:12px; inset-inline-end:12px; display:none; align-items:center; gap:6px; padding:8px 14px; border:0; border-radius:var(--bk-r-pill); background:color-mix(in srgb,#000 55%,transparent); color:#fff; font-family:var(--bk-font-ui); font-weight:600; font-size:var(--bk-fs-sm); backdrop-filter:blur(4px); cursor:pointer; z-index:2; }
+.br-photos-badge svg{ width:16px; height:16px; }
+.br-bar-btn-ic{ display:inline-flex; }
+
+@media (max-width:760px){
+  /* Swipeable image carousel on mobile (Fresha-like) */
+  .br-gallery{ display:flex !important; grid-template:none !important; height:clamp(220px,60vw,320px); gap:8px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .br-gallery::-webkit-scrollbar{ display:none; }
+  .br-gallery .g{ display:block !important; flex:0 0 90%; grid-row:auto !important; grid-column:auto !important; scroll-snap-align:center; border-radius:var(--bk-r-lg); }
+  .br-gallery .g:first-child{ grid-row:auto !important; }
+  .br-photos-badge{ display:inline-flex; }
+  #br-map{ height:220px; }
+  .br-title{ font-size:1.55rem; }
+}
+@media (max-width:980px){
+  .br-bar{ display:flex; }                 /* persistent CTA bar on mobile */
+  .br-block{ margin-bottom:30px; }          /* tighter vertical rhythm */
+  .br-block-title{ margin-bottom:16px; }
+  .br-wrap{ padding-bottom:calc(88px + env(safe-area-inset-bottom)); } /* clear the fixed bar */
+}
+body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bottom)); }
+@media (min-width:981px){ body:has(.br-bar) .bkf-footer{ padding-bottom:0; } }
 </style>
-</head>
-<body data-plugin-scroll-spy data-plugin-options="{'target': '#header'}">
-<div class="body">
+</x-slot:styles>
 
-{{-- ========== NAVBAR ========== --}}
-@if(!empty($privateMode))
-{{-- Private mode: isolated navbar — no directory links, no competitors --}}
-<nav id="bk-navbar" class="navbar navbar-expand-lg fixed-top">
-    <div class="container-fluid px-4">
-        <span class="navbar-brand" style="cursor:default;">{{ $brName }}</span>
-        <div class="d-flex align-items-center gap-3 ms-auto">
-            @if($isAr)
-                <a href="{{ route('locale.switch','en') }}" class="bk-lang">EN</a>
-            @else
-                <a href="{{ route('locale.switch','ar') }}" class="bk-lang">عربي</a>
-            @endif
+<div class="bkf-container-wide br-wrap">
+
+  {{-- breadcrumb --}}
+  <nav class="br-crumb" aria-label="breadcrumb">
+    <a href="{{ route('front.index') }}">{{ $t('الرئيسية','Home') }}</a>
+    <x-icon name="chevron-right" :size="14"/>
+    @if($catName && $company->category)
+      <a href="{{ route('front.category', $company->category->slug) }}">{{ $catName }}</a>
+      <x-icon name="chevron-right" :size="14"/>
+    @endif
+    <span>{{ $brName }}</span>
+  </nav>
+
+  {{-- gallery --}}
+  <div class="br-gallery {{ $imgs->count() < 2 ? 'br-gallery-single' : '' }}" id="br-gallery">
+    @if($imgs->isNotEmpty())
+      @foreach($imgs->take(5) as $i => $src)
+        <div class="g" data-lb="{{ $i }}">
+          <img src="{{ $src }}" alt="{{ $brName }}" loading="{{ $i === 0 ? 'eager' : 'lazy' }}">
+          @if($i === 4 && $imgs->count() > 5)<div class="g-more">+{{ $imgs->count() - 5 }}</div>@endif
         </div>
+      @endforeach
+    @else
+      <div class="g"><div class="g-ph"><x-icon name="{{ $catIcon($company->category->slug ?? '') }}" :size="48"/></div></div>
+    @endif
+    @if($imgs->count() > 1)
+      <button type="button" class="br-photos-badge" onclick="brLb.open(0)"><x-icon name="grid" :size="16"/>{{ $imgs->count() }} {{ $t('صورة','photos') }}</button>
+    @endif
+  </div>
+
+  {{-- head --}}
+  <div class="br-head">
+    <div>
+      <h1 class="br-title">{{ $brName }}</h1>
+      <div class="br-head-meta">
+        @if($catName)<span class="bkf-chip"><x-icon name="{{ $catIcon($company->category->slug ?? '') }}" :size="14"/>{{ $catName }}</span>@endif
+        @if($avg)<span class="br-rate-pill bkf-tnum"><x-icon name="star-fill" :size="16"/>{{ number_format($avg,1) }} <span style="color:var(--bk-text-muted);font-weight:500">· {{ $totalRev }} {{ $t('تقييم','reviews') }}</span></span>@endif
+        @if($city || $branch->address)<span class="it"><x-icon name="map-pin" :size="16"/>{{ $city ?: Str::limit($branch->address, 40) }}</span>@endif
+        <span class="br-open {{ $isOpenNow ? 'on' : 'off' }}"><span class="dot"></span>{{ $isOpenNow ? $t('مفتوح الآن','Open now') : $t('مغلق الآن','Closed') }} · {{ $todayLabel }}</span>
+      </div>
     </div>
-</nav>
-@else
-<nav id="bk-navbar" class="navbar navbar-expand-lg fixed-top">
-    <div class="container-fluid px-4">
-        <a href="{{ route('front.index') }}" class="navbar-brand">Booksy<span>.</span></a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#bkNavMenu">
-            <i class="fas fa-bars"></i>
-        </button>
-        <div class="collapse navbar-collapse" id="bkNavMenu">
-            <ul class="navbar-nav mx-auto gap-lg-1">
-                <li class="nav-item"><a class="nav-link" href="{{ route('front.index') }}">{{ $isAr ? 'الرئيسية' : 'Home' }}</a></li>
-                @if($company->category)
-                <li class="nav-item"><a class="nav-link" href="{{ route('front.category', $company->category->slug) }}">{{ $catName }}</a></li>
-                @endif
-                <li class="nav-item"><a class="nav-link" href="{{ route('front.about') }}">{{ $isAr ? 'من نحن' : 'About' }}</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ route('front.contact') }}">{{ $isAr ? 'تواصل' : 'Contact' }}</a></li>
-            </ul>
-            <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
-                @if($isAr)
-                    <a href="{{ route('locale.switch','en') }}" class="bk-lang">EN</a>
-                @else
-                    <a href="{{ route('locale.switch','ar') }}" class="bk-lang">عربي</a>
-                @endif
-                <a href="{{ route('company.login') }}" class="bk-login-link d-none d-lg-inline">
-                    {{ $isAr ? 'دخول الأعمال' : 'Business Login' }}
-                </a>
-                <a href="{{ route('company.register') }}" class="bk-register-btn">
-                    <i class="fas fa-store"></i>
-                    {{ $isAr ? 'سجّل نشاطك' : 'List Business' }}
-                </a>
-            </div>
-        </div>
+    <div class="br-head-actions">
+      <button type="button" class="br-icon-btn" data-fav="{{ $branch->id }}" aria-label="{{ $t('حفظ','Save') }}">
+        <x-icon name="heart" :size="20" class="heart-off"/><x-icon name="heart-fill" :size="20" class="heart-on" style="display:none"/>
+      </button>
+      @if($branch->latitude && $branch->longitude)
+      <a class="br-icon-btn" href="https://www.google.com/maps/dir/?api=1&destination={{ $branch->latitude }},{{ $branch->longitude }}" target="_blank" rel="noopener" aria-label="{{ $t('الاتجاهات','Directions') }}"><x-icon name="navigation" :size="20"/></a>
+      @endif
+      @if($branch->phone)
+      <a class="br-icon-btn" href="tel:{{ $branch->phone }}" aria-label="{{ $t('اتصال','Call') }}"><x-icon name="phone" :size="20"/></a>
+      @endif
     </div>
-</nav>
-@endif
+  </div>
 
-<div role="main" class="main">
+  {{-- tabs --}}
+  <div class="br-tabs" id="br-tabs">
+    <button class="br-tab is-active" data-target="br-services">{{ $t('الخدمات','Services') }}</button>
+    @if($branch->description_en || $branch->description_ar)<button class="br-tab" data-target="br-about">{{ $t('نبذة','About') }}</button>@endif
+    @if($employees->isNotEmpty())<button class="br-tab" data-target="br-team">{{ $t('الفريق','Team') }}</button>@endif
+    @if($totalRev)<button class="br-tab" data-target="br-reviews">{{ $t('التقييمات','Reviews') }}</button>@endif
+    <button class="br-tab" data-target="br-location">{{ $t('الموقع وأوقات العمل','Location & hours') }}</button>
+  </div>
 
-{{-- ========== COVER SLIDESHOW ========== --}}
-<div id="bk-cover">
-    @if($allImages->isNotEmpty())
-        @foreach($allImages as $i => $img)
-        <div class="bk-cover-slide {{ $i === 0 ? 'active' : '' }}">
-            <img src="{{ asset('storage/'.$img->path) }}" alt="{{ $brName }}" loading="{{ $i > 0 ? 'lazy' : 'eager' }}">
-        </div>
-        @endforeach
-        @if($allImages->count() > 1)
-        <div class="bk-cover-dots">
-            @foreach($allImages as $i => $img)
-            <button class="bk-cover-dot {{ $i === 0 ? 'active' : '' }}" data-slide="{{ $i }}"></button>
-            @endforeach
+  <div class="br-layout">
+    {{-- MAIN --}}
+    <div class="br-main">
+
+      {{-- services --}}
+      <section class="br-block" id="br-services">
+        <h2 class="br-block-title">{{ $t('الخدمات والأسعار','Services & prices') }}</h2>
+        @if($servicesByCategory->count() > 1)
+        <div class="br-svc-tabs" id="br-svc-tabs" role="tablist" aria-label="{{ $t('تصنيفات الخدمات','Service categories') }}">
+          <button type="button" class="br-svc-tab is-active" data-cat="all">{{ $t('الكل','All') }}</button>
+          @foreach($servicesByCategory as $catId => $services)
+            @php $scName = $services->first()->serviceCategory?->localizedName() ?? $t('خدمات','Services'); @endphp
+            <button type="button" class="br-svc-tab" data-cat="{{ $catId }}">{{ $scName }}</button>
+          @endforeach
         </div>
         @endif
-    @else
-        <div class="bk-cover-no-img"><i class="{{ $catIcon }}"></i></div>
-    @endif
-    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.25) 0%,rgba(10,10,10,.8) 100%);z-index:2;"></div>
-</div>
-
-{{-- ========== PROFILE BAR ========== --}}
-<div class="bk-profile-bar">
-    <div class="container">
-        <div class="d-flex align-items-center gap-4 flex-wrap justify-content-between">
-            <div class="d-flex align-items-center gap-4 flex-wrap">
-                {{-- Logo --}}
-                <div class="bk-pb-logo">
-                    @if($company->logo)
-                        <img src="{{ asset('storage/'.$company->logo) }}" alt="">
-                    @else
-                        <i class="{{ $catIcon }}" style="font-size:1.8rem;color:#C9A227;"></i>
-                    @endif
+        @forelse($servicesByCategory as $catId => $services)
+          @php $scName = $services->first()->serviceCategory?->localizedName() ?? $t('خدمات','Services'); @endphp
+          <div class="br-svc-cat" data-cat="{{ $catId }}">
+            <div class="br-svc-cat-h"><x-icon name="tag" :size="18"/>{{ $scName }}</div>
+            @foreach($services->where('is_active', true) as $svc)
+              @php $sName = $isAr ? ($svc->name_ar ?: $svc->name_en) : ($svc->name_en ?: $svc->name_ar); @endphp
+              <div class="br-svc">
+                <div class="br-svc-info">
+                  <div class="br-svc-nm">{{ $sName }}</div>
+                  <div class="br-svc-meta">
+                    @if($svc->duration_minutes)<span><x-icon name="clock" :size="14"/> {{ $svc->duration_minutes }} {{ $t('دقيقة','min') }}</span>@endif
+                    <span class="br-svc-price bkf-tnum">{{ $svc->price ? number_format($svc->price,0).' '.$currency : $t('حسب الطلب','On request') }}</span>
+                  </div>
                 </div>
-                <div>
-                    <div class="bk-pb-name">{{ $brName }}</div>
-                    <div class="bk-pb-sub">{{ $coName }}</div>
-                    <div class="d-flex gap-2 flex-wrap mt-2">
-                        @if($catName)
-                        <span class="bk-pb-badge cat"><i class="{{ $catIcon }}"></i> {{ $catName }}</span>
-                        @endif
-                        <span class="bk-pb-badge {{ $isOpenNow ? 'open' : 'closed' }}">
-                            <i class="fas fa-circle" style="font-size:.45rem;"></i>
-                            {{ $isOpenNow ? ($isAr?'مفتوح الآن':'Open Now') : ($isAr?'مغلق الآن':'Closed Now') }}
-                        </span>
-                        @if($avgRating > 0)
-                        <span class="bk-pb-badge cat">
-                            <i class="fas fa-star"></i> {{ round($avgRating,1) }}
-                            <span style="opacity:.6;">({{ $totalRev }})</span>
-                        </span>
-                        @endif
-                        @if($branch->address)
-                        <span class="bk-pb-badge cat" style="font-weight:400;"><i class="fas fa-map-marker-alt"></i> {{ Str::limit($branch->address, 30) }}</span>
-                        @endif
-                    </div>
-                </div>
-            </div>
-            <a href="#bk-cart" class="bk-pb-book-btn">
-                <i class="far fa-calendar-check"></i>
-                {{ $isAr ? 'احجز الآن' : 'Book Now' }}
-            </a>
-        </div>
-    </div>
-</div>
-
-{{-- ========== STICKY TAB BAR ========== --}}
-<div id="bk-tabs-bar">
-    <div class="container">
-        <div class="bk-tabs-inner">
-            <button class="bk-tab-btn active" data-target="tab-services">
-                <i class="fas fa-cut"></i> {{ $isAr ? 'الخدمات' : 'Services' }}
-            </button>
-            @if($allImages->isNotEmpty())
-            <button class="bk-tab-btn" data-target="tab-gallery">
-                <i class="fas fa-images"></i> {{ $isAr ? 'الصور' : 'Gallery' }}
-            </button>
-            @endif
-            @if($employees->isNotEmpty())
-            <button class="bk-tab-btn" data-target="tab-team">
-                <i class="fas fa-users"></i> {{ $isAr ? 'الفريق' : 'Team' }}
-            </button>
-            @endif
-            @if($reviews->isNotEmpty())
-            <button class="bk-tab-btn" data-target="tab-reviews">
-                <i class="fas fa-star"></i> {{ $isAr ? 'التقييمات' : 'Reviews' }}
-            </button>
-            @endif
-            <button class="bk-tab-btn" data-target="tab-info">
-                <i class="fas fa-info-circle"></i> {{ $isAr ? 'معلومات' : 'Info' }}
-            </button>
-        </div>
-    </div>
-</div>
-
-{{-- ========== MAIN CONTENT ========== --}}
-<div class="container">
-    <div class="bk-main-grid">
-
-        {{-- ===== LEFT COLUMN ===== --}}
-        <div>
-
-            {{-- SERVICES --}}
-            <div id="tab-services" class="bk-tab-section">
-                @if($servicesByCategory->isNotEmpty())
-                @foreach($servicesByCategory as $catId => $services)
-                @php
-                    $firstSvc = $services->first();
-                    $scName   = $isAr
-                        ? ($firstSvc->serviceCategory->name_ar ?? $firstSvc->serviceCategory->name_en ?? '')
-                        : ($firstSvc->serviceCategory->name_en ?? '');
-                @endphp
-                <div class="mb-5">
-                    <div class="bk-cat-label">
-                        <i class="{{ $catIcon }}"></i>
-                        {{ $scName ?: ($isAr ? 'خدمات عامة' : 'General Services') }}
-                    </div>
-                    @foreach($services as $si => $svc)
-                    @php
-                        $svcName = $isAr ? ($svc->name_ar ?: $svc->name_en) : $svc->name_en;
-                        $svcDesc = $isAr ? ($svc->description_ar ?? $svc->description ?? '') : ($svc->description ?? '');
-                    @endphp
-                    <div class="bk-svc-card" id="svc-wrap-{{ $svc->id }}">
-                        @if($si === 0)
-                        <span class="bk-popular-badge">
-                            <i class="fas fa-fire {{ $isAr?'ms-1':'me-1' }}"></i>{{ $isAr?'الأكثر طلباً':'Popular' }}
-                        </span>
-                        @endif
-                        <div class="icon"><i class="{{ $catIcon }}"></i></div>
-                        <div class="info">
-                            <h5>{{ $svcName }}</h5>
-                            @if($svcDesc)
-                            <p class="desc">{{ $svcDesc }}</p>
-                            @endif
-                            <div class="meta">
-                                <span class="price">{{ number_format($svc->price,0) }} {{ $isAr?'ر.س':'SAR' }}</span>
-                                @if($svc->duration_minutes)
-                                <span class="dur"><i class="fas fa-clock"></i> {{ $svc->duration_minutes }} {{ $isAr?'دقيقة':'min' }}</span>
-                                @endif
-                            </div>
-                        </div>
-                        <button class="add-btn"
-                                id="add-btn-{{ $svc->id }}"
-                                onclick="bkAddToCart({{ $svc->id }}, {{ json_encode($svcName) }}, {{ $svc->price }}, {{ $svc->duration_minutes ?? 0 }}, {{ $catId ?? 'null' }})">
-                            <i class="fas fa-plus {{ $isAr?'ms-1':'me-1' }}"></i>{{ $isAr?'أضف للحجز':'Add' }}
-                        </button>
-                    </div>
-                    @endforeach
-                </div>
-                @endforeach
-                @else
-                <div style="text-align:center;padding:50px 20px;color:rgba(255,255,255,.3);">
-                    <i class="fas fa-cut" style="font-size:3rem;color:rgba(201,162,39,.1);display:block;margin-bottom:14px;"></i>
-                    <p>{{ $isAr ? 'لا توجد خدمات متاحة حالياً.' : 'No services available at the moment.' }}</p>
-                </div>
-                @endif
-            </div>
-
-            {{-- GALLERY --}}
-            @if($allImages->isNotEmpty())
-            <div id="tab-gallery" class="bk-tab-section" style="display:none;">
-                <div class="bk-section-head">
-                    <h3><i class="fas fa-images {{ $isAr?'ms-2':'me-2' }}" style="color:#C9A227;"></i>{{ $isAr ? 'معرض الصور' : 'Gallery' }}</h3>
-                </div>
-                <div class="bk-gallery-grid">
-                    @foreach($allImages as $img)
-                    <a href="{{ asset('storage/'.$img->path) }}" class="bk-gallery-item bk-lightbox" data-group="gallery">
-                        <img src="{{ asset('storage/'.$img->path) }}" alt="" loading="lazy">
-                    </a>
-                    @endforeach
-                </div>
-            </div>
-            @endif
-
-            {{-- TEAM --}}
-            @if($employees->isNotEmpty())
-            <div id="tab-team" class="bk-tab-section" style="display:none;">
-                <div class="bk-section-head">
-                    <h3><i class="fas fa-users {{ $isAr?'ms-2':'me-2' }}" style="color:#C9A227;"></i>{{ $isAr ? 'الفريق' : 'Our Team' }}</h3>
-                </div>
-                <div class="row g-3">
-                    @foreach($employees as $emp)
-                    @php
-                        $empName  = $isAr ? ($emp->name_ar ?: $emp->name_en) : $emp->name_en;
-                        $roleName = $isAr ? ($emp->role->name_ar ?? $emp->role->name_en ?? '') : ($emp->role->name_en ?? '');
-                    @endphp
-                    <div class="col-sm-6 col-md-4">
-                        <div class="bk-emp-card">
-                            @if($emp->image)
-                            <div class="photo" style="width:auto;height:auto;background:none;border:none;display:block;">
-                                <img src="{{ asset('storage/'.$emp->image) }}" alt="{{ $empName }}">
-                            </div>
-                            @else
-                            <div class="photo-icon"><i class="fas fa-user"></i></div>
-                            @endif
-                            <h5>{{ $empName }}</h5>
-                            @if($roleName)
-                            <div class="role">{{ $roleName }}</div>
-                            @endif
-                            @if($emp->serviceCategories->isNotEmpty())
-                            <div class="spec-chips">
-                                @foreach($emp->serviceCategories->take(3) as $sc)
-                                <span class="spec-chip">{{ $isAr ? ($sc->name_ar ?? $sc->name_en) : $sc->name_en }}</span>
-                                @endforeach
-                            </div>
-                            @endif
-                            <button class="bk-emp-book-btn" onclick="bkBookWithEmployee({{ $emp->id }}, {{ json_encode($empName) }})">
-                                <i class="fas fa-calendar-plus {{ $isAr?'ms-1':'me-1' }}"></i>
-                                {{ $isAr ? 'احجز معي' : 'Book with me' }}
-                            </button>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-            @endif
-
-            {{-- REVIEWS --}}
-            @if($reviews->isNotEmpty())
-            <div id="tab-reviews" class="bk-tab-section" style="display:none;">
-                <div class="bk-section-head">
-                    <h3><i class="fas fa-star {{ $isAr?'ms-2':'me-2' }}" style="color:#C9A227;"></i>{{ $isAr ? 'التقييمات' : 'Reviews' }}</h3>
-                </div>
-                <div class="bk-rating-overview">
-                    <div>
-                        <div class="bk-rating-big">{{ number_format($avgRating,1) }}</div>
-                        <div style="display:flex;gap:3px;margin:4px 0;">
-                            @for($s=1;$s<=5;$s++)
-                            @php $f = $s <= floor($stars) ? 'fas' : ($s <= $stars ? 'fas fa-star-half-alt' : 'far'); @endphp
-                            <i class="{{ $f === 'fas fa-star-half-alt' ? $f : $f.' fa-star' }}" style="color:#C9A227;font-size:.9rem;"></i>
-                            @endfor
-                        </div>
-                        <div style="font-size:.78rem;color:rgba(255,255,255,.4);font-family:'Poppins',sans-serif;">{{ $totalRev }} {{ $isAr?'تقييم':'reviews' }}</div>
-                    </div>
-                </div>
-                @foreach($reviews->take(10) as $rev)
-                @php
-                    $custName = $isAr
-                        ? ($rev->customer->name_ar ?? $rev->customer->name ?? 'عميل')
-                        : ($rev->customer->name ?? 'Customer');
-                @endphp
-                <div class="bk-rev-card">
-                    <div class="auth-row">
-                        <div class="av"><i class="fas fa-user"></i></div>
-                        <div>
-                            <div class="name">{{ $custName }}</div>
-                            <div class="date">{{ $rev->created_at->diffForHumans() }}</div>
-                        </div>
-                    </div>
-                    <div class="stars">
-                        @for($s=1;$s<=5;$s++)
-                        <i class="{{ $s<=$rev->rating?'fas':'far' }} fa-star"></i>
-                        @endfor
-                    </div>
-                    @if($rev->comment)
-                    <p>{{ $rev->comment }}</p>
-                    @endif
-                </div>
-                @endforeach
-            </div>
-            @endif
-
-            {{-- INFO --}}
-            <div id="tab-info" class="bk-tab-section" style="display:none;">
-                <div class="bk-section-head">
-                    <h3><i class="fas fa-info-circle {{ $isAr?'ms-2':'me-2' }}" style="color:#C9A227;"></i>{{ $isAr ? 'معلومات الفرع' : 'Branch Info' }}</h3>
-                </div>
-
-                @if($branch->phone)
-                <div class="bk-info-row">
-                    <div class="bk-info-icon"><i class="fas fa-phone"></i></div>
-                    <div class="text"><a href="tel:{{ $branch->phone }}">{{ $branch->phone }}</a></div>
-                </div>
-                @endif
-                @if($company->email)
-                <div class="bk-info-row">
-                    <div class="bk-info-icon"><i class="fas fa-envelope"></i></div>
-                    <div class="text"><a href="mailto:{{ $company->email }}">{{ $company->email }}</a></div>
-                </div>
-                @endif
-                @if($branch->address)
-                <div class="bk-info-row">
-                    <div class="bk-info-icon"><i class="fas fa-map-marker-alt"></i></div>
-                    <div class="text">{{ $branch->address }}</div>
-                </div>
-                @endif
-
-                {{-- Social links --}}
-                @if($company->socialLinks && $company->socialLinks->isNotEmpty())
-                <div class="bk-info-row">
-                    <div class="bk-info-icon"><i class="fas fa-share-alt"></i></div>
-                    <div class="text d-flex gap-3 flex-wrap">
-                        @foreach($company->socialLinks as $sl)
-                        <a href="{{ $sl->url }}" target="_blank" style="color:#C9A227;text-decoration:none;font-size:.84rem;">
-                            <i class="fab fa-{{ strtolower($sl->platform ?? 'link') }} {{ $isAr?'ms-1':'me-1' }}"></i>
-                            {{ $sl->platform ?? 'Link' }}
-                        </a>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
-
-                {{-- Working hours --}}
-                @if($branch->workingHours->isNotEmpty())
-                <div style="margin:24px 0 16px;">
-                    <div class="bk-cat-label"><i class="fas fa-clock"></i> {{ $isAr?'أوقات العمل':'Working Hours' }}</div>
-                    <div style="background:#141414;border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden;">
-                        <table class="bk-wh-table">
-                            @for($d=0;$d<=6;$d++)
-                            @php
-                                $dayHours = $whByDay->get($d, collect());
-                                $isToday  = $d === $todayDow;
-                            @endphp
-                            <tr class="{{ $isToday ? 'today' : '' }}">
-                                <td>{{ $dayNames[$d] }}{{ $isToday ? ' ('.($isAr?'اليوم':'Today').')' : '' }}</td>
-                                <td style="text-align:{{ $isAr?'left':'right' }};">
-                                    @if($dayHours->isEmpty())
-                                        <span style="color:rgba(255,255,255,.25);">{{ $isAr?'—':'—' }}</span>
-                                    @elseif($dayHours->where('is_open',true)->isEmpty())
-                                        <span style="color:#f87171;">{{ $isAr?'مغلق':'Closed' }}</span>
-                                    @else
-                                        @foreach($dayHours->where('is_open',true) as $wh)
-                                        <span style="color:rgba(255,255,255,.7);">
-                                            {{ $wh->open_time ? \Carbon\Carbon::createFromFormat('H:i:s',$wh->open_time)->format('h:i A') : '' }}
-                                            –
-                                            {{ $wh->close_time ? \Carbon\Carbon::createFromFormat('H:i:s',$wh->close_time)->format('h:i A') : '' }}
-                                        </span>
-                                        @endforeach
-                                    @endif
-                                </td>
-                            </tr>
-                            @endfor
-                        </table>
-                    </div>
-                </div>
-                @endif
-
-                {{-- Map --}}
-                @if($branch->latitude && $branch->longitude)
-                <div class="mt-4">
-                    <div class="bk-cat-label"><i class="fas fa-map"></i> {{ $isAr?'الموقع على الخريطة':'Location' }}</div>
-                    <div class="bk-map-wrap">
-                        <iframe
-                            src="https://maps.google.com/maps?q={{ $branch->latitude }},{{ $branch->longitude }}&z=15&output=embed"
-                            width="100%" height="280" frameborder="0" style="display:block;border:0;"
-                            allowfullscreen="" loading="lazy">
-                        </iframe>
-                    </div>
-                </div>
-                @endif
-            </div>
-
-        </div>{{-- end left column --}}
-
-        {{-- ===== RIGHT COLUMN: BOOKING CART ===== --}}
-        <div id="bk-cart">
-            <div class="bk-cart-sticky">
-                <div class="bk-cart-head">
-                    <i class="far fa-calendar-check" style="color:#C9A227;font-size:1.1rem;"></i>
-                    <h4>{{ $isAr ? 'سلة الحجز' : 'Booking Cart' }}</h4>
-                    <span class="bk-cart-badge ms-auto" id="cart-count">0</span>
-                </div>
-                <div class="bk-cart-body">
-                    <div id="cart-empty-msg" class="bk-cart-empty">
-                        <i class="fas fa-calendar-plus"></i>
-                        <p>{{ $isAr ? 'اختر خدمة من القائمة لإضافتها للحجز.' : 'Select services from the list to add them here.' }}</p>
-                    </div>
-                    <div id="cart-items"></div>
-                    <div id="cart-total-section" class="bk-cart-total" style="display:none;">
-                        <div class="row-t">
-                            <span class="lbl">{{ $isAr ? 'إجمالي المدة' : 'Total Duration' }}</span>
-                            <span class="val" id="cart-duration">0 {{ $isAr?'دقيقة':'min' }}</span>
-                        </div>
-                        <div class="row-t">
-                            <span class="lbl">{{ $isAr ? 'إجمالي السعر' : 'Total Price' }}</span>
-                            <span class="val gold" id="cart-price">0 {{ $isAr?'ر.س':'SAR' }}</span>
-                        </div>
-                        <button onclick="bkOpenBookingModal()" id="cart-confirm-btn" class="bk-confirm-btn" style="width:100%;border:none;cursor:pointer;">
-                            <i class="far fa-calendar-check"></i>
-                            {{ $isAr ? 'اختر الوقت والتاريخ' : 'Choose Date & Time' }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>{{-- end grid --}}
-</div>{{-- end container --}}
-
-{{-- ── Floating cart button (mobile only) ── --}}
-<button class="bk-float-cart" onclick="bkToggleMobileCart()" id="bk-float-btn" aria-label="{{ $isAr?'سلة الحجز':'Cart' }}">
-    <i class="far fa-calendar-check"></i>
-    <span class="cart-cnt" id="float-cart-cnt" style="display:none;">0</span>
-</button>
-
-{{-- ── Mobile cart sheet ── --}}
-<div id="bk-mobile-cart">
-    <div class="overlay" onclick="bkToggleMobileCart()"></div>
-    <div class="sheet">
-        <div class="sheet-handle"></div>
-        <div class="sheet-head">
-            <i class="far fa-calendar-check" style="color:#C9A227;font-size:1.1rem;"></i>
-            <h4 style="font-size:1rem;font-weight:800;color:#fff;font-family:'Poppins',sans-serif;margin:0;">{{ $isAr?'سلة الحجز':'Booking Cart' }}</h4>
-            <span class="bk-cart-badge ms-auto" id="mobile-cart-count">0</span>
-            <button onclick="bkToggleMobileCart()" style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:.9rem;margin-{{ $isAr?'right':'left' }}:8px;">✕</button>
-        </div>
-        <div class="sheet-body" id="mobile-cart-body">
-            <div class="bk-cart-empty" id="mobile-cart-empty">
-                <i class="fas fa-calendar-plus"></i>
-                <p>{{ $isAr?'اختر خدمة من القائمة.':'Select services from the list.' }}</p>
-            </div>
-            <div id="mobile-cart-items"></div>
-            <div id="mobile-cart-total" class="bk-cart-total" style="display:none;">
-                <div class="row-t">
-                    <span class="lbl">{{ $isAr?'إجمالي السعر':'Total' }}</span>
-                    <span class="val gold" id="mobile-cart-price">0</span>
-                </div>
-                <button onclick="bkOpenBookingModal();bkToggleMobileCart();" class="bk-confirm-btn">
-                    <i class="far fa-calendar-check"></i>
-                    {{ $isAr?'اختر الوقت والتاريخ':'Choose Date & Time' }}
+                <button type="button" class="br-svc-add bkf-btn bkf-btn-ghost bkf-btn-sm"
+                        data-svc="{{ $svc->id }}" data-name="{{ $sName }}" data-price="{{ $svc->price ?: 0 }}"
+                        data-duration="{{ $svc->duration_minutes ?: 0 }}" data-cat="{{ $svc->service_category_id ?: '' }}"
+                        onclick="brToggle(this)">
+                  <x-icon name="check" :size="16" class="ic-on" style="display:none"/><span class="lbl">{{ $t('أضف','Add') }}</span>
                 </button>
+              </div>
+            @endforeach
+          </div>
+        @empty
+          <div class="br-book-empty"><x-icon name="scissors" :size="34"/><div>{{ $t('لا توجد خدمات منشورة بعد.','No services listed yet.') }}</div></div>
+        @endforelse
+      </section>
+
+      {{-- about --}}
+      @if($branch->description_en || $branch->description_ar)
+      <section class="br-block" id="br-about">
+        <h2 class="br-block-title">{{ $t('نبذة عن '.$brName, 'About '.$brName) }}</h2>
+        <p class="br-desc">{{ $isAr ? ($branch->description_ar ?: $branch->description_en) : ($branch->description_en ?: $branch->description_ar) }}</p>
+      </section>
+      @endif
+
+      {{-- team --}}
+      @if($employees->isNotEmpty())
+      <section class="br-block" id="br-team">
+        <h2 class="br-block-title">{{ $t('تعرّف على الفريق','Meet the team') }}</h2>
+        <div class="br-staff bkf-rail">
+          @foreach($employees as $emp)
+            @php $eName = $isAr ? ($emp->name_ar ?: $emp->name_en) : ($emp->name_en ?: $emp->name_ar); @endphp
+            <div class="br-staff-card">
+              <div class="br-staff-av">
+                @if($emp->image)<img src="{{ asset('storage/'.$emp->image) }}" alt="{{ $eName }}" loading="lazy" decoding="async">@else{{ mb_substr($eName ?: 'S', 0, 1) }}@endif
+              </div>
+              <div class="br-staff-nm">{{ $eName }}</div>
+              @if($emp->role)<div class="br-staff-rl">{{ $emp->role->localizedName() ?? ($isAr ? $emp->role->name_ar ?? '' : $emp->role->name_en ?? '') }}</div>@endif
             </div>
+          @endforeach
         </div>
+      </section>
+      @endif
+
+      {{-- reviews --}}
+      @if($totalRev)
+      <section class="br-block" id="br-reviews">
+        <h2 class="br-block-title">{{ $t('آراء العملاء','Client reviews') }}</h2>
+        <div class="br-rev-summary">
+          <div class="br-rev-big">
+            <div class="n bkf-tnum">{{ number_format($avg,1) }}</div>
+            <div class="s">@for($s=1;$s<=5;$s++)<x-icon name="{{ $s <= round($avg) ? 'star-fill' : 'star' }}" :size="16"/>@endfor</div>
+            <div class="c">{{ $totalRev }} {{ $t('تقييم','reviews') }}</div>
+          </div>
+          <div class="br-rev-bars">
+            @foreach($breakdown as $star => $count)
+              <div class="br-rev-bar"><span class="bkf-tnum">{{ $star }}★</span><span class="track"><span class="fill" style="width:{{ $totalRev ? round($count/$totalRev*100) : 0 }}%"></span></span><span class="bkf-tnum">{{ $count }}</span></div>
+            @endforeach
+          </div>
+        </div>
+        @foreach($reviews->take(8) as $rev)
+          @php $cn = $isAr ? ($rev->customer->name_ar ?? $rev->customer->name ?? 'عميل') : ($rev->customer->name ?? 'Customer'); @endphp
+          <div class="br-rev">
+            <div class="br-rev-top">
+              <div class="br-rev-av">{{ mb_substr($cn, 0, 1) }}</div>
+              <div><div class="br-rev-nm">{{ $cn }}</div><div class="br-rev-dt">{{ $rev->created_at->diffForHumans() }}</div></div>
+              <div class="br-rev-stars">@for($s=1;$s<=5;$s++)<x-icon name="{{ $s <= $rev->rating ? 'star-fill' : 'star' }}" :size="14"/>@endfor</div>
+            </div>
+            @if($rev->comment)<p>{{ $rev->comment }}</p>@endif
+          </div>
+        @endforeach
+      </section>
+      @endif
+
+      {{-- location + hours --}}
+      <section class="br-block" id="br-location">
+        <h2 class="br-block-title">{{ $t('الموقع وأوقات العمل','Location & hours') }}</h2>
+        @if($branch->address)<p class="br-desc" style="margin-bottom:14px"><x-icon name="map-pin" :size="16" style="color:var(--bk-accent);vertical-align:-2px"/> {{ $branch->fullAddress() ?: $branch->address }}</p>@endif
+        @if($branch->workingHours->isNotEmpty())
+        <div class="br-hours">
+          @php
+            $fmt = function ($v) {
+                if (!$v) return '';
+                return $v instanceof \DateTimeInterface ? $v->format('g:i A') : \Carbon\Carbon::parse($v)->format('g:i A');
+            };
+          @endphp
+          @for($d = 0; $d <= 6; $d++)
+            @php
+              $dh = $whByDay->get($d, collect())->where('is_open', true);
+              $w  = $dh->first();
+            @endphp
+            <div class="row {{ $d === $todayDow ? 'today' : '' }}">
+              <span>{{ $dayNames[$d] }}{{ $d === $todayDow ? ' · '.$t('اليوم','Today') : '' }}</span>
+              <span class="bkf-tnum">
+                @if($dh->isEmpty() || !$w)<span class="closed">{{ $t('مغلق','Closed') }}</span>
+                @else{{ $fmt($w->open_time) }} – {{ $fmt($w->close_time) }}@endif
+              </span>
+            </div>
+          @endfor
+        </div>
+        @endif
+        @if($branch->latitude && $branch->longitude)
+          <div id="br-map" data-lat="{{ $branch->latitude }}" data-lng="{{ $branch->longitude }}" data-name="{{ $brName }}"></div>
+        @endif
+      </section>
     </div>
+
+    {{-- ASIDE: booking cart --}}
+    <aside class="br-aside" id="book">
+      <div class="br-aside-inner">
+        <div class="br-book">
+          <div class="br-book-head">
+            <h3>{{ $t('حجزك','Your booking') }}</h3>
+            <span class="cnt" id="br-cart-count" style="display:none">0</span>
+          </div>
+          <div class="br-book-body">
+            <div class="br-book-empty" id="br-cart-empty">
+              <x-icon name="calendar" :size="34"/>
+              <div>{{ $t('اختر خدمة أو أكثر لبدء الحجز.','Add one or more services to start booking.') }}</div>
+            </div>
+            <div id="br-cart-items"></div>
+          </div>
+          <div class="br-book-foot" id="br-cart-foot" style="display:none">
+            <div class="br-book-tot">
+              <div><div class="l">{{ $t('الإجمالي','Total') }}</div><div class="d" id="br-cart-dur"></div></div>
+              <div class="p bkf-tnum" id="br-cart-price"></div>
+            </div>
+            <button type="button" class="bkf-btn bkf-btn-primary bkf-btn-block" onclick="brBook()"><x-icon name="calendar" :size="18"/>{{ $t('متابعة الحجز','Continue to booking') }}</button>
+          </div>
+        </div>
+        @if($branch->phone)
+        <a href="tel:{{ $branch->phone }}" class="bkf-btn bkf-btn-soft bkf-btn-block" style="margin-top:12px"><x-icon name="phone" :size="18"/>{{ $t('اتصل بالمكان','Call the venue') }}</a>
+        @endif
+      </div>
+    </aside>
+  </div>
 </div>
 
-@include('front.partials.footer')
+{{-- mobile sticky booking bar (persistent — default = "Book now") --}}
+<div class="br-bar" id="br-bar">
+  <div class="br-bar-info">
+    <div class="p bkf-tnum" id="br-bar-price">{{ $minPrice ? ($isAr ? 'من ' : 'from ').number_format($minPrice,0).' '.$currency : $t('احجز موعدك','Book a visit') }}</div>
+    <div class="l" id="br-bar-label">{{ $t('اختر خدماتك','Pick your services') }}</div>
+  </div>
+  <button type="button" class="bkf-btn bkf-btn-primary" onclick="brBarAction()">
+    <x-icon name="calendar" :size="18"/><span id="br-bar-btn-lbl">{{ $t('احجز الآن','Book now') }}</span>
+  </button>
+</div>
 
-{{-- ========== SCRIPTS ========== --}}
-<script src="{{ asset('frontend/vendor/jquery/jquery.min.js') }}"></script>
-<script src="{{ asset('frontend/vendor/jquery.appear/jquery.appear.min.js') }}"></script>
-<script src="{{ asset('frontend/vendor/jquery.easing/jquery.easing.min.js') }}"></script>
-<script src="{{ asset('frontend/vendor/jquery.cookie/jquery.cookie.min.js') }}"></script>
-<script src="{{ asset('frontend/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-<script src="{{ asset('frontend/vendor/owl.carousel/owl.carousel.min.js') }}"></script>
-<script src="{{ asset('frontend/vendor/magnific-popup/jquery.magnific-popup.min.js') }}"></script>
-<script src="{{ asset('frontend/js/theme.js') }}"></script>
-<script src="{{ asset('frontend/js/custom.js') }}"></script>
-<script src="{{ asset('frontend/js/theme.init.js') }}"></script>
+{{-- mobile cart sheet --}}
+<div class="br-sheet-ov" id="br-sheet-ov" onclick="brCloseSheet()"></div>
+<div class="br-sheet" id="br-sheet">
+  <div class="br-sheet-h"><h3 style="font-family:var(--bk-font-ui);font-weight:700">{{ $t('حجزك','Your booking') }}</h3><button class="br-icon-btn" onclick="brCloseSheet()" aria-label="{{ $t('إغلاق','Close') }}"><x-icon name="x" :size="18"/></button></div>
+  <div class="br-sheet-b"><div id="br-sheet-items"></div></div>
+  <div class="br-book-foot">
+    <div class="br-book-tot"><div class="l">{{ $t('الإجمالي','Total') }}</div><div class="p bkf-tnum" id="br-sheet-price">0 {{ $currency }}</div></div>
+    <button type="button" class="bkf-btn bkf-btn-primary bkf-btn-block" onclick="brCloseSheet();brBook()"><x-icon name="calendar" :size="18"/>{{ $t('متابعة الحجز','Continue to booking') }}</button>
+  </div>
+</div>
 
+{{-- lightbox --}}
+<div class="br-lb" id="br-lb">
+  <button class="br-lb-x" onclick="brLb.close()" aria-label="{{ $t('إغلاق','Close') }}"><x-icon name="x" :size="22"/></button>
+  <button class="br-lb-nav prev" onclick="brLb.step(-1)" aria-label="prev"><x-icon name="chevron-right" :size="22" style="transform:scaleX(-1)"/></button>
+  <img id="br-lb-img" src="" alt="">
+  <button class="br-lb-nav next" onclick="brLb.step(1)" aria-label="next"><x-icon name="chevron-right" :size="22"/></button>
+</div>
+
+@include('front.partials.group-booking-modal')
+{{-- customer-auth-modal is centralised in x-front.layout --}}
+
+<x-slot:scripts>
+<script src="{{ asset('vendor/leaflet/leaflet.js') }}" defer></script>
 <script>
-(function($){
-    'use strict';
+(function () {
+  'use strict';
+  var AR = @json($isAr), CUR = @json($currency);
+  var branchId = @json($branch->id), branchName = @json($brName);
+  var EMPS = @json($empData);
+  var GALLERY = @json($imgs->take(20)->values());
+  var MINPRICE = @json($minPrice ?: 0);
+  var cart = [];
 
-    var isAr  = {{ $isAr ? 'true' : 'false' }};
-    var branchId = {{ $branch->id }};
-    var companyId = {{ $company->id }};
+  function money(n){ return (parseFloat(n)||0).toFixed(0) + ' ' + CUR; }
+  function el(id){ return document.getElementById(id); }
+  function toast(m){ var t=document.createElement('div'); t.textContent=m; t.style.cssText='position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--bk-text);color:var(--bk-bg);padding:10px 18px;border-radius:999px;font-family:var(--bk-font-ui);font-size:.85rem;z-index:1300;box-shadow:var(--bk-shadow-lg);opacity:0;transition:opacity .3s'; document.body.appendChild(t); requestAnimationFrame(function(){t.style.opacity='1';}); setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove();},300);},2400); }
+  function matched(catId){ var m=EMPS.filter(function(e){return catId&&e.cats&&e.cats.indexOf(catId)>-1;}); return m.length?m:EMPS.slice(); }
 
-    // Employee & service data from PHP
-    var allEmployees = @json($empData);
-    var allServices  = @json($svcData);
+  /* favorites */
+  (function(){ var l; try{l=JSON.parse(localStorage.getItem('bk_favs')||'[]');}catch(e){l=[];}
+    document.querySelectorAll('[data-fav]').forEach(function(b){ if(l.indexOf(+b.dataset.fav)>-1){ b.classList.add('is-on'); b.querySelector('.heart-off').style.display='none'; b.querySelector('.heart-on').style.display='block'; } });
+    document.addEventListener('click',function(e){ var f=e.target.closest('[data-fav]'); if(!f)return; var id=+f.dataset.fav; var a; try{a=JSON.parse(localStorage.getItem('bk_favs')||'[]');}catch(x){a=[];} var i=a.indexOf(id); if(i>-1)a.splice(i,1); else a.push(id); try{localStorage.setItem('bk_favs',JSON.stringify(a));}catch(x){} var on=i===-1; f.classList.toggle('is-on',on); f.querySelector('.heart-off').style.display=on?'none':'block'; f.querySelector('.heart-on').style.display=on?'block':'none'; });
+  })();
 
-    // Cart state: array of { serviceId, serviceName, price, duration, catId, employeeId, employeeName }
-    var cart = [];
-
-    $(document).ready(function(){
-        // Navbar scroll
-        $(window).on('scroll', function(){
-            $(this).scrollTop()>30 ? $('#bk-navbar').addClass('scrolled') : $('#bk-navbar').removeClass('scrolled');
-        });
-
-        // Tab switching
-        $('.bk-tab-btn').on('click', function(){
-            var target = $(this).data('target');
-            $('.bk-tab-btn').removeClass('active');
-            $(this).addClass('active');
-            $('.bk-tab-section').hide();
-            $('#'+target).show();
-        });
-
-        // Cover slideshow
-        var slides = $('.bk-cover-slide');
-        if(slides.length > 1){
-            var cur = 0;
-            function goSlide(n){
-                slides.removeClass('active');
-                $('.bk-cover-dot').removeClass('active');
-                cur = (n + slides.length) % slides.length;
-                slides.eq(cur).addClass('active');
-                $('.bk-cover-dot').eq(cur).addClass('active');
-            }
-            $('.bk-cover-dot').on('click', function(){ goSlide($(this).data('slide')); });
-            setInterval(function(){ goSlide(cur+1); }, 5000);
-        }
-
-        // Lightbox
-        if($.fn.magnificPopup){
-            $('.bk-lightbox').magnificPopup({
-                type:'image', gallery:{enabled:true},
-                image:{verticalFit:true},
-                mainClass:'mfp-with-zoom'
-            });
-        }
-    });
-
-    // Add service to cart
-    window.bkAddToCart = function(svcId, svcName, price, duration, catId){
-        // Check if already added
-        if(cart.find(function(i){ return i.serviceId===svcId; })){
-            bkRemoveFromCart(svcId);
-            return;
-        }
-
-        // Find matching employees for this service's category
-        var matchedEmps = allEmployees.filter(function(e){
-            return catId && e.cats && e.cats.indexOf(catId) !== -1;
-        });
-        if(matchedEmps.length === 0) matchedEmps = allEmployees.slice();
-
-        var item = {
-            serviceId: svcId,
-            serviceName: svcName,
-            price: price,
-            duration: duration,
-            catId: catId,
-            employeeId: null,
-            employeeName: isAr ? 'أي موظف' : 'Any Employee',
-            matchedEmps: matchedEmps
-        };
-        cart.push(item);
-        bkRenderCart();
-
-        var btn = document.getElementById('add-btn-'+svcId);
-        if(btn){
-            btn.innerHTML = '<i class="fas fa-check '+(isAr?'ms-1':'me-1')+'"></i>'+(isAr?'تمت الإضافة ✓':'Added ✓');
-            btn.classList.add('added');
-        }
-    };
-
-    // Remove from cart
-    window.bkRemoveFromCart = function(svcId){
-        cart = cart.filter(function(i){ return i.serviceId !== svcId; });
-        bkRenderCart();
-        var btn = document.getElementById('add-btn-'+svcId);
-        if(btn){
-            btn.innerHTML = '<i class="fas fa-plus '+(isAr?'ms-1':'me-1')+'"></i>'+(isAr?'أضف للحجز':'Add to Booking');
-            btn.classList.remove('added');
-        }
-    };
-
-    // Update employee selection
-    window.bkUpdateEmployee = function(svcId, empId, empName){
-        var item = cart.find(function(i){ return i.serviceId===svcId; });
-        if(item){
-            item.employeeId   = empId ? parseInt(empId) : null;
-            item.employeeName = empName;
-        }
-        bkUpdateConfirmLink();
-    };
-
-    // Book with employee (from team section)
-    window.bkBookWithEmployee = function(empId, empName){
-        // Switch to services tab
-        $('.bk-tab-btn[data-target="tab-services"]').trigger('click');
-        // Scroll to cart
-        setTimeout(function(){
-            var cartEl = document.getElementById('bk-cart');
-            if(cartEl) cartEl.scrollIntoView({behavior:'smooth', block:'start'});
-        }, 200);
-        // Update all cart items to use this employee
-        cart.forEach(function(item){
-            item.employeeId   = empId;
-            item.employeeName = empName;
-        });
-        bkRenderCart();
-        // Show toast
-        bkToast(isAr ? 'سيتم حجز كل الخدمات مع '+empName : 'All services will be booked with '+empName);
-    };
-
-    function bkRenderCart(){
-        var $items = $('#cart-items');
-        var $empty = $('#cart-empty-msg');
-        var $total = $('#cart-total-section');
-        var $count = $('#cart-count');
-        $items.empty();
-
-        if(cart.length === 0){
-            $empty.show();
-            $total.hide();
-            $count.text('0');
-            return;
-        }
-        $empty.hide();
-        $count.text(cart.length);
-
-        cart.forEach(function(item){
-            var empOptions = '<option value="">'+(isAr?'أي موظف':'Any Employee')+'</option>';
-            item.matchedEmps.forEach(function(e){
-                var sel = item.employeeId === e.id ? ' selected' : '';
-                empOptions += '<option value="'+e.id+'"'+sel+'>'+e.name+'</option>';
-            });
-
-            var html = '<div class="bk-cart-item" id="ci-'+item.serviceId+'">'
-                +'<button class="remove-btn" onclick="bkRemoveFromCart('+item.serviceId+')" title="'+(isAr?'حذف':'Remove')+'"><i class="fas fa-times"></i></button>'
-                +'<div class="svc-name">'+item.serviceName+'</div>'
-                +'<div class="svc-meta">'
-                +'<span class="svc-price">'+item.price+' '+(isAr?'ر.س':'SAR')+'</span>'
-                +(item.duration ? '<span><i class="fas fa-clock" style="margin-'+(isAr?'left':'right')+':3px;"></i>'+item.duration+' '+(isAr?'د':'min')+'</span>' : '')
-                +'</div>'
-                +'<select class="emp-select" onchange="bkUpdateEmployee('+item.serviceId+', this.value, this.options[this.selectedIndex].text)">'+empOptions+'</select>'
-                +'</div>';
-            $items.append(html);
-        });
-
-        // Totals
-        var totalPrice    = cart.reduce(function(s,i){ return s + (parseFloat(i.price)||0); }, 0);
-        var totalDuration = cart.reduce(function(s,i){ return s + (parseInt(i.duration)||0); }, 0);
-        $('#cart-price').text(totalPrice.toFixed(0)+' '+(isAr?'ر.س':'SAR'));
-        $('#cart-duration').text(totalDuration+' '+(isAr?'دقيقة':'min'));
-        $total.show();
-
-        bkUpdateConfirmLink();
-        bkSyncMobileCart();
+  /* ── cart ── */
+  window.brToggle = function (btn) {
+    var id = +btn.dataset.svc, i = cart.findIndex(function (x) { return x.serviceId === id; });
+    if (i > -1) { cart.splice(i, 1); setBtn(btn, false); }
+    else {
+      var catId = btn.dataset.cat ? +btn.dataset.cat : null;
+      cart.push({ serviceId:id, name:btn.dataset.name, price:+btn.dataset.price||0, duration:+btn.dataset.duration||0, catId:catId, employeeId:null, matchedEmps:matched(catId) });
+      setBtn(btn, true);
     }
+    render();
+  };
+  function setBtn(btn, on){ btn.classList.toggle('is-added', on); btn.querySelector('.lbl').textContent = on ? (AR?'أُضيف':'Added') : (AR?'أضف':'Add'); btn.querySelector('.ic-on').style.display = on?'':'none'; }
+  window.brRemove = function (id) {
+    cart = cart.filter(function (x) { return x.serviceId !== id; });
+    var b = document.querySelector('.br-svc-add[data-svc="'+id+'"]'); if (b) setBtn(b, false);
+    render();
+  };
+  window.brSetEmp = function (id, empId) { var it = cart.find(function (x) { return x.serviceId === id; }); if (it) it.employeeId = empId ? +empId : null; };
 
-    function bkUpdateConfirmLink(){
-        // no-op: button opens modal directly
+  function itemHTML(it, ctx){
+    var opts = '<option value="">'+(AR?'أي موظف متاح':'Any available staff')+'</option>';
+    it.matchedEmps.forEach(function(e){ opts += '<option value="'+e.id+'"'+(it.employeeId===e.id?' selected':'')+'>'+e.name+'</option>'; });
+    var dur = it.duration ? '<span style="color:var(--bk-text-muted);font-size:.75rem">'+it.duration+(AR?' د':' min')+'</span>' : '';
+    return '<div class="br-bi">'
+      + '<div class="br-bi-top"><div><div class="br-bi-nm">'+it.name+'</div>'+dur+'</div>'
+      + '<div style="display:flex;align-items:center;gap:8px"><span class="br-bi-pr bkf-tnum">'+money(it.price)+'</span>'
+      + '<button class="br-bi-rm" onclick="brRemove('+it.serviceId+')" aria-label="remove">✕</button></div></div>'
+      + (ctx==='aside' ? '<select class="br-bi-emp" onchange="brSetEmp('+it.serviceId+',this.value)">'+opts+'</select>' : '')
+      + '</div>';
+  }
+
+  function render(){
+    var count = cart.length;
+    var price = cart.reduce(function(s,i){return s+(parseFloat(i.price)||0);},0);
+    var dur   = cart.reduce(function(s,i){return s+(parseInt(i.duration)||0);},0);
+
+    // aside
+    var items = el('br-cart-items'), empty = el('br-cart-empty'), foot = el('br-cart-foot'), cnt = el('br-cart-count');
+    if (items){
+      if (count===0){ items.innerHTML=''; empty.style.display=''; foot.style.display='none'; cnt.style.display='none'; }
+      else {
+        empty.style.display='none'; foot.style.display=''; cnt.style.display=''; cnt.textContent=count;
+        items.innerHTML = cart.map(function(it){return itemHTML(it,'aside');}).join('');
+        el('br-cart-price').textContent = money(price);
+        el('br-cart-dur').textContent = dur ? (dur+(AR?' دقيقة':' min')) : '';
+      }
     }
-
-    function bkSyncMobileCart(){
-        // Sync float button badge
-        var cnt = cart.length;
-        var floatCnt = document.getElementById('float-cart-cnt');
-        if(floatCnt){ floatCnt.textContent = cnt; floatCnt.style.display = cnt > 0 ? 'flex' : 'none'; }
-
-        // Sync mobile cart sheet
-        var mEmpty = document.getElementById('mobile-cart-empty');
-        var mItems = document.getElementById('mobile-cart-items');
-        var mTotal = document.getElementById('mobile-cart-total');
-        var mCount = document.getElementById('mobile-cart-count');
-        if(!mItems) return;
-
-        mItems.innerHTML = '';
-        if(cnt === 0){
-            if(mEmpty) mEmpty.style.display='block';
-            if(mTotal) mTotal.style.display='none';
-            if(mCount) mCount.textContent='0';
-            return;
-        }
-        if(mEmpty) mEmpty.style.display='none';
-        if(mCount) mCount.textContent=cnt;
-
-        cart.forEach(function(item){
-            var div = document.createElement('div');
-            div.className = 'bk-cart-item';
-            div.innerHTML = '<button class="remove-btn" onclick="bkRemoveFromCart('+item.serviceId+')" title="Remove"><i class="fas fa-times"></i></button>'
-                +'<div class="svc-name">'+item.serviceName+'</div>'
-                +'<div class="svc-meta"><span class="svc-price">'+item.price+' '+(isAr?'ر.س':'SAR')+'</span></div>';
-            mItems.appendChild(div);
-        });
-
-        if(mTotal){
-            var totalP = cart.reduce(function(s,i){ return s+(parseFloat(i.price)||0); },0);
-            var mPrice = document.getElementById('mobile-cart-price');
-            if(mPrice) mPrice.textContent = totalP.toFixed(0)+' '+(isAr?'ر.س':'SAR');
-            mTotal.style.display='block';
-        }
+    // mobile bar (persistent; content adapts to cart state)
+    var barPrice = el('br-bar-price'), barLabel = el('br-bar-label'), barBtnLbl = el('br-bar-btn-lbl');
+    if (count > 0){
+      if (barPrice) barPrice.textContent = money(price);
+      if (barLabel) barLabel.textContent = count + ' ' + (AR ? 'خدمة مختارة' : (count === 1 ? 'service' : 'services'));
+      if (barBtnLbl) barBtnLbl.textContent = AR ? 'متابعة' : 'Continue';
+    } else {
+      if (barPrice) barPrice.textContent = MINPRICE ? ((AR ? 'من ' : 'from ') + money(MINPRICE)) : (AR ? 'احجز موعدك' : 'Book a visit');
+      if (barLabel) barLabel.textContent = AR ? 'اختر خدماتك' : 'Pick your services';
+      if (barBtnLbl) barBtnLbl.textContent = AR ? 'احجز الآن' : 'Book now';
     }
+    var si = el('br-sheet-items'); if (si){ si.innerHTML = cart.map(function(it){return itemHTML(it,'sheet');}).join('') || '<div class="br-book-empty">'+(AR?'لا خدمات':'No services')+'</div>'; el('br-sheet-price').textContent = money(price); }
+  }
 
-    // Sequential index when booking multiple services
-    var bkCartBookingIndex = 0;
+  // Bar button: with items → open the cart sheet; empty → jump to services.
+  window.brBarAction = function(){ if (cart.length) brOpenSheet(); else { var s = el('br-services'); if (s) s.scrollIntoView({ behavior:'smooth', block:'start' }); } };
+  window.brOpenSheet = function(){ el('br-sheet-ov').classList.add('open'); el('br-sheet').classList.add('open'); document.body.style.overflow='hidden'; };
+  window.brCloseSheet = function(){ el('br-sheet-ov').classList.remove('open'); el('br-sheet').classList.remove('open'); document.body.style.overflow=''; };
 
-    window.bkOpenBookingModal = function(){
-        if(cart.length === 0) return;
-        bkCartBookingIndex = 0;
-        bkOpenNextService();
-    };
+  /* ── booking → Fresha-style group modal (one time, all services/guests) ── */
+  window.brBook = function(){
+    if (!cart.length){ toast(AR?'اختر خدمة أولاً':'Add a service first'); return; }
+    if (!window.GroupBookingModal){ toast(AR?'تعذّر فتح الحجز':'Booking unavailable'); return; }
+    GroupBookingModal.open(cart.map(function(x){ return x.serviceId; }));
+  };
 
-    function bkOpenNextService(){
-        if(bkCartBookingIndex >= cart.length) return;
+  /* ── tabs / scroll-spy ── */
+  var tabs = [].slice.call(document.querySelectorAll('.br-tab'));
+  tabs.forEach(function(tb){ tb.addEventListener('click', function(){ var s=el(tb.dataset.target); if(s) s.scrollIntoView({behavior:'smooth',block:'start'}); }); });
+  if ('IntersectionObserver' in window){
+    var spy = new IntersectionObserver(function(ents){ ents.forEach(function(en){ if(en.isIntersecting){ tabs.forEach(function(t){ t.classList.toggle('is-active', t.dataset.target===en.target.id); }); } }); }, { rootMargin:'-40% 0px -55% 0px' });
+    tabs.forEach(function(t){ var s=el(t.dataset.target); if(s) spy.observe(s); });
+  }
 
-        var item = cart[bkCartBookingIndex];
+  /* ── services: category chips filter (Fresha-style) ── */
+  (function(){
+    var tabs = [].slice.call(document.querySelectorAll('.br-svc-tab'));
+    if(!tabs.length) return;
+    var cats = [].slice.call(document.querySelectorAll('#br-services .br-svc-cat'));
+    var tabsBar = el('br-svc-tabs');
+    function apply(cat){ cats.forEach(function(c){ c.style.display = (cat==='all' || c.dataset.cat===cat) ? '' : 'none'; }); }
+    tabs.forEach(function(t){ t.addEventListener('click', function(){
+      tabs.forEach(function(x){ x.classList.remove('is-active'); x.setAttribute('aria-selected','false'); });
+      t.classList.add('is-active'); t.setAttribute('aria-selected','true');
+      apply(t.dataset.cat);
+      // keep the chosen chip in view
+      if (t.scrollIntoView) t.scrollIntoView({ inline:'center', block:'nearest', behavior:'smooth' });
+    }); });
+  })();
 
-        // Pick employee: if user chose one, use it; else use first available
-        var emp = null;
-        if(item.employeeId){
-            emp = item.matchedEmps.find(function(e){ return e.id === item.employeeId; });
-        }
-        if(!emp) emp = item.matchedEmps[0] || null;
+  /* ── hours: collapse to today on small screens ── */
+  (function(){
+    if(!window.matchMedia('(max-width:760px)').matches) return;
+    var hours = document.querySelector('.br-hours'); if(!hours) return;
+    var rows = [].slice.call(hours.querySelectorAll('.row')); if(rows.length <= 1) return;
+    rows.forEach(function(r){ if(!r.classList.contains('today')) r.classList.add('br-hidden'); });
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'br-hours-toggle bkf-btn bkf-btn-ghost bkf-btn-sm bkf-btn-block';
+    btn.textContent = AR ? 'عرض كل الأوقات' : 'Show all hours';
+    btn.addEventListener('click', function(){ rows.forEach(function(r){ r.classList.remove('br-hidden'); }); btn.remove(); });
+    hours.parentNode.insertBefore(btn, hours.nextSibling);
+  })();
 
-        if(!emp){
-            bkToast(isAr ? 'لا يوجد موظف متاح لهذه الخدمة' : 'No employee available for this service');
-            return;
-        }
+  /* ── lightbox ── */
+  var lbIdx = 0;
+  window.brLb = {
+    open:function(i){ lbIdx=i; el('br-lb-img').src=GALLERY[i]; el('br-lb').classList.add('open'); document.body.style.overflow='hidden'; },
+    close:function(){ el('br-lb').classList.remove('open'); document.body.style.overflow=''; },
+    step:function(d){ lbIdx=(lbIdx+d+GALLERY.length)%GALLERY.length; el('br-lb-img').src=GALLERY[lbIdx]; }
+  };
+  document.querySelectorAll('#br-gallery [data-lb]').forEach(function(g){ g.addEventListener('click', function(){ brLb.open(+g.dataset.lb); }); });
+  document.addEventListener('keydown', function(e){ if(!el('br-lb').classList.contains('open'))return; if(e.key==='Escape')brLb.close(); if(e.key==='ArrowRight')brLb.step(AR?-1:1); if(e.key==='ArrowLeft')brLb.step(AR?1:-1); });
 
-        BookingModal.open({
-            service: {
-                id:       item.serviceId,
-                name:     item.serviceName,
-                duration: item.duration,
-                price:    item.price,
-            },
-            employee: {
-                id:    emp.id,
-                name:  emp.name,
-                image: emp.image || null,
-            },
-            branch: {
-                id:   branchId,
-                name: isAr ? '{{ $branch->name_ar ?? $branch->name_en }}' : '{{ $branch->name_en ?? $branch->name_ar }}',
-            },
-            // called after successful booking of this item
-            onSuccess: function(appt){
-                bkCartBookingIndex++;
-                if(bkCartBookingIndex < cart.length){
-                    // small delay then open next service modal
-                    setTimeout(function(){
-                        BookingModal.resetForNext(
-                            isAr ? 'خدمة ' + (bkCartBookingIndex+1) + ' من ' + cart.length : 'Service ' + (bkCartBookingIndex+1) + ' of ' + cart.length
-                        );
-                        bkOpenNextService();
-                    }, 1200);
-                } else {
-                    // All booked — clear cart
-                    setTimeout(function(){
-                        cart = [];
-                        bkRenderCart();
-                    }, 2000);
-                }
-            },
-        });
-    }
-
-    window.bkToggleMobileCart = function(){
-        var sheet = document.getElementById('bk-mobile-cart');
-        sheet.style.display = (sheet.style.display === 'block') ? 'none' : 'block';
-    };
-
-    function bkToast(msg){
-        var t = $('<div>').css({
-            position:'fixed', bottom:'24px', right: isAr ? 'auto' : '24px', left: isAr ? '24px' : 'auto',
-            background:'#C9A227', color:'#0a0a0a', padding:'12px 22px',
-            borderRadius:'10px', fontFamily:'Poppins,sans-serif', fontWeight:'700',
-            fontSize:'.85rem', zIndex:9999, boxShadow:'0 6px 24px rgba(0,0,0,.4)',
-            opacity:0
-        }).text(msg);
-        $('body').append(t);
-        t.animate({opacity:1,bottom:'32px'},300).delay(2500).animate({opacity:0,bottom:'24px'},400,function(){ $(this).remove(); });
-    }
-
-})(jQuery);
+  /* ── leaflet single-marker map ── */
+  function initMap(){
+    var m = el('br-map'); if(!m) return;
+    if(!window.L){ window.addEventListener('load', initMap, {once:true}); return; }
+    var lat=+m.dataset.lat, lng=+m.dataset.lng;
+    var map = L.map('br-map',{scrollWheelZoom:false,zoomControl:true}).setView([lat,lng],15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+    L.marker([lat,lng]).addTo(map).bindPopup('<b>'+m.dataset.name+'</b>').openPopup();
+    setTimeout(function(){ map.invalidateSize(); }, 200);
+  }
+  initMap();
+  window.addEventListener('resize', function(){ render(); });
+})();
 </script>
-
-</div>
-
-{{-- ── Booking Modal (Booksy-style date/time picker) ── --}}
-@include('front.partials.booking-modal')
-
-</body>
-</html>
+</x-slot:scripts>
+</x-front.layout>

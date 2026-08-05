@@ -55,7 +55,7 @@
 </head>
 <body>
     <div class="wrap">
-        <div class="brand">Booksy</div>
+        <div class="brand"><img src="{{ asset('images/logo-dark.png') }}" alt="GlowRez" style="height:44px;width:auto"></div>
         <div class="code">500</div>
         <h1>{{ $isAr ? 'حدث خطأ من جانبنا' : 'Something went wrong on our end' }}</h1>
         <p>

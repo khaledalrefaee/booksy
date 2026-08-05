@@ -95,6 +95,84 @@
 </div>
 @endif
 
+{{-- ════ RECENT ACTIVITY + NEEDS HELP ════ --}}
+<div class="row g-3 mb-4">
+    {{-- Recent business activity --}}
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h6 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                        <i data-feather="activity" style="width:16px;height:16px;color:var(--bk-accent);"></i>
+                        {{ __('Recent activity') }}
+                    </h6>
+                    <a href="{{ route('owner.companies.index') }}" class="tx-12 text-decoration-none" style="color:var(--bk-accent);">{{ __('All companies') }}</a>
+                </div>
+                @forelse($recentActivity as $act)
+                    @php $name = $act->company?->localizedName() ?? ($act->email_attempted ?? __('Unknown')); @endphp
+                    <div class="d-flex align-items-center gap-3 py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                             style="width:34px;height:34px;background:{{ $act->successful ? 'var(--bk-success-bg)' : 'var(--bk-danger-bg)' }};color:{{ $act->successful ? 'var(--bk-success)' : 'var(--bk-danger)' }};">
+                            <i data-feather="{{ $act->successful ? 'log-in' : 'alert-triangle' }}" style="width:15px;height:15px;"></i>
+                        </div>
+                        <div class="flex-grow-1" style="min-width:0;">
+                            <div class="tx-13 fw-semibold text-truncate">
+                                {{ $name }}
+                                <span class="fw-normal text-muted">{{ $act->successful ? __('logged in') : __('failed to log in') }}</span>
+                            </div>
+                            <div class="tx-11 text-muted">{{ $act->created_at?->diffForHumans() }} · {{ $act->ip }}</div>
+                        </div>
+                        @if($act->company)
+                            <a href="{{ route('owner.companies.show', $act->company_id) }}" class="tx-11 text-decoration-none flex-shrink-0" style="color:var(--bk-accent);">{{ __('View') }}</a>
+                        @endif
+                    </div>
+                @empty
+                    <div class="text-center text-muted py-4 tx-13">{{ __('No activity yet') }}</div>
+                @endforelse
+            </div>
+        </div>
+    </div>
+
+    {{-- Businesses needing help --}}
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                    <i data-feather="life-buoy" style="width:16px;height:16px;color:var(--bk-warning);"></i>
+                    {{ __('Businesses needing help') }}
+                </h6>
+                @forelse($needsHelp as $row)
+                    <a href="{{ route('owner.companies.show', $row['company']->id) }}"
+                       class="d-block text-decoration-none py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="tx-13 fw-semibold text-truncate" style="color:var(--bk-text);max-width:60%;">{{ $row['company']->localizedName() }}</span>
+                            <span class="tx-11 fw-bold" style="color:{{ $row['percent'] < 50 ? 'var(--bk-danger)' : 'var(--bk-warning)' }};">{{ $row['percent'] }}%</span>
+                        </div>
+                        <div class="progress" style="height:5px;background:var(--bk-border);">
+                            <div class="progress-bar" role="progressbar"
+                                 style="width:{{ $row['percent'] }}%;background:{{ $row['percent'] < 50 ? 'var(--bk-danger)' : 'var(--bk-warning)' }};"
+                                 aria-valuenow="{{ $row['percent'] }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="tx-11 text-muted mt-1">
+                            {{ __('Signed up :days days ago', ['days' => $row['days_old']]) }}
+                            @if($row['last_login'])
+                                · {{ __('last seen :time', ['time' => $row['last_login']->diffForHumans()]) }}
+                            @else
+                                · {{ __('never logged in') }}
+                            @endif
+                        </div>
+                    </a>
+                @empty
+                    <div class="text-center text-muted py-4 tx-13">
+                        <i data-feather="check-circle" style="width:22px;height:22px;color:var(--bk-success);"></i>
+                        <div class="mt-2">{{ __('All recent businesses are set up') }}</div>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- ════ STAT CARDS — horizontal style ════ --}}
 <div class="row g-3 mb-4">
 
@@ -134,9 +212,9 @@
     </div>
 
     <div class="col-6 col-xl bk-a3">
-        <div class="bk-stat" data-accent="green">
+        <div class="bk-stat" data-accent="gold">
             <div class="bk-stat-left">
-                <div class="bk-stat-icon bk-icon-green">
+                <div class="bk-stat-icon bk-icon-gold">
                     <i data-feather="briefcase" style="width:22px;height:22px;"></i>
                 </div>
                 <div class="bk-stat-info">
@@ -150,9 +228,9 @@
     </div>
 
     <div class="col-6 col-xl bk-a4">
-        <div class="bk-stat" data-accent="blue">
+        <div class="bk-stat" data-accent="gold">
             <div class="bk-stat-left">
-                <div class="bk-stat-icon bk-icon-blue">
+                <div class="bk-stat-icon bk-icon-gold">
                     <i data-feather="scissors" style="width:22px;height:22px;"></i>
                 </div>
                 <div class="bk-stat-info">
@@ -166,9 +244,9 @@
     </div>
 
     <div class="col-6 col-xl bk-a5">
-        <div class="bk-stat" data-accent="red">
+        <div class="bk-stat" data-accent="gold">
             <div class="bk-stat-left">
-                <div class="bk-stat-icon bk-icon-red">
+                <div class="bk-stat-icon bk-icon-gold">
                     <i data-feather="users" style="width:22px;height:22px;"></i>
                 </div>
                 <div class="bk-stat-info">

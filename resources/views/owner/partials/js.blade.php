@@ -19,3 +19,14 @@
 
 {{-- Optional: flatpickr + ApexCharts + dashboard demo JS on pages that @push to this stack. --}}
 @stack('owner-after-template')
+
+{{-- Button loading state (opt-in): add data-loading to a submit button --}}
+<script>
+document.addEventListener('submit', function (e) {
+    var btn = e.target.querySelector('button[type="submit"][data-loading], [data-loading].btn');
+    if (btn && !btn.classList.contains('is-loading')) {
+        btn.classList.add('is-loading');
+        btn.setAttribute('aria-busy', 'true');
+    }
+}, true);
+</script>

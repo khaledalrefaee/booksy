@@ -6,6 +6,7 @@ use App\Models\Concerns\HasLocalizedNames;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -19,6 +20,7 @@ class Company extends Authenticatable
     protected $fillable = [
         'name_en',
         'name_ar',
+        'owner_name',
         'email',
         'email_verified_at',
         'phone',
@@ -153,6 +155,16 @@ class Company extends Authenticatable
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function onboarding(): HasOne
+    {
+        return $this->hasOne(CompanyOnboarding::class);
+    }
+
+    public function loginActivities(): HasMany
+    {
+        return $this->hasMany(CompanyLoginActivity::class);
     }
 
     public function socialLinks(): MorphMany

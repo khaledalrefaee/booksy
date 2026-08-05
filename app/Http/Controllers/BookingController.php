@@ -91,6 +91,8 @@ class BookingController extends Controller
         // Generate slots every 15 min within each shift — breaks between shifts are excluded automatically
         $duration = $service->duration_minutes;
         $slots    = [];
+        $now      = now();
+        $isToday  = $date->isToday();
 
         foreach ($shifts as $shift) {
             $whStart = Carbon::parse($date->toDateString() . ' ' . $shift->start_time);
@@ -99,6 +101,9 @@ class BookingController extends Controller
 
             while ($cursor->clone()->addMinutes($duration)->lte($whEnd)) {
                 $slotEnd = $cursor->clone()->addMinutes($duration);
+
+                // Hide slots that already started (today only)
+                if ($isToday && $cursor->lt($now)) { $cursor->addMinutes(15); continue; }
 
                 $overlaps = $booked->contains(
                     fn($a) => $a->start_time->lt($slotEnd) && $a->end_time->gt($cursor)
@@ -236,6 +241,333 @@ class BookingController extends Controller
                 'status'     => $appointment->status,
             ],
         ], 201);
+    }
+
+    /**
+     * GET /api/booking/group-slots
+     * Availability for a whole visit: one or more guests, each with their own
+     * services + staff choice. `mode=one` books everything back-to-back on ONE
+     * employee; `mode=split` runs guests in parallel with distinct employees.
+     */
+    public function groupSlots(Request $request): JsonResponse
+    {
+        $data = $this->validateSpec($request, false);
+        $date = Carbon::parse($data['date'])->startOfDay();
+        $now  = now();
+        $isToday = $date->isToday();
+
+        [$employees, $empById, $services, $booked, $gridStart, $gridEnd, $guestBlocks]
+            = $this->prepareSpec($data, $date);
+
+        if (!$gridStart) {
+            return response()->json(['available' => false, 'slots' => [], 'reason' => 'closed']);
+        }
+
+        $allocator = app(\App\Services\ResourceAllocator::class);
+        $slots = [];
+
+        for ($t = $gridStart->clone(); $t->lte($gridEnd); $t->addMinutes(15)) {
+            if ($isToday && $t->lt($now)) continue;
+            if ($this->resolveAssignment($data['mode'], $guestBlocks, $employees, $empById, $booked, $date, $t, $allocator) !== null) {
+                $slots[] = ['time' => $t->format('H:i'), 'start' => $date->toDateString() . ' ' . $t->format('H:i') . ':00'];
+            }
+        }
+
+        return response()->json([
+            'available' => count($slots) > 0,
+            'reason'    => count($slots) ? null : 'fully_booked',
+            'slots'     => $slots,
+        ]);
+    }
+
+    /**
+     * POST /api/booking/group-book
+     * Atomically creates every appointment for the visit (all guests / services).
+     * Re-checks availability under a lock; any conflict rolls the whole thing back.
+     */
+    public function groupBook(Request $request): JsonResponse
+    {
+        $customer = CustomerAuthController::authCustomer();
+        if (!$customer) {
+            return response()->json(['message' => 'Login required.'], 401);
+        }
+
+        $data = $this->validateSpec($request, true);
+        $date = Carbon::parse($data['start_time'])->startOfDay();
+        $start = Carbon::parse($data['start_time']);
+
+        [$employees, $empById, $services, $booked, $gridStart, $gridEnd, $guestBlocks]
+            = $this->prepareSpec($data, $date);
+
+        $allocator = app(\App\Services\ResourceAllocator::class);
+
+        try {
+            $created = DB::transaction(function () use ($data, $guestBlocks, $employees, $empById, $date, $start, $allocator, $customer) {
+                // Fresh booked map under lock
+                $lockedBooked = Appointment::whereIn('employee_id', $employees->pluck('id'))
+                    ->whereDate('start_time', $date->toDateString())
+                    ->whereIn('status', AppointmentStatus::blockingValues())
+                    ->lockForUpdate()
+                    ->get(['employee_id', 'start_time', 'end_time'])
+                    ->groupBy('employee_id');
+
+                $plan = $this->resolveAssignment($data['mode'], $guestBlocks, $employees, $empById, $lockedBooked, $date, $start, $allocator);
+                if ($plan === null) {
+                    throw new \RuntimeException('conflict');
+                }
+
+                $appts = [];
+                foreach ($plan as $job) { // each job: employee_id, service, start, end
+                    $resourceId = null;
+                    if ($allocator->requiresResource($job['service'])) {
+                        $res = $allocator->findFree($job['service'], $job['start'], $job['end'], null, true);
+                        if (!$res) throw new \RuntimeException('conflict');
+                        $resourceId = $res->id;
+                    }
+                    $svc = $job['service'];
+                    $appts[] = Appointment::create([
+                        'company_id'    => $svc->branch->company_id,
+                        'branch_id'     => $svc->branch_id,
+                        'customer_id'   => $customer->id,
+                        'employee_id'   => $job['employee_id'],
+                        'resource_id'   => $resourceId,
+                        'service_id'    => $svc->id,
+                        'start_time'    => $job['start'],
+                        'end_time'      => $job['end'],
+                        'status'        => AppointmentStatus::Pending,
+                        'total_price'   => $svc->price,
+                        'payment_status'=> 'pending',
+                        'notes'         => $data['notes'] ?? null,
+                    ]);
+                }
+                return $appts;
+            });
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'conflict' => true,
+                'message'  => app()->getLocale() === 'ar'
+                    ? 'تعذّر تأكيد بعض المواعيد في هذا الوقت. اختر وقتاً آخر.'
+                    : 'Some services couldn’t be booked at this time. Please pick another slot.',
+            ], 409);
+        }
+
+        foreach ($created as $appt) {
+            try { event(new AppointmentBooked($appt)); } catch (\Throwable $e) {}
+        }
+
+        $first = $created[0];
+        $last  = $created[count($created) - 1];
+        return response()->json([
+            'booked' => true,
+            'count'  => count($created),
+            'summary' => [
+                'start' => $first->start_time->format('D, d M Y · H:i'),
+                'end'   => $last->end_time->format('H:i'),
+                'total' => collect($created)->sum('total_price'),
+            ],
+        ], 201);
+    }
+
+    // ── group-booking helpers ────────────────────────────────────────────────
+
+    private function validateSpec(Request $request, bool $forBooking): array
+    {
+        return $request->validate([
+            'branch_id'              => 'required|exists:branches,id',
+            $forBooking ? 'start_time' : 'date' => $forBooking ? 'required|date' : 'required|date_format:Y-m-d',
+            'mode'                   => 'required|in:one,split',
+            'employee_id'            => 'nullable|exists:employees,id',
+            'notes'                  => 'nullable|string|max:500',
+            'guests'                 => 'required|array|min:1|max:8',
+            'guests.*.service_ids'   => 'required|array|min:1',
+            'guests.*.service_ids.*' => 'required|exists:services,id',
+            'guests.*.employee_id'   => 'nullable|exists:employees,id',
+        ]);
+    }
+
+    /** Load employees, services, the day's bookings, the time grid and per-guest blocks. */
+    private function prepareSpec(array $data, Carbon $date): array
+    {
+        $employees = Employee::with(['workingHours', 'serviceCategories', 'leaves'])
+            ->where('branch_id', $data['branch_id'])
+            ->where('is_active', true)
+            ->get();
+        $empById = $employees->keyBy('id');
+
+        $svcIds   = collect($data['guests'])->flatMap(fn ($g) => $g['service_ids'])->unique()->values();
+        $services = Service::with('branch')->whereIn('id', $svcIds)->get()->keyBy('id');
+
+        $booked = Appointment::whereIn('employee_id', $employees->pluck('id'))
+            ->whereDate('start_time', $date->toDateString())
+            ->whereIn('status', AppointmentStatus::blockingValues())
+            ->get(['employee_id', 'start_time', 'end_time'])
+            ->groupBy('employee_id');
+
+        $dow = (int) $date->dayOfWeek;
+        $gridStart = null; $gridEnd = null;
+        foreach ($employees as $e) {
+            foreach ($e->workingHours->where('day_of_week', $dow)->where('is_working', true) as $sh) {
+                if (!$sh->start_time || !$sh->end_time) continue;
+                $ws = Carbon::parse($date->toDateString() . ' ' . $sh->start_time);
+                $we = Carbon::parse($date->toDateString() . ' ' . $sh->end_time);
+                if (!$gridStart || $ws->lt($gridStart)) $gridStart = $ws;
+                if (!$gridEnd   || $we->gt($gridEnd))   $gridEnd   = $we;
+            }
+        }
+
+        $guestBlocks = [];
+        foreach ($data['guests'] as $g) {
+            $gsvcs = array_values(array_filter(array_map(fn ($id) => $services[$id] ?? null, $g['service_ids'])));
+            $guestBlocks[] = [
+                'services'    => $gsvcs,
+                'dur'         => array_sum(array_map(fn ($s) => (int) $s->duration_minutes, $gsvcs)),
+                'employee_id' => $g['employee_id'] ?? null,
+            ];
+        }
+
+        return [$employees, $empById, $services, $booked, $gridStart, $gridEnd, $guestBlocks];
+    }
+
+    /**
+     * Return a concrete plan (array of jobs: employee_id, service, start, end) if the
+     * whole visit fits at $start, or null. `one` = everything sequential on one
+     * employee; `split` = guests in parallel with distinct employees.
+     */
+    private function resolveAssignment(string $mode, array $guestBlocks, $employees, $empById, $booked, Carbon $date, Carbon $start, $allocator): ?array
+    {
+        if ($mode === 'one') {
+            $allSvcs = collect($guestBlocks)->flatMap(fn ($b) => $b['services'])->all();
+            $cands = ($id = $guestBlocks[0]['employee_id'] ?? null) && $empById->has($id)
+                ? [$empById[$id]]
+                : $employees->all();
+            // A top-level employee_id (shared "one professional") wins if present.
+            if (!empty($guestBlocks) && ($shared = $this->sharedEmployee($guestBlocks, $empById))) {
+                $cands = [$shared];
+            }
+            foreach ($cands as $emp) {
+                if (!$this->empQualifiedAll($emp, $allSvcs)) continue;
+                $jobs = $this->blockJobs($emp, $booked[$emp->id] ?? collect(), $date, $start, $allSvcs, $allocator);
+                if ($jobs !== null) return $jobs;
+            }
+            return null;
+        }
+
+        // split: feasible distinct employees per guest, all starting at $start
+        $feasible = [];
+        foreach ($guestBlocks as $gi => $b) {
+            $set = [];
+            $cands = ($b['employee_id'] && $empById->has($b['employee_id'])) ? [$empById[$b['employee_id']]] : $employees->all();
+            foreach ($cands as $emp) {
+                if (!$this->empQualifiedAll($emp, $b['services'])) continue;
+                if ($this->blockJobs($emp, $booked[$emp->id] ?? collect(), $date, $start, $b['services'], $allocator) !== null) {
+                    $set[] = $emp->id;
+                }
+            }
+            if (empty($set)) return null;
+            $feasible[$gi] = $set;
+        }
+        $assign = $this->assignDistinct($feasible);
+        if ($assign === null) return null;
+
+        // Build jobs from the assignment
+        $jobs = [];
+        foreach ($guestBlocks as $gi => $b) {
+            $emp = $empById[$assign[$gi]];
+            $sub = $this->blockJobs($emp, $booked[$emp->id] ?? collect(), $date, $start, $b['services'], $allocator);
+            if ($sub === null) return null;
+            $jobs = array_merge($jobs, $sub);
+        }
+        return $jobs;
+    }
+
+    /** If every guest requested the same specific employee, return it (shared "one professional"). */
+    private function sharedEmployee(array $guestBlocks, $empById)
+    {
+        $ids = array_unique(array_map(fn ($b) => $b['employee_id'], $guestBlocks));
+        if (count($ids) === 1 && $ids[0] && $empById->has($ids[0])) return $empById[$ids[0]];
+        return null;
+    }
+
+    /** Jobs for a consecutive block on ONE employee, or null if it doesn't fit/free. */
+    private function blockJobs($emp, $bookedForEmp, Carbon $date, Carbon $start, array $services, $allocator): ?array
+    {
+        $totalDur = array_sum(array_map(fn ($s) => (int) $s->duration_minutes, $services));
+        if ($totalDur <= 0) return null;
+        if (!$this->empFreeFor($emp, $bookedForEmp, $date, $start, $totalDur)) return null;
+
+        $jobs = [];
+        $cursor = $start->clone();
+        foreach ($services as $svc) {
+            $end = $cursor->clone()->addMinutes((int) $svc->duration_minutes);
+            if ($allocator->requiresResource($svc) && $allocator->findFree($svc, $cursor, $end, null, false) === null) {
+                return null;
+            }
+            $jobs[] = ['employee_id' => $emp->id, 'service' => $svc, 'start' => $cursor->clone(), 'end' => $end->clone()];
+            $cursor = $end;
+        }
+        return $jobs;
+    }
+
+    private function empQualifiedAll($emp, array $services): bool
+    {
+        $catIds = $emp->serviceCategories->pluck('id');
+        if ($catIds->isEmpty()) return true; // generalist — can do anything
+        foreach ($services as $s) {
+            if ($s->service_category_id && !$catIds->contains($s->service_category_id)) return false;
+        }
+        return true;
+    }
+
+    private function empFreeFor($emp, $bookedForEmp, Carbon $date, Carbon $start, int $dur): bool
+    {
+        $end = $start->clone()->addMinutes($dur);
+        $dow = (int) $date->dayOfWeek;
+
+        $inShift = false;
+        foreach ($emp->workingHours->where('day_of_week', $dow)->where('is_working', true) as $sh) {
+            if (!$sh->start_time || !$sh->end_time) continue;
+            $ws = Carbon::parse($date->toDateString() . ' ' . $sh->start_time);
+            $we = Carbon::parse($date->toDateString() . ' ' . $sh->end_time);
+            if ($start->gte($ws) && $end->lte($we)) { $inShift = true; break; }
+        }
+        if (!$inShift) return false;
+
+        foreach ($emp->leaves->where('status', 'approved') as $l) {
+            $ls = Carbon::parse($l->start_date)->startOfDay();
+            $le = Carbon::parse($l->end_date)->endOfDay();
+            if ($date->betweenIncluded($ls, $le)) {
+                if (!$l->is_hourly) return false;
+                if ($l->start_hour && $l->end_hour) {
+                    $hs = Carbon::parse($date->toDateString() . ' ' . $l->start_hour);
+                    $he = Carbon::parse($date->toDateString() . ' ' . $l->end_hour);
+                    if ($hs->lt($end) && $he->gt($start)) return false;
+                }
+            }
+        }
+
+        foreach ($bookedForEmp ?? [] as $a) {
+            if ($a->start_time->lt($end) && $a->end_time->gt($start)) return false;
+        }
+        return true;
+    }
+
+    /** Assign a distinct employee to each guest (backtracking). Returns [guestIdx => empId] or null. */
+    private function assignDistinct(array $guestFeasible): ?array
+    {
+        $assign = []; $used = [];
+        $keys = array_keys($guestFeasible);
+        $solve = function ($i) use (&$solve, &$assign, &$used, $guestFeasible, $keys) {
+            if ($i >= count($keys)) return true;
+            $g = $keys[$i];
+            foreach ($guestFeasible[$g] as $empId) {
+                if (isset($used[$empId])) continue;
+                $used[$empId] = true; $assign[$g] = $empId;
+                if ($solve($i + 1)) return true;
+                unset($used[$empId], $assign[$g]);
+            }
+            return false;
+        };
+        return $solve(0) ? $assign : null;
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

@@ -83,8 +83,32 @@
 
 <x-front.layout
     variant="business"
-    :title="$t('بوكسي للأعمال — نظام حجوزات مجاني لصالونك', 'Booksy for Business — free bookings for your salon')"
+    :title="$t('GlowRez للأعمال — نظام حجوزات مجاني لصالونك', 'GlowRez for Business — Free Booking System for Your Salon')"
+    :keywords="$t('نظام حجوزات صالون, برنامج إدارة صالون, حجوزات مجانية, تذكير واتساب, إدارة مواعيد, سوريا', 'salon booking software, salon management, free bookings, WhatsApp reminders, appointment scheduling, Syria')"
     :description="$t('نظام حجوزات مجاني للصالونات ومراكز التجميل والسبا وصالونات الرجال: صفحة حجز عامة، رمز QR، تقويم بلا تعارض، وتذكير واتساب تلقائي يقلّل الغياب. المالية والمخزون والتقارير قريبًا.', 'A free bookings platform for beauty salons, spas and barbershops: public booking page, QR code, conflict-free calendar and automatic WhatsApp reminders. Finance, inventory and reports coming soon.')">
+
+<x-slot:head>
+<script type="application/ld+json">{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type'    => 'SoftwareApplication',
+    'name'     => 'GlowRez for Business',
+    'operatingSystem' => 'Web, Android, iOS',
+    'applicationCategory' => 'BusinessApplication',
+    'url'      => route('front.business'),
+    'description' => $t('نظام حجوزات وإدارة مجاني لأماكن الجمال والعناية: صفحة حجز عامة، رمز QR، تقويم بلا تعارض وتذكير واتساب تلقائي.', 'A free booking & management platform for beauty & wellness venues: public booking page, QR code, conflict-free calendar and automatic WhatsApp reminders.'),
+    'offers'   => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'SYP'],
+    'publisher'=> ['@type' => 'Organization', 'name' => 'GlowRez', 'url' => url('/')],
+], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+<script type="application/ld+json">{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type'    => 'FAQPage',
+    'mainEntity' => collect($faqs)->map(fn($q) => [
+        '@type' => 'Question',
+        'name'  => $t($q['ar'], $q['en']),
+        'acceptedAnswer' => ['@type' => 'Answer', 'text' => $t($q['aar'], $q['aen'])],
+    ])->all(),
+], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+</x-slot:head>
 
 <x-slot:styles>
 <style>
@@ -193,6 +217,11 @@ html[dir="ltr"] .biz-hero h1 .gold::after{ transform-origin:0 50%; }
 .bkf-nav:not(.is-scrolled):not(.is-open) .bkf-nav-lang{ color:#fff; }
 .bkf-nav:not(.is-scrolled):not(.is-open) .bkf-brand-sub{ color:rgba(255,255,255,.74); }
 .bkf-nav:not(.is-scrolled):not(.is-open) .bkf-brand-dot{ color:var(--bk-gold); }
+/* the logo is a raster <img> (theme-swapped), so color:#fff no longer whitens it —
+   force the white (dark-variant) lockup while the nav floats over the dark hero, in
+   BOTH themes; once .is-scrolled restores the solid bar, the theme lockup returns. */
+.bkf-nav:not(.is-scrolled):not(.is-open) .bkf-logo--light{ display:none; }
+.bkf-nav:not(.is-scrolled):not(.is-open) .bkf-logo--dark{ display:block; }
 .bkf-nav:not(.is-scrolled):not(.is-open) .bkf-nav-links a:hover,
 .bkf-nav:not(.is-scrolled):not(.is-open) .bkf-nav-links a.is-active{ color:#fff; background:rgba(255,255,255,.16); }
 .bkf-nav:not(.is-scrolled):not(.is-open) .bkf-nav-lang{ border-color:rgba(255,255,255,.45); }

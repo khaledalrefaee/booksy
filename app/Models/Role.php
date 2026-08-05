@@ -26,4 +26,11 @@ class Role extends Model
     {
         return $this->hasMany(Employee::class);
     }
+
+    public function localizedName(): string
+    {
+        return app()->getLocale() === 'ar'
+            ? ($this->label_ar ?: $this->label_en ?: '')
+            : ($this->label_en ?: $this->label_ar ?: '');
+    }
 }

@@ -11,10 +11,22 @@ class CategoryFactory extends Factory
 
     public function definition(): array
     {
+        // Real business types (not lorem) so factory-built data never leaks
+        // placeholder categories into UI. Prefer CategorySeeder for real data.
+        $types = [
+            ['Salon', 'صالون'],
+            ['Barbershop', 'صالون حلاقة'],
+            ['Spa', 'سبا'],
+            ['Beauty Center', 'مركز تجميل'],
+            ['Nail Studio', 'استوديو أظافر'],
+            ['Wellness Center', 'مركز عافية'],
+        ];
+        $pick = fake()->randomElement($types);
+
         return [
             'slug' => fake()->unique()->slug(2),
-            'name_en' => fake()->word(),
-            'name_ar' => fake()->word(),
+            'name_en' => $pick[0],
+            'name_ar' => $pick[1],
             'sort_order' => fake()->numberBetween(1, 100),
         ];
     }

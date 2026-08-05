@@ -445,7 +445,7 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
 <div id="bk-cover">
     <div class="bk-cover-slides">
         @forelse($allImages as $idx => $img)
-        <img src="{{ asset('storage/'.$img->path) }}" alt="" class="{{ $idx === 0 ? 'active' : '' }}" data-slide="{{ $idx }}">
+        <img src="{{ asset('storage/'.$img->path) }}" alt="{{ $name }}" class="{{ $idx === 0 ? 'active' : '' }}" data-slide="{{ $idx }}" loading="{{ $idx === 0 ? 'eager' : 'lazy' }}" decoding="async">
         @empty
         <div style="width:100%;height:100%;background:linear-gradient(135deg,#111,#0a0a0a);position:absolute;inset:0;"></div>
         @endforelse
@@ -695,7 +695,7 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
                     <div class="bk-emp-card">
                         <div class="bk-emp-photo">
                             @if($emp->image)
-                                <img src="{{ asset('storage/'.$emp->image) }}" alt="{{ $isAr ? $emp->name_ar : $emp->name_en }}">
+                                <img src="{{ asset('storage/'.$emp->image) }}" alt="{{ $isAr ? $emp->name_ar : $emp->name_en }}" loading="lazy" decoding="async">
                             @else
                                 <div class="bk-emp-photo-placeholder"><i class="fas fa-user-circle"></i></div>
                             @endif

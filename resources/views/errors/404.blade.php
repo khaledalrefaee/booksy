@@ -55,7 +55,7 @@
 </head>
 <body>
     <div class="wrap">
-        <div class="brand">Booksy</div>
+        <div class="brand"><img src="{{ asset('images/logo-dark.png') }}" alt="GlowRez" style="height:44px;width:auto"></div>
         <div class="code">404</div>
         <h1>{{ $isAr ? 'هذه الصفحة غير موجودة' : 'This page doesn\'t exist' }}</h1>
         <p>

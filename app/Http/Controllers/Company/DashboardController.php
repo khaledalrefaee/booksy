@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Company;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Services\OnboardingService;
 use App\Services\Owner\DashboardStatisticsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -59,7 +60,9 @@ class DashboardController extends Controller
             ];
         }
 
-        return view('company.index', compact('stats', 'recentAppointments', 'chartData', 'company', 'monthOptions'));
+        $onboarding = OnboardingService::summary($company);
+
+        return view('company.index', compact('stats', 'recentAppointments', 'chartData', 'company', 'monthOptions', 'onboarding'));
     }
 
     public function monthChart(Request $request): JsonResponse

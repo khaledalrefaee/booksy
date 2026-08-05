@@ -37,6 +37,11 @@ Route::prefix('owner')->name('owner.')->group(function () {
 
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+        // Owner notifications (new-business bell)
+        Route::get('notifications', [\App\Http\Controllers\Owner\NotificationController::class, 'index'])->name('notifications.index');
+        Route::post('notifications/read-all', [\App\Http\Controllers\Owner\NotificationController::class, 'readAll'])->name('notifications.read-all');
+        Route::get('notifications/{notification}', [\App\Http\Controllers\Owner\NotificationController::class, 'read'])->name('notifications.read');
+
         // Global search
         Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 

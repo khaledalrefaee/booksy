@@ -51,24 +51,15 @@ class DamascusSeeder extends Seeder
             $q->select('id')->from('companies')->where('email', 'like', '%@booksy.test');
         })->delete();
         DB::table('companies')->where('email', 'like', '%@booksy.test')->delete();
-        DB::table('categories')->whereIn('slug', array_column($this->globalCategories(), 'slug'))->delete();
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         /* ════════════════════════════════════════
-           1. GLOBAL CATEGORIES
+           1. CANONICAL CATEGORIES (owned by CategorySeeder)
+           Resolve ids by slug; ensure CategorySeeder has run first.
         ════════════════════════════════════════ */
-        $catIds = [];
-        foreach ($this->globalCategories() as $i => $cat) {
-            $catIds[$cat['slug']] = DB::table('categories')->insertGetId([
-                'slug'       => $cat['slug'],
-                'name_en'    => $cat['name_en'],
-                'name_ar'    => $cat['name_ar'],
-                'sort_order' => $i + 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+        $this->call(CategorySeeder::class);
+        $catIds = DB::table('categories')->pluck('id', 'slug')->toArray();
 
         /* ════════════════════════════════════════
            2. COMPANIES (25)
@@ -144,17 +135,6 @@ class DamascusSeeder extends Seeder
     /* ════════════════════════════════════════════════════════════
        DATA DEFINITIONS
     ════════════════════════════════════════════════════════════ */
-
-    private function globalCategories(): array
-    {
-        return [
-            ['slug' => 'spa',            'name_en' => 'Spa & Wellness',      'name_ar' => 'سبا وعافية'],
-            ['slug' => 'salon-women',    'name_en' => 'Women\'s Salon',       'name_ar' => 'صالون نسائي'],
-            ['slug' => 'salon-men',      'name_en' => 'Men\'s Barber',        'name_ar' => 'صالون رجالي'],
-            ['slug' => 'beauty-center',  'name_en' => 'Beauty Center',        'name_ar' => 'مركز تجميل'],
-            ['slug' => 'nail-studio',    'name_en' => 'Nail Studio',          'name_ar' => 'استوديو أظافر'],
-        ];
-    }
 
     private function companiesData(): array
     {
@@ -280,7 +260,7 @@ class DamascusSeeder extends Seeder
                 'name_ar'  => 'صالون فرح للتجميل',
                 'email'    => 'farah.salon@booksy.test',
                 'phone'    => '+963 11 222 4001',
-                'category_slug' => 'salon-women',
+                'category_slug' => 'salon',
                 'service_categories' => [
                     ['slug' => 'farah-hair',  'name_en' => 'Hair',         'name_ar' => 'الشعر'],
                     ['slug' => 'farah-skin',  'name_en' => 'Skin & Face',  'name_ar' => 'البشرة والوجه'],
@@ -335,7 +315,7 @@ class DamascusSeeder extends Seeder
                 'name_ar'  => 'مركز نور للتجميل',
                 'email'    => 'nour.beauty@booksy.test',
                 'phone'    => '+963 11 222 5001',
-                'category_slug' => 'salon-women',
+                'category_slug' => 'salon',
                 'service_categories' => [
                     ['slug' => 'nour-hair',   'name_en' => 'Hair Services',   'name_ar' => 'خدمات الشعر'],
                     ['slug' => 'nour-body',   'name_en' => 'Body & Waxing',   'name_ar' => 'الجسم والشمع'],
@@ -377,7 +357,7 @@ class DamascusSeeder extends Seeder
                 'name_ar'  => 'داماس غلامور',
                 'email'    => 'damas.glamour@booksy.test',
                 'phone'    => '+963 11 333 6001',
-                'category_slug' => 'salon-women',
+                'category_slug' => 'salon',
                 'service_categories' => [
                     ['slug' => 'dg-hair',   'name_en' => 'Hair',        'name_ar' => 'الشعر'],
                     ['slug' => 'dg-face',   'name_en' => 'Face',        'name_ar' => 'الوجه'],
@@ -418,7 +398,7 @@ class DamascusSeeder extends Seeder
                 'name_ar'  => 'صالون ريم للسيدات',
                 'email'    => 'reem.salon@booksy.test',
                 'phone'    => '+963 11 444 7001',
-                'category_slug' => 'salon-women',
+                'category_slug' => 'salon',
                 'service_categories' => [
                     ['slug' => 'reem-hair',  'name_en' => 'Hair', 'name_ar' => 'الشعر'],
                     ['slug' => 'reem-care',  'name_en' => 'Care', 'name_ar' => 'العناية'],
@@ -490,7 +470,7 @@ class DamascusSeeder extends Seeder
                 'name_ar'  => 'حلاقة البسمة',
                 'email'    => 'albasma.barber@booksy.test',
                 'phone'    => '+963 11 555 9001',
-                'category_slug' => 'salon-men',
+                'category_slug' => 'barbershop',
                 'service_categories' => [
                     ['slug' => 'basma-hair',  'name_en' => 'Haircut',       'name_ar' => 'الحلاقة'],
                     ['slug' => 'basma-beard', 'name_en' => 'Beard',         'name_ar' => 'اللحية'],
@@ -542,7 +522,7 @@ class DamascusSeeder extends Seeder
                 'name_ar'  => 'حلاقة كراون',
                 'email'    => 'crown.barber@booksy.test',
                 'phone'    => '+963 11 444 1001',
-                'category_slug' => 'salon-men',
+                'category_slug' => 'barbershop',
                 'service_categories' => [
                     ['slug' => 'crown-cut',   'name_en' => 'Cuts',       'name_ar' => 'قصات'],
                     ['slug' => 'crown-beard', 'name_en' => 'Beard',      'name_ar' => 'لحية'],
@@ -583,7 +563,7 @@ class DamascusSeeder extends Seeder
                 'name_ar'  => 'حلاقة الجنتلمان',
                 'email'    => 'gentleman.barber@booksy.test',
                 'phone'    => '+963 11 333 1101',
-                'category_slug' => 'salon-men',
+                'category_slug' => 'barbershop',
                 'service_categories' => [
                     ['slug' => 'gent-style', 'name_en' => 'Style',      'name_ar' => 'التصفيف'],
                     ['slug' => 'gent-beard', 'name_en' => 'Beard Care', 'name_ar' => 'العناية باللحية'],
@@ -613,7 +593,7 @@ class DamascusSeeder extends Seeder
                 'name_ar'  => 'حلاقة دمشق التراثية',
                 'email'    => 'heritage.barber@booksy.test',
                 'phone'    => '+963 11 555 1201',
-                'category_slug' => 'salon-men',
+                'category_slug' => 'barbershop',
                 'service_categories' => [
                     ['slug' => 'heritage-trad', 'name_en' => 'Traditional',  'name_ar' => 'تقليدي'],
                     ['slug' => 'heritage-mod',  'name_en' => 'Modern',       'name_ar' => 'حديث'],
@@ -706,7 +686,7 @@ class DamascusSeeder extends Seeder
                 'key' => 'petra_salon', 'name_en' => 'Petra Beauty Salon',
                 'name_ar' => 'صالون بترا للتجميل',
                 'email' => 'petra.salon@booksy.test', 'phone' => '+963 11 444 1501',
-                'category_slug' => 'salon-women',
+                'category_slug' => 'salon',
                 'service_categories' => [
                     ['slug' => 'petra-hair',   'name_en' => 'Hair',     'name_ar' => 'شعر'],
                     ['slug' => 'petra-makeup', 'name_en' => 'Makeup',   'name_ar' => 'مكياج'],
@@ -737,7 +717,7 @@ class DamascusSeeder extends Seeder
                 'key' => 'tigers_barber', 'name_en' => 'Tiger Cuts Barbershop',
                 'name_ar' => 'حلاقة تايغر كاتس',
                 'email' => 'tiger.barber@booksy.test', 'phone' => '+963 11 555 1601',
-                'category_slug' => 'salon-men',
+                'category_slug' => 'barbershop',
                 'service_categories' => [
                     ['slug' => 'tiger-cuts',  'name_en' => 'Haircuts', 'name_ar' => 'قصات'],
                     ['slug' => 'tiger-beard', 'name_en' => 'Beard',    'name_ar' => 'لحية'],
@@ -785,7 +765,7 @@ class DamascusSeeder extends Seeder
                 'key' => 'kenz_salon', 'name_en' => 'Kenz Ladies Salon',
                 'name_ar' => 'صالون كنز للسيدات',
                 'email' => 'kenz.salon@booksy.test', 'phone' => '+963 11 222 1801',
-                'category_slug' => 'salon-women',
+                'category_slug' => 'salon',
                 'service_categories' => [
                     ['slug' => 'kenz-hair',  'name_en' => 'Hair',  'name_ar' => 'شعر'],
                     ['slug' => 'kenz-nails', 'name_en' => 'Nails', 'name_ar' => 'أظافر'],
@@ -811,7 +791,7 @@ class DamascusSeeder extends Seeder
                 'key' => 'topline_barber', 'name_en' => 'Topline Barbers',
                 'name_ar' => 'توبلاين للحلاقة',
                 'email' => 'topline.barber@booksy.test', 'phone' => '+963 11 444 1901',
-                'category_slug' => 'salon-men',
+                'category_slug' => 'barbershop',
                 'service_categories' => [
                     ['slug' => 'top-cuts', 'name_en' => 'Cuts',     'name_ar' => 'قصات'],
                     ['slug' => 'top-pkg',  'name_en' => 'Packages', 'name_ar' => 'باقات'],
@@ -912,7 +892,7 @@ class DamascusSeeder extends Seeder
                 'key' => 'elite_barber', 'name_en' => 'Elite Barbershop',
                 'name_ar' => 'إيليت للحلاقة',
                 'email' => 'elite.barber@booksy.test', 'phone' => '+963 11 555 2301',
-                'category_slug' => 'salon-men',
+                'category_slug' => 'barbershop',
                 'service_categories' => [
                     ['slug' => 'elite-cuts',  'name_en' => 'Cuts',   'name_ar' => 'قصات'],
                     ['slug' => 'elite-beard', 'name_en' => 'Beard',  'name_ar' => 'لحية'],
@@ -936,7 +916,7 @@ class DamascusSeeder extends Seeder
                 'key' => 'stars_beauty', 'name_en' => 'Stars Beauty Lounge',
                 'name_ar' => 'ستارز بيوتي لاونج',
                 'email' => 'stars.beauty@booksy.test', 'phone' => '+963 11 333 2401',
-                'category_slug' => 'salon-women',
+                'category_slug' => 'salon',
                 'service_categories' => [
                     ['slug' => 'stars-hair',   'name_en' => 'Hair',     'name_ar' => 'شعر'],
                     ['slug' => 'stars-facial', 'name_en' => 'Facials',  'name_ar' => 'عناية بشرة'],

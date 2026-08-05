@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Application;
 use App\Http\Middleware\AuthenticateCompany;
+use App\Http\Middleware\AuthenticateCustomer;
 use App\Http\Middleware\AuthenticateOwner;
 use App\Http\Middleware\EnsureCompanyFeature;
 use App\Http\Middleware\EnsureOwnerPermission;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'company.auth'  => AuthenticateCompany::class,
             'company.guest' => RedirectIfCompanyAuthenticated::class,
             'feature'       => EnsureCompanyFeature::class,
+            'customer.auth' => AuthenticateCustomer::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

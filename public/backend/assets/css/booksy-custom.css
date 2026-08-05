@@ -50,6 +50,40 @@ html { scroll-behavior: smooth; }
     --bk-online:#8BC26A;
 }
 
+/* ════════════════════════════════════════════════
+   TYPOGRAPHY SYSTEM (Phase A) — theme-independent
+   One scale for the whole app. Roles, not ad-hoc sizes.
+   Retrofitted onto existing component classes below so it
+   applies everywhere without editing individual pages.
+════════════════════════════════════════════════ */
+:root {
+    /* Type scale (role → size) */
+    --fs-page:    1.6rem;   /* page / hero title      */
+    --fs-section: 1.05rem;  /* section header         */
+    --fs-card:    .9rem;    /* card / widget title    */
+    --fs-body:    .85rem;   /* body text              */
+    --fs-helper:  .76rem;   /* helper / sub / caption */
+    --fs-label:   .72rem;   /* labels / eyebrows      */
+
+    /* Weights */
+    --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700; --fw-black:800;
+
+    /* Line heights */
+    --lh-tight:1.2; --lh-snug:1.35; --lh-normal:1.5; --lh-relaxed:1.6;
+}
+/* Page titles scale down a touch on small screens (keeps RTL + responsive intact) */
+@media (max-width: 575.98px) {
+    :root { --fs-page: 1.3rem; --fs-section: 1rem; }
+}
+
+/* Utility classes — use these on new markup instead of raw font-size */
+.bk-t-page    { font-size:var(--fs-page);    font-weight:var(--fw-black);   line-height:var(--lh-tight); }
+.bk-t-section { font-size:var(--fs-section); font-weight:var(--fw-bold);    line-height:var(--lh-snug); }
+.bk-t-card    { font-size:var(--fs-card);    font-weight:var(--fw-bold);    line-height:var(--lh-snug); }
+.bk-t-body    { font-size:var(--fs-body);    font-weight:var(--fw-regular); line-height:var(--lh-relaxed); color:var(--bk-text-soft); }
+.bk-t-helper  { font-size:var(--fs-helper);  font-weight:var(--fw-regular); line-height:var(--lh-normal); color:var(--bk-text-muted); }
+.bk-t-label   { font-size:var(--fs-label);   font-weight:var(--fw-bold);    letter-spacing:.5px; text-transform:uppercase; color:var(--bk-text-muted); }
+
 /* Bootstrap root-var remap so all NobleUI components inherit Atelier surfaces */
 .bk-theme-light {
     --bs-body-bg:#F7F5EF; --bs-body-bg-rgb:247,245,239;
@@ -334,7 +368,7 @@ html { scroll-behavior: smooth; }
 
 .bk-stat-info { min-width:0; }
 .bk-stat-label {
-    font-size:.72rem;font-weight:700;
+    font-size:var(--fs-label);font-weight:var(--fw-bold);
     text-transform:uppercase;letter-spacing:1px;
     margin-bottom:4px;white-space:normal;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
@@ -342,7 +376,7 @@ html { scroll-behavior: smooth; }
     color:var(--bk-text-muted);
 }
 .bk-stat-sub {
-    font-size:.76rem;margin-top:4px;
+    font-size:var(--fs-helper);margin-top:4px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     color:var(--bk-text-muted);
     line-height:1.4;
@@ -460,7 +494,7 @@ html { scroll-behavior: smooth; }
     margin-bottom:16px;
 }
 .bk-sh-title {
-    font-size:.9rem;font-weight:700;
+    font-size:var(--fs-section);font-weight:var(--fw-bold);
     display:flex;align-items:center;gap:8px;
     color:var(--bk-text);
 }
@@ -556,13 +590,108 @@ html { scroll-behavior: smooth; }
     border-color:var(--bk-border) !important;
     box-shadow:var(--bk-shadow) !important;
 }
-.card-title { font-size:.88rem !important; font-weight:700 !important; color:var(--bk-text); }
+.card-title { font-size:var(--fs-card) !important; font-weight:var(--fw-bold) !important; color:var(--bk-text); }
 
-/* Buttons global smooth */
-.btn {
-    transition:all .22s cubic-bezier(.22,1,.36,1) !important;
+/* ════════════════════════════════════════════════
+   BUTTON SYSTEM (Phase B) — tokens + states + variants
+   Global, brand-first. Applies to all .btn without
+   editing blades. Inline styles / .rounded-pill still win.
+════════════════════════════════════════════════ */
+:root {
+    --btn-h:40px; --btn-h-sm:32px; --btn-h-lg:48px;
+    --btn-px:16px; --btn-px-sm:11px; --btn-px-lg:22px;
+    --btn-radius:10px;                 /* keeps the SaaS look (not sharp Bootstrap) */
+    --btn-fs:var(--fs-body);           /* tied to Phase A typography */
+    --btn-fs-sm:var(--fs-helper);
+    --btn-fw:var(--fw-semibold);
+    --btn-icon:16px;                   /* icon size inside buttons */
+    --btn-gap:8px;                     /* icon ↔ label gap */
+    --btn-transition:all .2s cubic-bezier(.22,1,.36,1);
+    --btn-disabled-opacity:.5;
+    --btn-icon-size:36px;              /* square icon-only (table) button */
 }
+
+/* Base — alignment, sizing, motion (no !important on radius so utilities win) */
+.btn {
+    display:inline-flex; align-items:center; justify-content:center; gap:var(--btn-gap);
+    min-height:var(--btn-h);
+    padding-block:0; padding-inline:var(--btn-px);
+    border-radius:var(--btn-radius);
+    font-size:var(--btn-fs); font-weight:var(--btn-fw); line-height:1;
+    transition:var(--btn-transition) !important;
+    touch-action:manipulation;
+}
+.btn > i, .btn > svg, .btn [data-feather] { width:var(--btn-icon); height:var(--btn-icon); flex-shrink:0; }
 .btn:active { transform:scale(.96) !important; }
+.btn-sm { min-height:var(--btn-h-sm); padding-inline:var(--btn-px-sm); font-size:var(--btn-fs-sm); gap:6px; }
+.btn-lg { min-height:var(--btn-h-lg); padding-inline:var(--btn-px-lg); }
+
+/* Focus ring (accessibility) — accent, both themes */
+.btn:focus-visible {
+    outline:none;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--bk-accent) 35%,transparent) !important;
+}
+
+/* Disabled — clear, non-interactive */
+.btn:disabled, .btn.disabled, .btn[disabled] {
+    opacity:var(--btn-disabled-opacity) !important;
+    cursor:not-allowed !important; box-shadow:none !important; transform:none !important;
+}
+
+/* ── Brand variants (guarantee Olive + Gold, kill default Bootstrap blue/red) ── */
+.btn-primary {
+    background:var(--bk-accent-fill) !important; border-color:var(--bk-accent-fill) !important;
+    color:var(--bk-accent-ink) !important;
+}
+.btn-primary:hover, .btn-primary:focus-visible {
+    background:var(--bk-accent-hover) !important; border-color:var(--bk-accent-hover) !important;
+    color:var(--bk-accent-ink) !important;
+}
+.btn-gold {
+    background:var(--bk-gold) !important; border-color:var(--bk-gold) !important; color:var(--bk-gold-ink) !important;
+}
+.btn-gold:hover { background:var(--bk-gold-strong) !important; border-color:var(--bk-gold-strong) !important; }
+.btn-outline-secondary, .btn-outline-primary {
+    background:transparent !important; border-color:var(--bk-border-strong) !important; color:var(--bk-text-soft) !important;
+}
+.btn-outline-secondary:hover, .btn-outline-primary:hover {
+    background:var(--bk-surface-2) !important; border-color:var(--bk-accent) !important; color:var(--bk-text) !important;
+}
+.btn-danger {
+    background:var(--bk-danger) !important; border-color:var(--bk-danger) !important; color:#fff !important;
+}
+.btn-danger:hover { filter:brightness(.94); }
+.btn-success {
+    background:var(--bk-success) !important; border-color:var(--bk-success) !important; color:#fff !important;
+}
+.btn-success:hover { filter:brightness(.94); }
+.btn-light, .btn-outline-light { color:var(--bk-text-soft) !important; }
+
+/* ── Icon-only button (table actions). Requires aria-label + title. ── */
+.bk-btn-icon {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:var(--btn-icon-size); height:var(--btn-icon-size); padding:0;
+    border-radius:9px; border:1px solid transparent; background:transparent;
+    color:var(--bk-text-muted); cursor:pointer;
+    transition:var(--btn-transition);
+}
+.bk-btn-icon > i, .bk-btn-icon > svg, .bk-btn-icon [data-feather] { width:16px; height:16px; }
+.bk-btn-icon:hover { background:var(--bk-surface-2); color:var(--bk-accent); border-color:var(--bk-border); }
+.bk-btn-icon:focus-visible { outline:none; box-shadow:0 0 0 3px color-mix(in srgb,var(--bk-accent) 30%,transparent); }
+.bk-btn-icon-danger:hover { background:var(--bk-danger-bg); color:var(--bk-danger); border-color:transparent; }
+
+/* ── Loading state (toggle .is-loading via JS; opt-in with data-loading) ── */
+.btn.is-loading { color:transparent !important; pointer-events:none; position:relative; }
+.btn.is-loading::after {
+    content:''; position:absolute; top:calc(50% - .55em); inset-inline-start:calc(50% - .55em);
+    width:1.1em; height:1.1em; border-radius:50%;
+    border:2px solid color-mix(in srgb,var(--bk-accent) 35%,transparent); border-top-color:var(--bk-accent);
+    animation:bk-btn-spin .6s linear infinite;
+}
+.btn-primary.is-loading::after, .btn-danger.is-loading::after, .btn-success.is-loading::after,
+.btn-gold.is-loading::after { border-color:rgba(255,255,255,.45); border-top-color:#fff; }
+@keyframes bk-btn-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .btn.is-loading::after { animation-duration:1.2s; } }
 
 /* Page content spacing */
 .page-content {
@@ -612,7 +741,7 @@ html { scroll-behavior: smooth; }
 }
 [dir="rtl"] .bk-hero::after { right:auto; left:-60px; }
 .bk-hero-title {
-    font-size: 1.6rem; font-weight: 900;
+    font-size: var(--fs-page); font-weight: var(--fw-black);
     font-family: 'Poppins', sans-serif;
     color: #fff;
     margin: 0 0 6px;
@@ -620,7 +749,7 @@ html { scroll-behavior: smooth; }
 }
 .bk-hero-title span { color: #fff; opacity:.92; }
 .bk-hero-sub {
-    font-size: .84rem;
+    font-size: var(--fs-helper);
     color: rgba(255,255,255,.75);
     margin: 0;
 }

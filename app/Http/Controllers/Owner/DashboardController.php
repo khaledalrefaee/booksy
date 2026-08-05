@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Owner;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Company;
+use App\Models\CompanyLoginActivity;
+use App\Services\OnboardingService;
 use App\Services\Owner\DashboardStatisticsService;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
@@ -38,6 +40,37 @@ class DashboardController extends Controller
                 ->count(),
         ];
 
-        return view('owner.index', compact('stats', 'recentAppointments', 'chartData', 'alerts'));
+        // Recent business login/registration activity (owner feed).
+        $recentActivity = CompanyLoginActivity::query()
+            ->with('company:id,name_en,name_ar')
+            ->latest()
+            ->limit(8)
+            ->get();
+
+        // Businesses that likely need help: signed up recently but setup is
+        // still incomplete. Derived — bounded to recent signups to stay cheap.
+        $needsHelp = Company::query()
+            ->where('created_at', '>=', $today->copy()->subDays(30))
+            ->latest()
+            ->limit(40)
+            ->get()
+            ->map(function (Company $c) {
+                $lastLogin = $c->loginActivities()->where('successful', true)->max('created_at');
+
+                return [
+                    'company'      => $c,
+                    'percent'      => OnboardingService::percent($c),
+                    'last_login'   => $lastLogin ? Carbon::parse($lastLogin) : null,
+                    'days_old'     => (int) $c->created_at->diffInDays(now()),
+                ];
+            })
+            ->filter(fn ($row) => $row['percent'] < 100)
+            ->sortBy('percent')
+            ->take(6)
+            ->values();
+
+        return view('owner.index', compact(
+            'stats', 'recentAppointments', 'chartData', 'alerts', 'recentActivity', 'needsHelp'
+        ));
     }
 }

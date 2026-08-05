@@ -18,9 +18,10 @@
 
 <script>
 (function () {
-    var KEY = 'bk-tour-v1';
-    try { if (localStorage.getItem(KEY)) return; } catch (e) { return; }
-    if (!window.matchMedia('(min-width: 992px)').matches) return;
+    // State is server-side now (works across devices), not localStorage.
+    var TOUR_DONE = @json((bool) ($bkOnboarding['tourDone'] ?? true));
+    var TOUR_URL  = @json(route('company.onboarding.tour-complete'));
+    var CSRF      = @json(csrf_token());
 
     var STEPS = [
         {
@@ -71,9 +72,12 @@
     var i = 0;
 
     function done() {
-        try { localStorage.setItem(KEY, '1'); } catch (e) {}
         root.hidden = true;
         window.removeEventListener('resize', position);
+        // Persist server-side so it never auto-replays on any device.
+        try {
+            fetch(TOUR_URL, { method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' } });
+        } catch (e) {}
     }
 
     function position() {
@@ -141,6 +145,13 @@
     btnSkip.addEventListener('click', done);
     window.addEventListener('resize', position);
 
-    setTimeout(function () { root.hidden = false; render(); }, 900);
+    function start() { i = 0; root.hidden = false; render(); }
+    // Exposed so the Help (?) modal can replay the tour anytime.
+    window.bkStartTour = start;
+
+    // Auto-run only for brand-new businesses that haven't finished it (desktop).
+    if (!TOUR_DONE && window.matchMedia('(min-width: 992px)').matches) {
+        setTimeout(start, 900);
+    }
 })();
 </script>

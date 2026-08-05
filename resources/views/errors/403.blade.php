@@ -55,7 +55,7 @@
 </head>
 <body>
     <div class="wrap">
-        <div class="brand">Booksy</div>
+        <div class="brand"><img src="{{ asset('images/logo-dark.png') }}" alt="GlowRez" style="height:44px;width:auto"></div>
         <div class="code">403</div>
         <h1>{{ $isAr ? 'لا تملك صلاحية الوصول' : "You don't have access" }}</h1>
         <p>

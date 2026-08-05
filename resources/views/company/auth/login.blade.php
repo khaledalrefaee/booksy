@@ -38,7 +38,10 @@
                             </div>
                             <div class="col-md-8 ps-md-0">
                                 <div class="auth-form-wrapper px-4 py-5">
-                                    <a href="#" class="noble-ui-logo d-block mb-2">Book<span>sy</span> <small class="text-muted fw-normal fs-6">Business</small></a>
+                                    <a href="{{ route('company.login') }}" class="noble-ui-logo d-inline-flex align-items-center mb-2" style="gap:.5rem;text-decoration:none">
+                                        <x-front.logo variant="full" style="height:46px;width:auto"/>
+                                        <small class="text-muted fw-normal fs-6">Business</small>
+                                    </a>
                                     <h5 class="text-muted fw-normal mb-4">{{ __('Welcome back! Sign in to continue.') }}</h5>
 
                                     @if ($errors->any())

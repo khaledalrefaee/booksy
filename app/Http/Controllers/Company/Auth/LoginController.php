@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Company\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\LoginActivityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,9 +27,16 @@ class LoginController extends Controller
 
         if (Auth::guard('company')->attempt($credentials, $remember)) {
             $request->session()->regenerate();
+            LoginActivityService::record(
+                $request, true, Auth::guard('company')->id(), $credentials['email']
+            );
 
             return redirect()->intended(route('company.dashboard'));
         }
+
+        // Failed attempt — log for the owner activity feed (company may be unknown).
+        $companyId = \App\Models\Company::where('email', $credentials['email'])->value('id');
+        LoginActivityService::record($request, false, $companyId, $credentials['email']);
 
         return back()
             ->withInput($request->only('email'))

@@ -21,12 +21,13 @@ class DemoOwnerSeeder extends Seeder
      */
     public function run(): void
     {
+        // Use a canonical business category (seeded by CategorySeeder).
         $category = Category::query()->firstOrCreate(
-            ['slug' => 'demo-salon'],
+            ['slug' => 'salon'],
             [
                 'sort_order' => 1,
-                'name_en' => 'Hair & Beauty',
-                'name_ar' => 'تجميل وشعر',
+                'name_en' => 'Salon',
+                'name_ar' => 'صالون',
             ]
         );
 

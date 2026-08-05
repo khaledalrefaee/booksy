@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Http\Controllers\Company\AppointmentController;
 use App\Http\Controllers\Company\WaitlistController;
@@ -53,6 +53,10 @@ Route::prefix('company')->name('company.')->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard/chart/month', [DashboardController::class, 'monthChart'])->name('dashboard.chart.month');
+
+        // Onboarding (guided tour + setup checklist state, persisted cross-device)
+        Route::post('/onboarding/tour-complete', [\App\Http\Controllers\Company\OnboardingController::class, 'tourComplete'])->name('onboarding.tour-complete');
+        Route::post('/onboarding/dismiss', [\App\Http\Controllers\Company\OnboardingController::class, 'dismiss'])->name('onboarding.dismiss');
 
         // Global search
         Route::get('/search', [SearchController::class, 'index'])->name('search.index');

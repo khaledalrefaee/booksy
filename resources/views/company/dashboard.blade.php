@@ -3,11 +3,15 @@
     $companyTheme = request()->cookie('company_theme', 'dark');
     // Pending-appointments badge — computed once, shared by sidebar + bottom nav
     $bkPendingCount = 0;
+    $bkOnboarding = null;
     if ($bkAuthCompany = Auth::guard('company')->user()) {
         try {
             $bkPendingCount = (int) $bkAuthCompany->branches()
                 ->withCount(['appointments as pc' => fn($q) => $q->where('status', 'pending')])
                 ->get()->sum('pc');
+        } catch (\Throwable $e) {}
+        try {
+            $bkOnboarding = \App\Services\OnboardingService::summary($bkAuthCompany);
         } catch (\Throwable $e) {}
     }
 @endphp
@@ -32,6 +36,7 @@
     </div>
     @include('company.partials.bottom-nav')
     @include('company.partials.onboarding-tour')
+    @include('company.partials.help-center')
     @include('company.partials.js')
     @stack('scripts')
     @stack('company-after-template')

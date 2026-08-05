@@ -1,9 +1,15 @@
 @props([
-    'title'       => 'Booksy',
+    'title'       => 'GlowRez',
     'description' => null,
     'variant'     => 'customer',   // customer | business
     'bodyClass'   => '',
     'active'      => null,
+    'mapFab'      => true,         // global "all venues" map FAB (off on single-venue pages)
+    'keywords'    => null,         // optional comma-separated keywords
+    'ogImage'     => null,         // absolute/relative share image; defaults to brand cover
+    'ogType'      => 'website',    // og:type (website | article | product …)
+    'noindex'     => false,        // true → keep this page out of search indexes
+    'canonical'   => null,         // override canonical URL (defaults to current clean URL)
 ])
 @php
     $isAr = app()->getLocale() === 'ar';
@@ -12,7 +18,51 @@
     $theme = request()->cookie('bk_front_theme', 'light');
     $theme = in_array($theme, ['light','dark'], true) ? $theme : 'light';
 
-    $brand = $isAr ? 'بوكسي' : 'Booksy';
+    $brand = 'GlowRez';
+
+    /* ── SEO computed values ── */
+    $siteName     = 'GlowRez';
+    $metaDesc     = $description ?: ($isAr
+        ? 'GlowRez — منصة حجز وإدارة أماكن الجمال والعناية في سوريا. احجز موعدك في ثوانٍ وأدر عملك باحتراف.'
+        : 'GlowRez — the beauty & wellness booking and management platform in Syria. Book in seconds, run your business like a pro.');
+    $canonicalUrl = $canonical ?: url()->current();
+    $ogImageUrl   = $ogImage
+        ? (\Illuminate\Support\Str::startsWith($ogImage, ['http://','https://']) ? $ogImage : asset(ltrim($ogImage,'/')))
+        : asset('images/og-cover.jpg');
+    $ogLocale     = $isAr ? 'ar_AR' : 'en_US';
+    $robots       = $noindex
+        ? 'noindex, nofollow'
+        : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+
+    /* Site-wide JSON-LD (Organization + WebSite). Built in PHP — NOT via @json —
+       so Blade never tries to parse the '@type'/'@graph' keys as directives. */
+    $siteSchema = [
+        '@context' => 'https://schema.org',
+        '@graph'   => [
+            [
+                '@type'       => 'Organization',
+                '@id'         => url('/').'#organization',
+                'name'        => 'GlowRez',
+                'url'         => url('/'),
+                'logo'        => asset('images/logo-light.png'),
+                'image'       => asset('images/og-cover.jpg'),
+                'description' => $metaDesc,
+            ],
+            [
+                '@type'     => 'WebSite',
+                '@id'       => url('/').'#website',
+                'name'      => 'GlowRez',
+                'url'       => url('/'),
+                'publisher' => ['@id' => url('/').'#organization'],
+                'inLanguage'=> $lang,
+                'potentialAction' => [
+                    '@type'       => 'SearchAction',
+                    'target'      => ['@type' => 'EntryPoint', 'urlTemplate' => url('/venues').'?search={search_term_string}'],
+                    'query-input' => 'required name=search_term_string',
+                ],
+            ],
+        ],
+    ];
 
     // Nav links per variant
     if ($variant === 'business') {
@@ -24,11 +74,12 @@
             ['label' => $isAr ? 'مجاني'          : 'Free',        'href' => '#free'],
         ];
     } else {
+        $home = route('front.index');
         $links = [
-            ['label' => $isAr ? 'الفئات'   : 'Categories', 'href' => '#categories'],
-            ['label' => $isAr ? 'استكشف'   : 'Discover',   'href' => '#discover'],
-            ['label' => $isAr ? 'كيف يعمل' : 'How it works','href' => '#how'],
-            ['label' => $isAr ? 'للأعمال'  : 'For business','href' => route('front.business')],
+            ['label' => $isAr ? 'اكتشف'       : 'Discover',   'href' => $home.'#discover'],
+            ['label' => $isAr ? 'التصنيفات'   : 'Categories', 'href' => $home.'#categories'],
+            ['label' => $isAr ? 'الأقرب إليك' : 'Near you',   'href' => $home.'#nearby'],
+            ['label' => $isAr ? 'كيف يعمل'    : 'How it works','href' => $home.'#how'],
         ];
     }
 @endphp
@@ -38,9 +89,53 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="csrf-token" content="{{ csrf_token() }}">
+
+{{-- ══════════════  PRIMARY SEO  ══════════════ --}}
 <title>{{ $title }}</title>
-@if($description)<meta name="description" content="{{ $description }}">@endif
+<meta name="description" content="{{ $metaDesc }}">
+@if($keywords)<meta name="keywords" content="{{ $keywords }}">@endif
+<meta name="robots" content="{{ $robots }}">
+<meta name="googlebot" content="{{ $robots }}">
+<link rel="canonical" href="{{ $canonicalUrl }}">
+<meta name="author" content="GlowRez">
+<meta name="application-name" content="GlowRez">
 <meta name="theme-color" content="{{ $theme === 'dark' ? '#0F1413' : '#F6F5F2' }}">
+
+{{-- ══════════════  OPEN GRAPH (Facebook / WhatsApp / LinkedIn)  ══════════════ --}}
+<meta property="og:type" content="{{ $ogType }}">
+<meta property="og:site_name" content="GlowRez">
+<meta property="og:title" content="{{ $title }}">
+<meta property="og:description" content="{{ $metaDesc }}">
+<meta property="og:url" content="{{ $canonicalUrl }}">
+<meta property="og:image" content="{{ $ogImageUrl }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="{{ $ogLocale }}">
+<meta property="og:locale:alternate" content="{{ $isAr ? 'en_US' : 'ar_AR' }}">
+
+{{-- ══════════════  TWITTER CARDS  ══════════════ --}}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ $title }}">
+<meta name="twitter:description" content="{{ $metaDesc }}">
+<meta name="twitter:image" content="{{ $ogImageUrl }}">
+
+{{-- ══════════════  FAVICONS / APP ICONS  ══════════════ --}}
+@php $iconV = fn($p) => asset($p).'?v='.(@filemtime(public_path($p)) ?: '1'); @endphp
+<link rel="icon" href="{{ $iconV('favicon.ico') }}" sizes="any">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ $iconV('icons/favicon-16.png') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ $iconV('icons/favicon-32.png') }}">
+<link rel="icon" type="image/png" sizes="48x48" href="{{ $iconV('icons/favicon-48.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ $iconV('icons/apple-touch-icon.png') }}">
+
+{{-- PWA: installable, app-like on mobile --}}
+<link rel="manifest" href="{{ route('pwa.manifest') }}">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GlowRez">
+
+{{-- ══════════════  ORGANIZATION + WEBSITE (site-wide JSON-LD)  ══════════════ --}}
+<script type="application/ld+json">{!! json_encode($siteSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 
 {{-- Prevent theme flash: reconcile server cookie with client preference before paint --}}
 <script>
@@ -50,9 +145,12 @@
 <link rel="preconnect" href="{{ url('/') }}">
 <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('frontend/css/booksy-front.css') }}?v={{ @filemtime(public_path('frontend/css/booksy-front.css')) ?: '1' }}">
-<link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}">
 {{-- If JS is unavailable, never hide content behind scroll-reveal --}}
-<noscript><style>.bkf-reveal{opacity:1!important;transform:none!important}</style></noscript>
+<noscript>
+<style>.bkf-reveal{opacity:1!important;transform:none!important}</style>
+</noscript>
+{{-- page-specific structured data / head extras --}}
+{{ $head ?? '' }}
 {{ $styles ?? '' }}
 </head>
 <body class="bkf {{ $bodyClass }}">
@@ -60,15 +158,15 @@
 {{-- ══════════════  NAV  ══════════════ --}}
 <nav class="bkf-nav" data-bkf-nav>
   <div class="bkf-container-wide bkf-nav-inner">
-    <a href="{{ $variant === 'business' ? route('front.business') : route('front.index') }}" class="bkf-brand">
-      {{ $brand }}<span class="bkf-brand-dot">.</span>
+    <a href="{{ $variant === 'business' ? route('front.business') : route('front.index') }}" class="bkf-brand" aria-label="GlowRez">
+      <x-front.logo variant="full"/>
       @if($variant === 'business')<span class="bkf-brand-sub">{{ $isAr ? 'للأعمال' : 'Business' }}</span>@endif
     </a>
 
     <div class="bkf-nav-menu" data-menu>
       <ul class="bkf-nav-links">
         @foreach($links as $l)
-          <li><a href="{{ $l['href'] }}" @class(['is-active' => $active === $l['href']])>{{ $l['label'] }}</a></li>
+          <li><a href="{{ $l['href'] }}" @class(['is-active' => $active === $l['href']]) @if(\Illuminate\Support\Str::endsWith($l['href'] ?? '', '#nearby')) data-geo-trigger @endif>{{ $l['label'] }}</a></li>
         @endforeach
       </ul>
       <div class="bkf-nav-actions">
@@ -83,10 +181,7 @@
             {{ $isAr ? 'ابدأ الآن' : 'Get started' }}<x-icon name="arrow-right" :size="18"/>
           </a>
         @else
-          <a href="{{ route('front.business') }}" class="bkf-btn bkf-btn-ghost bkf-nav-btn">{{ $isAr ? 'أنا صاحب صالون' : 'For business' }}</a>
-          <a href="#discover" class="bkf-btn bkf-btn-primary bkf-nav-btn">
-            {{ $isAr ? 'احجز الآن' : 'Book now' }}<x-icon name="calendar" :size="18"/>
-          </a>
+          @include('front.partials.account-nav')
         @endif
       </div>
     </div>
@@ -103,11 +198,24 @@
 
 {{-- ══════════════  FOOTER  ══════════════ --}}
 <footer class="bkf-footer">
+  <div class="bkf-footer-waves" aria-hidden="true">
+    <svg viewBox="0 24 150 28" preserveAspectRatio="none">
+      <defs><path id="bkf-footer-wp" d="M-160 44c30 0 58-18 88-18s58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z"/></defs>
+      <use class="fw1" href="#bkf-footer-wp" x="48" y="0"/>
+      <use class="fw2" href="#bkf-footer-wp" x="48" y="3"/>
+      <use class="fw3" href="#bkf-footer-wp" x="48" y="5"/>
+      <use class="fw4" href="#bkf-footer-wp" x="48" y="7"/>
+    </svg>
+  </div>
+  <span class="bkf-footer-blob a"></span>
+  <span class="bkf-footer-blob b"></span>
   <div class="bkf-container-wide">
     <div class="bkf-footer-grid">
       <div class="bkf-footer-brand">
-        <a href="{{ route('front.index') }}" class="bkf-brand bkf-brand-lg">{{ $brand }}<span class="bkf-brand-dot">.</span></a>
-        <p class="bkf-footer-tag">{{ $isAr ? 'منصّة حجز وإدارة الصالونات ومراكز التجميل — احجز موعدك في ثوانٍ، وأدر عملك باحتراف.' : 'The booking & management platform for salons and beauty studios — book in seconds, run your business like a pro.' }}</p>
+        <a href="{{ route('front.index') }}" class="bkf-brand bkf-brand-lg" aria-label="GlowRez">
+          <x-front.logo variant="full"/>
+        </a>
+        <p class="bkf-footer-tag">{{ $isAr ? 'منصّة حجز وإدارة أماكن الجمال والعناية — احجز موعدك في ثوانٍ، وأدر عملك باحتراف.' : 'The booking & management platform for beauty & wellness venues — book in seconds, run your business like a pro.' }}</p>
         <div class="bkf-footer-social">
           <a href="#" aria-label="Instagram" class="bkf-footer-soc"><x-icon name="globe" :size="18"/></a>
           <a href="#" aria-label="Facebook" class="bkf-footer-soc"><x-icon name="message" :size="18"/></a>
@@ -119,12 +227,13 @@
         <a href="{{ route('front.index') }}#discover">{{ $isAr ? 'استكشف الأماكن' : 'Discover venues' }}</a>
         <a href="{{ route('front.index') }}#categories">{{ $isAr ? 'الفئات' : 'Categories' }}</a>
         <a href="{{ route('front.index') }}#how">{{ $isAr ? 'كيف يعمل' : 'How it works' }}</a>
+        <a href="{{ route('front.help') }}">{{ $isAr ? 'مركز المساعدة' : 'Help center' }}</a>
       </div>
       <div class="bkf-footer-col">
         <h4>{{ $isAr ? 'للأعمال' : 'For business' }}</h4>
         <a href="{{ route('front.business') }}#features">{{ $isAr ? 'المزايا' : 'Features' }}</a>
         <a href="{{ route('front.business') }}#free">{{ $isAr ? 'مجاني' : 'Free' }}</a>
-        <a href="{{ route('company.register') }}">{{ $isAr ? 'سجّل صالونك' : 'List your business' }}</a>
+        <a href="{{ route('company.register') }}">{{ $isAr ? 'سجّل نشاطك' : 'List your business' }}</a>
       </div>
       <div class="bkf-footer-col">
         <h4>{{ $isAr ? 'الشركة' : 'Company' }}</h4>
@@ -134,15 +243,35 @@
       </div>
     </div>
     <div class="bkf-footer-bar">
-      <span>© {{ date('Y') }} {{ $brand }}. {{ $isAr ? 'كل الحقوق محفوظة.' : 'All rights reserved.' }}</span>
+      <span>{{ $isAr
+        ? 'جميع الحقوق محفوظة © '.date('Y').' لشركة GlowRez — مع ترجمات Company S.L.'
+        : '© '.date('Y').' GlowRez. All rights reserved — with translations by Company S.L.' }}</span>
       <div class="bkf-footer-bar-links">
-        <a href="#">{{ $isAr ? 'الخصوصية' : 'Privacy' }}</a>
-        <a href="#">{{ $isAr ? 'الشروط' : 'Terms' }}</a>
+        <a href="{{ route('front.privacy') }}">{{ $isAr ? 'الخصوصية' : 'Privacy' }}</a>
+        <a href="{{ route('front.terms') }}">{{ $isAr ? 'الشروط' : 'Terms' }}</a>
       </div>
     </div>
   </div>
 </footer>
 
+@if($variant === 'customer')
+  @include('front.partials.customer-auth-modal')
+  {{-- A guarded page (/account/*) bounces guests here with ?login=1&return=… --}}
+  <script>
+  (function(){
+    var p = new URLSearchParams(location.search);
+    if(p.get('login') === '1' && window.CustomerAuthModal){
+      var ret = p.get('return');
+      CustomerAuthModal.open(function(){ location.href = ret || '{{ route('account.appointments') }}'; });
+    }
+  })();
+  </script>
+  @if($mapFab)
+    @include('front.partials.map-fab')
+  @endif
+@endif
+
+<script>window.BK_SW = '{{ asset('sw.js') }}'; window.BK_ICON = '{{ asset('icons/icon-192.png') }}';</script>
 <script src="{{ asset('frontend/js/booksy-front.js') }}?v={{ @filemtime(public_path('frontend/js/booksy-front.js')) ?: '1' }}" defer></script>
 {{ $scripts ?? '' }}
 </body>

@@ -115,4 +115,14 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Contact Inbox
+    |--------------------------------------------------------------------------
+    | Where public /contact form submissions are delivered. Falls back to the
+    | "from" address when CONTACT_INBOX is not set.
+    */
+
+    'contact_to' => env('CONTACT_INBOX'),
+
 ];

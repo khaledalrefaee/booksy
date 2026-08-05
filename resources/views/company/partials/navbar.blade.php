@@ -63,6 +63,14 @@
 
         <ul class="navbar-nav">
 
+            {{-- Help / getting-started (always available) --}}
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center" href="#" style="padding:0 10px;"
+                   data-bs-toggle="modal" data-bs-target="#bkHelpModal" aria-label="{{ __('Help') }}" title="{{ __('Help') }}">
+                    <i data-feather="help-circle" style="width:18px;height:18px;"></i>
+                </a>
+            </li>
+
             {{-- Notifications bell --}}
             @php
                 $unreadNotifs = $authCompany

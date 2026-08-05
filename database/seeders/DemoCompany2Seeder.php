@@ -18,12 +18,13 @@ class DemoCompany2Seeder extends Seeder
 {
     public function run(): void
     {
+        // Use a canonical business category (seeded by CategorySeeder).
         $category = Category::query()->firstOrCreate(
-            ['slug' => 'demo-spa'],
+            ['slug' => 'spa'],
             [
-                'sort_order' => 2,
-                'name_en' => 'Spa & Wellness',
-                'name_ar' => 'سبا وعافية',
+                'sort_order' => 3,
+                'name_en' => 'Spa',
+                'name_ar' => 'سبا',
             ]
         );
 

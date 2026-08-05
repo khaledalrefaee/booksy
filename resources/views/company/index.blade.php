@@ -39,6 +39,97 @@
     </div>
 @endif
 
+{{-- ════ PENDING APPROVAL STATUS ════ --}}
+@if($company->status === 'pending')
+<div class="card border-0 shadow-sm rounded-4 mb-4" style="border-inline-start:4px solid var(--bk-warning) !important;">
+    <div class="card-body d-flex flex-column flex-md-row align-items-md-center gap-3">
+        <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-4"
+             style="width:56px;height:56px;background:var(--bk-warning-bg);color:var(--bk-warning);">
+            <i data-feather="clock" style="width:26px;height:26px;"></i>
+        </div>
+        <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                <h5 class="fw-bold mb-0">{{ __('Your account was created successfully') }}</h5>
+                <span class="badge rounded-pill" style="background:var(--bk-warning-bg);color:var(--bk-warning);font-weight:700;font-size:.66rem;padding:4px 10px;">
+                    <i data-feather="loader" style="width:11px;height:11px;vertical-align:-1px;"></i>
+                    {{ __('Pending approval') }}
+                </span>
+            </div>
+            <p class="text-muted tx-13 mb-2">
+                {{ __('We are reviewing your account and will approve it shortly. Once approved, your business will be visible and ready to accept clients.') }}
+            </p>
+            <div class="d-flex flex-wrap gap-3 tx-12 text-muted">
+                <span><i data-feather="calendar" style="width:13px;height:13px;vertical-align:-2px;"></i> {{ __('Created on') }}: <strong>{{ $company->created_at?->translatedFormat('d M Y') }}</strong></span>
+                <span><i data-feather="activity" style="width:13px;height:13px;vertical-align:-2px;"></i> {{ __('Request status') }}: <strong style="color:var(--bk-warning);">{{ __('Under review') }}</strong></span>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+{{-- ════ ONBOARDING SETUP CHECKLIST ════ --}}
+@php
+    $obSteps = $onboarding['steps'] ?? [];
+    $obPct   = $onboarding['percent'] ?? 100;
+    $obDismissed = $onboarding['dismissed'] ?? false;
+    $obList = [
+        ['key' => 'service',       'icon' => 'scissors', 'title' => __('Add your first service'),        'route' => 'company.branches.index'],
+        ['key' => 'employee',      'icon' => 'users',    'title' => __('Add your team'),                  'route' => 'company.branches.index'],
+        ['key' => 'working_hours', 'icon' => 'clock',    'title' => __('Set working hours'),              'route' => 'company.branches.index'],
+        ['key' => 'appointment',   'icon' => 'calendar', 'title' => __('Create your first appointment'),  'route' => 'company.appointments.create'],
+    ];
+@endphp
+@if($obPct < 100 && ! $obDismissed)
+<div class="card border-0 shadow-sm rounded-4 mb-4" style="border-inline-start:4px solid var(--bk-accent) !important;">
+    <div class="card-body">
+        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+            <div>
+                <h5 class="fw-bold mb-1">🚀 {{ __('Welcome to Booksy Business!') }}</h5>
+                <p class="text-muted tx-13 mb-0">{{ __('Finish setting up your business to start taking bookings.') }}</p>
+            </div>
+            <form method="POST" action="{{ route('company.onboarding.dismiss') }}" class="m-0">
+                @csrf
+                <button type="submit" class="btn btn-sm btn-link text-muted p-0" title="{{ __('Dismiss') }}" aria-label="{{ __('Dismiss') }}">
+                    <i data-feather="x" style="width:16px;height:16px;"></i>
+                </button>
+            </form>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="progress flex-grow-1" style="height:8px;background:var(--bk-border);border-radius:6px;">
+                <div class="progress-bar" role="progressbar" style="width:{{ $obPct }}%;background:var(--bk-accent);"
+                     aria-valuenow="{{ $obPct }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <span class="tx-13 fw-bold flex-shrink-0" style="color:var(--bk-accent);">{{ $obPct }}%</span>
+        </div>
+
+        <div class="row g-2">
+            @foreach($obList as $s)
+                @php $done = $obSteps[$s['key']] ?? false; @endphp
+                <div class="col-sm-6 col-lg-3">
+                    <a href="{{ route($s['route']) }}"
+                       class="d-flex align-items-center gap-2 p-2 rounded-3 text-decoration-none h-100"
+                       style="border:1px solid var(--bk-border);{{ $done ? 'background:var(--bk-success-bg);' : '' }}">
+                        <span class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-circle"
+                              style="width:30px;height:30px;background:{{ $done ? 'var(--bk-success)' : 'var(--bk-accent-wash)' }};color:{{ $done ? '#fff' : 'var(--bk-accent)' }};">
+                            <i data-feather="{{ $done ? 'check' : $s['icon'] }}" style="width:14px;height:14px;"></i>
+                        </span>
+                        <span class="tx-12 fw-semibold" style="color:var(--bk-text);{{ $done ? 'text-decoration:line-through;opacity:.7;' : '' }}">{{ $s['title'] }}</span>
+                    </a>
+                </div>
+            @endforeach
+        </div>
+
+        <div class="mt-3">
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#bkHelpModal">
+                <i data-feather="help-circle" style="width:13px;height:13px;vertical-align:-2px;"></i>
+                {{ __('Need help?') }}
+            </button>
+        </div>
+    </div>
+</div>
+@endif
+
 {{-- ════ HERO HEADER ════ --}}
 <div class="bk-hero bk-a1">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">

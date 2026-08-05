@@ -55,6 +55,61 @@
 
         <ul class="navbar-nav">
 
+            {{-- Notifications bell --}}
+            @php
+                try {
+                    $bkNotifUnread = (int) \App\Models\OwnerNotification::whereNull('read_at')->count();
+                    $bkNotifRecent = \App\Models\OwnerNotification::with('company:id,name_en,name_ar')
+                        ->latest()->limit(6)->get();
+                } catch (\Throwable $e) { $bkNotifUnread = 0; $bkNotifRecent = collect(); }
+            @endphp
+            <li class="nav-item dropdown">
+                <a class="nav-link position-relative" href="#" data-bs-toggle="dropdown"
+                   style="padding:0 8px;" aria-label="{{ __('Notifications') }}">
+                    <i data-feather="bell" style="width:18px;height:18px;"></i>
+                    @if($bkNotifUnread > 0)
+                        <span class="badge rounded-pill position-absolute"
+                              style="top:-3px;inset-inline-end:-2px;background:var(--bk-danger);color:#fff;font-size:.58rem;font-weight:700;padding:2px 5px;min-width:16px;">
+                            {{ $bkNotifUnread > 9 ? '9+' : $bkNotifUnread }}
+                        </span>
+                    @endif
+                </a>
+                <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:320px;border-radius:12px;overflow:hidden;">
+                    <div class="px-3 py-2 border-bottom d-flex align-items-center justify-content-between" style="background:var(--bk-accent-wash);">
+                        <span style="font-size:.8rem;font-weight:700;">{{ __('Notifications') }}</span>
+                        @if($bkNotifUnread > 0)
+                            <form method="POST" action="{{ route('owner.notifications.read-all') }}" class="m-0">
+                                @csrf
+                                <button type="submit" class="btn btn-link p-0 border-0" style="font-size:.68rem;color:var(--bk-accent);text-decoration:none;">
+                                    {{ __('Mark all read') }}
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                    <div style="max-height:340px;overflow-y:auto;">
+                        @forelse($bkNotifRecent as $n)
+                            <a href="{{ route('owner.notifications.read', $n->id) }}"
+                               class="dropdown-item d-flex align-items-start gap-2 py-2 px-3 {{ $n->read_at ? '' : 'bk-notif-unread' }}"
+                               style="white-space:normal;border-bottom:1px solid var(--bk-border);{{ $n->read_at ? '' : 'background:color-mix(in srgb,var(--bk-accent) 7%,transparent);' }}">
+                                <span style="font-size:1.05rem;line-height:1;">{{ $n->icon }}</span>
+                                <span style="min-width:0;flex:1;">
+                                    <span style="display:block;font-size:.76rem;font-weight:{{ $n->read_at ? '500' : '700' }};">{{ $n->title }}</span>
+                                    <span style="display:block;font-size:.7rem;color:var(--bk-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $n->body }}</span>
+                                    <span style="display:block;font-size:.62rem;color:var(--bk-text-muted);margin-top:2px;">{{ $n->created_at?->diffForHumans() }}</span>
+                                </span>
+                            </a>
+                        @empty
+                            <div class="text-center py-4" style="font-size:.76rem;color:var(--bk-text-muted);">
+                                {{ __('No notifications yet') }}
+                            </div>
+                        @endforelse
+                    </div>
+                    <a href="{{ route('owner.notifications.index') }}" class="dropdown-item text-center py-2" style="font-size:.72rem;font-weight:600;color:var(--bk-accent);">
+                        {{ __('View all') }}
+                    </a>
+                </div>
+            </li>
+
             {{-- Language --}}
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle d-flex align-items-center gap-1" href="#"
