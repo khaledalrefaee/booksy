@@ -4,6 +4,8 @@ use App\Http\Controllers\Company\AppointmentController;
 use App\Http\Controllers\Company\WaitlistController;
 use App\Http\Controllers\Company\Auth\LoginController;
 use App\Http\Controllers\Company\Auth\RegisterController;
+use App\Http\Controllers\Company\Auth\PasswordResetController;
+use App\Http\Controllers\Company\Auth\VerificationController;
 use App\Http\Controllers\Company\BranchController;
 use App\Http\Controllers\Company\DashboardController;
 use App\Http\Controllers\Company\DeductionController;
@@ -38,17 +40,28 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::post('/login',   [LoginController::class, 'login'])->name('login.attempt');
         Route::get('/register', [RegisterController::class, 'showRegister'])->name('register');
         Route::post('/register',[RegisterController::class, 'register'])->name('register.attempt');
+
+        // Password reset (code-based via WhatsApp or email)
+        Route::get('/forgot-password',  [PasswordResetController::class, 'showForgot'])->name('password.forgot');
+        Route::post('/forgot-password', [PasswordResetController::class, 'sendCode'])->name('password.send');
+        Route::get('/reset-password',   [PasswordResetController::class, 'showReset'])->name('password.reset');
+        Route::post('/reset-password',  [PasswordResetController::class, 'reset'])->name('password.update');
     });
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
+    // Theme switcher — available to guests (login/register/reset) and authed users alike.
+    Route::get('/theme/{mode}', function (string $mode) {
+        return redirect()->back()->cookie('company_theme', $mode === 'light' ? 'light' : 'dark', 60 * 24 * 365);
+    })->whereIn('mode', ['light', 'dark'])->name('theme');
+
     // Protected routes
     Route::middleware('company.auth')->group(function () {
 
-        // Theme switcher
-        Route::get('/theme/{mode}', function (string $mode) {
-            return redirect()->back()->cookie('company_theme', $mode === 'light' ? 'light' : 'dark', 60 * 24 * 365);
-        })->whereIn('mode', ['light', 'dark'])->name('theme');
+        // Account verification (code sent after registration via WhatsApp + email)
+        Route::get('/verify',         [VerificationController::class, 'showNotice'])->name('verify.notice');
+        Route::post('/verify',        [VerificationController::class, 'verify'])->name('verify.attempt');
+        Route::post('/verify/resend', [VerificationController::class, 'resend'])->name('verify.resend');
 
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

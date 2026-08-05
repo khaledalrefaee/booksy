@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Company\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Company;
+use App\Services\CompanyVerificationService;
 use App\Services\LoginActivityService;
 use App\Services\OwnerNotificationService;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +23,7 @@ class RegisterController extends Controller
         return view('company.auth.register', compact('categories'));
     }
 
-    public function register(Request $request): RedirectResponse
+    public function register(Request $request, CompanyVerificationService $verification): RedirectResponse
     {
         $data = $request->validate([
             'name_en'               => ['required', 'string', 'max:255'],
@@ -59,6 +60,10 @@ class RegisterController extends Controller
         $request->session()->regenerate();
         LoginActivityService::record($request, true, $company->id, $company->email);
 
-        return redirect()->route('company.dashboard');
+        // Send a verification code (WhatsApp + email) and take the owner to the
+        // confirmation screen before the dashboard.
+        $verification->send($company);
+
+        return redirect()->route('company.verify.notice');
     }
 }

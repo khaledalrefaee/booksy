@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('Sign in') }} — Booksy Business</title>
+    <title>{{ __('Sign in') }} — GlowRez Business</title>
     <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('backend/assets/vendors/core/core.css') }}">
     <link rel="stylesheet" href="{{ asset('backend/assets/fonts/feather-font/css/iconfont.css') }}">
@@ -26,6 +26,7 @@
     </style>
 </head>
 <body>
+@include('company.auth.partials.theme-toggle')
 <div class="main-wrapper">
     <div class="page-wrapper full-page">
         <div class="page-content d-flex align-items-center justify-content-center">
@@ -43,6 +44,10 @@
                                         <small class="text-muted fw-normal fs-6">Business</small>
                                     </a>
                                     <h5 class="text-muted fw-normal mb-4">{{ __('Welcome back! Sign in to continue.') }}</h5>
+
+                                    @if (session('status'))
+                                        <div class="alert alert-success py-2 px-3 mb-3" role="alert" aria-live="polite">{{ session('status') }}</div>
+                                    @endif
 
                                     @if ($errors->any())
                                         <div class="alert alert-danger py-2 px-3 mb-3">{{ $errors->first() }}</div>
@@ -73,6 +78,7 @@
                                                 <input type="checkbox" class="form-check-input" id="remember" name="remember">
                                                 <label class="form-check-label text-muted" for="remember">{{ __('Remember me') }}</label>
                                             </div>
+                                            <a href="{{ route('company.password.forgot') }}" class="small fw-semibold text-decoration-none">{{ __('Forgot password?') }}</a>
                                         </div>
                                         <div class="d-grid">
                                             <button type="submit" class="btn btn-primary btn-lg rounded-3">{{ __('Sign in') }}</button>

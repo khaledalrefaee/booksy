@@ -24,6 +24,7 @@ class Company extends Authenticatable
         'email',
         'email_verified_at',
         'phone',
+        'phone_verified_at',
         'logo',
         'category_id',
         'password',
@@ -42,6 +43,7 @@ class Company extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'password' => 'hashed',
             'plan_expires_at' => 'date',
             'feature_overrides' => 'array',

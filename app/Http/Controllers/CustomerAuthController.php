@@ -36,10 +36,18 @@ class CustomerAuthController extends Controller
         ]);
 
         // Deliver the code over WhatsApp (no company gate — this is account auth).
-        $message = "🔐 *رمز الدخول إلى Booksy*\n\n"
-            . "رمز التحقق الخاص بك هو:\n\n"
-            . "*{$code}*\n\n"
-            . "الرمز صالح لمدة 4 دقائق. لا تشاركه مع أي أحد.";
+        // Follows the site's active locale so the message matches the user's language.
+        $message = app()->getLocale() === 'ar'
+            ? "🔐 *GlowRez*\n\n"
+                . "رمز التحقق الخاص بك:\n\n"
+                . "*{$code}*\n\n"
+                . "⏱️ صالح لمدة 4 دقائق\n"
+                . "🔒 لا تُشارك هذا الرمز مع أي أحد"
+            : "🔐 *GlowRez*\n\n"
+                . "Your verification code:\n\n"
+                . "*{$code}*\n\n"
+                . "⏱️ Valid for 4 minutes\n"
+                . "🔒 Never share this code with anyone";
 
         $sent = $whatsapp->send($phone, $message, null, null, 'otp');
 

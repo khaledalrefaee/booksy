@@ -139,7 +139,7 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Booksy WhatsApp</title>
+    <title>GlowRez WhatsApp</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
@@ -182,7 +182,7 @@ app.get('/', (req, res) => {
 <body>
     <div class="container">
         <div class="card">
-            <h1>💬 Booksy WhatsApp</h1>
+            <h1>💬 GlowRez WhatsApp</h1>
             <div class="subtitle">خدمة إشعارات الواتساب</div>
 
             <div class="status-bar" id="statusBar" style="background:rgba(${statusColors[connectionStatus] === '#22c55e' ? '34,197,94' : statusColors[connectionStatus] === '#f59e0b' ? '245,158,11' : '239,68,68'},.1);">
@@ -225,7 +225,7 @@ app.get('/', (req, res) => {
                 </div>
                 <div class="form-group">
                     <label>الرسالة</label>
-                    <textarea id="message" placeholder="مرحباً! هذه رسالة تجريبية من Booksy ✅">مرحباً! هذه رسالة تجريبية من Booksy ✅</textarea>
+                    <textarea id="message" placeholder="مرحباً! هذه رسالة تجريبية من GlowRez ✅">مرحباً! هذه رسالة تجريبية من Booksy ✅</textarea>
                 </div>
                 <button type="submit" class="btn btn-primary" id="sendBtn">إرسال ✉️</button>
             </form>
@@ -372,6 +372,6 @@ app.post('/send-bulk', authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`\n🚀 Booksy WhatsApp — http://localhost:${PORT}\n`);
+    console.log(`\n🚀 GlowRez WhatsApp — http://localhost:${PORT}\n`);
     connectWhatsApp();
 });

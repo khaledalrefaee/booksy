@@ -25,7 +25,27 @@
         ['nl','31','🇳🇱','هولندا','Netherlands'],
         ['fr','33','🇫🇷','فرنسا','France'],
         ['gb','44','🇬🇧','بريطانيا','United Kingdom'],
-        ['us','1','🇺🇸','أمريكا/كندا','USA / Canada'],
+        ['us','1','🇺🇸','أمريكا','USA'],
+        ['ca','1','🇨🇦','كندا','Canada'],
+        ['my','60','🇲🇾','ماليزيا','Malaysia'],
+        ['id','62','🇮🇩','إندونيسيا','Indonesia'],
+        ['in','91','🇮🇳','الهند','India'],
+        ['pk','92','🇵🇰','باكستان','Pakistan'],
+        ['au','61','🇦🇺','أستراليا','Australia'],
+        ['ru','7','🇷🇺','روسيا','Russia'],
+        ['ua','380','🇺🇦','أوكرانيا','Ukraine'],
+        ['it','39','🇮🇹','إيطاليا','Italy'],
+        ['es','34','🇪🇸','إسبانيا','Spain'],
+        ['be','32','🇧🇪','بلجيكا','Belgium'],
+        ['ch','41','🇨🇭','سويسرا','Switzerland'],
+        ['at','43','🇦🇹','النمسا','Austria'],
+        ['dk','45','🇩🇰','الدنمارك','Denmark'],
+        ['no','47','🇳🇴','النرويج','Norway'],
+        ['ma','212','🇲🇦','المغرب','Morocco'],
+        ['dz','213','🇩🇿','الجزائر','Algeria'],
+        ['tn','216','🇹🇳','تونس','Tunisia'],
+        ['ly','218','🇱🇾','ليبيا','Libya'],
+        ['sd','249','🇸🇩','السودان','Sudan'],
     ];
     $jsCountries = collect($countries)->map(fn($c) => [
         'iso' => $c[0], 'dial' => $c[1], 'flag' => $c[2],
@@ -37,17 +57,21 @@
 
 <div id="cam-modal" role="dialog" aria-modal="true" aria-labelledby="cam-heading">
 <style>
-#cam-overlay{ display:none; position:fixed; inset:0; z-index:11000; background:rgba(20,24,14,.55); backdrop-filter:blur(3px); }
+#cam-overlay{ display:none; position:fixed; inset:0; z-index:11000; background:rgba(20,24,14,.55); backdrop-filter:blur(3px); animation:camFade .2s ease; }
+@keyframes camFade{ from{ opacity:0; } to{ opacity:1; } }
 #cam-modal{
-    display:none; position:fixed; bottom:0; left:50%; transform:translateX(-50%);
-    z-index:11001; width:100%; max-width:440px;
+    display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    z-index:11001; width:calc(100% - 32px); max-width:440px;
     background:var(--bk-surface); color:var(--bk-text);
-    border:1px solid var(--bk-border); border-bottom:none;
-    border-radius:var(--bk-r-2xl) var(--bk-r-2xl) 0 0;
-    padding:20px 22px calc(28px + env(safe-area-inset-bottom));
-    box-shadow:0 -18px 60px rgba(0,0,0,.28);
+    border:1px solid var(--bk-border);
+    border-radius:var(--bk-r-2xl);
+    padding:24px 22px 26px;
+    box-shadow:0 30px 80px rgba(0,0,0,.42);
     font-family:'{{ $isAr ? "Tajawal" : "Poppins" }}', var(--bk-font-ui);
+    animation:camIn .24s cubic-bezier(.16,1,.3,1);
 }
+@keyframes camIn{ from{ opacity:0; transform:translate(-50%,-46%) scale(.96); } to{ opacity:1; transform:translate(-50%,-50%) scale(1); } }
+@media (prefers-reduced-motion: reduce){ #cam-modal, #cam-overlay{ animation:none; } }
 #cam-modal *{ box-sizing:border-box; font-family:inherit; }
 .cam-handle{ width:44px; height:5px; border-radius:99px; background:var(--bk-border-strong); opacity:.5; margin:0 auto 18px; }
 .cam-x{ position:absolute; top:16px; inset-inline-end:16px; width:34px; height:34px; display:grid; place-items:center;
@@ -298,7 +322,10 @@ window.CustomerAuthModal = (function(){
         for (let i = 0; i < 4; i++) {
             const box = $('otp' + i); box.value = '';
             box.oninput = function(){ if (this.value && i < 3) $('otp' + (i+1)).focus(); };
-            box.onkeydown = function(e){ if (e.key === 'Backspace' && !this.value && i > 0) $('otp' + (i-1)).focus(); };
+            box.onkeydown = function(e){
+                if (e.key === 'Backspace' && !this.value && i > 0) $('otp' + (i-1)).focus();
+                if (e.key === 'Enter') { e.preventDefault(); verifyOtp(); }
+            };
             box.onpaste = function(e){ const t = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,4); for (let j=0;j<t.length;j++){ const b=$('otp'+j); if(b) b.value=t[j]; } e.preventDefault(); };
         }
     }
@@ -341,6 +368,8 @@ window.CustomerAuthModal = (function(){
         $('cam-cc-btn').addEventListener('click', (e) => { e.stopPropagation(); panelOpen() ? closePanel() : openPanel(); });
         $('cam-cc-search').addEventListener('input', function(){ renderList(this.value); });
         $('cam-phone-input').addEventListener('input', validatePhone);
+        $('cam-phone-input').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !panelOpen()) { e.preventDefault(); sendOtp(); } });
+        $('cam-name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveProfile(); } });
         document.addEventListener('click', (e) => { if (!$('cam-cc').contains(e.target)) closePanel(); });
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape') return;

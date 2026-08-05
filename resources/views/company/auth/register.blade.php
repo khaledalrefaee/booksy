@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('Register') }} — Booksy Business</title>
+    <title>{{ __('Register') }} — GlowRez Business</title>
     <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('backend/assets/vendors/core/core.css') }}">
     <link rel="stylesheet" href="{{ asset('backend/assets/fonts/feather-font/css/iconfont.css') }}">
@@ -106,6 +106,7 @@
     </style>
 </head>
 <body>
+@include('company.auth.partials.theme-toggle')
 <div class="main-wrapper">
     <div class="page-wrapper full-page">
         <div class="page-content d-flex align-items-center justify-content-center py-4 py-md-5">
