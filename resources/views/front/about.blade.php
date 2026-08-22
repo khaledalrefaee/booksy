@@ -56,10 +56,10 @@
       <div class="eyebrow">{{ $isAr ? 'تعرّف علينا' : 'Get to know us' }}</div>
       <h1>{{ $isAr ? 'نُبسّط حجز' : 'We make booking' }} <span>{{ $isAr ? 'الجمال والعناية' : 'beauty & wellness' }}</span> {{ $isAr ? '' : 'effortless' }}</h1>
       <p>{{ $isAr
-          ? 'بوكسي منصّة تربط عملاء الجمال والعناية بأفضل الأماكن والمراكز — نؤمن أن الحجز يجب أن يكون سهلاً وسريعاً وممتعاً.'
-          : 'Booksy connects beauty & wellness customers with the best venues — we believe booking should be easy, fast, and enjoyable.' }}</p>
+          ? 'غلوريز منصّة تربط عملاء الجمال والعناية بأفضل الأماكن والمراكز — نؤمن أن الحجز يجب أن يكون سهلاً وسريعاً وممتعاً.'
+          : 'GlowRez connects beauty & wellness customers with the best venues — we believe booking should be easy, fast, and enjoyable.' }}</p>
       <div class="cta">
-        <a href="{{ route('front.venues') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg">{{ $isAr ? 'استكشف الأماكن' : 'Explore venues' }}<x-icon name="arrow-right" :size="18"/></a>
+        <a href="{{ route('front.venues') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg">{{ $isAr ? 'استكشف أماكن الجمال والعناية' : 'Explore Beauty & Wellness Venues' }}<x-icon name="arrow-right" :size="18"/></a>
         <a href="{{ route('front.contact') }}" class="bkf-btn bkf-btn-ghost bkf-btn-lg">{{ $isAr ? 'تواصل معنا' : 'Contact us' }}</a>
       </div>
     </div>
@@ -92,12 +92,12 @@
     </div>
   </section>
 
-  {{-- Why Booksy --}}
+  {{-- Why GlowRez --}}
   <section class="bkf-ab-sec">
     <div class="bkf-ab-wrap">
       <div class="bkf-ab-sechead bkf-reveal">
         <div class="eyebrow">{{ $isAr ? 'ما يميّزنا' : 'What sets us apart' }}</div>
-        <h2>{{ $isAr ? 'لماذا ' : 'Why ' }}<span>{{ $isAr ? 'بوكسي؟' : 'Booksy?' }}</span></h2>
+        <h2>{{ $isAr ? 'لماذا ' : 'Why ' }}<span>{{ $isAr ? 'غلوريز؟' : 'GlowRez?' }}</span></h2>
       </div>
       @php
         $feats = [

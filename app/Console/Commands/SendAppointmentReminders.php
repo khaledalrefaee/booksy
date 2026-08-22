@@ -10,34 +10,42 @@ use Illuminate\Console\Command;
 class SendAppointmentReminders extends Command
 {
     protected $signature = 'appointments:send-reminders';
-    protected $description = 'Send WhatsApp reminders for appointments starting within the configured window';
+    protected $description = 'Send the 1h confirm/cancel reminder for upcoming appointments';
 
     public function handle(WhatsappService $whatsapp): int
     {
-        if (!$whatsapp->isConnected()) {
-            $this->warn('WhatsApp service is not connected. Skipping reminders.');
-            return self::SUCCESS;
-        }
-
-        $minutes = config('booksy.whatsapp.reminder_minutes', 60);
-        $windowStart = now()->addMinutes($minutes - 5);
-        $windowEnd   = now()->addMinutes($minutes + 5);
+        // A single actionable reminder ~1h before the visit. No WhatsApp-connection
+        // gate here: Syrian numbers go out over SMS, which is independent of the
+        // WhatsApp node — sendReminder() routes each one by country and logs
+        // failures. The scheduler runs every 10 min; a ±6 min window covers it
+        // without gaps, and the service de-dupes per group so nothing repeats.
+        $minutesBefore = 60;
+        $windowStart   = now()->addMinutes($minutesBefore - 6);
+        $windowEnd     = now()->addMinutes($minutesBefore + 6);
 
         $appointments = Appointment::query()
             ->whereIn('status', [AppointmentStatus::Pending->value, AppointmentStatus::Confirmed->value])
             ->whereBetween('start_time', [$windowStart, $windowEnd])
             ->whereNotNull('customer_phone')
-            ->with(['branch', 'service'])
+            ->with(['branch', 'service', 'company'])
+            ->orderBy('id')
             ->get();
 
+        // Send once per visit: for grouped bookings only the first row (lowest id)
+        // triggers the consolidated reminder; siblings are skipped.
+        $seenGroups = [];
         $sent = 0;
         foreach ($appointments as $appt) {
-            if ($whatsapp->sendReminder($appt)) {
+            if ($appt->booking_group_id) {
+                if (isset($seenGroups[$appt->booking_group_id])) continue;
+                $seenGroups[$appt->booking_group_id] = true;
+            }
+            if ($whatsapp->sendReminder($appt, '1h')) {
                 $sent++;
             }
         }
 
-        $this->info("Sent {$sent} reminder(s) out of {$appointments->count()} appointment(s).");
+        $this->info("Sent {$sent} one-hour reminder(s).");
         return self::SUCCESS;
     }
 }

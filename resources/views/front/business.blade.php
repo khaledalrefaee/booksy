@@ -24,8 +24,8 @@
             'pts_ar' => ['عرض يومي وأسبوعي وشهري','جدولة عدة موظفين وكراسٍ في شاشة واحدة','منع الحجز المزدوج تلقائيًا','ألوان لكل خدمة وموظف'],
             'pts_en' => ['Day, week and month views','Multi-staff & multi-chair scheduling in one screen','Automatic double-booking protection','Colour-coded by service & staff'],
             'photo' => 'styling.jpg', 'rev' => false,
-            'shot' => '6662e8acc2a1f758efeb0836_b2e1efaab1c8c1cb5c5136f9bacea889_stay-booked-3.avif', 'sw' => 498, 'sh' => 576,
-            'alt_ar' => 'معاينة تقويم مواعيد بوكسي على الهاتف', 'alt_en' => 'Booksy appointment calendar preview on a phone',
+            'shot' => '1945cdd6-6a22-4454-bdcb-0f3d731fb3c0.png', 'sw' => 498, 'sh' => 576,
+            'alt_ar' => 'معاينة تقويم مواعيد غلوريز على الهاتف', 'alt_en' => 'GlowRez appointment calendar preview on a phone',
         ],
         [
             'eyebrow' => $t('الحجز الذاتي','Self-booking'),
@@ -35,19 +35,19 @@
             'pts_ar' => ['حجز ذاتي ٢٤/٧','رابط ورمز QR جاهزان','سجل كل عميلة وخدماتها المفضّلة','تأكيد فوري للطرفين'],
             'pts_en' => ['24/7 self-booking','Ready link and QR code','Each client’s history & favourite services','Instant confirmation for both'],
             'photo' => 'makeup.jpg', 'rev' => true,
-            'shot' => '666ff439946e67e168c4ab29_eda56729f7bef85ceff2885db984a1ae_be-proud-2.avif', 'sw' => 1080, 'sh' => 1080,
-            'alt_ar' => 'لوحة حجوزات ونمو الأعمال في بوكسي', 'alt_en' => 'Booksy bookings and business-growth dashboard',
+            'shot' => 'd0b5d557-d14b-43bc-89c9-3c1d7369451d.png', 'sw' => 1080, 'sh' => 1080,
+            'alt_ar' => 'لوحة حجوزات ونمو الأعمال في غلوريز', 'alt_en' => 'GlowRez bookings and business-growth dashboard',
         ],
         [
             'eyebrow' => $t('التذكير','Reminders'),
             'ar' => 'تذكير تلقائي، غياب أقل', 'en' => 'Auto reminders, fewer no-shows',
-            'lead_ar' => 'يرسل بوكسي تأكيدًا عند الحجز وتذكيرًا قبل الموعد عبر واتساب — القناة التي يفتحها عملاؤك فعلًا. فتبقى كراسيك ممتلئة.',
-            'lead_en' => 'Booksy sends a confirmation on booking and a reminder before the appointment over WhatsApp — the channel your clients actually open. So your chairs stay full.',
+            'lead_ar' => 'يرسل غلوريز تأكيدًا عند الحجز وتذكيرًا قبل الموعد عبر واتساب — القناة التي يفتحها عملاؤك فعلًا. فتبقى كراسيك ممتلئة.',
+            'lead_en' => 'GlowRez sends a confirmation on booking and a reminder before the appointment over WhatsApp — the channel your clients actually open. So your chairs stay full.',
             'pts_ar' => ['تأكيد فوري عند كل حجز','تذكير قبل الموعد','تعديل أو إلغاء برابط واحد'],
             'pts_en' => ['Instant confirmation on booking','A nudge before the appointment','Reschedule or cancel with one tap'],
             'photo' => 'facial.jpg', 'rev' => false,
             'shot' => '667cf467cd2f43c2e7eb320e_streamline-admin-3.webp', 'sw' => 540, 'sh' => 540,
-            'alt_ar' => 'بطاقة الإكراميات والتقييمات في بوكسي', 'alt_en' => 'Booksy tips and reviews card',
+            'alt_ar' => 'بطاقة الإكراميات والتقييمات في غلوريز', 'alt_en' => 'GlowRez tips and reviews card',
         ],
     ];
 
@@ -63,7 +63,7 @@
         ['icon' => 'gift',    'ar' => 'مجاني الآن',        'en' => 'Free right now',     'dar' => 'ابدأ اليوم بلا بطاقة وبلا التزام — ندعمك ونحن ننمو معًا.', 'den' => 'Start today with no card and no commitment.'],
         ['icon' => 'globe',   'ar' => 'بالعربية أولًا',    'en' => 'Arabic-first',       'dar' => 'واجهة ودعم بالعربية بالكامل، مصمّمان لطريقة عمل منشأتك.', 'den' => 'A fully Arabic interface and support, built around how your business works.'],
         ['icon' => 'zap',     'ar' => 'إعداد بدقائق',      'en' => 'Ready in minutes',   'dar' => 'أضف خدماتك وموظفيك وابدأ باستقبال الحجوزات اليوم.', 'den' => 'Add your services and staff and start taking bookings today.'],
-        ['icon' => 'layers',  'ar' => 'كل شيء بمكان واحد', 'en' => 'All in one place',   'dar' => 'لا تقفز بين خمسة تطبيقات — بوكسي يوحّدها.', 'den' => 'Stop juggling five apps — Booksy unifies them.'],
+        ['icon' => 'layers',  'ar' => 'كل شيء بمكان واحد', 'en' => 'All in one place',   'dar' => 'لا تقفز بين خمسة تطبيقات — غلوريز يوحّدها.', 'den' => 'Stop juggling five apps — GlowRez unifies them.'],
     ];
 
     $testi = [
@@ -73,8 +73,8 @@
     ];
 
     $faqs = [
-        ['ar' => 'هل هو مجاني فعلًا؟', 'en' => 'Is it really free?', 'aar' => 'نعم، بوكسي مجاني بالكامل الآن بلا بطاقة ولا التزام. نطلق الميزات ميزة تلو الأخرى، ومن ينضمّ مبكرًا يحصل على كل جديد أولًا.', 'aen' => 'Yes — Booksy is completely free right now, no card and no commitment. We roll features out one at a time, and early salons get every new one first.'],
-        ['ar' => 'هل أحتاج خبرة تقنية؟', 'en' => 'Do I need technical skills?', 'aar' => 'إطلاقًا. إن كنت تستخدم واتساب، تستطيع إدارة مواعيدك على بوكسي. ونساعدك في الإعداد بالكامل.', 'aen' => 'Not at all. If you can use WhatsApp, you can run your bookings on Booksy — and we help you set everything up.'],
+        ['ar' => 'هل هو مجاني فعلًا؟', 'en' => 'Is it really free?', 'aar' => 'نعم، غلوريز مجاني بالكامل الآن بلا بطاقة ولا التزام. نطلق الميزات ميزة تلو الأخرى، ومن ينضمّ مبكرًا يحصل على كل جديد أولًا.', 'aen' => 'Yes — GlowRez is completely free right now, no card and no commitment. We roll features out one at a time, and early salons get every new one first.'],
+        ['ar' => 'هل أحتاج خبرة تقنية؟', 'en' => 'Do I need technical skills?', 'aar' => 'إطلاقًا. إن كنت تستخدم واتساب، تستطيع إدارة مواعيدك على غلوريز. ونساعدك في الإعداد بالكامل.', 'aen' => 'Not at all. If you can use WhatsApp, you can run your bookings on GlowRez — and we help you set everything up.'],
         ['ar' => 'كم يستغرق إعداد منشأتي؟', 'en' => 'How long does setup take?', 'aar' => 'أغلب المنشآت تضيف خدماتها وموظفيها وتبدأ باستقبال الحجوزات خلال أقل من ساعة.', 'aen' => 'Most businesses add their services and staff and start taking bookings in under an hour.'],
         ['ar' => 'هل يمكن للعملاء الحجز بأنفسهم؟', 'en' => 'Can clients book themselves?', 'aar' => 'نعم. تحصل على صفحة حجز عامة ورمز QR يحجز منهما العملاء ٢٤/٧ دون أي مكالمة.', 'aen' => 'Yes. You get a public booking page and a QR code so clients book 24/7 without a single call.'],
         ['ar' => 'ماذا عن المالية والمخزون والتقارير؟', 'en' => 'What about finance, inventory and reports?', 'aar' => 'قادمة قريبًا جدًا. نبدأ بالمواعيد لنتقنها أولًا، ثم نضيف المالية والصلاحيات والمخزون والتحليلات تباعًا.', 'aen' => 'Coming very soon. We start with bookings to perfect them first, then add finance, roles, inventory and analytics.'],
@@ -176,7 +176,7 @@ html[dir="rtl"] .biz-progress{ transform-origin:100% 50%; }
 .biz-glow{ position:absolute; border-radius:50%; filter:blur(60px); opacity:.5; z-index:0; }
 .biz-glow.g1{ width:520px; height:520px; background:radial-gradient(circle,rgba(199,161,90,.30),transparent 70%); top:-160px; inset-inline-end:-120px; }
 .biz-glow.g2{ width:460px; height:460px; background:radial-gradient(circle,rgba(75,93,52,.28),transparent 70%); bottom:-160px; inset-inline-start:-120px; }
-/* full-bleed photographic hero (Booksy-style): the photo fills the whole band; a dark olive scrim keeps the copy legible */
+/* full-bleed photographic hero (GlowRez-style): the photo fills the whole band; a dark olive scrim keeps the copy legible */
 .biz-hero-photo{ position:absolute; inset:0; z-index:0; }
 .biz-hero-photo img{ width:100%; height:100%; object-fit:cover; object-position:center right; display:block; }
 /* RTL: mirror the photo with CSS only so its built-in dark side sits under the copy — no crop, no resize */
@@ -346,7 +346,7 @@ html[dir="rtl"] .biz-marquee-track{ animation-direction:reverse; }
 .biz-feature-pts li .ck svg{ width:15px; height:15px; }
 .biz-feature-cta{ margin-top:var(--bk-s8); }
 
-/* ── App-shot visual: real product mockup floating on an accent shape (Booksy-style) ── */
+/* ── App-shot visual: real product mockup floating on an accent shape (GlowRez-style) ── */
 .biz-features{ display:flex; flex-direction:column; margin-top:clamp(40px,6vw,72px); }
 .biz-shot{ position:relative; display:grid; place-items:center; padding:clamp(14px,2.4vw,30px); isolation:isolate; }
 /* soft rounded accent panel behind the mockup, offset toward the outer edge and gently floating */
@@ -361,11 +361,13 @@ html[dir="rtl"] .biz-marquee-track{ animation-direction:reverse; }
   animation:biz-shot-bob 9s ease-in-out infinite alternate-reverse; }
 .biz-feature:not(.rev) .biz-shot-ring{ inset-block-start:2%; inset-inline-start:6%; }
 .biz-feature.rev .biz-shot-ring{ inset-block-start:2%; inset-inline-end:6%; }
-.biz-shot-frame{ position:relative; z-index:1; width:min(100%,430px);  overflow:hidden;
-   
-  transition:transform var(--bk-t) var(--bk-spring),  }
-.biz-shot-frame img{ display:block; width:100%; height:auto; }
-.biz-shot-frame:hover{ transform:translateY(-8px) scale(1.015);  }
+/* Invisible wrapper — the product shots are transparent PNGs that already carry
+   their own card + shadow, so they float over .biz-shot-blob (was a broken rule). */
+.biz-shot-frame{ position:relative; z-index:1; width:min(100%,430px);
+  transition:transform var(--bk-t) var(--bk-spring); }
+.biz-shot-frame img{ display:block; width:100%; height:auto;
+  filter:drop-shadow(0 26px 52px rgba(8,11,5,.30)); }
+.biz-shot-frame:hover{ transform:translateY(-8px) scale(1.015); }
 @keyframes biz-shot-bob{ from{ transform:translateY(0); } to{ transform:translateY(-14px); } }
 
 /* collage: mock in front, photo peeking behind */
@@ -514,7 +516,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
 @media (prefers-reduced-motion:reduce){ .biz-q[open] .biz-q-a{ animation:none; } }
 
 /* ══════════════  FINAL CTA  ══════════════ */
-/* Final offer card: photo on an accent panel + the free offer & CTA (Booksy pricing-card layout, on-brand olive/gold) */
+/* Final offer card: photo on an accent panel + the free offer & CTA (GlowRez pricing-card layout, on-brand olive/gold) */
 .biz-offer{ position:relative; display:grid; grid-template-columns:.92fr 1.08fr; gap:clamp(24px,4vw,56px); align-items:center;
   padding:clamp(24px,4vw,56px); border-radius:var(--bk-r-2xl); background:var(--bk-surface); border:1px solid var(--bk-border); box-shadow:var(--bk-shadow-lg); overflow:hidden; }
 .biz-offer::before{ content:""; position:absolute; inset:0; background:var(--bk-grad-hero); pointer-events:none; }
@@ -555,7 +557,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
   .biz-bento{ grid-template-columns:repeat(2,1fr); } .biz-cell.wide{ grid-column:span 2; }
 }
 @media (max-width:900px){
-  /* Booksy mobile: dark copy on top, backdrop melts into the warm base, a big phone bridges into the next section */
+  /* GlowRez mobile: dark copy on top, backdrop melts into the warm base, a big phone bridges into the next section */
   /* reserve bottom room so the front card (which hangs below the back one) stays inside the hero */
   /* mobile: single column + dark brand base so the white copy stays readable (home-hero-img is hidden here) */
   .biz-hero{ min-height:auto; display:flex; flex-direction:column; position:relative; overflow:visible;
@@ -633,7 +635,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
         <div class="biz-stack">
               <figure class="biz-stack-bg">
                   <img src="{{ $img('hero-calendar.JPG') }}"
-                        alt="{{ $t('تقويم مواعيد بوكسي — يومك في نظرة واحدة','Booksy appointments calendar — your day at a glance') }}"
+                        alt="{{ $t('تقويم مواعيد GlowRez — يومك في نظرة واحدة','GlowRez appointments calendar — your day at a glance') }}"
                         width="653"
                         height="864"
                         loading="eager"
@@ -671,7 +673,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
 <section class="bkf-section" id="features">
   <div class="bkf-container-wide">
     <div class="bkf-head-center bkf-reveal">
-      <span class="bkf-eyebrow is-center">{{ $t('كيف يعمل بوكسي','How Booksy works') }}</span>
+      <span class="bkf-eyebrow is-center">{{ $t('كيف يعمل غلوريز','How GlowRez works') }}</span>
       <h2 class="bkf-title">{{ $t('كل ما تحتاجه لإدارة','Everything you need to run') }} <span class="em">{{ $t('مواعيدك في مكان واحد','your bookings in one place') }}</span></h2>
       <p class="bkf-lead">{{ $t('من التقويم إلى صفحة الحجز إلى التذكير — ثلاث خطوات بسيطة تُبقي كراسيك ممتلئة ويومك منظّمًا دون أي جهد يدوي.','From your calendar to your booking page to reminders — three simple steps that keep your chairs full and your day organised, with zero manual work.') }}</p>
     </div>
@@ -712,7 +714,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
     <div class="bkf-head-center bkf-reveal">
       <span class="bkf-eyebrow is-center">{{ $t('قريبًا جدًا','Coming very soon') }}</span>
       <h2 class="bkf-title">{{ $t('نبدأ بالمواعيد','We start with bookings') }} <span class="em">{{ $t('والباقي في الطريق','the rest is on the way') }}</span></h2>
-      <p class="bkf-lead">{{ $t('نطلق بوكسي ميزة تلو الأخرى لنتقن كل واحدة. هذه الوحدات قادمة قريبًا — ومن ينضمّ الآن يحصل عليها أولًا ومجانًا.','We release Booksy one feature at a time to perfect each one. These modules are coming soon — join now and get them first, free.') }}</p>
+      <p class="bkf-lead">{{ $t('نطلق غلوريز ميزة تلو الأخرى لنتقن كل واحدة. هذه الوحدات قادمة قريبًا — ومن ينضمّ الآن يحصل عليها أولًا ومجانًا.','We release GlowRez one feature at a time to perfect each one. These modules are coming soon — join now and get them first, free.') }}</p>
     </div>
     <div class="biz-soon-grid">
       @foreach($soon as $i => $s)
@@ -749,9 +751,9 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
         <span class="biz-motif m2"><x-icon name="sparkles" :size="74" :stroke="1.2"/></span>
         <span class="biz-motif m3"><x-icon name="star" :size="58" :stroke="1.2"/></span>
       </span>
-      <span class="bkf-eyebrow is-center">{{ $t('لماذا بوكسي','Why Booksy') }}</span>
+      <span class="bkf-eyebrow is-center">{{ $t('لماذا غلوريز','Why GlowRez') }}</span>
       <h2 class="bkf-title">{{ $t('لماذا تبدأ','Why start') }} <span class="em">{{ $t('معنا اليوم','with us today') }}</span></h2>
-      <p class="bkf-lead">{{ $t('أربعة أسباب تجعل بوكسي الخيار الأذكى لمنشأتك من اليوم الأول — بلا مخاطرة وبلا تكلفة.','Four reasons Booksy is the smart choice for your business from day one — no risk, no cost.') }}</p>
+      <p class="bkf-lead">{{ $t('أربعة أسباب تجعل غلوريز الخيار الأذكى لمنشأتك من اليوم الأول — بلا مخاطرة وبلا تكلفة.','Four reasons GlowRez is the smart choice for your business from day one — no risk, no cost.') }}</p>
     </div>
     <div class="biz-why-grid">
       @foreach($whySwitch as $i => $w)
@@ -824,7 +826,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
       <div class="biz-offer-visual">
         <span class="biz-offer-panel" aria-hidden="true"></span>
         <img class="biz-offer-photo" src="{{ $img('65ee13e9c8f322f7a8ce7c37_0814f24f9b69707e5aba5a9928b038cc_prix.avif') }}"
-             alt="{{ $t('صاحبة صالون تدير أعمالها مع بوكسي','Salon owner running her business with Booksy') }}"
+             alt="{{ $t('صاحبة صالون تدير أعمالها مع غلوريز','Salon owner running her business with GlowRez') }}"
              width="377" height="468" loading="lazy" decoding="async">
       </div>
       <div class="biz-offer-body">

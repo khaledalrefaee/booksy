@@ -37,6 +37,27 @@ class UpdateEmployeeRequest extends FormRequest
             'bio' => ['nullable', 'string', 'max:10000'],
             'image' => ['nullable', 'image', 'max:2048'],
             'is_active' => ['sometimes', 'boolean'],
+            'role_id' => ['required', 'exists:roles,id'],
+            // Branch access (WHERE) + Full Access (WHAT) + optional overrides.
+            'access_mode' => ['nullable', 'in:selected,all'],
+            'branch_ids' => ['nullable', 'array'],
+            'branch_ids.*' => ['integer'],
+            'full_access' => ['nullable', 'boolean'],
+            'overrides' => ['nullable', 'array'],
+            'overrides.*' => ['nullable', 'in:default,none,view,manage'],
+            'per_branch' => ['nullable', 'boolean'],
+            'branch_overrides' => ['nullable', 'array'],
+            'branch_overrides.*' => ['nullable', 'array'],
+            'branch_overrides.*.*' => ['nullable', 'in:default,none,view,manage'],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if ($this->input('access_mode', 'selected') !== 'all' && empty($this->input('branch_ids'))) {
+                $validator->errors()->add('branch_ids', __('Select at least one branch, or choose All branches.'));
+            }
+        });
     }
 }

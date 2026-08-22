@@ -58,48 +58,20 @@ class CompanyController extends Controller
 
     public function show(Company $company): View
     {
-        $company->load([
-            'category',
-            'plan',
-            'branches' => fn ($query) => $query->orderBy('sort_order')->with([
-                'workingHours' => fn ($q) => $q->orderBy('day_of_week')->orderBy('shift_number'),
-                'services' => fn ($q) => $q->orderByLocalizedName(),
-            ]),
-            'employees' => fn ($query) => $query->with(['branch', 'role'])->orderByLocalizedName(),
-            'appointments' => fn ($query) => $query
-                ->with(['branch', 'customer', 'employee', 'service'])
-                ->orderByDesc('start_time')
-                ->limit(50),
-            'waitlistEntries' => fn ($query) => $query
-                ->with(['branch', 'customer', 'service'])
-                ->orderByDesc('created_at')
-                ->limit(30),
-        ]);
+        // Lightweight shell only — each workspace tab lazy-loads its own scoped
+        // data via its Owner\Workspace controller (see config/owner-workspace.php).
+        $company->load(['category', 'plan']);
 
         $stats = [
-            'branches' => $company->branches->count(),
-            'employees' => $company->employees->count(),
+            'branches'     => $company->branches()->count(),
+            'employees'    => $company->employees()->count(),
             'appointments' => $company->appointments()->count(),
-            'waitlist' => $company->waitlistEntries()->count(),
+            'waitlist'     => $company->waitlistEntries()->count(),
         ];
 
-        $plans          = Plan::query()->where('is_active', true)->orderBy('sort_order')->orderBy('price')->get();
-        $featureCatalog = Plan::featureCatalog();
+        $tabs = config('owner-workspace.tabs', []);
 
-        $companyPayments = $company->subscriptionPayments()
-            ->latest('paid_at')->latest('id')
-            ->limit(30)
-            ->get();
-
-        $companyAuditLogs = \App\Models\OwnerAuditLog::query()
-            ->with('owner')
-            ->where('auditable_type', $company->getMorphClass())
-            ->where('auditable_id', $company->id)
-            ->latest('id')
-            ->limit(30)
-            ->get();
-
-        return view('owner.companies.show', compact('company', 'stats', 'plans', 'featureCatalog', 'companyPayments', 'companyAuditLogs'));
+        return view('owner.companies.show', compact('company', 'stats', 'tabs'));
     }
 
     public function updateSubscription(Request $request, Company $company): RedirectResponse

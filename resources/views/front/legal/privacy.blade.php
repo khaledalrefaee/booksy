@@ -24,8 +24,8 @@
         <div class="bkf-legal-body">
           <p>
             {{ $isAr
-              ? 'في Booksy نحترم خصوصيتك. توضّح هذه السياسة البيانات التي نجمعها عند استخدامك المنصّة لحجز مواعيد صالونات التجميل ومراكز العناية، وكيف نستخدمها ونحميها.'
-              : 'At Booksy we respect your privacy. This policy explains what data we collect when you use the platform to book beauty and wellness appointments, and how we use and protect it.' }}
+              ? 'في GlowRez نحترم خصوصيتك. توضّح هذه السياسة البيانات التي نجمعها عند استخدامك المنصّة لحجز مواعيد صالونات التجميل ومراكز العناية، وكيف نستخدمها ونحميها.'
+              : 'At GlowRez we respect your privacy. This policy explains what data we collect when you use the platform to book beauty and wellness appointments, and how we use and protect it.' }}
           </p>
 
           <h2 id="collect">{{ $isAr ? '١. البيانات التي نجمعها' : '1. Information we collect' }}</h2>

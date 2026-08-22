@@ -172,7 +172,7 @@
           <button type="button" class="bkf-btn bkf-btn-soft" data-share
                   data-share-url="{{ route('front.branch', $b) }}"
                   data-share-title="{{ $venue }}"
-                  data-share-text="{{ $isAr ? 'موعدي في '.$venue.' عبر بوكسي' : 'My appointment at '.$venue.' via Booksy' }}">
+                  data-share-text="{{ $isAr ? 'موعدي في '.$venue.' عبر غلوريز' : 'My appointment at '.$venue.' via GlowRez' }}">
             <x-icon name="arrow-up-right" :size="17"/>{{ $isAr ? 'مشاركة' : 'Share' }}
           </button>
         </div>

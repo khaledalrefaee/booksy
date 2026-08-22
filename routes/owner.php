@@ -68,6 +68,19 @@ Route::prefix('owner')->name('owner.')->group(function () {
             ->only(['store', 'update', 'destroy'])
             ->middleware('owner.can:companies.manage');
 
+        // ── Company Workspace (per-company management hub) ──
+        // Each tab/module owns its own file in routes/owner/ws/ so parallel work
+        // never collides on this file. Group applies prefix + name + base gate;
+        // individual files may add stricter middleware per action.
+        Route::middleware('owner.can:company-workspace.view')
+            ->prefix('companies/{company}/ws')
+            ->name('companies.ws.')
+            ->group(function () {
+                foreach (glob(base_path('routes/owner/ws/*.php')) as $wsFile) {
+                    require $wsFile;
+                }
+            });
+
         // Subscription plans
         Route::resource('plans', \App\Http\Controllers\Owner\PlanController::class)->only(['index']);
         Route::resource('plans', \App\Http\Controllers\Owner\PlanController::class)

@@ -114,7 +114,7 @@
 
         // Browser notification
         if (Notification.permission === 'granted') {
-            new Notification(IS_AR ? '📅 حجز جديد — بوكسي' : '📅 New Booking — Booksy', {
+            new Notification(IS_AR ? '📅 حجز جديد — غلوريز' : '📅 New Booking — GlowRez', {
                 body: `${customer} · ${svc} · ${time}`,
                 icon: '/favicon.ico',
             });

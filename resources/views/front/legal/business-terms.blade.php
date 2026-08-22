@@ -32,14 +32,14 @@
         <div class="bkf-legal-body">
           <p>
             {{ $isAr
-              ? 'تنطبق هذه الشروط على النشاط التجاري (الصالون/المركز/العيادة) الذي يشترك في منصّة Booksy لإدارة الحجوزات والأعمال. باستخدامك لوحة الأعمال فإنك توافق عليها نيابةً عن نشاطك.'
-              : 'These terms apply to the business (salon / center / clinic) that subscribes to the Booksy platform to manage bookings and operations. By using the business dashboard you accept them on behalf of your business.' }}
+              ? 'تنطبق هذه الشروط على النشاط التجاري (الصالون/المركز/العيادة) الذي يشترك في منصّة GlowRez لإدارة الحجوزات والأعمال. باستخدامك لوحة الأعمال فإنك توافق عليها نيابةً عن نشاطك.'
+              : 'These terms apply to the business (salon / center / clinic) that subscribes to the GlowRez platform to manage bookings and operations. By using the business dashboard you accept them on behalf of your business.' }}
           </p>
 
           <h2 id="service">{{ $isAr ? '١. الخدمة وترخيص الاستخدام' : '1. The service & licence' }}</h2>
           <p>{{ $isAr
-            ? '[هيكل] Booksy تُقدّم برمجية كخدمة (SaaS) لإدارة الحجوزات والفريق والعملاء. نمنحك ترخيصاً محدوداً وغير حصري وقابلاً للإلغاء لاستخدام المنصّة. لسنا شريكاً لك ولا صاحب عمل لموظفيك.'
-            : '[Structure] Booksy provides software-as-a-service (SaaS) to manage bookings, staff and customers. We grant you a limited, non-exclusive, revocable licence to use the platform. We are not your partner and not the employer of your staff.' }}</p>
+            ? '[هيكل] GlowRez تُقدّم برمجية كخدمة (SaaS) لإدارة الحجوزات والفريق والعملاء. نمنحك ترخيصاً محدوداً وغير حصري وقابلاً للإلغاء لاستخدام المنصّة. لسنا شريكاً لك ولا صاحب عمل لموظفيك.'
+            : '[Structure] GlowRez provides software-as-a-service (SaaS) to manage bookings, staff and customers. We grant you a limited, non-exclusive, revocable licence to use the platform. We are not your partner and not the employer of your staff.' }}</p>
 
           <h2 id="account">{{ $isAr ? '٢. الحساب والحسابات الفرعية للموظفين' : '2. Account & staff sub-accounts' }}</h2>
           <ul>

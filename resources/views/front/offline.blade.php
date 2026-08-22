@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>{{ $isAr ? 'غير متصل' : 'Offline' }} — Booksy</title>
+<title>{{ $isAr ? 'غير متصل' : 'Offline' }} — GlowRez</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;

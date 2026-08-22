@@ -49,7 +49,9 @@ class CustomerAuthController extends Controller
                 . "⏱️ Valid for 4 minutes\n"
                 . "🔒 Never share this code with anyone";
 
-        $sent = $whatsapp->send($phone, $message, null, null, 'otp');
+        // Route by country: Syrian numbers → local SMS (Rasel), everyone else → WhatsApp.
+        $channel = $whatsapp->channelFor($phone);
+        $sent = $whatsapp->send($phone, $message, null, null, 'otp', $channel);
 
         // In local dev, always allow the flow and surface the code in the UI even
         // if the WhatsApp gateway isn't connected.

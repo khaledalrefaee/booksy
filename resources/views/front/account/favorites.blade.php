@@ -37,7 +37,7 @@
       <div class="bkf-empty-ic"><x-icon name="heart" :size="30"/></div>
       <h3>{{ $isAr ? 'لا مفضّلات بعد' : 'No favourites yet' }}</h3>
       <p>{{ $isAr ? 'اضغط على القلب في أي مكان يعجبك ليظهر هنا.' : 'Tap the heart on any venue you like and it will show up here.' }}</p>
-      <a href="{{ route('front.venues') }}" class="bkf-btn bkf-btn-primary">{{ $isAr ? 'استكشف الأماكن' : 'Explore venues' }}<x-icon name="arrow-right" :size="18"/></a>
+      <a href="{{ route('front.venues') }}" class="bkf-btn bkf-btn-primary">{{ $isAr ? 'استكشف أماكن الجمال والعناية' : 'Explore Beauty & Wellness Venues' }}<x-icon name="arrow-right" :size="18"/></a>
     </div>
   </div>
 </section>

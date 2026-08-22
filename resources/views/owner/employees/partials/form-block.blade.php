@@ -62,6 +62,17 @@
                    value="{{ $row['phone'] ?? '' }}">
         </div>
         <div class="col-md-6">
+            <label class="f-label">{{ __('Role') }}</label>
+            <select name="{{ $pfx }}[role_id]" class="f-input form-select">
+                @foreach(($roles ?? collect()) as $role)
+                <option value="{{ $role->id }}" {{ (string) ($row['role_id'] ?? '') === (string) $role->id ? 'selected' : '' }}>
+                    {{ app()->getLocale()==='ar' ? ($role->label_ar ?: $role->label_en) : ($role->label_en ?: $role->label_ar) }}
+                </option>
+                @endforeach
+            </select>
+            <div class="mt-1" style="font-size:10px;opacity:.5;">{{ __('Works in this branch. Fine-tune access after creating.') }}</div>
+        </div>
+        <div class="col-md-6">
             <label class="f-label">{{ __('Password') }} <span class="text-danger">*</span></label>
             <input type="password" name="{{ $pfx }}[password]"
                    class="f-input form-control" placeholder="••••••••">

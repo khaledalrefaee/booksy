@@ -23,15 +23,15 @@
         <div class="bkf-legal-body">
           <p>
             {{ $isAr
-              ? 'باستخدامك منصّة Booksy فإنك توافق على هذه الشروط. يُرجى قراءتها بعناية. إذا لم توافق عليها، فلا يمكنك استخدام المنصّة.'
-              : 'By using the Booksy platform you agree to these terms. Please read them carefully. If you do not agree, you may not use the platform.' }}
+              ? 'باستخدامك منصّة GlowRez فإنك توافق على هذه الشروط. يُرجى قراءتها بعناية. إذا لم توافق عليها، فلا يمكنك استخدام المنصّة.'
+              : 'By using the GlowRez platform you agree to these terms. Please read them carefully. If you do not agree, you may not use the platform.' }}
           </p>
 
           <h2 id="service">{{ $isAr ? '١. عن الخدمة' : '1. About the service' }}</h2>
           <p>
             {{ $isAr
-              ? 'Booksy منصّة تربط العملاء بصالونات التجميل ومراكز العناية لحجز المواعيد. نحن لسنا مقدّم الخدمة داخل الصالون؛ الصالون وحده مسؤول عن الخدمات التي يقدّمها.'
-              : 'Booksy is a platform connecting customers with beauty and wellness venues to book appointments. We are not the in-venue service provider; each venue is solely responsible for the services it delivers.' }}
+              ? 'GlowRez منصّة تربط العملاء بصالونات التجميل ومراكز العناية لحجز المواعيد. نحن لسنا مقدّم الخدمة داخل الصالون؛ الصالون وحده مسؤول عن الخدمات التي يقدّمها.'
+              : 'GlowRez is a platform connecting customers with beauty and wellness venues to book appointments. We are not the in-venue service provider; each venue is solely responsible for the services it delivers.' }}
           </p>
 
           <h2 id="account">{{ $isAr ? '٢. حسابك' : '2. Your account' }}</h2>

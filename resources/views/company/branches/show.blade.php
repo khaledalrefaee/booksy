@@ -93,6 +93,136 @@
     font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
     padding: 3px 9px; border-radius: 20px;
 }
+
+/* ── QR Code card · Design B — GlowRez Brand Gradient (theme-aware) ── */
+/* The card itself is the gradient ring; .bk-qr-inner is the real surface. */
+.bk-qr-card {
+    position: relative;
+    border-radius: 23px;
+    padding: 1.5px;
+    background: linear-gradient(135deg,
+        var(--bk-accent) 0%, var(--bk-gold) 45%, var(--bk-gold-strong) 68%, var(--bk-accent) 100%);
+    box-shadow: var(--bk-shadow-lg), 0 0 0 1px color-mix(in srgb, var(--bk-gold) 16%, transparent);
+}
+.bk-qr-inner {
+    position: relative;
+    border-radius: 21.5px;
+    overflow: hidden;
+    padding: 22px 22px 20px;
+    background:
+        radial-gradient(135% 95% at 100% -12%, color-mix(in srgb, var(--bk-gold) 15%, transparent) 0%, transparent 55%),
+        radial-gradient(120% 80% at -8% 112%, color-mix(in srgb, var(--bk-accent) 14%, transparent) 0%, transparent 52%),
+        linear-gradient(165deg, color-mix(in srgb, var(--bk-accent) 6%, var(--bk-surface)) 0%, var(--bk-surface) 58%);
+}
+.bk-qr-head {
+    display: flex; align-items: flex-start; gap: 13px;
+}
+.bk-qr-head-icon {
+    flex: none; width: 44px; height: 44px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--bk-accent-ink);
+    background: linear-gradient(135deg,
+        var(--bk-accent-fill), color-mix(in srgb, var(--bk-gold-strong) 60%, var(--bk-accent-fill)));
+    box-shadow: 0 6px 16px -7px color-mix(in srgb, var(--bk-gold) 55%, transparent),
+                inset 0 1px 0 rgba(255,255,255,.22);
+}
+.bk-qr-head-icon svg { width: 22px; height: 22px; }
+.bk-qr-title {
+    font-size: 15.5px; font-weight: 800; letter-spacing: -.01em;
+    margin: 2px 0 4px; color: var(--bk-text);
+}
+.bk-qr-sub {
+    font-size: 12px; line-height: 1.5; margin: 0;
+    color: var(--bk-text-muted); max-width: 32ch;
+}
+
+/* White plaque + blurred brand-gradient halo → premium, and the QR stays
+   high-contrast & scannable in BOTH themes */
+.bk-qr-plaque-wrap {
+    position: relative; margin-top: 20px;
+    display: flex; justify-content: center; isolation: isolate;
+}
+.bk-qr-plaque-wrap::before {
+    content: ""; position: absolute; z-index: 0;
+    width: 66%; height: 66%; top: 17%; left: 17%;
+    border-radius: 34px; filter: blur(32px); opacity: .42;
+    background: linear-gradient(135deg, var(--bk-accent), var(--bk-gold));
+}
+.bk-qr-plaque {
+    position: relative; z-index: 1;
+    background: #fff; border-radius: 18px; padding: 16px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--bk-gold) 34%, transparent),
+                0 16px 36px -16px color-mix(in srgb, var(--bk-accent) 62%, transparent);
+}
+.bk-qr-img {
+    width: 100%; max-width: 210px; height: auto;
+    display: block; border-radius: 8px;
+}
+.bk-qr-actions {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px;
+}
+.bk-qr-btn {
+    flex: 1 1 auto; min-width: 92px; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 13px; font-weight: 700; line-height: 1;
+    border-radius: 13px; cursor: pointer; color: var(--bk-text-soft);
+    border: 1px solid transparent;
+    background:
+        linear-gradient(var(--bk-surface-2), var(--bk-surface-2)) padding-box,
+        linear-gradient(135deg, color-mix(in srgb, var(--bk-accent) 55%, transparent),
+                                color-mix(in srgb, var(--bk-gold) 62%, transparent)) border-box;
+    transition: transform .14s ease, filter .18s ease, box-shadow .18s ease, color .15s;
+}
+.bk-qr-btn svg { width: 15px; height: 15px; }
+.bk-qr-btn:hover { transform: translateY(-1px); color: var(--bk-text); filter: brightness(1.04); }
+.bk-qr-btn:active { transform: translateY(0); }
+.bk-qr-btn:focus-visible { outline: 2px solid var(--bk-accent); outline-offset: 2px; }
+.bk-qr-btn-primary {
+    color: var(--bk-accent-ink); border-color: transparent;
+    background: linear-gradient(135deg,
+        var(--bk-accent-fill) 0%, color-mix(in srgb, var(--bk-gold-strong) 58%, var(--bk-accent-fill)) 100%);
+    box-shadow: 0 8px 18px -9px color-mix(in srgb, var(--bk-gold) 60%, transparent),
+                inset 0 1px 0 rgba(255,255,255,.20);
+}
+.bk-qr-btn-primary:hover {
+    color: var(--bk-accent-ink);
+    box-shadow: 0 12px 24px -10px color-mix(in srgb, var(--bk-gold) 70%, transparent),
+                inset 0 1px 0 rgba(255,255,255,.20);
+}
+.bk-qr-btn.is-copied {
+    color: var(--bk-success);
+    background:
+        linear-gradient(var(--bk-success-bg), var(--bk-success-bg)) padding-box,
+        linear-gradient(135deg, var(--bk-success), var(--bk-success)) border-box;
+}
+.bk-qr-regen {
+    text-align: center; margin-top: 12px;
+}
+.bk-qr-regen-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: none; border: none; cursor: pointer;
+    font-size: 11.5px; font-weight: 600; color: var(--bk-text-muted);
+    padding: 6px 11px; border-radius: 9px;
+    transition: color .15s, background .15s;
+}
+.bk-qr-regen-btn svg { width: 12px; height: 12px; }
+.bk-qr-regen-btn:hover { color: var(--bk-gold-strong); background: var(--bk-gold-soft); }
+
+/* Empty state */
+.bk-qr-empty {
+    margin-top: 20px; padding: 30px 20px; text-align: center;
+    border-radius: 16px; border: 1px dashed color-mix(in srgb, var(--bk-gold) 40%, var(--bk-border));
+    background: color-mix(in srgb, var(--bk-accent) 5%, var(--bk-surface-2)); color: var(--bk-text-muted);
+}
+.bk-qr-empty svg { color: var(--bk-accent); opacity: .7; }
+.bk-qr-empty p { margin: 10px 0 0; font-size: 12.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+    .bk-qr-btn, .bk-qr-regen-btn { transition: none; }
+}
+@media (max-width: 400px) {
+    .bk-qr-btn { min-width: 0; flex-basis: calc(50% - 4px); }
+}
 </style>
 @endpush
 
@@ -354,52 +484,72 @@
         <div class="col-lg-5">
 
             {{-- QR Code card --}}
-            <div class="card border-0 mb-4" style="border-radius:18px;overflow:hidden;">
-                <div class="card-body p-4">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h5 class="fw-bold mb-0" style="font-size:15px;">
-                            <i data-feather="maximize" style="width:15px;height:15px;margin-inline-end:6px;opacity:.6;"></i>
-                            {{ __('QR Code') }}
-                        </h5>
-                        <div class="d-flex gap-2">
-                            @if($branch->qr_code)
-                            <a href="{{ asset('storage/'.$branch->qr_code) }}" download="qr-{{ Str::slug($branch->localizedName()) }}.png"
-                               class="btn btn-sm rounded-pill px-3"
-                               style="font-size:11px;font-weight:600;background:rgba(43,207,126,.12);color:#2bcf7e;border:none;">
-                                <i data-feather="download" style="width:11px;height:11px;margin-inline-end:4px;"></i>{{ __('Download') }}
-                            </a>
-                            @endif
-                            <form method="POST" action="{{ route('company.branches.regenerate-qr', $branch) }}" style="display:inline;">
-                                @csrf
-                                <button type="submit" class="btn btn-sm rounded-pill px-3"
-                                        style="font-size:11px;font-weight:600;background:rgba(102,126,234,.12);color:#a5b4fd;border:none;">
-                                    <i data-feather="refresh-cw" style="width:11px;height:11px;margin-inline-end:4px;"></i>{{ __('Regenerate') }}
-                                </button>
-                            </form>
+            @php $qrVer = ($branch->qr_code ? @filemtime(public_path('storage/'.$branch->qr_code)) : null) ?: (optional($branch->updated_at)->timestamp ?: '1'); @endphp
+            <div class="bk-qr-card mb-4">
+              <div class="bk-qr-inner">
+                <div class="bk-qr-head">
+                    <div class="bk-qr-head-icon">
+                        <i data-feather="maximize"></i>
+                    </div>
+                    <div>
+                        <h5 class="bk-qr-title">{{ __('QR Code') }}</h5>
+                        <p class="bk-qr-sub">{{ __('Share your branch with customers.') }}</p>
+                    </div>
+                </div>
+
+                @if($branch->qr_code)
+                    <div class="bk-qr-plaque-wrap">
+                        <div class="bk-qr-plaque">
+                            <img id="bkQrImg"
+                                 class="bk-qr-img"
+                                 src="{{ asset('storage/'.$branch->qr_code) }}?v={{ $qrVer }}"
+                                 alt="{{ __('QR Code') }} — {{ $branch->localizedName() }}">
                         </div>
                     </div>
 
-                    @if($branch->qr_code)
-                        <div class="text-center">
-                            <img src="{{ asset('storage/'.$branch->qr_code) }}"
-                                 alt="QR"
-                                 style="width:200px;height:auto;border-radius:12px;border:4px solid rgba(255,255,255,.08);">
-                            <p class="mt-2 mb-0" style="font-size:11px;opacity:.4;">
-                                {{ __('Scan to open branch booking page') }}
-                            </p>
-                        </div>
-                    @else
-                        <div class="text-center py-3" style="opacity:.35;">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
-                                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                                <rect x="3" y="14" width="7" height="7"/>
-                                <path d="M14 14h3v3m0 4h4m-4 0v-4m-3 4h-1m1-7h4"/>
-                            </svg>
-                            <p class="mt-2 mb-0" style="font-size:12px;">{{ __('No QR code yet.') }}</p>
-                            <p style="font-size:11px;opacity:.6;">{{ __('Click Regenerate to create one.') }}</p>
-                        </div>
-                    @endif
-                </div>
+                    <div class="bk-qr-actions">
+                        <a href="{{ asset('storage/'.$branch->qr_code) }}?v={{ $qrVer }}"
+                           download="glowrez-qr-{{ Str::slug($branch->localizedName()) }}.png"
+                           class="bk-qr-btn bk-qr-btn-primary">
+                            <i data-feather="download"></i>{{ __('Download') }}
+                        </a>
+                        <button type="button" class="bk-qr-btn" onclick="bkPrintQr()">
+                            <i data-feather="printer"></i>{{ __('Print') }}
+                        </button>
+                        <button type="button" class="bk-qr-btn" id="bkCopyLinkBtn"
+                                data-url="{{ route('front.branch', $branch) }}"
+                                data-copied="{{ __('Copied!') }}">
+                            <i data-feather="link"></i><span>{{ __('Copy Link') }}</span>
+                        </button>
+                    </div>
+
+                    <div class="bk-qr-regen">
+                        <form method="POST" action="{{ route('company.branches.regenerate-qr', $branch) }}">
+                            @csrf
+                            <button type="submit" class="bk-qr-regen-btn">
+                                <i data-feather="refresh-cw"></i>{{ __('Regenerate') }}
+                            </button>
+                        </form>
+                    </div>
+                @else
+                    <div class="bk-qr-empty">
+                        <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
+                            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                            <path d="M14 14h3v3m0 4h4m-4 0v-4m-3 4h-1m1-7h4"/>
+                        </svg>
+                        <p>{{ __('No QR code yet.') }}</p>
+                    </div>
+                    <div class="bk-qr-regen">
+                        <form method="POST" action="{{ route('company.branches.regenerate-qr', $branch) }}">
+                            @csrf
+                            <button type="submit" class="bk-qr-regen-btn">
+                                <i data-feather="refresh-cw"></i>{{ __('Generate QR code') }}
+                            </button>
+                        </form>
+                    </div>
+                @endif
+              </div>
             </div>
 
            
@@ -411,3 +561,71 @@
 
 </div>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    // ── Copy branch booking link ──
+    var copyBtn = document.getElementById('bkCopyLinkBtn');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', function () {
+            var url   = copyBtn.dataset.url;
+            var label = copyBtn.querySelector('span');
+            var done  = function () {
+                var prev = label.textContent;
+                copyBtn.classList.add('is-copied');
+                label.textContent = copyBtn.dataset.copied || 'Copied!';
+                setTimeout(function () {
+                    copyBtn.classList.remove('is-copied');
+                    label.textContent = prev;
+                }, 1800);
+            };
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(url).then(done).catch(fallback);
+            } else {
+                fallback();
+            }
+            function fallback() {
+                var ta = document.createElement('textarea');
+                ta.value = url;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.focus(); ta.select();
+                try { document.execCommand('copy'); } catch (e) {}
+                document.body.removeChild(ta);
+                done();
+            }
+        });
+    }
+})();
+
+// ── Print the QR code on a clean sheet ──
+function bkPrintQr() {
+    var img = document.getElementById('bkQrImg');
+    if (!img) return;
+    var title = @json($branch->localizedName());
+    var url   = @json(route('front.branch', $branch));
+    var w = window.open('', '_blank', 'width=560,height=680');
+    if (!w) return;
+    w.document.write(
+        '<!doctype html><html><head><meta charset="utf-8"><title>' + title + '</title>' +
+        '<style>' +
+        'html,body{height:100%;margin:0}' +
+        'body{display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+        'font-family:Poppins,Segoe UI,Arial,sans-serif;color:#22251D;padding:32px;box-sizing:border-box}' +
+        'img{width:320px;max-width:80vw;height:auto}' +
+        'h1{font-size:20px;font-weight:800;margin:20px 0 4px;text-align:center}' +
+        'p{font-size:12px;color:#7B7C6D;margin:0;word-break:break-all;text-align:center;max-width:340px}' +
+        '</style></head><body>' +
+        '<img src="' + img.src + '" alt="QR">' +
+        '<h1>' + title + '</h1><p>' + url + '</p>' +
+        '</body></html>'
+    );
+    w.document.close();
+    var run = function () { w.focus(); w.print(); };
+    if (w.document.readyState === 'complete') { setTimeout(run, 250); }
+    else { w.onload = run; }
+}
+</script>
+@endpush

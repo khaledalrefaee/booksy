@@ -348,7 +348,38 @@ window.CustomerAuthModal = (function(){
         if (res.error || !res.verified) { $('cam-otp-err').textContent = IS_AR ? 'الرمز غير صحيح أو منتهي الصلاحية.' : 'Invalid or expired code.'; return; }
         clearInterval(_timerInt);
         if (res.needs_profile) { goStep(3); $('cam-name-input').focus(); }
-        else { close(); if (_callback) _callback(); }
+        else { completeLogin(res.customer && res.customer.name); }
+    }
+
+    // Finish a successful customer login: stash a one-shot welcome flag (so the
+    // toast survives a page reload/redirect from _callback), close, run callback.
+    // If the callback reloads/redirects the page, we DON'T show it here — the
+    // flag is consumed on the next page render so the toast gets its full life
+    // after loading. Only when the page stays put (e.g. continue booking) do we
+    // show it in-place. Consumed atomically so it fires exactly once.
+    function completeLogin(name) {
+        try { sessionStorage.setItem('bkfWelcome', name || '1'); } catch (e) {}
+
+        var navigating = false;
+        var mark = function () { navigating = true; };
+        window.addEventListener('pagehide', mark, { once: true });
+        window.addEventListener('beforeunload', mark, { once: true });
+
+        close();
+        if (_callback) _callback();
+
+        setTimeout(function () {
+            window.removeEventListener('pagehide', mark);
+            window.removeEventListener('beforeunload', mark);
+            if (navigating) return; // page is reloading → let the next render show it
+            try {
+                var n = sessionStorage.getItem('bkfWelcome');
+                if (n !== null) {
+                    sessionStorage.removeItem('bkfWelcome');
+                    if (window.bkfWelcomeToast) window.bkfWelcomeToast(n === '1' ? '' : n);
+                }
+            } catch (e) {}
+        }, 700);
     }
 
     async function saveProfile() {
@@ -359,7 +390,7 @@ window.CustomerAuthModal = (function(){
             method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':TOKEN,'Accept':'application/json'},
             body: JSON.stringify({ name, age: age || null })
         }).then(r => r.json()).catch(() => ({ error:true }));
-        if (res.saved) { close(); if (_callback) _callback(); }
+        if (res.saved) { completeLogin(name); }
         else { $('cam-name-err').textContent = IS_AR ? 'تعذّر الحفظ. حاول مجدداً.' : 'Could not save. Try again.'; }
     }
 
@@ -380,5 +411,114 @@ window.CustomerAuthModal = (function(){
     })();
 
     return { open, close, goStep, sendOtp, verifyOtp, saveProfile };
+})();
+</script>
+
+{{-- Welcome toast — same dark card + green gradient + glowing bar as the dashboard toast --}}
+<style>
+#bkf-toast-stack {
+    position: fixed;
+    top: 20px;
+    inset-inline-end: 20px;
+    z-index: 12000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+    max-width: calc(100vw - 40px);
+}
+.bkf-ct {
+    --color: #22c55e;
+    width: 360px;
+    max-width: 100%;
+    border-radius: 10px;
+    pointer-events: all;
+    position: relative;
+    overflow: hidden;
+    direction: {{ $isAr ? 'rtl' : 'ltr' }};
+    animation: bkfCtIn .45s cubic-bezier(.16,1,.3,1);
+    background-color: #22242F;
+    background-image: linear-gradient(to {{ $isAr ? 'left' : 'right' }}, color-mix(in srgb, var(--color) 55%, transparent), #22242F 60%);
+    box-shadow: 0 12px 30px rgba(0,0,0,.35);
+}
+.bkf-ct.removing { animation: bkfCtOut .35s ease forwards; }
+@keyframes bkfCtIn  { from { opacity:0; transform: translateY(-16px) scale(.96); } to { opacity:1; transform: translateY(0) scale(1); } }
+@keyframes bkfCtOut { to { opacity:0; transform: translateX({{ $isAr ? '-' : '' }}60px) scale(.92); } }
+.bkf-ct-progress {
+    position: absolute;
+    bottom: 0; inset-inline-start: 0;
+    background-color: var(--color);
+    width: 100%; height: 3px;
+    box-shadow: 0 0 10px var(--color);
+    animation: bkfCtTimeout 4s linear 1 forwards;
+}
+@keyframes bkfCtTimeout { to { width: 0; } }
+.bkf-ct-body { display: flex; align-items: center; gap: 14px; padding: 16px 18px; }
+.bkf-ct-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #fff; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; color: var(--color); font-size: 18px; font-weight: 900;
+}
+.bkf-ct-text { flex: 1; min-width: 0; }
+.bkf-ct-title { font-size: 15px; font-weight: 800; font-family: '{{ $isAr ? "Tajawal" : "Poppins" }}', var(--bk-font-ui); color: #fff; margin-bottom: 2px; }
+.bkf-ct-msg { font-size: 12.5px; color: rgba(255,255,255,.82); line-height: 1.45; }
+.bkf-ct-close {
+    align-self: flex-start; width: 26px; height: 26px; border-radius: 6px; border: none;
+    background: transparent; color: rgba(255,255,255,.6); font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all .2s; flex-shrink: 0;
+}
+.bkf-ct-close:hover { color: #fff; background: rgba(255,255,255,.1); }
+</style>
+
+<div id="bkf-toast-stack"></div>
+
+<script>
+(function () {
+    var isAr = {{ $isAr ? 'true' : 'false' }};
+
+    window.bkfToast = function (title, message) {
+        var stack = document.getElementById('bkf-toast-stack');
+        if (!stack) return;
+        var el = document.createElement('div');
+        el.className = 'bkf-ct';
+        el.innerHTML =
+            '<div class="bkf-ct-body">'
+            + '<div class="bkf-ct-icon">✓</div>'
+            + '<div class="bkf-ct-text">'
+            + '<div class="bkf-ct-title"></div>'
+            + '<div class="bkf-ct-msg"></div>'
+            + '</div>'
+            + '<button class="bkf-ct-close" aria-label="close">&times;</button>'
+            + '</div>'
+            + '<div class="bkf-ct-progress"></div>';
+        el.querySelector('.bkf-ct-title').textContent = title;
+        el.querySelector('.bkf-ct-msg').textContent = message;
+        var dismiss = function () {
+            if (el._rm) return; el._rm = true; clearTimeout(el._timer);
+            el.classList.add('removing');
+            setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 350);
+        };
+        el.querySelector('.bkf-ct-close').addEventListener('click', dismiss);
+        stack.appendChild(el);
+        el._timer = setTimeout(dismiss, 4000);
+    };
+
+    window.bkfWelcomeToast = function (name) {
+        var title = isAr ? 'مرحباً بك' : 'Welcome';
+        var msg = name
+            ? (isAr ? ('تم تسجيل دخولك بنجاح، ' + name) : ('Signed in successfully, ' + name))
+            : (isAr ? 'تم تسجيل الدخول بنجاح' : 'Signed in successfully');
+        window.bkfToast(title, msg);
+    };
+
+    // Show the welcome toast after a reload/redirect that followed login. Runs on
+    // this page's render; consumes the one-shot flag atomically so it fires once.
+    try {
+        var n = sessionStorage.getItem('bkfWelcome');
+        if (n !== null) {
+            sessionStorage.removeItem('bkfWelcome');
+            window.bkfWelcomeToast(n === '1' ? '' : n);
+        }
+    } catch (e) {}
 })();
 </script>

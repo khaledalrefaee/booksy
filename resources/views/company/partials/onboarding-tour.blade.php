@@ -26,7 +26,7 @@
     var STEPS = [
         {
             center: true,
-            title: @json(__('Welcome to Booksy Business!')),
+            title: @json(__('Welcome to GlowRez Business!')),
             text:  @json(__('A quick tour to set up your salon in a few minutes.')),
             next:  @json(__('Start tour'))
         },

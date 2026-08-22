@@ -11,6 +11,7 @@ use App\Support\Auditor;
 use App\Models\LoyaltyPointLog;
 use App\Services\StaffNotificationService;
 use App\Services\WhatsappService;
+use Illuminate\Support\Facades\Cache;
 
 class AppointmentObserver
 {
@@ -34,6 +35,14 @@ class AppointmentObserver
 
         dispatch(function () use ($appointment) {
             $appointment->load(['branch', 'service', 'customer']);
+            // Group bookings create one row per service/guest but must reach the
+            // customer as ONE message. The first row to run claims the group lock;
+            // the rest bail so nothing double-sends. sendAppointmentBooked() itself
+            // aggregates every sibling into a single message.
+            if ($appointment->booking_group_id) {
+                $lock = 'booked_msg_' . $appointment->booking_group_id;
+                if (! Cache::add($lock, 1, 600)) return;
+            }
             app(WhatsappService::class)->sendAppointmentBooked($appointment);
         })->afterResponse();
 

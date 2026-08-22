@@ -1,5 +1,5 @@
 {{--
-  Booksy Toast Notifications — colored gradient card with glowing progress bar
+  GlowRez Toast Notifications — colored gradient card with glowing progress bar
 --}}
 @php $isAr = app()->getLocale() === 'ar'; @endphp
 

@@ -353,7 +353,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="f-label">{{ __('Role') }} <span class="text-danger">*</span></label>
-                                        <select name="role_id" id="role-select" class="f-input form-select @error('role_id') is-invalid @enderror" onchange="toggleBranchScope()">
+                                        <select name="role_id" id="role-select" class="f-input form-select @error('role_id') is-invalid @enderror">
                                             <option value="">{{ __('Select role…') }}</option>
                                             @foreach($roles as $role)
                                             <option value="{{ $role->id }}" data-slug="{{ $role->slug }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
@@ -363,18 +363,8 @@
                                         </select>
                                         @error('role_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
-                                    <div class="col-md-6" id="branch-scope-field" style="display:none;">
-                                        <label class="f-label">{{ __('Branch') }}</label>
-                                        <select name="branch_scope" class="f-input form-select">
-                                            <option value="branch" {{ old('branch_scope', 'branch') === 'branch' ? 'selected' : '' }}>
-                                                📍 {{ $branch->localizedName() }} ({{ __('This branch only') }})
-                                            </option>
-                                            <option value="all" {{ old('branch_scope') === 'all' ? 'selected' : '' }}>
-                                                🏢 {{ __('All branches') }} ({{ __('Company owner') }})
-                                            </option>
-                                        </select>
-                                        @error('branch_scope')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                                    </div>
+
+                                    @include('company.employees.partials.access-permissions', ['defaultBranchId' => $branch->id])
                                     <div class="col-md-6">
                                         <label class="f-label">{{ __('Password') }} <span class="text-danger">*</span></label>
                                         <div class="input-group">
@@ -903,18 +893,6 @@ function showSaveOverlay() {
     overlay.innerHTML = '<div style="text-align:center;color:#fff;"><div class="spinner-border mb-3" style="width:40px;height:40px;border-width:3px;color:#667eea;"></div><div style="font-size:14px;font-weight:600;">{{ __("Saving...") }}</div><div style="font-size:12px;opacity:.5;margin-top:4px;">{{ __("Please wait") }}</div></div>';
     document.body.appendChild(overlay);
 }
-
-// ── Branch scope: "all branches" choice appears only for the company-owner role ──
-function toggleBranchScope() {
-    const roleSel = document.getElementById('role-select');
-    const field   = document.getElementById('branch-scope-field');
-    if (!roleSel || !field) return;
-    const slug    = roleSel.options[roleSel.selectedIndex]?.dataset.slug || '';
-    const isOwner = slug === 'company_owner';
-    field.style.display = isOwner ? '' : 'none';
-    if (!isOwner) field.querySelector('select').value = 'branch';
-}
-toggleBranchScope();
 
 // ── Client-side validation ──
 document.getElementById('emp-create-form').addEventListener('submit', function (e) {

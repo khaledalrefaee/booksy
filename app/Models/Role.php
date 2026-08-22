@@ -17,9 +17,29 @@ class Role extends Model
         'description',
     ];
 
+    /** @var array<int,string>|null Memoised default permission slugs (L1). */
+    protected ?array $cachedPermissionSlugs = null;
+
     public function permissions(): BelongsToMany
     {
         return $this->belongsToMany(Permission::class, 'permission_role');
+    }
+
+    /** Slugs this role grants by default (L1). Memoised per instance. */
+    public function permissionSlugs(): array
+    {
+        if ($this->cachedPermissionSlugs === null) {
+            $this->cachedPermissionSlugs = $this->relationLoaded('permissions')
+                ? $this->permissions->pluck('slug')->all()
+                : $this->permissions()->pluck('slug')->all();
+        }
+
+        return $this->cachedPermissionSlugs;
+    }
+
+    public function hasPermission(string $slug): bool
+    {
+        return in_array($slug, $this->permissionSlugs(), true);
     }
 
     public function employees(): HasMany

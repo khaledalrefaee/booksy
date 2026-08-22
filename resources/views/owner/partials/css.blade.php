@@ -5,7 +5,7 @@
 	<meta name="author" content="NobleUI">
 	<meta name="keywords" content="nobleui, bootstrap, bootstrap 5, bootstrap5, admin, dashboard, template, responsive, css, sass, html, theme, front-end, ui kit, web">
 
-	<title> Admin Dashboard Booksy</title>
+	<title> Admin Dashboard GlowRez</title>
 
   <!-- Fonts -->
   <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
@@ -41,7 +41,7 @@
 	@endif
   <!-- End layout styles -->
 
-  <link rel="shortcut icon" href="{{asset('backend/assets/images/favicon.png')}}" />
+  <link rel="shortcut icon" href="{{asset('backend/assets/images/favicon.png')}}?v={{ @filemtime(public_path('backend/assets/images/favicon.png')) ?: '1' }}" />
   <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-custom.css') }}?v={{ @filemtime(public_path('backend/assets/css/booksy-custom.css')) ?: '1' }}">
   @if(app()->getLocale() === 'ar')
     <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-arabic.css') }}">

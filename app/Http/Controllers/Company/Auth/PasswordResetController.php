@@ -143,20 +143,28 @@ class PasswordResetController extends Controller
             return;
         }
 
-        // WhatsApp — pass companyId=null so the plan gate never blocks an
-        // account-security message.
-        $message = $isAr
-            ? "🔐 *{$brand}*\n\n"
-                . "رمز استعادة كلمة المرور:\n\n"
-                . "*{$code}*\n\n"
-                . "⏱️ صالح لمدة 10 دقائق\n"
-                . "🔒 لا تُشارك هذا الرمز مع أي أحد"
-            : "🔐 *{$brand}*\n\n"
-                . "Your password reset code:\n\n"
-                . "*{$code}*\n\n"
-                . "⏱️ Valid for 10 minutes\n"
-                . "🔒 Never share this code with anyone";
+        // Deliver to the phone, routed by country: Syrian numbers → local SMS
+        // (paid, Rasel), everyone else → WhatsApp. companyId=null so the plan
+        // gate never blocks an account-security message.
+        $phoneChannel = $whatsapp->channelFor($company->phone);
 
-        $whatsapp->send($company->phone, $message, null, null, 'password_reset');
+        // Short, single-line body for the paid SMS segment; rich body for WhatsApp.
+        $message = $phoneChannel === 'sms'
+            ? ($isAr
+                ? "{$brand}: رمز استعادة كلمة المرور هو {$code} (صالح 10 دقائق). لا تشاركه مع أحد."
+                : "{$brand}: Your password reset code is {$code} (valid 10 min). Do not share it.")
+            : ($isAr
+                ? "🔐 *{$brand}*\n\n"
+                    . "رمز استعادة كلمة المرور:\n\n"
+                    . "*{$code}*\n\n"
+                    . "⏱️ صالح لمدة 10 دقائق\n"
+                    . "🔒 لا تُشارك هذا الرمز مع أي أحد"
+                : "🔐 *{$brand}*\n\n"
+                    . "Your password reset code:\n\n"
+                    . "*{$code}*\n\n"
+                    . "⏱️ Valid for 10 minutes\n"
+                    . "🔒 Never share this code with anyone");
+
+        $whatsapp->send($company->phone, $message, null, null, 'password_reset', $phoneChannel);
     }
 }

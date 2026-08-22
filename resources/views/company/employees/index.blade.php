@@ -42,6 +42,14 @@
     background: rgba(102,126,234,.18); color: #a5b4fd;
 }
 .bk-theme-light .badge-role { background: rgba(102,126,234,.12); color: #4f46e5; }
+.badge-access {
+    font-size: 10.5px; font-weight: 700;
+    padding: 2px 8px; border-radius: 7px;
+    background: rgba(67,233,123,.14); color: #43e97b;
+}
+.bk-theme-light .badge-access { background: rgba(40,167,69,.1); color: #1a7a36; }
+.badge-access-full { background: rgba(255,193,7,.16); color: #ffc107; }
+.bk-theme-light .badge-access-full { background: rgba(255,193,7,.14); color: #9a7a08; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 .emp-actions {
     display: flex; align-items: center; gap: 6px; flex-shrink: 0;
@@ -307,6 +315,20 @@
                         @if($emp->role)
                             <span class="badge-role">
                                 {{ app()->getLocale()==='ar' ? ($emp->role->label_ar ?: $emp->role->label_en) : ($emp->role->label_en ?: $emp->role->label_ar) }}
+                            </span>
+                        @endif
+                        @if($emp->all_branches)
+                            <span class="badge-access" title="{{ __('Works across all branches') }}">
+                                🏢 {{ __('All branches') }}
+                            </span>
+                        @elseif(($emp->branches_count ?? 0) > 1)
+                            <span class="badge-access" title="{{ __('Works in multiple branches') }}">
+                                🔗 {{ $emp->branches_count }} {{ __('branches') }}
+                            </span>
+                        @endif
+                        @if($emp->full_access)
+                            <span class="badge-access badge-access-full" title="{{ __('Has every permission') }}">
+                                ⚡ {{ __('Full access') }}
                             </span>
                         @endif
                         @php $onLeave = $emp->is_active ? $emp->currentLeave() : null; @endphp

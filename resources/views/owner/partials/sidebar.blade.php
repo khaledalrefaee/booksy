@@ -49,7 +49,7 @@
 <nav class="sidebar bk-sidebar-v3">
     <div class="sidebar-header">
         <a href="{{ route('owner.dashboard') }}" class="sidebar-brand">
-            Booksy<span>.</span>
+            GlowRez<span>.</span>
         </a>
     </div>
 

@@ -30,7 +30,11 @@ trait ResolvesOwnerCompany
 
     protected function authorizeEmployee(Employee $employee): void
     {
-        abort_unless($employee->branch_id !== null && $employee->branch !== null, 404);
+        // All-branches employees legitimately have no single home branch.
+        abort_unless(
+            $employee->all_branches || ($employee->branch_id !== null && $employee->branch !== null),
+            404
+        );
     }
 
     protected function authorizeAppointment(Appointment $appointment): void

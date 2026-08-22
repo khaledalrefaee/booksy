@@ -6,7 +6,10 @@
     :description="$isAr ? 'تواصل مع فريق GlowRez — استفسارات، دعم فني، أو شراكة أعمال. نحن هنا لمساعدتك.' : 'Get in touch with the GlowRez team — questions, support, or business partnership. We are here to help.'">
 <x-slot:styles>
 <style>
-.bkf-ct{ padding:calc(var(--bk-nav-h) + var(--bk-s10)) 0 var(--bk-s20); }
+/* NOTE: section class is .bkf-contact (NOT .bkf-ct) — .bkf-ct is the global
+   welcome-toast class in customer-auth-modal.blade.php (width:360px, dark bg);
+   sharing it squished this page. The .bkf-ct-* sub-classes below don't collide. */
+.bkf-contact{ padding:calc(var(--bk-nav-h) + var(--bk-s10)) 0 var(--bk-s20); }
 .bkf-ct-wrap{ max-width:var(--bk-container); margin-inline:auto; padding-inline:var(--bk-gutter); }
 .bkf-ct-head{ text-align:center; max-width:600px; margin:0 auto var(--bk-s10); }
 .bkf-ct-head .eyebrow{ font-size:var(--bk-eyebrow); font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--bk-gold-strong); margin-bottom:12px; }
@@ -45,7 +48,7 @@
 </style>
 </x-slot:styles>
 
-<section class="bkf-ct">
+<section class="bkf-contact">
   <div class="bkf-ct-wrap">
     <div class="bkf-ct-head bkf-reveal">
       <div class="eyebrow">{{ $isAr ? 'نحن هنا لمساعدتك' : 'We’re here to help' }}</div>
@@ -96,9 +99,9 @@
       {{-- Info --}}
       <div class="bkf-reveal">
         <div class="bkf-ct-info">
-          <a href="mailto:info@booksy.app" class="bkf-ct-item">
+          <a href="mailto:info@glowrez.com" class="bkf-ct-item">
             <span class="bkf-ct-ic"><x-icon name="message" :size="20"/></span>
-            <div><h4>{{ $isAr ? 'البريد' : 'Email' }}</h4><p>info@booksy.app</p></div>
+            <div><h4>{{ $isAr ? 'البريد' : 'Email' }}</h4><p>info@glowrez.com</p></div>
           </a>
           <a href="{{ route('front.help') }}" class="bkf-ct-item">
             <span class="bkf-ct-ic"><x-icon name="sparkles" :size="20"/></span>

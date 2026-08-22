@@ -22,6 +22,15 @@
  *   audit-log.view          read the owner audit log
  *   operations.view         cross-tenant customers & invoices directories
  *   locations.manage        countries / governorates / areas CRUD
+ *
+ *   ── Company Workspace (per-company management hub) ──
+ *   company-workspace.view  open a company's workspace + view any tab
+ *   appointments.manage     change appointment status / reschedule / cancel from workspace
+ *   catalog.manage          edit services & pricing from workspace
+ *   attendance.manage       attendance actions from workspace
+ *   finance.manage          cash / invoices / expenses actions from workspace
+ *   payroll.manage          payroll / deductions / advances actions from workspace
+ *   inventory.manage        stock / transfers actions from workspace
  */
 
 return [

@@ -122,7 +122,7 @@ class CustomerAccountController extends Controller
         $fmt = fn ($d) => $d->copy()->utc()->format('Ymd\THis\Z');
 
         $lines = [
-            'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Booksy//Appointments//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+            'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//GlowRez//Appointments//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
             'BEGIN:VEVENT',
             'UID:booksy-appt-' . $appointment->id . '@' . parse_url(config('app.url'), PHP_URL_HOST),
             'DTSTAMP:' . $fmt(now()),
@@ -130,7 +130,7 @@ class CustomerAccountController extends Controller
             'DTEND:'   . $fmt($appointment->end_time),
             'SUMMARY:' . $esc($svc . ' — ' . $venue),
             'LOCATION:' . $esc($appointment->branch->address),
-            'DESCRIPTION:' . $esc(($isAr ? 'موعدك عبر بوكسي' : 'Your booking via Booksy')),
+            'DESCRIPTION:' . $esc(($isAr ? 'موعدك عبر غلوريز' : 'Your booking via GlowRez')),
             'END:VEVENT', 'END:VCALENDAR',
         ];
 

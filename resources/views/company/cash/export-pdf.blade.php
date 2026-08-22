@@ -122,7 +122,7 @@
     </table>
 
     <div class="footer">
-        Booksy. — {{ $pdfText(__('Cash Report')) }} · {{ now()->format('Y') }}
+        GlowRez. — {{ $pdfText(__('Cash Report')) }} · {{ now()->format('Y') }}
     </div>
 </body>
 </html>

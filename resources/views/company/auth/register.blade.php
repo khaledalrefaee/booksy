@@ -16,7 +16,7 @@
     @else
         <link rel="stylesheet" href="{{ asset($theme === 'light' ? 'backend/assets/css/demo1/style.css' : 'backend/assets/css/demo2/style.css') }}">
     @endif
-    <link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}" />
+    <link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}?v={{ @filemtime(public_path('backend/assets/images/favicon.png')) ?: '1' }}" />
     <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-custom.css') }}?v={{ @filemtime(public_path('backend/assets/css/booksy-custom.css')) ?: '1' }}">
     @if(app()->getLocale() === 'ar')
         <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-arabic.css') }}">
@@ -88,16 +88,53 @@
         /* intl-tel-input theming to match bk tokens */
         .bk-reg .iti{ width:100%; }
         .bk-reg .iti input.form-control{ width:100%; }
-        .bk-reg .iti__country-list{
+        .bk-reg .iti__country-list, .bk-reg .iti__dropdown-content{
             background:var(--bk-surface); color:var(--bk-text);
             border:1px solid var(--bk-border); box-shadow:var(--bk-shadow-lg);
+            border-radius:.6rem; overflow:hidden;
         }
-        .bk-reg .iti__country.iti__highlight{ background:var(--bk-accent-wash); }
+        .bk-reg .iti__country.iti__highlight, .bk-reg .iti__country:hover{ background:var(--bk-accent-wash); }
         .bk-reg .iti__dial-code{ color:var(--bk-text-muted); }
         .bk-reg .iti__search-input{ background:var(--bk-surface); color:var(--bk-text); border-color:var(--bk-border); }
+
+        /* New Syrian flag (green–white–black, 3 red stars) — override sprite */
+        .bk-reg .iti__flag.iti__sy{
+            --iti-flag-offset:0;
+            background-image:url("{{ asset('backend/assets/vendors/intl-tel-input/img/flag-sy-new.svg') }}") !important;
+            background-position:center !important;
+            background-size:16px 12px !important;
+        }
+
+        /* Friendlier, larger phone control */
+        .bk-reg .iti input.form-control{ height:calc(1.5em + 1.1rem + 2px); }
+        .bk-reg .iti--separate-dial-code .iti__selected-country{ background:var(--bk-surface-2); }
+        .bk-reg .iti__selected-dial-code{ color:var(--bk-text); font-weight:600; }
+
+        /* Live valid state — green check + success border */
+        .bk-reg .bk-phone-wrap{ position:relative; }
+        .bk-reg .bk-phone-ok{
+            position:absolute; inset-inline-end:.7rem; top:calc((1.5em + 1.1rem + 2px)/2);
+            transform:translateY(-50%); width:20px; height:20px; border-radius:50%;
+            display:none; align-items:center; justify-content:center;
+            background:var(--bk-success); color:#fff; pointer-events:none; z-index:2;
+        }
+        .bk-reg .bk-phone-ok i{ width:13px; height:13px; }
+        .bk-reg .bk-phone-wrap.is-valid .bk-phone-ok{ display:flex; }
+        .bk-reg .bk-phone-wrap.is-valid #phone{ border-color:var(--bk-success); padding-inline-end:2.4rem; }
         .bk-reg #phone.is-invalid{ border-color:var(--bk-danger); }
         .bk-reg .bk-phone-error{ display:none; font-size:.76rem; color:var(--bk-danger); margin-top:.3rem; }
         .bk-reg .bk-phone-error.show{ display:block; }
+        .bk-reg .bk-phone-hint{ font-size:.76rem; color:var(--bk-text-muted); margin-top:.3rem; display:flex; align-items:center; gap:.35rem; }
+        .bk-reg .bk-phone-hint i{ width:13px; height:13px; flex:0 0 auto; color:var(--bk-accent); }
+        .bk-reg .bk-phone-wrap.is-valid ~ .bk-phone-hint{ color:var(--bk-success); }
+        .bk-reg .bk-phone-wrap.is-valid ~ .bk-phone-hint i{ color:var(--bk-success); }
+        /* RTL (Arabic): keep the .iti CONTAINER rtl (flag + dial code on the
+           right), but force the number text and the dial code themselves to LTR
+           so "944 567 890" / "+963" don't get bidi-reversed by the RTL stylesheet.
+           text-align:right anchors the number to the dial-code side. */
+        html[dir="rtl"] .bk-reg #phone{ direction:ltr; text-align:right; }
+        html[dir="rtl"] .bk-reg .iti__selected-dial-code{ direction:ltr; }
+        html[dir="rtl"] .bk-reg .iti__dial-code{ direction:ltr; unicode-bidi:embed; }
 
         @media (max-width: 767.98px){
             .bk-reg .card > .row{ min-height:0; }
@@ -122,8 +159,8 @@
                                             <img src="{{ asset('images/logo-dark.png') }}" alt="GlowRez غلوريز" style="height:50px;width:auto">
                                             <small>Business</small>
                                         </div>
-                                        <h2>{{ __('Grow your business with Booksy') }}</h2>
-                                        <p class="bk-hero-sub">{{ __('The all-in-one platform to manage bookings, staff and payments — built for salons and spas in Syria.') }}</p>
+                                        <h2>{{ __('Grow your business with GlowRez') }}</h2>
+                                        <p class="bk-hero-sub">{{ __('The all-in-one platform to manage bookings, staff and payments — built for salons and spas.') }}</p>
                                         <ul class="bk-hero-list">
                                             <li>
                                                 <span class="bk-hero-ic"><i data-feather="calendar"></i></span>
@@ -215,12 +252,16 @@
                                         <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="phone" class="form-label fw-semibold">{{ __('Phone') }} <span class="text-danger">*</span></label>
-                                                {{-- Visible input has NO name; the E.164 value is written to the hidden field on submit. --}}
-                                                <input type="tel" id="phone" dir="ltr"
-                                                    class="form-control @error('phone') is-invalid @enderror"
-                                                    autocomplete="tel">
+                                                {{-- Visible input has NO name; the E.164 value is written to the hidden field live + on submit. --}}
+                                                <div class="bk-phone-wrap">
+                                                    <input type="tel" id="phone" dir="ltr"
+                                                        class="form-control @error('phone') is-invalid @enderror"
+                                                        autocomplete="tel">
+                                                    <span class="bk-phone-ok" aria-hidden="true"><i data-feather="check"></i></span>
+                                                </div>
                                                 <input type="hidden" id="phone_full" name="phone" value="{{ old('phone') }}">
                                                 <div class="bk-phone-error" id="phoneError">{{ __('Please enter a valid phone number.') }}</div>
+                                                <div class="bk-phone-hint"><i data-feather="shield"></i><span>{{ __("We'll send a verification code to this number.") }}</span></div>
                                                 @error('phone')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                                             </div>
                                             <div class="col-md-6 mb-3">
@@ -356,29 +397,42 @@
             initialCountry: 'sy',
             countryOrder: ['sy', 'lb', 'jo', 'iq', 'tr', 'sa', 'ae', 'eg'],
             separateDialCode: true,
-            strictMode: true,
+            strictMode: true,               // block non-digits + cap length as they type
+            autoPlaceholder: 'aggressive',  // show a real example number to guide the user
+            placeholderNumberType: 'MOBILE',
+            formatOnDisplay: true,          // pretty-format the number as it's entered
             utilsScript: '{{ asset('backend/assets/vendors/intl-tel-input/js/utils.js') }}',
         });
 
-        // Repopulate after a server-side validation error (hidden holds E.164).
-        const prev = hidden.value;
-        if (prev) {
-            const applyPrev = () => iti.setNumber(prev);
-            input.addEventListener('countrychange', applyPrev, { once: true });
-            setTimeout(applyPrev, 300); // once utils has loaded
-        }
+        const wrap = input.closest('.bk-phone-wrap');
 
+        // Keep the hidden E.164 field + green-check state in sync with the input.
+        function refresh() {
+            const has   = input.value.trim() !== '';
+            const valid = has && iti.isValidNumber();
+            wrap.classList.toggle('is-valid', valid);
+            hidden.value = has ? iti.getNumber() : '';
+            return valid;
+        }
         function showError(show) {
             errorEl.classList.toggle('show', show);
             input.classList.toggle('is-invalid', show);
         }
 
-        // Validate on blur only (not per keystroke) to avoid nagging.
+        // Once utils has loaded: repopulate a prior value (after a server error) and format it.
+        iti.promise.then(function () {
+            if (hidden.value) { iti.setNumber(hidden.value); }
+            refresh();
+        });
+
+        input.addEventListener('input', function () { showError(false); refresh(); });
+        input.addEventListener('countrychange', function () { showError(false); refresh(); });
+
+        // Nag with the error only on blur (never per keystroke).
         input.addEventListener('blur', function () {
             if (input.value.trim() === '') { showError(false); return; }
             showError(!iti.isValidNumber());
         });
-        input.addEventListener('input', function () { showError(false); });
 
         form.addEventListener('submit', function (e) {
             if (input.value.trim() !== '' && !iti.isValidNumber()) {

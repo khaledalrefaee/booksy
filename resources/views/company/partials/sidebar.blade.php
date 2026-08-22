@@ -52,7 +52,7 @@
     } elseif (request()->routeIs('company.reports.*') || request()->routeIs('company.activity-log.*')) {
         $activeSection = 'reports';
     } elseif (request()->routeIs('company.service-categories.*') || request()->routeIs('company.resources.*')
-        || request()->routeIs('company.profile.*')) {
+        || request()->routeIs('company.booking-policy.*') || request()->routeIs('company.profile.*')) {
         $activeSection = 'settings';
     } else {
         $activeSection = 'home';
@@ -78,7 +78,7 @@
 <nav class="sidebar bk-sidebar-v3">
     <div class="sidebar-header">
         <a href="{{ route('company.dashboard') }}" class="sidebar-brand">
-            Booksy<span>.</span>
+            GlowRez<span>.</span>
         </a>
     </div>
 
@@ -286,6 +286,10 @@
                 <a href="{{ route('company.resources.index') }}"
                    class="bk-pl {{ request()->routeIs('company.resources.*') ? 'active' : '' }}">
                     <i data-feather="grid"></i><span>{{ __('Resources & rooms') }}</span>
+                </a>
+                <a href="{{ route('company.booking-policy.edit') }}"
+                   class="bk-pl {{ request()->routeIs('company.booking-policy.*') ? 'active' : '' }}">
+                    <i data-feather="shield"></i><span>{{ __('Booking policy') }}</span>
                 </a>
                 <a href="{{ route('company.profile.show') }}"
                    class="bk-pl {{ request()->routeIs('company.profile.*') ? 'active' : '' }}">

@@ -15,7 +15,7 @@
     @else
         <link rel="stylesheet" href="{{ asset($theme === 'light' ? 'backend/assets/css/demo1/style.css' : 'backend/assets/css/demo2/style.css') }}">
     @endif
-    <link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}" />
+    <link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}?v={{ @filemtime(public_path('backend/assets/images/favicon.png')) ?: '1' }}" />
     <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-custom.css') }}?v={{ @filemtime(public_path('backend/assets/css/booksy-custom.css')) ?: '1' }}">
     @if(app()->getLocale() === 'ar')
         <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-arabic.css') }}">

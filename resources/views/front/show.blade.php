@@ -12,7 +12,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,shrink-to-fit=no">
-<title>{{ $name }} – Booksy</title>
+<title>{{ $name }} – GlowRez</title>
 
 <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('frontend/vendor/bootstrap/css/bootstrap'.($isAr?'.rtl':'').'.min.css') }}">
@@ -189,7 +189,7 @@ html,body{background:#0a0a0a!important;color:rgba(255,255,255,.82)!important;scr
 .bk-cat-toggle{color:rgba(255,255,255,.3);font-size:.8rem;transition:transform .3s;}
 .bk-cat-header.collapsed .bk-cat-toggle{transform:rotate(-90deg);}
 
-/* Service card — Booksy style */
+/* Service card — GlowRez style */
 .bk-service-card{
     display:flex;align-items:stretch;gap:0;
     background:#111;border:1px solid rgba(201,162,39,.1);border-radius:14px;
@@ -414,7 +414,7 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
 {{-- ════ NAVBAR ════ --}}
 <nav id="bk-navbar" class="navbar navbar-expand-lg fixed-top">
     <div class="container-fluid px-4">
-        <a href="{{ route('front.index') }}" class="navbar-brand">Booksy<span>.</span></a>
+        <a href="{{ route('front.index') }}" class="navbar-brand">GlowRez<span>.</span></a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#bkNav">
             <i class="fas fa-bars"></i>
         </button>
@@ -930,7 +930,7 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
     <div class="container">
         <div class="row g-4">
             <div class="col-lg-5">
-                <span class="footer-brand">Booksy<span>.</span></span>
+                <span class="footer-brand">GlowRez<span>.</span></span>
                 <div class="divider-gold mt-2 mb-2"></div>
                 <p>{{ $isAr ? 'منصة حجز مواعيد صالونات التجميل والعيادات.' : 'Beauty salon & clinic booking platform.' }}</p>
             </div>
@@ -952,7 +952,7 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
         </div>
     </div>
     <div style="margin-top:36px;border-top:1px solid rgba(255,255,255,.06);padding:16px 0;">
-        <div class="container"><p class="copy">&copy; {{ date('Y') }} Booksy</p></div>
+        <div class="container"><p class="copy">&copy; {{ date('Y') }} GlowRez</p></div>
     </div>
 </footer>
 

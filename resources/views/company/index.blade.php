@@ -84,7 +84,7 @@
     <div class="card-body">
         <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
             <div>
-                <h5 class="fw-bold mb-1">🚀 {{ __('Welcome to Booksy Business!') }}</h5>
+                <h5 class="fw-bold mb-1">🚀 {{ __('Welcome to GlowRez Business!') }}</h5>
                 <p class="text-muted tx-13 mb-0">{{ __('Finish setting up your business to start taking bookings.') }}</p>
             </div>
             <form method="POST" action="{{ route('company.onboarding.dismiss') }}" class="m-0">

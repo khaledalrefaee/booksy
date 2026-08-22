@@ -23,8 +23,16 @@
     /* ── SEO computed values ── */
     $siteName     = 'GlowRez';
     $metaDesc     = $description ?: ($isAr
-        ? 'GlowRez — منصة حجز وإدارة أماكن الجمال والعناية في سوريا. احجز موعدك في ثوانٍ وأدر عملك باحتراف.'
+        ? 'غلوريز (GlowRez) — منصة حجز وإدارة أماكن الجمال والعناية في سوريا. احجز موعدك في ثوانٍ وأدر عملك باحتراف.'
         : 'GlowRez — the beauty & wellness booking and management platform in Syria. Book in seconds, run your business like a pro.');
+
+    /* Brand + core keywords always present (helps Arabic brand search: غلوريز / غلو ريز),
+       merged ahead of any page-specific keywords passed in. */
+    $brandKeywords = 'GlowRez, غلوريز, غلو ريز, Glow Rez, قلوريز';
+    $baseKeywords  = $isAr
+        ? $brandKeywords.', حجز صالون, حجز مركز تجميل, حجز حلاقة, مواعيد الجمال, سبا, أظافر, عيادات تجميل, سوريا, دمشق'
+        : $brandKeywords.', salon booking, beauty appointment, barber booking, spa, nails, beauty clinics, wellness, Syria, Damascus';
+    $allKeywords   = trim(($keywords ? $keywords.', ' : '').$baseKeywords, ', ');
     $canonicalUrl = $canonical ?: url()->current();
     $ogImageUrl   = $ogImage
         ? (\Illuminate\Support\Str::startsWith($ogImage, ['http://','https://']) ? $ogImage : asset(ltrim($ogImage,'/')))
@@ -40,19 +48,21 @@
         '@context' => 'https://schema.org',
         '@graph'   => [
             [
-                '@type'       => 'Organization',
-                '@id'         => url('/').'#organization',
-                'name'        => 'GlowRez',
-                'url'         => url('/'),
-                'logo'        => asset('images/logo-light.png'),
-                'image'       => asset('images/og-cover.jpg'),
-                'description' => $metaDesc,
+                '@type'         => 'Organization',
+                '@id'           => url('/').'#organization',
+                'name'          => 'GlowRez',
+                'alternateName' => ['غلوريز', 'غلو ريز', 'Glow Rez', 'قلوريز'],
+                'url'           => url('/'),
+                'logo'          => asset('images/logo-light.png'),
+                'image'         => asset('images/og-cover.jpg'),
+                'description'   => $metaDesc,
             ],
             [
-                '@type'     => 'WebSite',
-                '@id'       => url('/').'#website',
-                'name'      => 'GlowRez',
-                'url'       => url('/'),
+                '@type'         => 'WebSite',
+                '@id'           => url('/').'#website',
+                'name'          => 'GlowRez',
+                'alternateName' => ['غلوريز', 'غلو ريز'],
+                'url'           => url('/'),
                 'publisher' => ['@id' => url('/').'#organization'],
                 'inLanguage'=> $lang,
                 'potentialAction' => [
@@ -69,7 +79,7 @@
         $links = [
             ['label' => $isAr ? 'المزايا'        : 'Features',    'href' => '#features'],
             ['label' => $isAr ? 'قريبا'        : 'coming soon',    'href' => '#soon'],
-            ['label' => $isAr ? 'لماذا بوكسي'    : 'Why Booksy',  'href' => '#why'],
+            ['label' => $isAr ? 'لماذا غلوريز'    : 'Why GlowRez',  'href' => '#why'],
             ['label' => $isAr ? 'الأسئلة الشائعة': 'FAQ',         'href' => '#faq'],
             ['label' => $isAr ? 'مجاني'          : 'Free',        'href' => '#free'],
         ];
@@ -93,7 +103,7 @@
 {{-- ══════════════  PRIMARY SEO  ══════════════ --}}
 <title>{{ $title }}</title>
 <meta name="description" content="{{ $metaDesc }}">
-@if($keywords)<meta name="keywords" content="{{ $keywords }}">@endif
+<meta name="keywords" content="{{ $allKeywords }}">
 <meta name="robots" content="{{ $robots }}">
 <meta name="googlebot" content="{{ $robots }}">
 <link rel="canonical" href="{{ $canonicalUrl }}">
@@ -144,6 +154,7 @@
 
 <link rel="preconnect" href="{{ url('/') }}">
 <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
+<link href="{{ asset('fonts/glowrez-type.css') }}?v={{ @filemtime(public_path('fonts/glowrez-type.css')) ?: '1' }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('frontend/css/booksy-front.css') }}?v={{ @filemtime(public_path('frontend/css/booksy-front.css')) ?: '1' }}">
 {{-- If JS is unavailable, never hide content behind scroll-reveal --}}
 <noscript>

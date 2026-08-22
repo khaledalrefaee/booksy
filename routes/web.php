@@ -46,7 +46,9 @@ Route::get('/branch/{branch}', [FrontController::class, 'branchShow'])->name('fr
 Route::get('/s/{slug}', [FrontController::class, 'privateBooking'])->name('front.private-booking');
 Route::get('/for-business', [FrontController::class, 'business'])->name('front.business');
 Route::get('/about', [FrontController::class, 'about'])->name('front.about');
-Route::get('/appointment/{token}/{action}', [AppointmentConfirmController::class, 'handle'])->name('appointment.confirm')->where('action', 'confirm|cancel');
+Route::get('/appointment/{token}/confirm', [AppointmentConfirmController::class, 'confirm'])->name('appointment.confirm');
+Route::get('/appointment/{token}/cancel',  [AppointmentConfirmController::class, 'cancelForm'])->name('appointment.cancel-form');
+Route::post('/appointment/{token}/cancel', [AppointmentConfirmController::class, 'cancel'])->name('appointment.cancel-do');
 Route::get('/contact', [FrontController::class, 'contact'])->name('front.contact');
 Route::post('/contact', [FrontController::class, 'contactSend'])->name('front.contact.send');
 

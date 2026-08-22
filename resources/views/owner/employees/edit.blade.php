@@ -183,6 +183,21 @@
                                 <input type="text" name="phone" class="f-input form-control"
                                        value="{{ old('phone', $employee->phone) }}">
                             </div>
+                            <div class="col-md-6">
+                                <label class="f-label">{{ __('Role') }} <span class="text-danger">*</span></label>
+                                <select name="role_id" id="role-select" class="f-input form-select @error('role_id') is-invalid @enderror">
+                                    <option value="">{{ __('Select role…') }}</option>
+                                    @foreach($roles as $role)
+                                    <option value="{{ $role->id }}" data-slug="{{ $role->slug }}" {{ old('role_id', $employee->role_id) == $role->id ? 'selected' : '' }}>
+                                        {{ app()->getLocale()==='ar' ? ($role->label_ar ?: $role->label_en) : ($role->label_en ?: $role->label_ar) }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                                @error('role_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+
+                            @include('company.employees.partials.access-permissions')
+
                             <div class="col-12">
                                 <label class="f-label">
                                     {{ __('New password') }}

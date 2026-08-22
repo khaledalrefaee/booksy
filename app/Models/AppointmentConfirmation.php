@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 class AppointmentConfirmation extends Model
 {
     protected $fillable = [
-        'appointment_id', 'token', 'action', 'acted_at', 'expires_at',
+        'appointment_id', 'token', 'action', 'reason', 'acted_at', 'expires_at',
     ];
 
     protected function casts(): array
@@ -42,5 +42,21 @@ class AppointmentConfirmation extends Model
             'token'          => Str::random(48),
             'expires_at'     => $appointment->start_time,
         ]);
+    }
+
+    /**
+     * A still-usable confirmation for this appointment, reused across the booking
+     * message and the 1h reminder so both links act on the same token. Creates a
+     * fresh one only when none is pending, keeping the confirm/cancel flow single.
+     */
+    public static function activeFor(Appointment $appointment): self
+    {
+        $existing = self::where('appointment_id', $appointment->id)
+            ->whereNull('action')
+            ->where('expires_at', '>', now())
+            ->latest('id')
+            ->first();
+
+        return $existing ?? self::generateFor($appointment);
     }
 }

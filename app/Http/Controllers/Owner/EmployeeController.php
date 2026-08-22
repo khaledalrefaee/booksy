@@ -11,6 +11,8 @@ use App\Models\Employee;
 use App\Models\EmployeeWorkingHour;
 use App\Models\Role;
 use App\Models\SocialLink;
+use App\Support\Access\EmployeeAccessWriter;
+use App\Support\Access\PermissionCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -69,6 +71,7 @@ class EmployeeController extends Controller
         return view('owner.employees.create', [
             'branch' => $branch,
             'wizard' => $this->isWizardStep($branch),
+            'roles'  => Role::query()->orderBy('label_en')->get(),
         ]);
     }
 
@@ -76,7 +79,8 @@ class EmployeeController extends Controller
     {
         $this->authorizeBranch($branch);
 
-        $defaultRole = Role::where('slug', '!=', 'company_owner')->orderBy('id')->first();
+        $defaultRole    = Role::where('slug', '!=', 'company_owner')->orderBy('id')->first();
+        $companyBranches = $branch->company->branches()->pluck('id');
 
         foreach ($request->validated('employees') as $index => $row) {
             $imageFile = $request->file("employees.$index.image");
@@ -88,12 +92,24 @@ class EmployeeController extends Controller
                 'name_ar'    => $row['name_ar'] ?? null,
                 'phone'      => $row['phone'] ?? null,
                 'email'      => $row['email'] ?? null,
-                'role_id'    => $defaultRole?->id ?? 1,
+                'role_id'    => $row['role_id'] ?? $defaultRole?->id ?? 1,
                 'password'   => $row['password'],
                 'bio'        => $row['bio'] ?? null,
                 'image'      => $imagePath,
                 'is_active'  => ! empty($row['is_active']),
             ]);
+
+            // Same branch-access + permission records as the company dashboard.
+            // The quick-setup wizard defaults to the branch being set up; the writer
+            // still runs so owner-created employees never miss their L2 rows/flags.
+            app(EmployeeAccessWriter::class)->apply($employee, [
+                'access_mode'      => $row['access_mode'] ?? 'selected',
+                'branch_ids'       => $row['branch_ids'] ?? [$branch->id],
+                'full_access'      => ! empty($row['full_access']),
+                'overrides'        => $row['overrides'] ?? [],
+                'per_branch'       => ! empty($row['per_branch']),
+                'branch_overrides' => $row['branch_overrides'] ?? [],
+            ], $companyBranches);
 
             // Save working hours per employee
             $hours = $request->input("employees.$index.working_hours", []);
@@ -135,11 +151,38 @@ class EmployeeController extends Controller
         $workingHours = $employee->workingHours()->where('shift_number', 1)->get()->keyBy('day_of_week');
         $socialLinks  = $employee->socialLinks()->get()->keyBy('platform');
 
+        // ── Same branch-access + permission assignment as the company dashboard ──
+        $catalog       = app(PermissionCatalog::class);
+        $roles         = Role::query()->orderBy('label_en')->get();
+        $branches      = $employee->company->branches()->orderBy('sort_order')->get();
+        $roleSummaries = $catalog->roleSummaries();
+
+        $accessMode        = $employee->all_branches ? 'all' : 'selected';
+        $selectedBranchIds = $employee->branches()->pluck('branches.id')->all();
+
+        $l3Levels = $catalog->levelsFromEffects(
+            $employee->permissionOverrides()->get()->mapWithKeys(fn ($p) => [(int) $p->id => $p->pivot->effect])->all()
+        );
+        $l4Levels = $employee->branchPermissionOverrides()->get()
+            ->groupBy('branch_id')
+            ->map(fn ($rows) => $catalog->levelsFromEffects(
+                $rows->mapWithKeys(fn ($r) => [(int) $r->permission_id => $r->effect])->all()
+            ))->all();
+
         return view('owner.employees.edit', [
-            'branch'       => $employee->branch,
-            'employee'     => $employee,
-            'workingHours' => $workingHours,
-            'socialLinks'  => $socialLinks,
+            'branch'            => $employee->branch ?? $branches->first(),
+            'employee'          => $employee,
+            'workingHours'      => $workingHours,
+            'socialLinks'       => $socialLinks,
+            'roles'             => $roles,
+            'branches'          => $branches,
+            'catalog'           => $catalog,
+            'roleSummaries'     => $roleSummaries,
+            'accessMode'        => $accessMode,
+            'selectedBranchIds' => $selectedBranchIds,
+            'l3Levels'          => $l3Levels,
+            'l4Levels'          => $l4Levels,
+            'perBranch'         => ! empty($l4Levels),
         ]);
     }
 
@@ -149,6 +192,10 @@ class EmployeeController extends Controller
 
         $data = $request->validated();
         $data['is_active'] = $request->boolean('is_active');
+
+        // Access fields are persisted by the writer, not mass-assigned here.
+        unset($data['access_mode'], $data['branch_ids'], $data['full_access'],
+              $data['overrides'], $data['per_branch'], $data['branch_overrides']);
 
         if (empty($data['password'])) {
             unset($data['password']);
@@ -165,13 +212,23 @@ class EmployeeController extends Controller
 
         $employee->update($data);
 
+        // Same branch-access + permission engine as the company dashboard.
+        app(EmployeeAccessWriter::class)->apply(
+            $employee,
+            $this->accessInput($request),
+            $employee->company->branches()->pluck('id')
+        );
+
         $this->syncWorkingHours($employee, $request->input('working_hours', []));
 
         // Sync social links
         SocialLink::syncFor($employee, $request->input('social_links', []));
 
+        $fresh       = $employee->fresh();
+        $redirectTo  = $fresh->branch ?? $fresh->company->branches()->orderBy('sort_order')->first();
+
         return redirect()
-            ->route('owner.branches.employees.index', $employee->branch)
+            ->route('owner.branches.employees.index', $redirectTo)
             ->with('success', __('Employee updated successfully.'));
     }
 
@@ -185,6 +242,19 @@ class EmployeeController extends Controller
         return redirect()
             ->route('owner.branches.employees.index', $branch)
             ->with('success', __('Employee deleted successfully.'));
+    }
+
+    /** Normalise the branch-access + overrides fields for the EmployeeAccessWriter. */
+    private function accessInput(Request $request): array
+    {
+        return [
+            'access_mode'      => $request->input('access_mode', 'selected'),
+            'branch_ids'       => $request->input('branch_ids', []),
+            'full_access'      => $request->boolean('full_access'),
+            'overrides'        => $request->input('overrides', []),
+            'per_branch'       => $request->boolean('per_branch'),
+            'branch_overrides' => $request->input('branch_overrides', []),
+        ];
     }
 
     private function syncWorkingHours(Employee $employee, array $hours): void

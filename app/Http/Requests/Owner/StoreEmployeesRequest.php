@@ -37,6 +37,12 @@ class StoreEmployeesRequest extends FormRequest
             'employees.*.bio' => ['nullable', 'string', 'max:10000'],
             'employees.*.image' => ['nullable', 'image', 'max:2048'],
             'employees.*.is_active' => ['sometimes', 'boolean'],
+            // Optional per-row access; the quick-setup wizard defaults to this branch.
+            'employees.*.role_id' => ['nullable', 'exists:roles,id'],
+            'employees.*.access_mode' => ['nullable', 'in:selected,all'],
+            'employees.*.branch_ids' => ['nullable', 'array'],
+            'employees.*.branch_ids.*' => ['integer'],
+            'employees.*.full_access' => ['nullable', 'boolean'],
             'wizard' => ['sometimes', 'boolean'],
         ];
     }

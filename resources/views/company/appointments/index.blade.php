@@ -352,7 +352,7 @@
     <div id="view-staff" class="d-none">
         <div id="bk-staff-shell" style="background:var(--cal-surface);border-radius:var(--cal-radius);border:1px solid var(--cal-border);box-shadow:var(--cal-shadow);overflow:hidden;">
 
-            {{-- Staff nav — Booksy style ── --}}
+            {{-- Staff nav — GlowRez style ── --}}
             <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 10px;border-bottom:1px solid var(--cal-border);background:var(--cal-toolbar-bg);flex-wrap:wrap;gap:8px;">
                 <div class="sf-popwrap" style="display:flex;align-items:center;gap:8px;">
                     <button id="sf-prev" style="background:var(--cal-surface2);border:1px solid var(--cal-border);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--cal-text);font-size:1.05rem;transition:background .12s;">‹</button>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasBranchScopedAccess;
 use App\Models\Concerns\HasLocalizedNames;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Employee extends Model
 {
+    use HasBranchScopedAccess;
     use HasFactory;
     use HasLocalizedNames;
 
@@ -33,6 +35,8 @@ class Employee extends Model
     protected $fillable = [
         'company_id',
         'branch_id',
+        'all_branches',
+        'full_access',
         'role_id',
         'name_en',
         'name_ar',
@@ -71,6 +75,8 @@ class Employee extends Model
         return [
             'is_active'         => 'boolean',
             'is_bookable'       => 'boolean',
+            'all_branches'      => 'boolean',
+            'full_access'       => 'boolean',
             'password'          => 'hashed',
             'hire_date'         => 'date',
             'contract_end_date' => 'date',
@@ -84,9 +90,30 @@ class Employee extends Model
         return $this->belongsTo(Company::class);
     }
 
+    /** Home / primary branch (informational). The real access set is branches(). */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    /** L2 — branches this employee may operate in (ignored when all_branches). */
+    public function branches(): BelongsToMany
+    {
+        return $this->belongsToMany(Branch::class, 'branch_employee')->withTimestamps();
+    }
+
+    /** L3 — per-employee permission overrides (grant/deny), across all their branches. */
+    public function permissionOverrides(): BelongsToMany
+    {
+        return $this->belongsToMany(Permission::class, 'employee_permission')
+                    ->withPivot('effect')
+                    ->withTimestamps();
+    }
+
+    /** L4 — per-branch permission overrides (grant/deny). Advanced scenario only. */
+    public function branchPermissionOverrides(): HasMany
+    {
+        return $this->hasMany(BranchEmployeePermission::class);
     }
 
     public function role(): BelongsTo

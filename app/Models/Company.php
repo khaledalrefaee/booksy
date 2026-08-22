@@ -32,6 +32,7 @@ class Company extends Authenticatable
         'plan_id',
         'plan_expires_at',
         'feature_overrides',
+        'booking_policy_mode',
     ];
 
     protected $hidden = [
@@ -132,6 +133,31 @@ class Company extends Authenticatable
     public function branches(): HasMany
     {
         return $this->hasMany(Branch::class);
+    }
+
+    public function bookingPolicies(): HasMany
+    {
+        return $this->hasMany(BookingPolicy::class);
+    }
+
+    /**
+     * Resolve the policy that actually applies to a booking.
+     * Unified mode → always the company default. Per-branch mode →
+     * the branch's own row, falling back to the company default.
+     * Never returns null: fills gaps with BookingPolicy::defaults().
+     */
+    public function effectiveBookingPolicy(?Branch $branch = null): BookingPolicy
+    {
+        $company = $this->bookingPolicies()->whereNull('branch_id')->first();
+
+        if ($this->booking_policy_mode === 'per_branch' && $branch) {
+            $branchPolicy = $this->bookingPolicies()->where('branch_id', $branch->id)->first();
+            if ($branchPolicy) {
+                return $branchPolicy;
+            }
+        }
+
+        return $company ?? new BookingPolicy(BookingPolicy::defaults());
     }
 
     public function employees(): HasMany

@@ -396,7 +396,7 @@
                                     
                                     <div class="col-md-6">
                                         <label class="f-label">{{ __('Role') }} <span class="text-danger">*</span></label>
-                                        <select name="role_id" id="role-select" class="f-input form-select @error('role_id') is-invalid @enderror" onchange="syncBranchOptions()">
+                                        <select name="role_id" id="role-select" class="f-input form-select @error('role_id') is-invalid @enderror">
                                             <option value="">{{ __('Select role…') }}</option>
                                             @foreach($roles as $role)
                                             <option value="{{ $role->id }}" data-slug="{{ $role->slug }}" {{ old('role_id', $employee->role_id) == $role->id ? 'selected' : '' }}>
@@ -406,26 +406,9 @@
                                         </select>
                                         @error('role_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="f-label">{{ __('Branch') }} <span class="text-danger">*</span></label>
-                                        @php $currentBranchVal = old('branch_id', $employee->branch_id ?? 'all'); @endphp
-                                        <select name="branch_id" id="branch-select" class="f-input form-select @error('branch_id') is-invalid @enderror"
-                                                data-original="{{ $employee->branch_id ?? 'all' }}" onchange="onBranchChange()">
-                                            <option value="all" id="branch-opt-all" {{ (string) $currentBranchVal === 'all' ? 'selected' : '' }}>
-                                                🏢 {{ __('All branches') }} ({{ __('Company owner') }})
-                                            </option>
-                                            @foreach($branches as $b)
-                                            <option value="{{ $b->id }}" {{ (string) $currentBranchVal === (string) $b->id ? 'selected' : '' }}>
-                                                {{ $b->localizedName() }}
-                                            </option>
-                                            @endforeach
-                                        </select>
-                                        <div id="branch-transfer-hint" style="display:none;font-size:11px;color:#f59e0b;margin-top:4px;">
-                                            ⚠️ {{ __('The employee will be transferred to the selected branch on save — review their services afterwards.') }}
-                                        </div>
-                                        @error('branch_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                    </div>
-                                    
+
+                                    @include('company.employees.partials.access-permissions')
+
                                     <div class="col-12">
                                         <label class="f-label">{{ __('Bio') }}</label>
                                         <textarea name="bio" class="f-input form-control" rows="3">{{ old('bio', $employee->bio) }}</textarea>
@@ -944,36 +927,6 @@ document.getElementById('edit-photo-input').addEventListener('change', function 
         if (inner) inner.innerHTML = '<img src="' + URL.createObjectURL(file) + '" style="width:100%;height:100%;object-fit:cover;">';
     }, 800);
 });
-
-// ── Branch transfer & "all branches" (company owner only) ──
-function syncBranchOptions() {
-    const roleSel   = document.getElementById('role-select');
-    const branchSel = document.getElementById('branch-select');
-    const allOpt    = document.getElementById('branch-opt-all');
-    if (!roleSel || !branchSel || !allOpt) return;
-
-    const slug    = roleSel.options[roleSel.selectedIndex]?.dataset.slug || '';
-    const isOwner = slug === 'company_owner';
-
-    allOpt.hidden = allOpt.disabled = !isOwner;
-
-    // Non-owner can't stay on "all branches" — snap back to the original branch or the first one
-    if (!isOwner && branchSel.value === 'all') {
-        const original = branchSel.dataset.original;
-        branchSel.value = (original && original !== 'all') ? original : (branchSel.options[1]?.value || '');
-        onBranchChange();
-    }
-}
-
-function onBranchChange() {
-    const branchSel = document.getElementById('branch-select');
-    const hint = document.getElementById('branch-transfer-hint');
-    if (!branchSel || !hint) return;
-    hint.style.display = branchSel.value !== branchSel.dataset.original ? 'block' : 'none';
-}
-
-syncBranchOptions();
-onBranchChange();
 
 // ── Client-side validation ──
 document.getElementById('emp-edit-form').addEventListener('submit', function (e) {

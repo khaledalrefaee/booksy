@@ -7,6 +7,7 @@ use App\Http\Controllers\Company\Auth\RegisterController;
 use App\Http\Controllers\Company\Auth\PasswordResetController;
 use App\Http\Controllers\Company\Auth\VerificationController;
 use App\Http\Controllers\Company\BranchController;
+use App\Http\Controllers\Company\BookingPolicyController;
 use App\Http\Controllers\Company\DashboardController;
 use App\Http\Controllers\Company\DeductionController;
 use App\Http\Controllers\Company\EmployeeController;
@@ -119,6 +120,10 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::resource('branches.services', ServiceController::class)->shallow()->except(['show']);
         // Service category reordering (drag-and-drop in the rail)
         Route::post('service-categories/reorder', [ServiceCategoryController::class, 'reorder'])->name('service-categories.reorder');
+
+        // Booking & cancellation policy (company settings)
+        Route::get( 'booking-policy', [BookingPolicyController::class, 'edit'])->name('booking-policy.edit');
+        Route::post('booking-policy', [BookingPolicyController::class, 'update'])->name('booking-policy.update');
 
         // Employees (nested under branch, shallow)
         Route::get('employees/check-email', [EmployeeController::class, 'checkEmail'])->name('employees.check-email');

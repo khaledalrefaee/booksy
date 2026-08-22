@@ -357,17 +357,46 @@ class FrontController extends Controller
     public function mapBranches()
     {
         $isAr = app()->getLocale() === 'ar';
-        $branches = \App\Models\Branch::with(['company.category','images','reviews'])
+        $branches = \App\Models\Branch::with([
+                'company.category',
+                'images',
+                'reviews',
+                'governorate',
+                'area',
+                'services' => fn($q) => $q->where('is_active', true),
+                'workingHours',
+            ])
             ->marketplace()
             ->whereNotNull('latitude')->whereNotNull('longitude')
             ->whereHas('company', fn($q) => $q->where('status','active'))
             ->get();
 
-        return response()->json($branches->map(function($b) use ($isAr) {
-            $reviews = $b->reviews;
-            $avg     = $reviews->count() ? round($reviews->avg('rating'),1) : null;
-            $img     = $b->images->first();
-            $company = $b->company;
+        // Local weekday (0=Sun … 6=Sat) for a lightweight "open now" flag.
+        $now   = now();
+        $dow   = (int) $now->dayOfWeek;
+        $hhmm  = $now->format('H:i');
+
+        return response()->json($branches->map(function($b) use ($isAr, $dow, $hhmm) {
+            $reviews  = $b->reviews;
+            $avg      = $reviews->count() ? round($reviews->avg('rating'),1) : null;
+            $img      = $b->images->first();
+            $company  = $b->company;
+            $services = $b->services;
+            $prices   = $services->pluck('price')->filter(fn ($p) => $p > 0);
+            $topSvc   = $services->take(3)
+                ->map(fn ($s) => $isAr ? ($s->name_ar ?? $s->name_en) : ($s->name_en ?? $s->name_ar))
+                ->filter()->values();
+
+            // "Open now" — only asserted when we actually have today's hours row.
+            $openNow = null;
+            $today   = $b->workingHours->firstWhere('day_of_week', $dow);
+            if ($today) {
+                $openNow = (bool) $today->is_open
+                    && $today->open_time && $today->close_time
+                    && $hhmm >= substr($today->open_time, 0, 5)
+                    && $hhmm <  substr($today->close_time, 0, 5);
+            }
+
             return [
                 'id'           => $b->id,
                 'lat'          => (float)$b->latitude,
@@ -377,10 +406,17 @@ class FrontController extends Controller
                 'company_logo' => $company->logo ? asset('storage/'.$company->logo) : null,
                 'image'        => $img ? asset('storage/'.$img->path) : null,
                 'category'     => $company->category ? ($isAr ? $company->category->name_ar : $company->category->name_en) : null,
+                'cat_slug'     => $company->category?->slug,
+                'city'         => $b->governorate?->localizedName() ?? $b->area?->localizedName(),
                 'address'      => $b->address,
                 'avg_rating'   => $avg,
                 'review_count' => $reviews->count(),
+                'services'     => $topSvc,
+                'svc_count'    => $services->count(),
+                'min_price'    => $prices->isNotEmpty() ? (float) $prices->min() : null,
+                'open_now'     => $openNow,
                 'url'          => route('front.branch', $b),
+                'book_url'     => route('front.branch', $b).'#book',
             ];
         }));
     }

@@ -11,6 +11,8 @@ use App\Models\Role;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\SocialLink;
+use App\Support\Access\EmployeeAccessWriter;
+use App\Support\Access\PermissionCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -35,6 +37,19 @@ class EmployeeController extends Controller
     private function authoriseEmployee(Employee $employee): void
     {
         abort_unless($employee->company_id === $this->company()->id, 403);
+    }
+
+    /** Normalise the branch-access + overrides fields for the EmployeeAccessWriter. */
+    private function accessInput(Request $request): array
+    {
+        return [
+            'access_mode'      => $request->input('access_mode', 'selected'),
+            'branch_ids'       => $request->input('branch_ids', []),
+            'full_access'      => $request->boolean('full_access'),
+            'overrides'        => $request->input('overrides', []),
+            'per_branch'       => $request->boolean('per_branch'),
+            'branch_overrides' => $request->input('branch_overrides', []),
+        ];
     }
 
     /** AJAX: live email-uniqueness check while typing in the employee form. */
@@ -116,6 +131,7 @@ class EmployeeController extends Controller
             ]);
 
         $employees = $query
+            ->withCount(['branches'])
             ->withCount([
                 'appointments as appointments_this_month' => fn($q) => $q
                     ->whereMonth('start_time', now()->month)
@@ -167,7 +183,13 @@ class EmployeeController extends Controller
                         ->get()
                         ->groupBy('service_category_id');
 
-        return view('company.employees.create', compact('branch', 'roles', 'services'));
+        $catalog       = app(PermissionCatalog::class);
+        $branches      = $this->company()->branches()->orderBy('sort_order')->get();
+        $roleSummaries = $catalog->roleSummaries();
+
+        return view('company.employees.create', compact(
+            'branch', 'roles', 'services', 'branches', 'catalog', 'roleSummaries'
+        ));
     }
 
     public function store(Request $request, Branch $branch): RedirectResponse
@@ -187,7 +209,18 @@ class EmployeeController extends Controller
             'dial_code'            => ['required', 'string', 'max:5'],
             'phone_number'         => ['required', 'string', 'max:15'],
             'role_id'              => ['required', 'exists:roles,id'],
-            'branch_scope'         => ['nullable', 'in:branch,all'],
+            // Branch access (WHERE) — independent of Full Access (WHAT).
+            'access_mode'          => ['nullable', 'in:selected,all'],
+            'branch_ids'           => ['nullable', 'array'],
+            'branch_ids.*'         => ['integer'],
+            'full_access'          => ['nullable', 'boolean'],
+            // Advanced permission overrides (optional; module-level).
+            'overrides'            => ['nullable', 'array'],
+            'overrides.*'          => ['nullable', 'in:default,none,view,manage'],
+            'per_branch'           => ['nullable', 'boolean'],
+            'branch_overrides'         => ['nullable', 'array'],
+            'branch_overrides.*'       => ['nullable', 'array'],
+            'branch_overrides.*.*'     => ['nullable', 'in:default,none,view,manage'],
             'password'             => ['required', 'string', 'min:8'],
             'bio'                  => ['nullable', 'string', 'max:1000'],
             'image'                => ['nullable', 'image', 'max:10240'],
@@ -237,15 +270,12 @@ class EmployeeController extends Controller
 
         $this->validateShiftTimes($request);
 
-        // All-branches employee (branch_id NULL) — company-owner role only
-        $branchScope = $data['branch_scope'] ?? 'branch';
-        if ($branchScope === 'all') {
-            $role = Role::find($data['role_id']);
-            if ($role?->slug !== 'company_owner') {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'branch_scope' => __('Only the company owner role can be assigned to all branches.'),
-                ]);
-            }
+        // Branch access: selected branches, or all. Selected requires at least one.
+        $accessMode = $data['access_mode'] ?? 'selected';
+        if ($accessMode !== 'all' && empty($data['branch_ids'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'branch_ids' => __('Select at least one branch, or choose All branches.'),
+            ]);
         }
 
         $imagePath = $request->hasFile('image')
@@ -253,7 +283,7 @@ class EmployeeController extends Controller
             : null;
 
         $employee = Employee::create([
-            'branch_id'   => $branchScope === 'all' ? null : $branch->id,
+            'branch_id'   => $branch->id, // home branch; adjusted by the access writer
             'company_id'  => $this->company()->id,
             'name_en'     => $data['name_en'],
             'name_ar'     => $data['name_ar'] ?? null,
@@ -279,6 +309,13 @@ class EmployeeController extends Controller
             'license_number'            => $data['license_number'] ?? null,
             'license_expiry'            => $data['license_expiry'] ?? null,
         ]);
+
+        // Branch access (WHERE) + Full Access flag + optional overrides (L2/L3/L4).
+        app(EmployeeAccessWriter::class)->apply(
+            $employee,
+            $this->accessInput($request),
+            $this->company()->branches()->pluck('id')
+        );
 
         // Sync services with optional per-employee price & duration overrides
         $employee->services()->sync($this->buildServiceSyncData($request));
@@ -325,6 +362,23 @@ class EmployeeController extends Controller
         $workingHours        = $employee->workingHours()->orderBy('shift_number')->get()->groupBy('day_of_week');
         $socialLinks         = $employee->socialLinks()->get()->keyBy('platform');
 
+        // ── Branch access + permission prefill ──
+        $catalog       = app(PermissionCatalog::class);
+        $roleSummaries = $catalog->roleSummaries();
+
+        $accessMode        = $employee->all_branches ? 'all' : 'selected';
+        $selectedBranchIds = $employee->branches()->pluck('branches.id')->all();
+
+        $l3Effects = $employee->permissionOverrides()->get()
+            ->mapWithKeys(fn ($p) => [(int) $p->id => $p->pivot->effect])->all();
+        $l3Levels  = $catalog->levelsFromEffects($l3Effects);
+
+        $l4Levels  = $employee->branchPermissionOverrides()->get()
+            ->groupBy('branch_id')
+            ->map(fn ($rows) => $catalog->levelsFromEffects(
+                $rows->mapWithKeys(fn ($r) => [(int) $r->permission_id => $r->effect])->all()
+            ))->all();
+
         return view('company.employees.edit', [
             'employee'           => $employee,
             'branch'             => $branch,
@@ -337,6 +391,13 @@ class EmployeeController extends Controller
             'serviceCommissions' => $serviceCommissions,
             'workingHours'       => $workingHours,
             'socialLinks'        => $socialLinks,
+            'catalog'            => $catalog,
+            'roleSummaries'      => $roleSummaries,
+            'accessMode'         => $accessMode,
+            'selectedBranchIds'  => $selectedBranchIds,
+            'l3Levels'           => $l3Levels,
+            'l4Levels'           => $l4Levels,
+            'perBranch'          => ! empty($l4Levels),
         ]);
     }
 
@@ -351,7 +412,16 @@ class EmployeeController extends Controller
             'dial_code'             => ['required', 'string', 'max:5'],
             'phone_number'          => ['required', 'string', 'max:15'],
             'role_id'               => ['required', 'exists:roles,id'],
-            'branch_id'             => ['nullable', 'string', 'max:20'],
+            'access_mode'           => ['nullable', 'in:selected,all'],
+            'branch_ids'            => ['nullable', 'array'],
+            'branch_ids.*'          => ['integer'],
+            'full_access'           => ['nullable', 'boolean'],
+            'overrides'             => ['nullable', 'array'],
+            'overrides.*'           => ['nullable', 'in:default,none,view,manage'],
+            'per_branch'            => ['nullable', 'boolean'],
+            'branch_overrides'      => ['nullable', 'array'],
+            'branch_overrides.*'    => ['nullable', 'array'],
+            'branch_overrides.*.*'  => ['nullable', 'in:default,none,view,manage'],
             'password'              => ['nullable', 'string', 'min:8'],
             'bio'                   => ['nullable', 'string', 'max:1000'],
             'image'                 => ['nullable', 'image', 'max:10240'],
@@ -401,33 +471,20 @@ class EmployeeController extends Controller
 
         $this->validateShiftTimes($request);
 
-        // Branch transfer: a concrete branch of this company, or 'all' (= NULL,
-        // works across all branches) — allowed only for the company-owner role.
-        $company     = $this->company();
-        $oldBranchId = $employee->branch_id;
-        $newBranchId = $oldBranchId;
-
-        if (! empty($data['branch_id'])) {
-            if ($data['branch_id'] === 'all') {
-                $role = Role::find($data['role_id']);
-                if ($role?->slug !== 'company_owner') {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'branch_id' => __('Only the company owner role can be assigned to all branches.'),
-                    ]);
-                }
-                $newBranchId = null;
-            } else {
-                $newBranchId = (int) $data['branch_id'];
-                if (! $company->branches()->whereKey($newBranchId)->exists()) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'branch_id' => __('Invalid branch.'),
-                    ]);
-                }
-            }
+        // Branch access: selected branches, or all. Selected requires at least one.
+        $company    = $this->company();
+        $accessMode = $data['access_mode'] ?? 'selected';
+        if ($accessMode !== 'all' && empty($data['branch_ids'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'branch_ids' => __('Select at least one branch, or choose All branches.'),
+            ]);
         }
 
+        $oldAccess = $employee->all_branches
+            ? __('All branches')
+            : $employee->branches()->pluck('branches.id')->sort()->implode(',');
+
         $updateData = [
-            'branch_id'   => $newBranchId,
             'name_en'     => $data['name_en'],
             'name_ar'     => $data['name_ar'] ?? null,
             'email'       => $data['email'] ?? null,
@@ -464,13 +521,20 @@ class EmployeeController extends Controller
 
         $employee->update($updateData);
 
+        // Branch access (WHERE) + Full Access flag + optional overrides (L2/L3/L4).
+        app(EmployeeAccessWriter::class)->apply(
+            $employee,
+            $this->accessInput($request),
+            $company->branches()->pluck('id')
+        );
+        $employee->refresh();
+
         // Sync services with optional per-employee price & duration overrides.
-        // Only services of the employee's (new) branch are kept — on transfer,
-        // services of the old branch are dropped automatically.
-        $allowedServiceIds = Service::whereIn(
-                'branch_id',
-                $newBranchId ? [$newBranchId] : $company->branches()->pluck('id')
-            )->pluck('id')->flip();
+        // Only services of the employee's accessible branches are kept.
+        $accessServiceBranchIds = $employee->all_branches
+            ? $company->branches()->pluck('id')
+            : $employee->branches()->pluck('branches.id');
+        $allowedServiceIds = Service::whereIn('branch_id', $accessServiceBranchIds)->pluck('id')->flip();
         $serviceSync = array_filter(
             $this->buildServiceSyncData($request),
             fn ($serviceId) => $allowedServiceIds->has((int) $serviceId),
@@ -487,12 +551,12 @@ class EmployeeController extends Controller
         // Sync social links
         SocialLink::syncFor($employee, $request->input('social_links', []));
 
-        if ($newBranchId !== $oldBranchId) {
-            $branchName = fn ($id) => $id
-                ? Branch::find($id)?->localizedName() ?? "#{$id}"
-                : __('All branches');
+        $newAccess = $employee->all_branches
+            ? __('All branches')
+            : $employee->branches()->pluck('branches.id')->sort()->implode(',');
+        if ($newAccess !== $oldAccess) {
             \App\Support\Auditor::log(
-                "Transferred {$employee->localizedName()} from {$branchName($oldBranchId)} to {$branchName($newBranchId)}",
+                "Updated {$employee->localizedName()} branch access ({$oldAccess} → {$newAccess})",
                 $employee
             );
         }

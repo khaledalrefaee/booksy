@@ -316,6 +316,10 @@ class BookingController extends Controller
                     throw new \RuntimeException('conflict');
                 }
 
+                // Link every row of a multi-service / multi-guest visit under one
+                // group id so the customer gets a single consolidated message.
+                $groupId = count($plan) > 1 ? Appointment::newGroupId() : null;
+
                 $appts = [];
                 foreach ($plan as $job) { // each job: employee_id, service, start, end
                     $resourceId = null;
@@ -326,18 +330,19 @@ class BookingController extends Controller
                     }
                     $svc = $job['service'];
                     $appts[] = Appointment::create([
-                        'company_id'    => $svc->branch->company_id,
-                        'branch_id'     => $svc->branch_id,
-                        'customer_id'   => $customer->id,
-                        'employee_id'   => $job['employee_id'],
-                        'resource_id'   => $resourceId,
-                        'service_id'    => $svc->id,
-                        'start_time'    => $job['start'],
-                        'end_time'      => $job['end'],
-                        'status'        => AppointmentStatus::Pending,
-                        'total_price'   => $svc->price,
-                        'payment_status'=> 'pending',
-                        'notes'         => $data['notes'] ?? null,
+                        'company_id'      => $svc->branch->company_id,
+                        'branch_id'       => $svc->branch_id,
+                        'customer_id'     => $customer->id,
+                        'booking_group_id'=> $groupId,
+                        'employee_id'     => $job['employee_id'],
+                        'resource_id'     => $resourceId,
+                        'service_id'      => $svc->id,
+                        'start_time'      => $job['start'],
+                        'end_time'        => $job['end'],
+                        'status'          => AppointmentStatus::Pending,
+                        'total_price'     => $svc->price,
+                        'payment_status'  => 'pending',
+                        'notes'           => $data['notes'] ?? null,
                     ]);
                 }
                 return $appts;

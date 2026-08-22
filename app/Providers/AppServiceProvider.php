@@ -20,6 +20,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(BranchRepositoryInterface::class, EloquentBranchRepository::class);
+
+        // Branch-scoped permission engine — single source of truth for effective
+        // permissions. Singleton so the slug→level/id map is resolved once per request.
+        $this->app->singleton(\App\Support\Access\PermissionResolver::class);
     }
 
     /**

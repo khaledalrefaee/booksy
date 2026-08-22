@@ -56,7 +56,7 @@
 
     <div class="bkf-vpage-head-row">
       <div>
-        <span class="bkf-eyebrow">{{ $catName ? $t('فئة', 'Category') : $t('استكشف', 'Explore') }}</span>
+        <span class="bkf-eyebrow">{{ $catName ? $t('فئة', 'Category') : $t('استكشف أماكن الجمال والعناية', 'Explore Beauty & Wellness Venues') }}</span>
         <h1 class="bkf-vpage-title">{{ $pageTitle }}</h1>
         <p class="bkf-vpage-count bkf-tnum" aria-live="polite">
           {{ $total }} {{ trans_choice($isAr ? 'مكان|أماكن' : 'venue|venues', $total) }}

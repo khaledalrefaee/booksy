@@ -161,8 +161,11 @@
 .br-icon-btn.is-on{ color:var(--bk-danger); border-color:var(--bk-danger); }
 
 /* layout */
-.br-layout{ display:grid; grid-template-columns:1fr 380px; gap:var(--bk-s10); align-items:start; margin-top:var(--bk-s10); }
-@media (max-width:980px){ .br-layout{ grid-template-columns:1fr; } .br-aside{ display:none; } }
+.br-layout{ display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:var(--bk-s10); align-items:start; margin-top:var(--bk-s10); }
+.br-main{ min-width:0; }   /* let the main column shrink instead of overflowing the viewport → no horizontal scroll, nothing hidden on the right */
+@media (max-width:980px){ .br-layout{ grid-template-columns:minmax(0,1fr); } .br-aside{ display:none; } }
+/* belt-and-braces: the page itself never scrolls sideways on mobile */
+@media (max-width:980px){ html,body{ overflow-x:clip; } }
 
 /* sub-tabs */
 .br-tabs{ position:sticky; top:calc(var(--bk-nav-h) - 2px); z-index:5; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:10px 0; margin-bottom:8px; background:color-mix(in srgb,var(--bk-bg) 90%,transparent); backdrop-filter:blur(10px); }
@@ -180,6 +183,10 @@
 .br-svc-cat-h{ font-family:var(--bk-font-ui); font-weight:700; font-size:1rem; color:var(--bk-text); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
 .br-svc-cat-h svg{ width:18px; height:18px; color:var(--bk-accent); }
 .br-svc{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px; border:1px solid var(--bk-border); border-radius:var(--bk-r); background:var(--bk-surface); margin-bottom:10px; transition:border-color var(--bk-t) ease,box-shadow var(--bk-t) ease; }
+.br-svc-info{ flex:1 1 auto; min-width:0; }        /* name column takes the room, never collapses to 0 */
+.br-svc-nm{ overflow-wrap:break-word; }            /* wrap between words only — never letter-by-letter */
+/* higher specificity than the global mobile `.bkf-btn{width:100%}` so Add stays intrinsic */
+.br-svc .br-svc-add{ flex:0 0 auto; width:auto; }
 .br-svc:hover{ border-color:color-mix(in srgb,var(--bk-accent) 30%,var(--bk-border)); box-shadow:var(--bk-shadow-sm); }
 .br-svc-info{ min-width:0; }
 .br-svc-nm{ font-family:var(--bk-font-ui); font-weight:600; color:var(--bk-text); }
@@ -189,15 +196,28 @@
 .br-svc-add{ flex-shrink:0; }
 .br-svc-add.is-added{ background:var(--bk-accent-wash); color:var(--bk-accent); border-color:var(--bk-accent); }
 
-/* team — horizontal rail of circular avatars (Fresha-style) */
-.br-staff{ display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:6px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+/* team — bare circular avatars (no card): photo · name · role, Fresha-style */
+.br-staff{ display:flex; gap:8px; overflow-x:auto; scroll-snap-type:x mandatory; padding:6px 2px 14px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
 .br-staff::-webkit-scrollbar{ display:none; }
-.br-staff-card{ flex:0 0 auto; width:148px; scroll-snap-align:start; text-align:center; padding:22px 14px; border:1px solid var(--bk-border); border-radius:var(--bk-r-lg); background:var(--bk-surface); transition:transform var(--bk-t) var(--bk-ease),box-shadow var(--bk-t) ease; }
-.br-staff-card:hover{ transform:translateY(-4px); box-shadow:var(--bk-shadow); }
-.br-staff-av{ width:76px; height:76px; border-radius:50%; margin:0 auto 12px; overflow:hidden; background:var(--bk-accent-wash); color:var(--bk-accent); display:grid; place-items:center; font-family:var(--bk-font-display); font-weight:800; font-size:1.5rem; }
-.br-staff-av img{ width:100%; height:100%; object-fit:cover; }
-.br-staff-nm{ font-family:var(--bk-font-ui); font-weight:700; color:var(--bk-text); }
-.br-staff-rl{ font-family:var(--bk-font-ui); font-size:var(--bk-fs-xs); color:var(--bk-text-muted); margin-top:2px; }
+.br-mate{ flex:0 0 auto; width:112px; margin:0; text-align:center; scroll-snap-align:start; }
+.br-mate-av{ position:relative; width:92px; height:92px; border-radius:50%; margin:0 auto 11px; overflow:visible;
+  background:var(--bk-accent-wash); color:var(--bk-accent); display:grid; place-items:center;
+  font-family:var(--bk-font-display); font-weight:800; font-size:1.9rem; cursor:pointer;
+  transition:transform .45s var(--bk-spring); }
+/* gold ring drawn on hover (mask trick — no layout shift) */
+.br-mate-av::after{ content:""; position:absolute; inset:-4px; border-radius:50%; padding:3px; pointer-events:none;
+  background:var(--bk-grad-gold); opacity:0; transform:scale(.9); transition:opacity .4s var(--bk-ease),transform .45s var(--bk-spring);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); mask-composite:exclude; }
+.br-mate-av img{ width:100%; height:100%; border-radius:50%; object-fit:cover; }
+.br-mate:hover .br-mate-av{ transform:translateY(-6px) scale(1.06); }
+.br-mate:hover .br-mate-av::after{ opacity:1; transform:scale(1); }
+.br-mate-nm{ font-family:var(--bk-font-ui); font-weight:600; font-size:.92rem; color:var(--bk-text); line-height:1.3; }
+.br-mate-rl{ font-family:var(--bk-font-ui); font-size:var(--bk-fs-xs); color:var(--bk-text-muted); margin-top:2px; }
+/* staggered entrance — reuses .bkf-reveal observer; per-item delay set inline */
+.br-mate.bkf-reveal{ transform:translateY(18px) scale(.96); }
+.br-mate.bkf-reveal.is-in{ transform:none; }
+@media (prefers-reduced-motion:reduce){ .br-mate-av,.br-mate-av::after{ transition:none; } }
 
 /* reviews */
 .br-rev-summary{ display:flex; gap:32px; align-items:center; flex-wrap:wrap; padding:22px; border:1px solid var(--bk-border); border-radius:var(--bk-r-lg); background:var(--bk-surface); margin-bottom:22px; }
@@ -299,6 +319,8 @@ html[data-bk-theme="dark"] #bk-modal{ --bk-bg:#252C1B; --bk-card:#2E3623; --bk-b
   .br-gallery::-webkit-scrollbar{ display:none; }
   .br-gallery .g{ display:block !important; flex:0 0 90%; grid-row:auto !important; grid-column:auto !important; scroll-snap-align:center; border-radius:var(--bk-r-lg); }
   .br-gallery .g:first-child{ grid-row:auto !important; }
+  /* single image (no swipe rail needed): fill the width, centred */
+  .br-gallery-single .g{ flex:0 0 100% !important; }
   .br-photos-badge{ display:inline-flex; }
   #br-map{ height:220px; }
   .br-title{ font-size:1.55rem; }
@@ -308,6 +330,21 @@ html[data-bk-theme="dark"] #bk-modal{ --bk-bg:#252C1B; --bk-card:#2E3623; --bk-b
   .br-block{ margin-bottom:30px; }          /* tighter vertical rhythm */
   .br-block-title{ margin-bottom:16px; }
   .br-wrap{ padding-bottom:calc(88px + env(safe-area-inset-bottom)); } /* clear the fixed bar */
+  /* sticky bar: text must never push the CTA off-screen */
+  .br-bar-info{ min-width:0; flex:1 1 auto; }
+  .br-bar-info .p,.br-bar-info .l{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .br-bar .bkf-btn{ flex:0 0 auto; }
+}
+/* service rows: keep name + meta + Add tidy on narrow phones */
+@media (max-width:560px){
+  .br-svc{ padding:13px 14px; gap:10px; }
+  .br-svc-meta{ flex-wrap:wrap; gap:6px 12px; }
+  .br-svc-add{ align-self:center; }
+}
+@media (max-width:380px){
+  .br-bar{ padding-inline:12px; gap:8px; }
+  .br-bar .bkf-btn{ padding-inline:15px; }
+  .br-bar-info .p{ font-size:1rem; }
 }
 body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bottom)); }
 @media (min-width:981px){ body:has(.br-bar) .bkf-footer{ padding-bottom:0; } }
@@ -436,13 +473,13 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
         <div class="br-staff bkf-rail">
           @foreach($employees as $emp)
             @php $eName = $isAr ? ($emp->name_ar ?: $emp->name_en) : ($emp->name_en ?: $emp->name_ar); @endphp
-            <div class="br-staff-card">
-              <div class="br-staff-av">
+            <figure class="br-mate bkf-reveal" style="transition-delay:{{ min($loop->index, 12) * 60 }}ms">
+              <span class="br-mate-av">
                 @if($emp->image)<img src="{{ asset('storage/'.$emp->image) }}" alt="{{ $eName }}" loading="lazy" decoding="async">@else{{ mb_substr($eName ?: 'S', 0, 1) }}@endif
-              </div>
-              <div class="br-staff-nm">{{ $eName }}</div>
-              @if($emp->role)<div class="br-staff-rl">{{ $emp->role->localizedName() ?? ($isAr ? $emp->role->name_ar ?? '' : $emp->role->name_en ?? '') }}</div>@endif
-            </div>
+              </span>
+              <figcaption class="br-mate-nm">{{ $eName }}</figcaption>
+              @if($emp->role)<span class="br-mate-rl">{{ $emp->role->localizedName() ?? ($isAr ? $emp->role->name_ar ?? '' : $emp->role->name_en ?? '') }}</span>@endif
+            </figure>
           @endforeach
         </div>
       </section>

@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="ie=edge">
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<title>Booksy Business</title>
+<title>GlowRez Business</title>
 <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('backend/assets/vendors/core/core.css') }}">
 <link rel="stylesheet" href="{{ asset('backend/assets/vendors/flatpickr/flatpickr.min.css') }}">
@@ -22,7 +22,7 @@
         <link rel="stylesheet" href="{{ asset('backend/assets/css/demo2/style.css') }}">
     @endif
 @endif
-<link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}" />
+<link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}?v={{ @filemtime(public_path('backend/assets/images/favicon.png')) ?: '1' }}" />
 <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-custom.css') }}?v={{ @filemtime(public_path('backend/assets/css/booksy-custom.css')) ?: '1' }}">
 @if(app()->getLocale() === 'ar')
     <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-arabic.css') }}">

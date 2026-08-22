@@ -226,8 +226,52 @@
     });
   }
   window.bkRefreshRails = refreshDrag; // let pages re-scan after revealing a rail
+
+  /* ── Arrow controls for rails wrapped in [data-railwrap] ──
+     Desktop affordance (touch scrolls natively). RTL-aware: scrollLeft goes
+     negative toward the end, so we mirror the delta and use Math.abs for state. */
+  function initRailArrows() {
+    document.querySelectorAll('[data-railwrap]').forEach(function (wrap) {
+      var rail = wrap.querySelector('[data-rail]');
+      if (!rail || rail.__arrowsBound) return;
+      rail.__arrowsBound = true;
+      var prev = wrap.querySelector('[data-rail-prev]');
+      var next = wrap.querySelector('[data-rail-next]');
+      var rtl = getComputedStyle(rail).direction === 'rtl';
+
+      function step() {
+        var card = rail.querySelector('.bkf-vp') || rail.firstElementChild;
+        var w = card ? card.getBoundingClientRect().width + 16 : rail.clientWidth * 0.8;
+        return Math.max(w, rail.clientWidth * 0.75);
+      }
+      function go(dir) { // dir: -1 = prev (toward start), +1 = next (toward end)
+        rail.scrollBy({ left: step() * dir * (rtl ? -1 : 1), behavior: reduce ? 'auto' : 'smooth' });
+      }
+      function update() {
+        var max = rail.scrollWidth - rail.clientWidth;
+        var sl = Math.abs(rail.scrollLeft);
+        if (prev) prev.disabled = max <= 2 || sl <= 2;
+        if (next) next.disabled = max <= 2 || sl >= max - 2;
+      }
+      if (prev) prev.addEventListener('click', function () { go(-1); });
+      if (next) next.addEventListener('click', function () { go(1); });
+      rail.addEventListener('scroll', function () {
+        if (rail.__arrowRaf) return;
+        rail.__arrowRaf = requestAnimationFrame(function () { rail.__arrowRaf = 0; update(); });
+      }, { passive: true });
+      wrap.__railUpdate = update;
+      update();
+    });
+  }
+  window.bkRefreshRailArrows = function () {
+    document.querySelectorAll('[data-railwrap]').forEach(function (w) { if (w.__railUpdate) w.__railUpdate(); });
+  };
+
   var rzT;
-  window.addEventListener('resize', function () { clearTimeout(rzT); rzT = setTimeout(refreshDrag, 200); }, { passive: true });
+  window.addEventListener('resize', function () {
+    clearTimeout(rzT);
+    rzT = setTimeout(function () { refreshDrag(); window.bkRefreshRailArrows(); }, 200);
+  }, { passive: true });
 
   /* ── Favourites (account-bound) — shared by home + venues + favourites page ──
      Source of truth is the server (window.BK_FAV.ids). Guests are prompted to
@@ -311,7 +355,7 @@
       bar.className = 'bkf-install';
       bar.innerHTML =
         '<div class="bkf-install-ic"><img src="' + (window.BK_ICON || '') + '" alt=""></div>' +
-        '<div class="bkf-install-tx"><b>' + (ar ? 'ثبّت بوكسي' : 'Install Booksy') + '</b>' +
+        '<div class="bkf-install-tx"><b>' + (ar ? 'ثبّت غلوريز' : 'Install GlowRez') + '</b>' +
         '<span>' + (ar ? 'وصول أسرع من شاشتك الرئيسية' : 'Faster access from your home screen') + '</span></div>' +
         '<button class="bkf-install-go" type="button">' + (ar ? 'تثبيت' : 'Install') + '</button>' +
         '<button class="bkf-install-x" type="button" aria-label="' + (ar ? 'إغلاق' : 'Dismiss') + '">&times;</button>';
@@ -332,7 +376,7 @@
     }
   }
 
-  function boot() { initReveal(); initNav(); initCounters(); initParallax(); initTilt(); refreshDrag(); initFavorites(); initPWA(); }
+  function boot() { initReveal(); initNav(); initCounters(); initParallax(); initTilt(); refreshDrag(); initRailArrows(); initFavorites(); initPWA(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();

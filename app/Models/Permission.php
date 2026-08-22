@@ -10,10 +10,21 @@ class Permission extends Model
     protected $fillable = [
         'slug',
         'group',
+        'level',
     ];
 
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'permission_role');
+    }
+
+    public function isBranchLevel(): bool
+    {
+        return $this->level === 'branch';
+    }
+
+    public function isCompanyLevel(): bool
+    {
+        return $this->level === 'company';
     }
 }

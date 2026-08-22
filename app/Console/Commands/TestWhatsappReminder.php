@@ -22,7 +22,7 @@ class TestWhatsappReminder extends Command
 
         $this->info('WhatsApp is connected.');
 
-        $message = $this->option('message') ?: "✅ *تجربة من Booksy*\n\nهذه رسالة تجريبية للتأكد أن النظام يعمل بنجاح.\n\n💛 Booksy";
+        $message = $this->option('message') ?: "✅ *تجربة من GlowRez*\n\nهذه رسالة تجريبية للتأكد أن النظام يعمل بنجاح.\n\n💛 GlowRez";
 
         $this->info("Sending to {$phone}...");
         $result = $whatsapp->send($phone, $message, null, null, 'test');

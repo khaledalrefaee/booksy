@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>{{ __('Sign in') }} — Booksy</title>
+    <title>{{ __('Sign in') }} — GlowRez</title>
 
     <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
 
@@ -27,7 +27,7 @@
         @endif
     @endif
 
-    <link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}" />
+    <link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}?v={{ @filemtime(public_path('backend/assets/images/favicon.png')) ?: '1' }}" />
     @if(app()->getLocale() === 'ar')
         <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-arabic.css') }}">
     @endif

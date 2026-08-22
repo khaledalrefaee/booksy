@@ -93,4 +93,27 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | SMS gateway (used for Syrian numbers, and any booking policy channel = "sms")
+    |--------------------------------------------------------------------------
+    | Change the provider and key from ONE place: the .env file.
+    |   driver  = 'rasel'   → Rasel SMS (Syria). POST { to, channel, messageType,
+    |                          content:{text} } with an "X-API-Key" header.
+    |   driver  = 'generic' → Twilio-style gateway. POST { to, from, message }
+    |                          with an "Authorization: Bearer <key>" header.
+    | Leave the URL empty to keep SMS inert (failures log a clear reason).
+    |
+    | 'countries' lists the dial codes that are delivered over SMS instead of
+    | WhatsApp — Syria (963) by default. Everyone else gets WhatsApp.
+    */
+    'sms' => [
+        'driver'    => env('BOOKSY_SMS_DRIVER', 'rasel'),
+        'url'       => env('BOOKSY_SMS_URL', 'https://raselsms.com/api/v2/messages/send'),
+        'api_key'   => env('BOOKSY_SMS_KEY', ''),
+        'channel'   => env('BOOKSY_SMS_CHANNEL', 'local_sms'),
+        'sender'    => env('BOOKSY_SMS_SENDER', 'GlowRez'),
+        'countries' => array_filter(explode(',', env('BOOKSY_SMS_COUNTRIES', '963'))),
+    ],
+
 ];
