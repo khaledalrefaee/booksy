@@ -607,8 +607,8 @@ function showMap(empLat, empLng, brLat, brLng, empName, distance) {
 
         mapInstance = L.map('mapContainer').setView([empLat, empLng], 15);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap, &copy; CARTO'
         }).addTo(mapInstance);
 
         // Employee check-in marker (red)

@@ -761,7 +761,7 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
     if(!window.L){ window.addEventListener('load', initMap, {once:true}); return; }
     var lat=+m.dataset.lat, lng=+m.dataset.lng;
     var map = L.map('br-map',{scrollWheelZoom:false,zoomControl:true}).setView([lat,lng],15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap, &copy; CARTO'}).addTo(map);
     L.marker([lat,lng]).addTo(map).bindPopup('<b>'+m.dataset.name+'</b>').openPopup();
     setTimeout(function(){ map.invalidateSize(); }, 200);
   }

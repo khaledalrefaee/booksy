@@ -736,7 +736,7 @@ window.BK_HERO_SLIDES = @json($heroSlidesJs);
     loadLeaflet(function (Lref) {
       L = Lref;
       map = L.map(mapEl, { scrollWheelZoom: false, zoomControl: true }).setView(DAMASCUS, 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap, &copy; CARTO' }).addTo(map);
       fetch(CFG.url).then(function (r) { return r.json(); }).then(function (list) {
         data = list.filter(function (b) { return b.lat != null && b.lng != null; });
         loaded = true;

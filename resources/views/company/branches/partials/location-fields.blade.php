@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var map    = L.map('branch-map').setView([startLat, startLng], 13);
     var marker = L.marker([startLat, startLng], { draggable: true }).addTo(map);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
         maxZoom: 19, attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
