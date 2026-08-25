@@ -164,12 +164,22 @@ class BookingController extends Controller
             'employee_id' => 'required|exists:employees,id',
             'start_time'  => 'required|date',
             'notes'       => 'nullable|string|max:500',
+            'employee_requested' => 'nullable|boolean',
         ]);
 
         $service   = Service::with('branch.company')->findOrFail($request->service_id);
         $employee  = Employee::findOrFail($request->employee_id);
         $startTime = Carbon::parse($request->start_time);
         $endTime   = $startTime->clone()->addMinutes($service->duration_minutes);
+
+        // Never allow a slot that has already started. The slots endpoint hides
+        // past times, but a stale tab or a direct POST must be rejected too.
+        if ($startTime->lte(now())) {
+            return response()->json([
+                'message'  => __('This time has already passed. Please pick a later slot.'),
+                'past'     => true,
+            ], 422);
+        }
 
         $allocator = app(\App\Services\ResourceAllocator::class);
 
@@ -202,7 +212,9 @@ class BookingController extends Controller
                 'company_id'   => $service->branch->company_id,
                 'branch_id'    => $service->branch_id,
                 'customer_id'  => $customer->id,
+                'reference'    => Appointment::newReference(),
                 'employee_id'  => $employee->id,
+                'employee_requested' => (bool) ($request->boolean('employee_requested', true)),
                 'resource_id'  => $resourceId,
                 'service_id'   => $service->id,
                 'start_time'   => $startTime,
@@ -296,13 +308,46 @@ class BookingController extends Controller
         $date = Carbon::parse($data['start_time'])->startOfDay();
         $start = Carbon::parse($data['start_time']);
 
+        // Reject any visit that starts in the past (stale slot / direct POST).
+        if ($start->lte(now())) {
+            return response()->json([
+                'message' => app()->getLocale() === 'ar'
+                    ? 'هذا الوقت مضى بالفعل. الرجاء اختيار وقت لاحق.'
+                    : 'This time has already passed. Please pick a later slot.',
+                'past'    => true,
+            ], 422);
+        }
+
+        // Idempotency: a double-submit / retry that carries the same key must not
+        // create a second visit — return the one already made (last 15 min).
+        $idemKey = $data['idempotency_key'] ?? null;
+        if ($idemKey) {
+            $existing = Appointment::where('idempotency_key', $idemKey)
+                ->where('customer_id', $customer->id)
+                ->where('created_at', '>=', now()->subMinutes(15))
+                ->orderBy('start_time')
+                ->get();
+            if ($existing->isNotEmpty()) {
+                return response()->json([
+                    'booked'    => true,
+                    'duplicate' => true,
+                    'count'     => $existing->count(),
+                    'summary'   => [
+                        'start' => $existing->first()->start_time->format('D, d M Y · H:i'),
+                        'end'   => $existing->last()->end_time->format('H:i'),
+                        'total' => (float) $existing->sum('total_price'),
+                    ],
+                ], 200);
+            }
+        }
+
         [$employees, $empById, $services, $booked, $gridStart, $gridEnd, $guestBlocks]
             = $this->prepareSpec($data, $date);
 
         $allocator = app(\App\Services\ResourceAllocator::class);
 
         try {
-            $created = DB::transaction(function () use ($data, $guestBlocks, $employees, $empById, $date, $start, $allocator, $customer) {
+            $created = DB::transaction(function () use ($data, $guestBlocks, $employees, $empById, $date, $start, $allocator, $customer, $idemKey) {
                 // Fresh booked map under lock
                 $lockedBooked = Appointment::whereIn('employee_id', $employees->pluck('id'))
                     ->whereDate('start_time', $date->toDateString())
@@ -318,7 +363,8 @@ class BookingController extends Controller
 
                 // Link every row of a multi-service / multi-guest visit under one
                 // group id so the customer gets a single consolidated message.
-                $groupId = count($plan) > 1 ? Appointment::newGroupId() : null;
+                $groupId   = count($plan) > 1 ? Appointment::newGroupId() : null;
+                $reference = Appointment::newReference(); // shared human-readable id
 
                 $appts = [];
                 foreach ($plan as $job) { // each job: employee_id, service, start, end
@@ -329,12 +375,24 @@ class BookingController extends Controller
                         $resourceId = $res->id;
                     }
                     $svc = $job['service'];
+                        // Guest 0 is the account holder (name resolves from the customer
+                    // record). Extra guests are labelled so every message and the
+                    // staff board can tell the companions apart.
+                    $guestIdx   = (int) ($job['guest'] ?? 0);
+                    $guestLabel = $guestIdx > 0
+                        ? (app()->getLocale() === 'ar' ? 'ضيف ' . ($guestIdx + 1) : 'Guest ' . ($guestIdx + 1))
+                        : null;
+
                     $appts[] = Appointment::create([
                         'company_id'      => $svc->branch->company_id,
                         'branch_id'       => $svc->branch_id,
                         'customer_id'     => $customer->id,
+                        'customer_name'   => $guestLabel,
                         'booking_group_id'=> $groupId,
+                        'reference'       => $reference,
+                        'idempotency_key' => $idemKey,
                         'employee_id'     => $job['employee_id'],
+                        'employee_requested' => (bool) ($job['requested'] ?? false),
                         'resource_id'     => $resourceId,
                         'service_id'      => $svc->id,
                         'start_time'      => $job['start'],
@@ -365,10 +423,12 @@ class BookingController extends Controller
         return response()->json([
             'booked' => true,
             'count'  => count($created),
+            'reference' => $first->reference,
             'summary' => [
                 'start' => $first->start_time->format('D, d M Y · H:i'),
                 'end'   => $last->end_time->format('H:i'),
                 'total' => collect($created)->sum('total_price'),
+                'reference' => $first->reference,
             ],
         ], 201);
     }
@@ -387,6 +447,7 @@ class BookingController extends Controller
             'guests.*.service_ids'   => 'required|array|min:1',
             'guests.*.service_ids.*' => 'required|exists:services,id',
             'guests.*.employee_id'   => 'nullable|exists:employees,id',
+            'idempotency_key'        => 'nullable|string|max:64',
         ]);
     }
 
@@ -442,16 +503,27 @@ class BookingController extends Controller
     {
         if ($mode === 'one') {
             $allSvcs = collect($guestBlocks)->flatMap(fn ($b) => $b['services'])->all();
+            // Keep each service tied to the guest it belongs to, so the visit can
+            // be labelled per guest even when one professional serves everyone.
+            $allItems = [];
+            foreach ($guestBlocks as $gi => $b) {
+                foreach ($b['services'] as $svc) $allItems[] = ['svc' => $svc, 'guest' => $gi];
+            }
+            $requested = false;
             $cands = ($id = $guestBlocks[0]['employee_id'] ?? null) && $empById->has($id)
                 ? [$empById[$id]]
                 : $employees->all();
+            if (($guestBlocks[0]['employee_id'] ?? null) && $empById->has($guestBlocks[0]['employee_id'])) {
+                $requested = true;
+            }
             // A top-level employee_id (shared "one professional") wins if present.
             if (!empty($guestBlocks) && ($shared = $this->sharedEmployee($guestBlocks, $empById))) {
                 $cands = [$shared];
+                $requested = true;
             }
             foreach ($cands as $emp) {
                 if (!$this->empQualifiedAll($emp, $allSvcs)) continue;
-                $jobs = $this->blockJobs($emp, $booked[$emp->id] ?? collect(), $date, $start, $allSvcs, $allocator);
+                $jobs = $this->blockJobs($emp, $booked[$emp->id] ?? collect(), $date, $start, $allItems, $allocator, $requested);
                 if ($jobs !== null) return $jobs;
             }
             return null;
@@ -460,11 +532,12 @@ class BookingController extends Controller
         // split: feasible distinct employees per guest, all starting at $start
         $feasible = [];
         foreach ($guestBlocks as $gi => $b) {
-            $set = [];
+            $set   = [];
+            $items = array_map(fn ($svc) => ['svc' => $svc, 'guest' => $gi], $b['services']);
             $cands = ($b['employee_id'] && $empById->has($b['employee_id'])) ? [$empById[$b['employee_id']]] : $employees->all();
             foreach ($cands as $emp) {
                 if (!$this->empQualifiedAll($emp, $b['services'])) continue;
-                if ($this->blockJobs($emp, $booked[$emp->id] ?? collect(), $date, $start, $b['services'], $allocator) !== null) {
+                if ($this->blockJobs($emp, $booked[$emp->id] ?? collect(), $date, $start, $items, $allocator) !== null) {
                     $set[] = $emp->id;
                 }
             }
@@ -477,8 +550,10 @@ class BookingController extends Controller
         // Build jobs from the assignment
         $jobs = [];
         foreach ($guestBlocks as $gi => $b) {
-            $emp = $empById[$assign[$gi]];
-            $sub = $this->blockJobs($emp, $booked[$emp->id] ?? collect(), $date, $start, $b['services'], $allocator);
+            $emp       = $empById[$assign[$gi]];
+            $requested = $b['employee_id'] !== null && $empById->has($b['employee_id']);
+            $items     = array_map(fn ($svc) => ['svc' => $svc, 'guest' => $gi], $b['services']);
+            $sub = $this->blockJobs($emp, $booked[$emp->id] ?? collect(), $date, $start, $items, $allocator, $requested);
             if ($sub === null) return null;
             $jobs = array_merge($jobs, $sub);
         }
@@ -493,21 +568,26 @@ class BookingController extends Controller
         return null;
     }
 
-    /** Jobs for a consecutive block on ONE employee, or null if it doesn't fit/free. */
-    private function blockJobs($emp, $bookedForEmp, Carbon $date, Carbon $start, array $services, $allocator): ?array
+    /**
+     * Jobs for a consecutive block on ONE employee, or null if it doesn't fit/free.
+     * Each $item: ['svc' => Service, 'guest' => int] — guest index labels the
+     * companion the service is for.
+     */
+    private function blockJobs($emp, $bookedForEmp, Carbon $date, Carbon $start, array $items, $allocator, bool $requested = false): ?array
     {
-        $totalDur = array_sum(array_map(fn ($s) => (int) $s->duration_minutes, $services));
+        $totalDur = array_sum(array_map(fn ($i) => (int) $i['svc']->duration_minutes, $items));
         if ($totalDur <= 0) return null;
         if (!$this->empFreeFor($emp, $bookedForEmp, $date, $start, $totalDur)) return null;
 
         $jobs = [];
         $cursor = $start->clone();
-        foreach ($services as $svc) {
+        foreach ($items as $it) {
+            $svc = $it['svc'];
             $end = $cursor->clone()->addMinutes((int) $svc->duration_minutes);
             if ($allocator->requiresResource($svc) && $allocator->findFree($svc, $cursor, $end, null, false) === null) {
                 return null;
             }
-            $jobs[] = ['employee_id' => $emp->id, 'service' => $svc, 'start' => $cursor->clone(), 'end' => $end->clone()];
+            $jobs[] = ['employee_id' => $emp->id, 'service' => $svc, 'start' => $cursor->clone(), 'end' => $end->clone(), 'requested' => $requested, 'guest' => $it['guest']];
             $cursor = $end;
         }
         return $jobs;

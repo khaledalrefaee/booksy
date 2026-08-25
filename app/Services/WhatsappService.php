@@ -164,13 +164,31 @@ class WhatsappService
     private function templateVars(Appointment $appointment, string $link = ''): array
     {
         return [
-            'name'    => $appointment->customer_name ?? $appointment->customer?->name ?? '',
-            'service' => $appointment->service?->localizedName() ?? $appointment->service?->name ?? '',
-            'branch'  => $appointment->branch?->localizedName() ?? '',
-            'date'    => $appointment->start_time->translatedFormat('l d M Y'),
-            'time'    => $appointment->start_time->format('h:i A'),
-            'link'    => $link,
+            'name'     => $appointment->customer?->name ?: ($appointment->customer_name ?? ''),
+            'service'  => $appointment->service?->localizedName() ?? $appointment->service?->name ?? '',
+            'branch'   => $appointment->branch?->localizedName() ?? '',
+            'date'     => $appointment->start_time->translatedFormat('l d M Y'),
+            'short_date'=> $this->shortDateTime($appointment->start_time),
+            'time'     => $this->timeLabel($appointment->start_time),
+            'employee' => ($appointment->employee_requested && $appointment->employee)
+                ? $appointment->employee->localizedName() : '',
+            'link'     => $link,
         ];
+    }
+
+    /**
+     * Professional 12-hour clock with correct AM/PM and no leading zero, e.g.
+     * "4:00 PM". Used everywhere a time is shown to the customer.
+     */
+    private function timeLabel(\Illuminate\Support\Carbon $dt): string
+    {
+        return $dt->format('g:i A');
+    }
+
+    /** Compact date + time, e.g. "23/08 — 4:00 PM". */
+    private function shortDateTime(\Illuminate\Support\Carbon $dt): string
+    {
+        return $dt->format('d/m') . ' — ' . $dt->format('g:i A');
     }
 
     /**
@@ -229,35 +247,47 @@ class WhatsappService
     /** Consolidated "booked" message: one branch, one date, every service line. */
     private function defaultBookedMessage($visit, BookingPolicy $policy, string $confirmUrl, string $cancelUrl): string
     {
-        $first      = $visit->first();
-        $branch     = $first->branch?->localizedName() ?? '';
-        $date       = $first->start_time->translatedFormat('l d M Y');
-        $customerId = $first->customer_id;
+        $first    = $visit->first();
+        $branch   = $first->branch?->localizedName() ?? '';
+        $dayDate  = $first->start_time->translatedFormat('l') . ' ' . $first->start_time->format('d/m');
+
+        // Extra guests carry a label on their rows; guest 0 (the account holder)
+        // does not. This lets the message state, unambiguously, whether the visit
+        // includes a companion.
+        $guestLabels = $visit->pluck('customer_name')->filter()->unique()->values();
+        $companion = $guestLabels->isNotEmpty()
+            ? "👥 لك و" . $guestLabels->count() . ($guestLabels->count() === 1 ? ' ضيف' : ' ضيوف')
+            : "👤 الحجز لك وحدك — بدون ضيوف";
 
         $lines = [];
         foreach ($visit as $a) {
-            $svc  = $a->service?->localizedName() ?? $a->service?->name ?? '';
-            $time = $a->start_time->format('h:i A');
-            // Name only the guests who differ from the account holder.
-            $guest = ($a->customer_name && $a->customer_id !== $customerId) ? " ({$a->customer_name})" : '';
-            $lines[] = "🕐 {$time} — 💇 {$svc}{$guest}";
+            $svc   = $a->service?->localizedName() ?? $a->service?->name ?? '';
+            $time  = $this->timeLabel($a->start_time);
+            $emp   = ($a->employee_requested && $a->employee) ? " — 👤 " . $a->employee->localizedName() : '';
+            $guest = filled($a->customer_name) ? " — 🧑‍🤝‍🧑 {$a->customer_name}" : '';
+            $lines[] = "🕐 {$time} • {$svc}{$emp}{$guest}";
         }
 
         $msg = "✅ *تم حجز موعدك بنجاح*\n\n"
             . "📍 *{$branch}*\n"
-            . "📅 {$date}\n\n"
+            . "📅 {$dayDate}\n"
+            . "{$companion}\n\n"
             . implode("\n", $lines) . "\n\n";
 
         if ($visit->count() > 1) {
-            $msg .= "💰 الإجمالي: " . (int) $visit->sum('total_price') . "\n\n";
+            $msg .= "💰 الإجمالي: " . (int) $visit->sum('total_price') . "\n";
         }
+        if ($first->reference) {
+            $msg .= "🔖 رقم الحجز: {$first->reference}\n";
+        }
+        $msg .= "\n";
 
         if ($policy->require_confirmation) {
             $msg .= "✔ لتأكيد الموعد:\n{$confirmUrl}\n\n"
                 . "❌ لإلغاء الموعد:\n{$cancelUrl}\n\n";
         }
 
-        return $msg . "نتطلع لرؤيتك! 💛";
+        return $msg . "نتطلّع لرؤيتك! 💛";
     }
 
     /**
@@ -317,16 +347,29 @@ class WhatsappService
         $phone = $appointment->customer_phone ?? $appointment->customer?->phone;
         if (!$phone) return false;
 
-        $branch = $appointment->branch?->localizedName() ?? '';
-        $date   = $appointment->start_time->translatedFormat('l d M Y');
-        $time   = $appointment->start_time->format('h:i A');
+        // One message per visit, even when every grouped row flips to confirmed.
+        $visit   = $this->visitAppointments($appointment);
+        $primary = $visit->first();
+        if ($this->alreadySent($primary->id, 'appointment_confirmed')) return false;
+
+        $branch  = $primary->branch?->localizedName() ?? '';
+        $dayDate = $primary->start_time->translatedFormat('l') . ' ' . $primary->start_time->format('d/m');
+
+        $lines = [];
+        foreach ($visit as $a) {
+            $svc  = $a->service?->localizedName() ?? $a->service?->name ?? '';
+            $time = $this->timeLabel($a->start_time);
+            $emp  = ($a->employee_requested && $a->employee) ? " — 👤 " . $a->employee->localizedName() : '';
+            $lines[] = "🕐 {$time} • {$svc}{$emp}";
+        }
 
         $message = "🎉 *تم تأكيد موعدك*\n\n"
-            . "📍 {$branch}\n"
-            . "📅 {$date} — ⏰ {$time}\n\n"
+            . "📍 *{$branch}*\n"
+            . "📅 {$dayDate}\n\n"
+            . implode("\n", $lines) . "\n\n"
             . "نراك قريباً! 💛";
 
-        return $this->send($phone, $message, $appointment->company_id, $appointment->id, 'appointment_confirmed', $this->channelFor($phone));
+        return $this->send($phone, $message, $primary->company_id, $primary->id, 'appointment_confirmed', $this->channelFor($phone));
     }
 
     public function sendAppointmentCancelled(Appointment $appointment): bool
@@ -334,14 +377,115 @@ class WhatsappService
         $phone = $appointment->customer_phone ?? $appointment->customer?->phone;
         if (!$phone) return false;
 
-        $branch = $appointment->branch?->localizedName() ?? '';
+        $visit   = $this->visitAppointments($appointment);
+        $primary = $visit->first();
+        if ($this->alreadySent($primary->id, 'appointment_cancelled')) return false;
+
+        $branch = $primary->branch?->localizedName() ?? '';
+        $reason = $this->cancellationReason($primary);
 
         $message = "⚠️ *تم إلغاء موعدك*\n\n"
-            . "📍 {$branch}\n"
-            . "📅 {$appointment->start_time->translatedFormat('l d M Y')}\n\n"
-            . "يمكنك حجز موعد جديد في أي وقت 🙏";
+            . "📍 *{$branch}*\n"
+            . "📅 {$primary->start_time->translatedFormat('l')} {$primary->start_time->format('d/m')} — ⏰ {$this->timeLabel($primary->start_time)}\n"
+            . ($reason ? "📝 السبب: {$reason}\n" : '')
+            . "\nيمكنك حجز موعد جديد في أي وقت 🙏";
 
-        return $this->send($phone, $message, $appointment->company_id, $appointment->id, 'appointment_cancelled', $this->channelFor($phone));
+        return $this->send($phone, $message, $primary->company_id, $primary->id, 'appointment_cancelled', $this->channelFor($phone));
+    }
+
+    /** Single "your appointment moved" message for the whole visit. */
+    public function sendAppointmentRescheduled(Appointment $appointment, string $oldStartIso): bool
+    {
+        $phone = $appointment->customer_phone ?? $appointment->customer?->phone;
+        if (!$phone) return false;
+
+        $visit   = $this->visitAppointments($appointment);
+        $primary = $visit->first();
+        $branch  = $primary->branch?->localizedName() ?? '';
+        $old     = \Illuminate\Support\Carbon::parse($oldStartIso);
+
+        $lines = [];
+        foreach ($visit as $a) {
+            $svc = $a->service?->localizedName() ?? $a->service?->name ?? '';
+            $emp = ($a->employee_requested && $a->employee) ? " — 👤 " . $a->employee->localizedName() : '';
+            $lines[] = "🕐 {$this->timeLabel($a->start_time)} • {$svc}{$emp}";
+        }
+
+        $message = "🔄 *تم تغيير موعدك بنجاح*\n\n"
+            . "📍 *{$branch}*\n"
+            . "❌ السابق: {$old->translatedFormat('l')} {$old->format('d/m')} — {$this->timeLabel($old)}\n"
+            . "✅ الجديد: {$primary->start_time->translatedFormat('l')} {$primary->start_time->format('d/m')} — {$this->timeLabel($primary->start_time)}\n\n"
+            . implode("\n", $lines) . "\n"
+            . ($primary->reference ? "🔖 رقم الحجز: {$primary->reference}\n" : '')
+            . "\nنراك في موعدك الجديد! 💛";
+
+        return $this->send($phone, $message, $primary->company_id, $primary->id, 'appointment_rescheduled', $this->channelFor($phone));
+    }
+
+    /**
+     * Venue rejected a still-pending request — commercially different from a
+     * cancellation, so it gets its own message: the reason + a link to pick
+     * another time, instead of a bare "cancelled".
+     */
+    public function sendAppointmentRejected(Appointment $appointment): bool
+    {
+        $phone = $appointment->customer_phone ?? $appointment->customer?->phone;
+        if (!$phone) return false;
+
+        $visit   = $this->visitAppointments($appointment);
+        $primary = $visit->first();
+        if ($this->alreadySent($primary->id, 'appointment_rejected')) return false;
+
+        $branch = $primary->branch?->localizedName() ?? '';
+        $reason = $this->cancellationReason($primary);
+        $rebook = $primary->branch ? route('front.branch', $primary->branch) : url('/');
+
+        $message = "❌ *تعذّر تأكيد موعدك*\n\n"
+            . "📍 *{$branch}*\n"
+            . "📅 {$primary->start_time->translatedFormat('l')} {$primary->start_time->format('d/m')} — ⏰ {$this->timeLabel($primary->start_time)}\n"
+            . ($reason ? "📝 السبب: {$reason}\n" : '')
+            . "\nنعتذر عن ذلك 🙏 يمكنك اختيار موعد آخر:\n{$rebook}";
+
+        return $this->send($phone, $message, $primary->company_id, $primary->id, 'appointment_rejected', $this->channelFor($phone));
+    }
+
+    /** A slot the customer was waiting for just opened — nudge them to grab it. */
+    public function sendWaitlistOpening(\App\Models\BookingWaitlistEntry $entry, Appointment $freed): bool
+    {
+        $phone = $entry->customer?->phone;
+        if (!$phone) return false;
+
+        $branch = $freed->branch?->localizedName() ?? $entry->branch?->localizedName() ?? '';
+        $svc    = $freed->service?->localizedName() ?? $entry->service?->localizedName() ?? '';
+        $book   = $freed->branch ? route('front.branch', $freed->branch) : url('/');
+
+        $message = "🎉 *صار في موعد فاضي!*\n\n"
+            . "📍 *{$branch}*\n"
+            . ($svc ? "💇 {$svc}\n" : '')
+            . "📅 {$freed->start_time->translatedFormat('l')} {$freed->start_time->format('d/m')} — ⏰ {$this->timeLabel($freed->start_time)}\n\n"
+            . "سارِع بالحجز قبل أن يحجزه غيرك 👇\n{$book}";
+
+        return $this->send($phone, $message, $freed->company_id, $freed->id, 'waitlist_opening', $this->channelFor($phone));
+    }
+
+    /** True when a message of this type was already sent for the primary row. */
+    private function alreadySent(int $appointmentId, string $type): bool
+    {
+        return WhatsappLog::where('appointment_id', $appointmentId)
+            ->where('type', $type)
+            ->where('status', 'sent')
+            ->exists();
+    }
+
+    /** The reason recorded on the latest cancellation transition, if any. */
+    private function cancellationReason(Appointment $appointment): ?string
+    {
+        $t = $appointment->transitions()
+            ->whereIn('to_status', ['cancelled_by_customer', 'cancelled_by_salon'])
+            ->latest('id')
+            ->first();
+
+        return $t?->reason ?: ($appointment->rejection_reason ?: null);
     }
 
     /**
@@ -383,16 +527,24 @@ class WhatsappService
     {
         $first  = $visit->first();
         $branch = $first->branch?->localizedName() ?? '';
-        $time   = $first->start_time->format('h:i A');
+        $time   = $this->timeLabel($first->start_time);
+
+        $guestLabels = $visit->pluck('customer_name')->filter()->unique()->values();
+        $companion   = $guestLabels->isNotEmpty()
+            ? "👥 لك و" . $guestLabels->count() . ($guestLabels->count() === 1 ? ' ضيف' : ' ضيوف') . "\n"
+            : '';
 
         $services = [];
         foreach ($visit as $a) {
-            $services[] = "💇 " . ($a->service?->localizedName() ?? $a->service?->name ?? '');
+            $svc = $a->service?->localizedName() ?? $a->service?->name ?? '';
+            $emp = ($a->employee_requested && $a->employee) ? " — 👤 " . $a->employee->localizedName() : '';
+            $services[] = "💇 {$svc}{$emp}";
         }
 
         return "⏰ *تذكير: موعدك بعد ساعة*\n\n"
-            . "📍 {$branch}\n"
+            . "📍 *{$branch}*\n"
             . "🕐 اليوم الساعة {$time}\n"
+            . $companion
             . implode("\n", array_values(array_unique($services))) . "\n\n"
             . "يرجى تأكيد حضورك:\n"
             . "✔ تأكيد الموعد:\n{$confirmUrl}\n\n"

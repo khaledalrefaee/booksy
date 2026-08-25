@@ -255,8 +255,8 @@
     </div>
     <div class="bkf-footer-bar">
       <span>{{ $isAr
-        ? 'جميع الحقوق محفوظة © '.date('Y').' لشركة GlowRez — مع ترجمات Company S.L.'
-        : '© '.date('Y').' GlowRez. All rights reserved — with translations by Company S.L.' }}</span>
+        ? 'جميع الحقوق محفوظة © '.date('Y').' لشركة GlowRez'
+        : '© '.date('Y').' GlowRez. All rights reserved.' }}</span>
       <div class="bkf-footer-bar-links">
         <a href="{{ route('front.privacy') }}">{{ $isAr ? 'الخصوصية' : 'Privacy' }}</a>
         <a href="{{ route('front.terms') }}">{{ $isAr ? 'الشروط' : 'Terms' }}</a>

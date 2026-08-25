@@ -5,13 +5,14 @@
 
     // Business types we serve (marquee band)
     $bizTypes = [
-        ['icon' => 'scissors', 'ar' => 'صالونات الشعر', 'en' => 'Hair salons'],
-        ['icon' => 'user',     'ar' => 'الحلاقة',        'en' => 'Barbershops'],
-        ['icon' => 'sparkles', 'ar' => 'مراكز التجميل',  'en' => 'Beauty salons'],
-        ['icon' => 'flame',    'ar' => 'سبا ومنتجعات',   'en' => 'Spas'],
-        ['icon' => 'heart',    'ar' => 'مراكز الأظافر',  'en' => 'Nail studios'],
-        ['icon' => 'star',     'ar' => 'الرموش والحواجب','en' => 'Lash & brow'],
-        ['icon' => 'award',    'ar' => 'العناية بالبشرة','en' => 'Skincare'],
+        ['icon' => 'sparkles', 'ar' => 'مراكز التجميل',        'en' => 'Beauty centres'],
+        ['icon' => 'zap',      'ar' => 'مراكز الليزر',         'en' => 'Laser clinics'],
+        ['icon' => 'flame',    'ar' => 'سبا ومنتجعات صحية',    'en' => 'Spa & wellness'],
+        ['icon' => 'award',    'ar' => 'العناية بالبشرة',      'en' => 'Skincare & facials'],
+        ['icon' => 'scissors', 'ar' => 'صالونات الشعر',        'en' => 'Hair salons'],
+        ['icon' => 'user',     'ar' => 'صالونات الرجال',       'en' => 'Barbershops'],
+        ['icon' => 'heart',    'ar' => 'العناية بالأظافر',     'en' => 'Nail studios'],
+        ['icon' => 'star',     'ar' => 'الرموش والحواجب',      'en' => 'Lash & brow'],
     ];
 
     // Appointment deep-dives (3) — text + collage of real photo + live mock
@@ -24,30 +25,30 @@
             'pts_ar' => ['عرض يومي وأسبوعي وشهري','جدولة عدة موظفين وكراسٍ في شاشة واحدة','منع الحجز المزدوج تلقائيًا','ألوان لكل خدمة وموظف'],
             'pts_en' => ['Day, week and month views','Multi-staff & multi-chair scheduling in one screen','Automatic double-booking protection','Colour-coded by service & staff'],
             'photo' => 'styling.jpg', 'rev' => false,
-            'shot' => '1945cdd6-6a22-4454-bdcb-0f3d731fb3c0.png', 'sw' => 498, 'sh' => 576,
+            'shot' => 'nails_image_2.png', 'sw' => 513, 'sh' => 1043,
             'alt_ar' => 'معاينة تقويم مواعيد غلوريز على الهاتف', 'alt_en' => 'GlowRez appointment calendar preview on a phone',
         ],
         [
             'eyebrow' => $t('الحجز الذاتي','Self-booking'),
             'ar' => 'يحجزون بأنفسهم، وأنت تعمل', 'en' => 'They book themselves while you work',
-            'lead_ar' => 'صفحة حجز أنيقة ورمز QR خاصّان بمنشأتك. تختار العميلة الخدمة والموظف والوقت المتاح وتؤكّد — بلا مكالمة واحدة.',
+            'lead_ar' => 'صفحة حجز أنيقة ورمز QR خاصّان بمنشأتك. يختار العميل الخدمة والموظف والوقت المتاح ويؤكّد — بلا مكالمة واحدة.',
             'lead_en' => 'An elegant booking page and QR code for your business. Clients pick the service, staff and open slot and confirm — with zero phone calls.',
-            'pts_ar' => ['حجز ذاتي ٢٤/٧','رابط ورمز QR جاهزان','سجل كل عميلة وخدماتها المفضّلة','تأكيد فوري للطرفين'],
+            'pts_ar' => ['حجز ذاتي ٢٤/٧','رابط ورمز QR جاهزان','سجل كل عميل وخدماته المفضّلة','تأكيد فوري للطرفين'],
             'pts_en' => ['24/7 self-booking','Ready link and QR code','Each client’s history & favourite services','Instant confirmation for both'],
-            'photo' => 'makeup.jpg', 'rev' => true,
-            'shot' => 'd0b5d557-d14b-43bc-89c9-3c1d7369451d.png', 'sw' => 1080, 'sh' => 1080,
+            'photo' => 'makeup.jpg', 'rev' => true, 'big' => true,
+            'shot' => 'chart_images.png', 'sw' => 1536, 'sh' => 1024,
             'alt_ar' => 'لوحة حجوزات ونمو الأعمال في غلوريز', 'alt_en' => 'GlowRez bookings and business-growth dashboard',
         ],
         [
             'eyebrow' => $t('التذكير','Reminders'),
             'ar' => 'تذكير تلقائي، غياب أقل', 'en' => 'Auto reminders, fewer no-shows',
-            'lead_ar' => 'يرسل غلوريز تأكيدًا عند الحجز وتذكيرًا قبل الموعد عبر واتساب — القناة التي يفتحها عملاؤك فعلًا. فتبقى كراسيك ممتلئة.',
-            'lead_en' => 'GlowRez sends a confirmation on booking and a reminder before the appointment over WhatsApp — the channel your clients actually open. So your chairs stay full.',
+            'lead_ar' => 'يرسل غلوريز تأكيدًا عند الحجز وتذكيرًا قبل الموعد عبر واتساب — القناة التي يفتحها عملاؤك فعلًا. فتبقى مواعيدك ممتلئة.',
+            'lead_en' => 'GlowRez sends a confirmation on booking and a reminder before the appointment over WhatsApp — the channel your clients actually open. So your schedule stays full.',
             'pts_ar' => ['تأكيد فوري عند كل حجز','تذكير قبل الموعد','تعديل أو إلغاء برابط واحد'],
             'pts_en' => ['Instant confirmation on booking','A nudge before the appointment','Reschedule or cancel with one tap'],
             'photo' => 'facial.jpg', 'rev' => false,
-            'shot' => '667cf467cd2f43c2e7eb320e_streamline-admin-3.webp', 'sw' => 540, 'sh' => 540,
-            'alt_ar' => 'بطاقة الإكراميات والتقييمات في غلوريز', 'alt_en' => 'GlowRez tips and reviews card',
+            'shot' => 'tips-reviews-recreated@2x.png', 'sw' => 1080, 'sh' => 1080,
+            'alt_ar' => 'تذكير تلقائي بالموعد عبر واتساب وتأكيد الحضور في غلوريز', 'alt_en' => 'Automatic WhatsApp appointment reminder and attendance confirmation in GlowRez',
         ],
     ];
 
@@ -67,13 +68,13 @@
     ];
 
     $testi = [
-        ['q_ar' => 'صرت أعرف يومي قبل ما يبدأ، والعميلات يحجزن لحالهن من الرابط. ما عاد في تعارض مواعيد أبدًا.', 'q_en' => 'I know my day before it starts, and clients book themselves from the link. No more clashing appointments.', 'nm' => 'رنا خالد', 'nm_en' => 'Rana Khaled', 'rl_ar' => 'صالون لمسة', 'rl_en' => 'Lamsa Salon', 'in' => 'ر'],
+        ['q_ar' => 'صرت أعرف يومي قبل ما يبدأ، والعملاء يحجزون لحالهم من الرابط. ما عاد في تعارض مواعيد أبدًا.', 'q_en' => 'I know my day before it starts, and clients book themselves from the link. No more clashing appointments.', 'nm' => 'رنا خالد', 'nm_en' => 'Rana Khaled', 'rl_ar' => 'صالون لمسة', 'rl_en' => 'Lamsa Salon', 'in' => 'ر'],
         ['q_ar' => 'التذكير التلقائي بواتساب قلّل الغياب بشكل واضح. الكرسي ما عاد يضلّ فاضي بسبب النسيان.', 'q_en' => 'Automatic WhatsApp reminders visibly cut no-shows. The chair no longer sits empty because someone forgot.', 'nm' => 'أبو محمود', 'nm_en' => 'Abu Mahmoud', 'rl_ar' => 'باربر هاوس للرجال', 'rl_en' => 'Barber House', 'in' => 'م'],
-        ['q_ar' => 'الإعداد أخذ نصف ساعة، وبالعربي بالكامل. أول مرة أحس إن في نظام مفهوم لسوقنا.', 'q_en' => 'Setup took half an hour, fully in Arabic. The first system that actually fits how we work.', 'nm' => 'سلمى العلي', 'nm_en' => 'Salma Al-Ali', 'rl_ar' => 'مركز غلو للتجميل', 'rl_en' => 'Glow Beauty Studio', 'in' => 'س'],
+        ['q_ar' => 'جلسات الليزر تحتاج مواعيد دقيقة ومتابعة، وغلوريز نظّم كل شيء. الإعداد أخذ نصف ساعة وبالعربي بالكامل.', 'q_en' => 'Laser sessions need precise scheduling and follow-up, and GlowRez organised all of it. Setup took half an hour, fully in Arabic.', 'nm' => 'سلمى العلي', 'nm_en' => 'Salma Al-Ali', 'rl_ar' => 'مركز غلو للتجميل والليزر', 'rl_en' => 'Glow Beauty & Laser', 'in' => 'س'],
     ];
 
     $faqs = [
-        ['ar' => 'هل هو مجاني فعلًا؟', 'en' => 'Is it really free?', 'aar' => 'نعم، غلوريز مجاني بالكامل الآن بلا بطاقة ولا التزام. نطلق الميزات ميزة تلو الأخرى، ومن ينضمّ مبكرًا يحصل على كل جديد أولًا.', 'aen' => 'Yes — GlowRez is completely free right now, no card and no commitment. We roll features out one at a time, and early salons get every new one first.'],
+        ['ar' => 'هل هو مجاني فعلًا؟', 'en' => 'Is it really free?', 'aar' => 'نعم، غلوريز مجاني بالكامل الآن بلا بطاقة ولا التزام. نطلق الميزات ميزة تلو الأخرى، ومن ينضمّ مبكرًا يحصل على كل جديد أولًا.', 'aen' => 'Yes — GlowRez is completely free right now, no card and no commitment. We roll features out one at a time, and early businesses get every new one first.'],
         ['ar' => 'هل أحتاج خبرة تقنية؟', 'en' => 'Do I need technical skills?', 'aar' => 'إطلاقًا. إن كنت تستخدم واتساب، تستطيع إدارة مواعيدك على غلوريز. ونساعدك في الإعداد بالكامل.', 'aen' => 'Not at all. If you can use WhatsApp, you can run your bookings on GlowRez — and we help you set everything up.'],
         ['ar' => 'كم يستغرق إعداد منشأتي؟', 'en' => 'How long does setup take?', 'aar' => 'أغلب المنشآت تضيف خدماتها وموظفيها وتبدأ باستقبال الحجوزات خلال أقل من ساعة.', 'aen' => 'Most businesses add their services and staff and start taking bookings in under an hour.'],
         ['ar' => 'هل يمكن للعملاء الحجز بأنفسهم؟', 'en' => 'Can clients book themselves?', 'aar' => 'نعم. تحصل على صفحة حجز عامة ورمز QR يحجز منهما العملاء ٢٤/٧ دون أي مكالمة.', 'aen' => 'Yes. You get a public booking page and a QR code so clients book 24/7 without a single call.'],
@@ -83,9 +84,9 @@
 
 <x-front.layout
     variant="business"
-    :title="$t('GlowRez للأعمال — نظام حجوزات مجاني لصالونك', 'GlowRez for Business — Free Booking System for Your Salon')"
-    :keywords="$t('نظام حجوزات صالون, برنامج إدارة صالون, حجوزات مجانية, تذكير واتساب, إدارة مواعيد, سوريا', 'salon booking software, salon management, free bookings, WhatsApp reminders, appointment scheduling, Syria')"
-    :description="$t('نظام حجوزات مجاني للصالونات ومراكز التجميل والسبا وصالونات الرجال: صفحة حجز عامة، رمز QR، تقويم بلا تعارض، وتذكير واتساب تلقائي يقلّل الغياب. المالية والمخزون والتقارير قريبًا.', 'A free bookings platform for beauty salons, spas and barbershops: public booking page, QR code, conflict-free calendar and automatic WhatsApp reminders. Finance, inventory and reports coming soon.')">
+    :title="$t('GlowRez للأعمال — نظام حجوزات مجاني لمركزك', 'GlowRez for Business — Free Booking System for Your Beauty Business')"
+    :keywords="$t('نظام حجوزات مركز تجميل, حجز ليزر, برنامج إدارة سبا, حجوزات مجانية, تذكير واتساب, إدارة مواعيد, سوريا', 'beauty centre booking software, laser clinic bookings, spa management, free bookings, WhatsApp reminders, appointment scheduling, Syria')"
+    :description="$t('نظام حجوزات مجاني لمراكز التجميل والليزر والسبا وصالونات الشعر والرجال: صفحة حجز عامة، رمز QR، تقويم بلا تعارض، وتذكير واتساب تلقائي يقلّل الغياب. المالية والمخزون والتقارير قريبًا.', 'A free bookings platform for beauty centres, laser clinics, spas and hair salons: public booking page, QR code, conflict-free calendar and automatic WhatsApp reminders. Finance, inventory and reports coming soon.')">
 
 <x-slot:head>
 <script type="application/ld+json">{!! json_encode([
@@ -365,6 +366,13 @@ html[dir="rtl"] .biz-marquee-track{ animation-direction:reverse; }
    their own card + shadow, so they float over .biz-shot-blob (was a broken rule). */
 .biz-shot-frame{ position:relative; z-index:1; width:min(100%,430px);
   transition:transform var(--bk-t) var(--bk-spring); }
+/* a deliberately larger, more prominent mockup for its section */
+.biz-shot-frame.is-big{ width:min(100%,560px); }
+@media (min-width:901px){
+  /* give the visual side more room so the enlarged mockup can actually grow */
+  .biz-feature.is-big{ grid-template-columns:1.18fr .82fr; }
+  .biz-feature.is-big:not(.rev){ grid-template-columns:.82fr 1.18fr; }
+}
 .biz-shot-frame img{ display:block; width:100%; height:auto;
   filter:drop-shadow(0 26px 52px rgba(8,11,5,.30)); }
 .biz-shot-frame:hover{ transform:translateY(-8px) scale(1.015); }
@@ -616,7 +624,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
         <h1>
           <span class="biz-word" style="animation-delay:.05s">{{ $t('مواعيدك','Your calendar,') }}</span>
           <span class="biz-word em" style="animation-delay:.18s">{{ $t('مرتّبة.','sorted.') }}</span><br>
-          <span class="biz-word" style="animation-delay:.32s">{{ $t('كرسيك','Your chairs,') }}</span>
+          <span class="biz-word" style="animation-delay:.32s">{{ $t('يومك','Your day,') }}</span>
           <span class="biz-word gold" style="animation-delay:.46s">{{ $t('ممتلئ.','full.') }}</span>
         </h1>
         <p class="biz-hero-sub">{{ $t('استقبل الحجوزات على مدار الساعة عبر صفحة حجز ورمز QR خاصّين بمنشأتك، وذكّر عملائك تلقائيًا بواتساب فيقلّ الغياب. ودّع الدفاتر والمكالمات.', 'Take bookings around the clock through your own booking page and QR code, and auto-remind clients on WhatsApp so no-shows drop. Say goodbye to notebooks and phone calls.') }}</p>
@@ -651,7 +659,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
 
 {{-- ═══════════════  2 · TRUSTED MARQUEE + STATS  ═══════════════ --}}
 <section class="biz-trusted">
-  <div class="biz-trusted-lbl">{{ $t('صُمّم لكل أنواع الصالونات ومراكز التجميل', 'Built for every kind of salon & studio') }}</div>
+  <div class="biz-trusted-lbl">{{ $t('صُمّم لكل أماكن الجمال والعناية', 'Built for every beauty & wellness business') }}</div>
   <div class="biz-marquee">
     <div class="biz-marquee-track">
       @foreach(array_merge($bizTypes, $bizTypes) as $b)
@@ -675,12 +683,12 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
     <div class="bkf-head-center bkf-reveal">
       <span class="bkf-eyebrow is-center">{{ $t('كيف يعمل غلوريز','How GlowRez works') }}</span>
       <h2 class="bkf-title">{{ $t('كل ما تحتاجه لإدارة','Everything you need to run') }} <span class="em">{{ $t('مواعيدك في مكان واحد','your bookings in one place') }}</span></h2>
-      <p class="bkf-lead">{{ $t('من التقويم إلى صفحة الحجز إلى التذكير — ثلاث خطوات بسيطة تُبقي كراسيك ممتلئة ويومك منظّمًا دون أي جهد يدوي.','From your calendar to your booking page to reminders — three simple steps that keep your chairs full and your day organised, with zero manual work.') }}</p>
+      <p class="bkf-lead">{{ $t('من التقويم إلى صفحة الحجز إلى التذكير — ثلاث خطوات بسيطة تُبقي مواعيدك ممتلئة ويومك منظّمًا دون أي جهد يدوي.','From your calendar to your booking page to reminders — three simple steps that keep your schedule full and your day organised, with zero manual work.') }}</p>
     </div>
 
     <div class="biz-features">
       @foreach($deep as $i => $d)
-      <div class="biz-feature{{ $d['rev'] ? ' rev' : '' }}">
+      <div class="biz-feature{{ $d['rev'] ? ' rev' : '' }}{{ ($d['big'] ?? false) ? ' is-big' : '' }}">
         <div class="biz-feature-text bkf-reveal" data-reveal="{{ $d['rev'] ? 'right' : 'left' }}">
           <span class="biz-feature-eyebrow">{{ $d['eyebrow'] }}</span>
           <h2>{{ $t($d['ar'], $d['en']) }}</h2>
@@ -696,7 +704,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
         <div class="biz-feature-visual bkf-reveal" data-reveal="{{ $d['rev'] ? 'left' : 'right' }}">
           <div class="biz-shot">
            
-            <div class="biz-shot-frame">
+            <div class="biz-shot-frame{{ ($d['big'] ?? false) ? ' is-big' : '' }}">
               <img src="{{ $img($d['shot']) }}" alt="{{ $t($d['alt_ar'], $d['alt_en']) }}"
                    width="{{ $d['sw'] }}" height="{{ $d['sh'] }}" loading="lazy" decoding="async">
             </div>
@@ -775,7 +783,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
   <div class="bkf-container-wide">
     <div class="bkf-head-center bkf-reveal">
       <span class="bkf-eyebrow is-center">{{ $t('قصص نجاح','Success stories') }}</span>
-      <h2 class="bkf-title">{{ $t('أصحاب صالونات ومراكز','Salon & studio owners') }} <span class="em">{{ $t('مثلك تمامًا','just like you') }}</span></h2>
+      <h2 class="bkf-title">{{ $t('أصحاب مراكز وصالونات','Beauty & wellness owners') }} <span class="em">{{ $t('مثلك تمامًا','just like you') }}</span></h2>
     </div>
     <div class="biz-tt-grid">
       @foreach($testi as $i => $c)
@@ -826,7 +834,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
       <div class="biz-offer-visual">
         <span class="biz-offer-panel" aria-hidden="true"></span>
         <img class="biz-offer-photo" src="{{ $img('65ee13e9c8f322f7a8ce7c37_0814f24f9b69707e5aba5a9928b038cc_prix.avif') }}"
-             alt="{{ $t('صاحبة صالون تدير أعمالها مع غلوريز','Salon owner running her business with GlowRez') }}"
+             alt="{{ $t('صاحبة مركز تجميل تدير أعمالها مع غلوريز','Beauty centre owner running her business with GlowRez') }}"
              width="377" height="468" loading="lazy" decoding="async">
       </div>
       <div class="biz-offer-body">

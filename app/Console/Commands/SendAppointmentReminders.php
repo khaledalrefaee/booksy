@@ -23,11 +23,17 @@ class SendAppointmentReminders extends Command
         $windowStart   = now()->addMinutes($minutesBefore - 6);
         $windowEnd     = now()->addMinutes($minutesBefore + 6);
 
+        // App bookings keep the phone on the customer record, not the denormalised
+        // customer_phone column — so accept EITHER, or the reminder never fires for
+        // anyone who booked through the site.
         $appointments = Appointment::query()
             ->whereIn('status', [AppointmentStatus::Pending->value, AppointmentStatus::Confirmed->value])
             ->whereBetween('start_time', [$windowStart, $windowEnd])
-            ->whereNotNull('customer_phone')
-            ->with(['branch', 'service', 'company'])
+            ->where(function ($q) {
+                $q->whereNotNull('customer_phone')
+                  ->orWhereHas('customer', fn ($c) => $c->whereNotNull('phone'));
+            })
+            ->with(['branch', 'service', 'company', 'customer', 'employee'])
             ->orderBy('id')
             ->get();
 

@@ -88,9 +88,13 @@ Route::get('/manifest.webmanifest', function () {
 Route::prefix('account')->name('account.')->middleware('customer.auth')->group(function () {
     Route::get('appointments', [CustomerAccountController::class, 'appointments'])->name('appointments');
     Route::get('appointments/{appointment}', [CustomerAccountController::class, 'show'])->name('appointment');
+    Route::get('appointments/{appointment}/status', [CustomerAccountController::class, 'status'])->name('appointment.status');
     Route::post('appointments/{appointment}/cancel', [CustomerAccountController::class, 'cancel'])->name('appointment.cancel');
+    Route::post('appointments/{appointment}/reschedule', [CustomerAccountController::class, 'reschedule'])->name('appointment.reschedule');
     Route::get('appointments/{appointment}/calendar', [CustomerAccountController::class, 'calendar'])->name('appointment.calendar');
     Route::post('appointments/{appointment}/review', [CustomerAccountController::class, 'storeReview'])->name('appointment.review');
+    Route::get('waitlist', [\App\Http\Controllers\WaitlistController::class, 'index'])->name('waitlist');
+    Route::delete('waitlist/{entry}', [\App\Http\Controllers\WaitlistController::class, 'destroy'])->name('waitlist.leave');
     Route::get('favorites', [CustomerAccountController::class, 'favorites'])->name('favorites');
     Route::get('profile', [CustomerAccountController::class, 'profile'])->name('profile');
     Route::post('profile', [CustomerAccountController::class, 'updateProfile'])->name('profile.update');
@@ -120,6 +124,9 @@ Route::prefix('api/booking')->name('booking.')->group(function () {
     Route::get('group-slots', [BookingController::class, 'groupSlots'])->name('group-slots');
     Route::post('group-book', [BookingController::class, 'groupBook'])->name('group-book');
 });
+
+/* ── Online waitlist (join is public; controller gates on customer session) ── */
+Route::post('/api/waitlist/join', [\App\Http\Controllers\WaitlistController::class, 'join'])->name('waitlist.join');
 
 /* ── Broadcasting auth — support company + owner guards ── */
 Route::post('/broadcasting/auth', function (\Illuminate\Http\Request $request) {

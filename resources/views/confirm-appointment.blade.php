@@ -67,8 +67,8 @@
                 @if($branch)
                     <div class="row"><span class="ic">📍</span> <b>{{ $branch }}</b></div>
                 @endif
-                <div class="row"><span class="ic">📅</span> {{ $appointment->start_time->translatedFormat('l d M Y') }}</div>
-                <div class="row"><span class="ic">⏰</span> {{ $appointment->start_time->format('h:i A') }}</div>
+                <div class="row"><span class="ic">📅</span> {{ $appointment->start_time->translatedFormat('l') }} {{ $appointment->start_time->format('d/m') }}</div>
+                <div class="row"><span class="ic">⏰</span> {{ $appointment->start_time->format('g:i A') }}</div>
             </div>
         @endif
 

@@ -60,12 +60,17 @@
         $c = $status->color();
         return "color:$c;background:color-mix(in srgb, $c 14%, transparent);";
     };
-    $card = function($a) use ($isAr, $pill){
+    // One card per VISIT (a grouped multi-service booking is a single entry).
+    $visitCard = function($v) use ($isAr){
+        $a     = $v->primary;
         $img   = $a->branch?->images?->first();
         $venue = $isAr ? ($a->branch->name_ar ?? $a->branch->name_en) : ($a->branch->name_en ?? $a->branch->name_ar);
-        $svc   = $a->service ? ($isAr ? ($a->service->name_ar ?? $a->service->name_en) : ($a->service->name_en ?? $a->service->name_ar)) : '';
-        $emp   = $a->employee ? ($isAr ? ($a->employee->name_ar ?? $a->employee->name_en) : ($a->employee->name_en ?? $a->employee->name_ar)) : null;
-        return compact('a','img','venue','svc','emp');
+        $first = $v->service_names->first() ?? '';
+        $more  = $v->service_count - 1;
+        $svc   = $more > 0
+            ? $first . ' ' . ($isAr ? "و+{$more}" : "+{$more}")
+            : $first;
+        return compact('a','img','venue','svc','v');
     };
 @endphp
 
@@ -83,32 +88,33 @@
 
     <div class="bkf-seg" role="tablist">
       <button role="tab" class="is-active" data-tab="up" aria-selected="true">
-        {{ $isAr ? 'القادمة' : 'Upcoming' }}<span class="bkf-seg-count">{{ $upcoming->count() }}</span>
+        {{ $isAr ? 'القادمة' : 'Upcoming' }}<span class="bkf-seg-count">{{ $upcomingVisits->count() }}</span>
       </button>
       <button role="tab" data-tab="past" aria-selected="false">
-        {{ $isAr ? 'السابقة' : 'Past' }}<span class="bkf-seg-count">{{ $past->count() }}</span>
+        {{ $isAr ? 'السابقة' : 'Past' }}<span class="bkf-seg-count">{{ $pastVisits->count() }}</span>
       </button>
     </div>
 
     {{-- Upcoming --}}
     <div class="bkf-appt-list" data-pane="up">
-      @forelse($upcoming as $a) @php($v = $card($a))
-        <a href="{{ route('account.appointment', $a) }}" class="bkf-appt">
-          @if($v['img'])
-            <img src="{{ asset('storage/'.$v['img']->path) }}" alt="{{ $v['venue'] }}" class="bkf-appt-thumb" loading="lazy">
+      @forelse($upcomingVisits as $v) @php($c = $visitCard($v))
+        <a href="{{ route('account.appointment', $c['a']) }}" class="bkf-appt" data-status-url="{{ route('account.appointment.status', $c['a']) }}" data-status-start="{{ $c['a']->start_time->toDateTimeString() }}">
+          @if($c['img'])
+            <img src="{{ asset('storage/'.$c['img']->path) }}" alt="{{ $c['venue'] }}" class="bkf-appt-thumb" loading="lazy">
           @else
             <span class="bkf-appt-thumb ph"><x-icon name="scissors" :size="26"/></span>
           @endif
           <div class="bkf-appt-main">
             <div class="bkf-appt-top">
-              <span class="bkf-appt-venue">{{ $v['venue'] }}</span>
-              <span class="bkf-pill" style="{{ $pill($a->status) }}"><i></i>{{ $a->status->label() }}</span>
+              <span class="bkf-appt-venue">{{ $c['venue'] }}</span>
+              <span class="bkf-pill" style="color:{{ $v->status['color'] }};background:color-mix(in srgb, {{ $v->status['color'] }} 14%, transparent)" data-status-pill><i></i><span data-status-label>{{ $v->status['label'] }}</span></span>
             </div>
-            <div class="bkf-appt-svc">{{ $v['svc'] }}</div>
+            <div class="bkf-appt-svc">{{ $c['svc'] }}</div>
             <div class="bkf-appt-meta">
-              <span><x-icon name="calendar" :size="15"/>{{ $a->start_time->translatedFormat($isAr ? 'l d M' : 'D, d M') }}</span>
-              <span><x-icon name="clock" :size="15"/>{{ $a->start_time->translatedFormat('h:i A') }}</span>
-              @if($v['emp'])<span><x-icon name="user" :size="15"/>{{ $v['emp'] }}</span>@endif
+              <span><x-icon name="calendar" :size="15"/>{{ $c['a']->start_time->translatedFormat($isAr ? 'l d/m' : 'D, d/m') }}</span>
+              <span><x-icon name="clock" :size="15"/>{{ $c['a']->start_time->format('g:i A') }}</span>
+              @if($v->service_count > 1)<span><x-icon name="tag" :size="15"/>{{ $v->service_count }} {{ $isAr ? 'خدمات' : 'services' }}</span>@endif
+              @if($v->guest_count > 0)<span><x-icon name="user" :size="15"/>{{ $isAr ? 'أنت + '.$v->guest_count.' ضيف' : 'You + '.$v->guest_count.' guest'.($v->guest_count > 1 ? 's' : '') }}</span>@endif
             </div>
           </div>
         </a>
@@ -124,22 +130,23 @@
 
     {{-- Past --}}
     <div class="bkf-appt-list" data-pane="past" hidden>
-      @forelse($past as $a) @php($v = $card($a))
-        <a href="{{ route('account.appointment', $a) }}" class="bkf-appt">
-          @if($v['img'])
-            <img src="{{ asset('storage/'.$v['img']->path) }}" alt="{{ $v['venue'] }}" class="bkf-appt-thumb" loading="lazy">
+      @forelse($pastVisits as $v) @php($c = $visitCard($v))
+        <a href="{{ route('account.appointment', $c['a']) }}" class="bkf-appt">
+          @if($c['img'])
+            <img src="{{ asset('storage/'.$c['img']->path) }}" alt="{{ $c['venue'] }}" class="bkf-appt-thumb" loading="lazy">
           @else
             <span class="bkf-appt-thumb ph"><x-icon name="scissors" :size="26"/></span>
           @endif
           <div class="bkf-appt-main">
             <div class="bkf-appt-top">
-              <span class="bkf-appt-venue">{{ $v['venue'] }}</span>
-              <span class="bkf-pill" style="{{ $pill($a->status) }}"><i></i>{{ $a->status->label() }}</span>
+              <span class="bkf-appt-venue">{{ $c['venue'] }}</span>
+              <span class="bkf-pill" style="color:{{ $v->status['color'] }};background:color-mix(in srgb, {{ $v->status['color'] }} 14%, transparent)"><i></i>{{ $v->status['label'] }}</span>
             </div>
-            <div class="bkf-appt-svc">{{ $v['svc'] }}</div>
+            <div class="bkf-appt-svc">{{ $c['svc'] }}</div>
             <div class="bkf-appt-meta">
-              <span><x-icon name="calendar" :size="15"/>{{ $a->start_time->translatedFormat($isAr ? 'l d M Y' : 'D, d M Y') }}</span>
-              <span><x-icon name="clock" :size="15"/>{{ $a->start_time->translatedFormat('h:i A') }}</span>
+              <span><x-icon name="calendar" :size="15"/>{{ $c['a']->start_time->translatedFormat($isAr ? 'l d/m Y' : 'D, d/m Y') }}</span>
+              <span><x-icon name="clock" :size="15"/>{{ $c['a']->start_time->format('g:i A') }}</span>
+              @if($v->service_count > 1)<span><x-icon name="tag" :size="15"/>{{ $v->service_count }} {{ $isAr ? 'خدمات' : 'services' }}</span>@endif
             </div>
           </div>
         </a>
@@ -169,6 +176,36 @@
     panes.up.hidden = t !== 'up';
     panes.past.hidden = t !== 'past';
   });
+
+  // Live status — poll each upcoming card so a venue confirm/cancel shows here
+  // without a refresh (mirrors the detail page). Reloads once if anything changed.
+  var cards = [].slice.call(document.querySelectorAll('[data-pane="up"] [data-status-url]'));
+  if(cards.length){
+    var poll = function(){
+      cards.forEach(function(card){
+        var pill = card.querySelector('[data-status-pill]');
+        var label = card.querySelector('[data-status-label]');
+        if(!pill || !label) return;
+        var startWas = card.dataset.statusStart || '';
+        fetch(card.dataset.statusUrl,{headers:{'X-Requested-With':'XMLHttpRequest'}})
+          .then(function(r){ return r.ok ? r.json() : null; })
+          .then(function(d){
+            if(!d || !d.label) return;
+            var labelChanged = d.label !== label.textContent.trim();
+            var timeChanged  = d.start && startWas && d.start !== startWas; // venue rescheduled
+            if(labelChanged || timeChanged){
+              label.textContent = d.label;
+              pill.style.color = d.color;
+              pill.style.background = 'color-mix(in srgb, ' + d.color + ' 14%, transparent)';
+              // A status change or reschedule can move/retime a card — resync once.
+              setTimeout(function(){ window.location.reload(); }, 1500);
+            }
+          }).catch(function(){});
+      });
+    };
+    setInterval(poll, 20000);
+    document.addEventListener('visibilitychange', function(){ if(!document.hidden) poll(); });
+  }
 })();
 </script>
 </x-slot:scripts>

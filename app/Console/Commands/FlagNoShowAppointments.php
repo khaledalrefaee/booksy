@@ -24,35 +24,49 @@ class FlagNoShowAppointments extends Command
 
     public function handle(TransitionAppointment $transition): int
     {
-        $grace  = (int) ($this->option('grace') ?? config('booksy.no_show_grace_minutes', 20));
-        $cutoff = now()->subMinutes($grace);
+        // A forced --grace overrides everything; otherwise each appointment uses
+        // ITS branch's late_grace_minutes policy, falling back to the global default.
+        $forced   = $this->option('grace') !== null ? (int) $this->option('grace') : null;
+        $fallback = (int) config('booksy.no_show_grace_minutes', 20);
 
         $flagged = 0;
         $failed  = 0;
 
         Appointment::query()
+            ->with('company', 'branch')
             ->whereIn('status', [
                 AppointmentStatus::Pending->value,
                 AppointmentStatus::Confirmed->value,
             ])
-            ->where('start_time', '<', $cutoff)
+            ->where('start_time', '<', now())
             // Guard against a backlog sweeping up ancient rows the first time
             // this runs on an existing database.
             ->where('start_time', '>', now()->subDay())
-            ->chunkById(200, function ($appointments) use ($transition, &$flagged, &$failed) {
+            ->chunkById(200, function ($appointments) use ($transition, $forced, $fallback, &$flagged, &$failed) {
                 foreach ($appointments as $appointment) {
+                    $grace = $forced;
+                    if ($grace === null) {
+                        $policy = $appointment->company?->effectiveBookingPolicy($appointment->branch);
+                        $grace  = (int) ($policy->late_grace_minutes ?? $fallback);
+                    }
+
+                    // Not past the grace window yet — leave it for a later run.
+                    if ($appointment->start_time->copy()->addMinutes($grace)->isFuture()) {
+                        continue;
+                    }
+
                     $ok = $transition->attempt(
                         $appointment,
                         AppointmentStatus::NoShow,
                         TransitionActor::System,
-                        ['automatic' => true, 'meta' => ['reason' => 'grace_period_elapsed']],
+                        ['automatic' => true, 'meta' => ['reason' => 'grace_period_elapsed', 'grace' => $grace]],
                     );
 
                     $ok ? $flagged++ : $failed++;
                 }
             });
 
-        $this->info("Flagged {$flagged} appointment(s) as no-show (grace {$grace}m).");
+        $this->info("Flagged {$flagged} appointment(s) as no-show.");
 
         if ($failed > 0) {
             $this->warn("{$failed} appointment(s) could not be transitioned.");

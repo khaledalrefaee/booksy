@@ -868,7 +868,10 @@
     "Customer cancelled via WhatsApp": "الزبون ألغى عبر واتساب",
     "Appointment confirmed!": "تم تأكيد موعدك!",
     "Your appointment on :date at :time has been confirmed.": "تم تأكيد موعدك بتاريخ :date الساعة :time.",
+    "Thank you! Your appointment on :date at :time is confirmed. We look forward to seeing you. 💛": "شكراً لك! موعدك يوم :date الساعة :time مؤكَّد. نتطلّع لرؤيتك. 💛",
     "Your appointment has been cancelled. You can book a new one anytime.": "تم إلغاء موعدك. يمكنك حجز موعد جديد في أي وقت.",
+    "Thank you for letting us know. Your appointment has been cancelled — you can book a new one anytime. 🙏": "شكراً لإعلامنا. تم إلغاء موعدك — يمكنك حجز موعد جديد في أي وقت. 🙏",
+    "This time has already passed. Please pick a later slot.": "هذا الوقت مضى بالفعل. الرجاء اختيار وقت لاحق.",
     "Invalid link": "رابط غير صالح",
     "This confirmation link is not valid.": "رابط التأكيد غير صالح.",
     "Already done": "تم مسبقاً",
@@ -2141,5 +2144,6 @@
     "Emergency came up": "ظرف طارئ",
     "Schedule conflict": "تعارض مع موعد آخر",
     "Changed my mind": "غيّرت رأيي",
+    "Found another time": "وجدت موعداً آخر",
     "Other reason": "سبب آخر"
 }

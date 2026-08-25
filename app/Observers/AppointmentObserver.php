@@ -69,6 +69,15 @@ class AppointmentObserver
         $newStatus = $appointment->status;
         $appointment->load(['branch', 'service', 'customer']);
 
+        // Live-update the branch board / employee screen (optional; never block).
+        try {
+            $prev = $appointment->getOriginal('status');
+            $prev = $prev instanceof \App\Enums\AppointmentStatus ? $prev->value : (is_string($prev) ? $prev : $appointment->status_previous);
+            event(new \App\Events\AppointmentStatusChanged($appointment, $prev));
+        } catch (\Throwable $e) {
+            // Broadcasting is optional; a missing Reverb node must not fail the write.
+        }
+
         match ($newStatus) {
             AppointmentStatus::Confirmed => $this->onConfirmed($appointment),
             AppointmentStatus::Completed => $this->onCompleted($appointment),
@@ -157,8 +166,18 @@ class AppointmentObserver
     {
         StaffNotificationService::appointmentCancelled($appointment);
 
-        dispatch(function () use ($appointment) {
-            app(WhatsappService::class)->sendAppointmentCancelled($appointment);
+        // A salon-side cancellation straight out of "pending" is a rejection of the
+        // request — send the dedicated "couldn't confirm" message with a rebook link.
+        $isRejection = $appointment->status === AppointmentStatus::CancelledBySalon
+            && $appointment->status_previous === AppointmentStatus::Pending->value;
+
+        dispatch(function () use ($appointment, $isRejection) {
+            $wa = app(WhatsappService::class);
+            $isRejection ? $wa->sendAppointmentRejected($appointment) : $wa->sendAppointmentCancelled($appointment);
+
+            // The freed slot may match someone on the online waitlist — tell them.
+            try { app(\App\Services\WaitlistService::class)->notifyForFreedSlot($appointment); }
+            catch (\Throwable $e) { /* waitlist is best-effort; never block the cancel */ }
         })->afterResponse();
 
         if ($appointment->customer_id) {

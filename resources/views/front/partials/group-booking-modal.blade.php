@@ -124,6 +124,7 @@ window.GroupBookingModal = (function () {
   const EMPLOYEES = @json($gbEmployees);
   const SLOTS_URL = @json(route('booking.group-slots'));
   const BOOK_URL  = @json(route('booking.group-book'));
+  const WAITLIST_URL = @json(route('waitlist.join'));
   const ME_URL    = @json(route('customer.me'));
   const TOKEN     = @json(csrf_token());
   const SVC = {}; SERVICES.forEach(s => SVC[s.id] = s);
@@ -143,8 +144,9 @@ window.GroupBookingModal = (function () {
   const totalServices = () => st.guests.reduce((s,g)=> s + g.services.length, 0);
 
   function open(initialServiceIds) {
+    var idem = 'gb-' + Date.now() + '-' + Math.random().toString(36).slice(2,10);
     st = { step:0, activeGuest:0, guests:[{services:(initialServiceIds||[]).slice(), employeeId:null}],
-           staffMode:'any', oneEmployee:null, weekOffset:0, date:null, slot:null, cache:{} };
+           staffMode:'any', oneEmployee:null, weekOffset:0, date:null, slot:null, cache:{}, idempotencyKey:idem };
     el('gb-overlay').classList.add('open');
     el('gb-modal').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -260,7 +262,8 @@ window.GroupBookingModal = (function () {
       employee_id: st.staffMode==='per' ? (g.employeeId||null) : (st.staffMode==='one' ? (st.oneEmployee||null) : null),
     }));
     const spec = { branch_id: BRANCH_ID, mode, guests };
-    if (withStart) spec.start_time = st.date + ' ' + st.slot.time + ':00'; else spec.date = st.date;
+    if (withStart) { spec.start_time = st.date + ' ' + st.slot.time + ':00'; spec.idempotency_key = st.idempotencyKey; }
+    else spec.date = st.date;
     return spec;
   }
 
@@ -293,10 +296,27 @@ window.GroupBookingModal = (function () {
   }
   function paintSlots(d){
     const grid = el('gb-slots'); if(!grid) return;
-    if (!d.available || !d.slots.length){ grid.innerHTML = `<div class="gb-empty">${AR?'لا أوقات متاحة في هذا اليوم':'No times available this day'}</div>`; updateFoot(); return; }
+    if (!d.available || !d.slots.length){
+      grid.innerHTML = `<div class="gb-empty">${AR?'لا أوقات متاحة في هذا اليوم':'No times available this day'}</div>`
+        + `<button type="button" class="bkf-btn bkf-btn-soft bkf-btn-block" style="margin-top:12px" onclick="GroupBookingModal._waitlist(this)">🔔 ${AR?'أخبرني عند توفّر موعد':'Notify me when a slot opens'}</button>`;
+      updateFoot(); return;
+    }
     grid.innerHTML = d.slots.map(s=>`<button class="gb-slot ${st.slot&&st.slot.time===s.time?'is-on':''}" onclick="GroupBookingModal._pickSlot('${s.time}')">${s.time}</button>`).join('');
   }
   function _pickSlot(t){ st.slot={time:t}; document.querySelectorAll('#gb-slots .gb-slot').forEach(b=>b.classList.toggle('is-on', b.textContent.trim()===t)); updateFoot(); }
+
+  /* ── waitlist: join when the chosen day is full ── */
+  async function _waitlist(btn){
+    const me = await fetch(ME_URL).then(r=>r.json()).catch(()=>({authenticated:false}));
+    if (!me.authenticated){ window.CustomerAuthModal ? CustomerAuthModal.open(()=>_waitlist(btn)) : null; return; }
+    const serviceIds = st.guests.reduce((a,g)=>a.concat(g.services), []);
+    btn.disabled = true; btn.textContent = AR?'جارٍ التسجيل…':'Adding…';
+    const res = await fetch(WAITLIST_URL, { method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRF-TOKEN':TOKEN,'X-Requested-With':'XMLHttpRequest'},
+      body: JSON.stringify({ branch_id: BRANCH_ID, date: st.date, service_ids: serviceIds })
+    }).then(r=>r.json()).catch(()=>({}));
+    btn.textContent = res.joined ? (AR?'✓ سنُعلمك عند التوفّر':'✓ You’re on the waitlist') : (AR?'تعذّر التسجيل':'Couldn’t add');
+  }
 
   function specToQuery(spec){
     const p = new URLSearchParams(); p.set('branch_id',spec.branch_id); p.set('mode',spec.mode); p.set('date',spec.date);
@@ -348,6 +368,6 @@ window.GroupBookingModal = (function () {
 
   document.addEventListener('keydown', e=>{ if(e.key==='Escape' && el('gb-modal').classList.contains('open')) close(); });
 
-  return { open, close, back, next, _pickGuest, _addGuest, _removeGuest, _toggleSvc, _setMode, _setOne, _setGuestEmp, _week, _pickDay, _pickSlot };
+  return { open, close, back, next, _pickGuest, _addGuest, _removeGuest, _toggleSvc, _setMode, _setOne, _setGuestEmp, _week, _pickDay, _pickSlot, _waitlist };
 })();
 </script>

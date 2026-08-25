@@ -46,6 +46,13 @@ window.BK_FAV = {
                 <x-icon name="{{ $isAr ? 'chevron-left' : 'chevron-right' }}" :size="16" class="bkf-acct-go"/>
             </a>
 
+            @if(\Illuminate\Support\Facades\Route::has('account.waitlist'))
+            <a role="menuitem" href="{{ route('account.waitlist') }}" class="bkf-acct-item">
+                <x-icon name="clock" :size="19"/>{{ $isAr ? 'قائمة الانتظار' : 'Waitlist' }}
+                <x-icon name="{{ $isAr ? 'chevron-left' : 'chevron-right' }}" :size="16" class="bkf-acct-go"/>
+            </a>
+            @endif
+
             @if(\Illuminate\Support\Facades\Route::has('account.favorites'))
             <a role="menuitem" href="{{ route('account.favorites') }}" class="bkf-acct-item">
                 <x-icon name="heart" :size="19"/>{{ $isAr ? 'المفضلة' : 'Favorites' }}

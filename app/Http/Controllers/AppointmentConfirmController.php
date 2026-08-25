@@ -47,9 +47,9 @@ class AppointmentConfirmController extends Controller
         StaffNotificationService::customerConfirmedViaWhatsApp($appointment);
 
         return $this->page('success', '✅', __('Appointment confirmed!'),
-            __('Your appointment on :date at :time has been confirmed.', [
-                'date' => $appointment->start_time->translatedFormat('l d M Y'),
-                'time' => $appointment->start_time->format('h:i A'),
+            __('Thank you! Your appointment on :date at :time is confirmed. We look forward to seeing you. 💛', [
+                'date' => $appointment->start_time->translatedFormat('l d/m'),
+                'time' => $appointment->start_time->format('g:i A'),
             ]), $appointment);
     }
 
@@ -94,7 +94,10 @@ class AppointmentConfirmController extends Controller
                 $appt,
                 AppointmentStatus::CancelledByCustomer,
                 TransitionActor::Customer,
-                ['meta' => ['source' => 'reminder_link', 'reason' => $reason]],
+                [
+                    'reason' => $reason,   // stored in the transition's reason column + shown in history
+                    'meta'   => ['source' => 'reminder_link', 'reason' => $reason],
+                ],
             );
         }
 
@@ -102,7 +105,7 @@ class AppointmentConfirmController extends Controller
         StaffNotificationService::customerCancelledViaWhatsApp($appointment);
 
         return $this->page('warning', '⚠️', __('Appointment cancelled'),
-            __('Your appointment has been cancelled. You can book a new one anytime.'), $appointment);
+            __('Thank you for letting us know. Your appointment has been cancelled — you can book a new one anytime. 🙏'), $appointment);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -140,6 +143,7 @@ class AppointmentConfirmController extends Controller
             'emergency' => __('Emergency came up'),
             'conflict'  => __('Schedule conflict'),
             'changed'   => __('Changed my mind'),
+            'found'     => __('Found another time'),
             'other'     => __('Other reason'),
         ];
     }
