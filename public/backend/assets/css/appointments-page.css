@@ -2270,7 +2270,11 @@ html[dir="rtl"] .ap-status { padding: 7px 16px 7px 30px; background-position: le
     position: fixed;
     top: 0;
     bottom: 0;
+    /* Pin to the inline-end edge. inset-inline-start:auto neutralises the
+       generic ".bk-drawer { inset:0 }" rule in booksy-custom.css, which would
+       otherwise force left:0 and leave the closed drawer stranded on-screen. */
     inset-inline-end: 0;
+    inset-inline-start: auto;
     z-index: 1195;
     width: 400px;
     max-width: 94vw;
@@ -2281,9 +2285,15 @@ html[dir="rtl"] .ap-status { padding: 7px 16px 7px 30px; background-position: le
     flex-direction: column;
     transform: translateX(105%);
     transition: transform .28s cubic-bezier(.22,1,.36,1);
+    /* Belt-and-braces: a closed drawer must never capture clicks even if a
+       positioning conflict leaves part of it painted. */
+    pointer-events: none;
 }
 [dir="rtl"] .bk-drawer { transform: translateX(-105%); }
-.bk-drawer.open { transform: none; }
+/* Open slides the drawer in. !important guarantees this beats the base
+   [dir=rtl] .bk-drawer translate, which otherwise left the open drawer
+   stranded off-screen. */
+.bk-drawer.open { transform: none !important; pointer-events: auto; }
 @media (prefers-reduced-motion: reduce) { .bk-drawer { transition: none; } }
 .bk-wl-addbox { padding: 16px 20px; border-bottom: 1px solid var(--cal-border); }
 .bk-wl-list { flex: 1; overflow-y: auto; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 8px; }

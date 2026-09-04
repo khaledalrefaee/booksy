@@ -54,6 +54,9 @@ class VerificationController extends Controller
             'email_verified_at' => $company->email_verified_at ?? now(),
         ]);
 
+        // Seed the head-office branch so the setup checklist can begin.
+        \App\Services\CompanySetupService::ensureHeadOffice($company);
+
         return redirect()->route('company.dashboard')
             ->with('status', __('Your account has been verified. Welcome aboard!'));
     }

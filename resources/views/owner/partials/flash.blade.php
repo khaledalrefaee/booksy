@@ -1,28 +1,25 @@
-@if (session('success'))
-    <div class="alert alert-success border-0 shadow-sm rounded-3 mb-4 d-flex align-items-center" role="alert">
-        <i data-feather="check-circle" class="text-success me-2 icon-md"></i>
-        <span>{{ session('success') }}</span>
-    </div>
-@endif
-@if (session('warning'))
-    <div class="alert alert-warning border-0 shadow-sm rounded-3 mb-4 d-flex align-items-center" role="alert">
-        <i data-feather="alert-triangle" class="text-warning me-2 icon-md"></i>
-        <span>{{ session('warning') }}</span>
-    </div>
-@endif
-@if (session('error'))
-    <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-4 d-flex align-items-center" role="alert">
-        <i data-feather="alert-circle" class="text-danger me-2 icon-md"></i>
-        <span>{{ session('error') }}</span>
-    </div>
-@endif
-@if ($errors->any())
-    <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-4" role="alert">
-        <div class="fw-semibold mb-2">{{ __('Please fix the following:') }}</div>
-        <ul class="mb-0 ps-3">
+{{--
+  Owner flash → unified GlowRez toast engine (partials/glow-toast).
+  Surfaces session success/error/warning/info AND validation errors as toasts.
+--}}
+@include('partials.glow-toast')
+
+@if (session('success') || session('error') || session('warning') || session('info') || $errors->any())
+<script>
+(function () {
+    function fire() {
+        @if (session('success')) window.GlowToast.success(@json(session('success'))); @endif
+        @if (session('warning')) window.GlowToast.warning(@json(session('warning'))); @endif
+        @if (session('info'))    window.GlowToast.info(@json(session('info')));       @endif
+        @if (session('error'))   window.GlowToast.error(@json(session('error')));     @endif
+        @if ($errors->any())
             @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
+                window.GlowToast.error(@json($error));
             @endforeach
-        </ul>
-    </div>
+        @endif
+    }
+    if (window.GlowToast) fire();
+    else document.addEventListener('DOMContentLoaded', fire);
+})();
+</script>
 @endif

@@ -200,10 +200,10 @@
                         <small class="text-muted">{{ __('Added for each service beyond the first') }}</small>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">{{ __('Points per currency unit') }}</label>
+                        <label class="form-label fw-semibold">{{ __('Spend amount per point') }}</label>
                         <input type="number" name="loyalty_points_per_currency_unit" min="0"
                             class="form-control rounded-3" value="{{ old('loyalty_points_per_currency_unit', 10000) }}">
-                        <small class="text-muted">{{ __('1 point per this amount spent (0 = disabled)') }}</small>
+                        <small class="text-muted">{{ __('Amount a customer spends to earn 1 point (e.g. 10,000 → spending 55,000 = 5 points). 0 = disabled.') }}</small>
                     </div>
                 </div>
                 <div class="mt-4 p-3 rounded-3" style="background:var(--bs-tertiary-bg);">
@@ -215,11 +215,22 @@
 
         {{-- Footer --}}
         <div class="d-flex justify-content-between gap-2 pt-3">
+            @php $rtl = app()->getLocale() === 'ar'; @endphp
             <a href="{{ route('company.branches.index') }}" class="btn btn-light rounded-pill px-4">{{ __('Cancel') }}</a>
-            <button type="submit" class="btn btn-primary rounded-pill px-4">
-                <i data-feather="save" class="me-1" style="width:16px;height:16px;"></i>
-                {{ __('Save branch') }}
-            </button>
+            <div class="d-flex gap-2">
+                <button type="button" id="branchPrevBtn" class="btn btn-outline-secondary rounded-pill px-4 d-none">
+                    <i data-feather="{{ $rtl ? 'arrow-right' : 'arrow-left' }}" class="me-1" style="width:16px;height:16px;"></i>
+                    {{ __('Previous') }}
+                </button>
+                <button type="button" id="branchNextBtn" class="btn btn-outline-primary rounded-pill px-4">
+                    {{ __('Next') }}
+                    <i data-feather="{{ $rtl ? 'arrow-left' : 'arrow-right' }}" class="ms-1" style="width:16px;height:16px;"></i>
+                </button>
+                <button type="submit" class="btn btn-primary rounded-pill px-4">
+                    <i data-feather="save" class="me-1" style="width:16px;height:16px;"></i>
+                    {{ __('Save branch') }}
+                </button>
+            </div>
         </div>
 
     </form>
@@ -229,15 +240,51 @@
 @push('scripts')
 <script>
 // ── Tabs ──────────────────────────────────────────────────────────
-document.querySelectorAll('[data-tab]').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('[data-tab]').forEach(function(b) { b.classList.remove('active'); });
-        document.querySelectorAll('.tab-pane-bk').forEach(function(p) { p.classList.add('d-none'); });
-        btn.classList.add('active');
-        document.getElementById(btn.dataset.tab).classList.remove('d-none');
-        if (window.feather) feather.replace();
-    });
+var tabButtons = Array.prototype.slice.call(document.querySelectorAll('#branchTabs [data-tab]'));
+var nextBtn    = document.getElementById('branchNextBtn');
+var prevBtn    = document.getElementById('branchPrevBtn');
+
+function currentTabIndex() {
+    for (var i = 0; i < tabButtons.length; i++) {
+        if (tabButtons[i].classList.contains('active')) return i;
+    }
+    return 0;
+}
+
+function updateTabNav() {
+    var i = currentTabIndex();
+    // Prev hidden on the first tab, Next hidden on the last (only Save remains).
+    if (prevBtn) prevBtn.classList.toggle('d-none', i <= 0);
+    if (nextBtn) nextBtn.classList.toggle('d-none', i >= tabButtons.length - 1);
+}
+
+function activateTab(btn) {
+    tabButtons.forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-pane-bk').forEach(function(p) { p.classList.add('d-none'); });
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.remove('d-none');
+    // Leaflet renders wrong when built in a hidden tab — fix it on reveal.
+    if (btn.dataset.tab === 'tab-location' && window.__branchMapShow) window.__branchMapShow();
+    updateTabNav();
+    if (window.feather) feather.replace();
+}
+
+function stepTab(delta) {
+    var i = currentTabIndex() + delta;
+    if (i >= 0 && i < tabButtons.length) {
+        activateTab(tabButtons[i]);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+tabButtons.forEach(function(btn) {
+    btn.addEventListener('click', function() { activateTab(btn); });
 });
+
+nextBtn && nextBtn.addEventListener('click', function() { stepTab(+1); });
+prevBtn && prevBtn.addEventListener('click', function() { stepTab(-1); });
+
+updateTabNav();
 
 // ── Address preview ───────────────────────────────────────────────
 (function() {

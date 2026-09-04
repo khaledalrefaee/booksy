@@ -106,7 +106,7 @@ class DemoOwnerSeeder extends Seeder
 
         $role = Role::query()->where('slug', 'company_owner')->first();
         if ($role) {
-            Employee::query()->firstOrCreate(
+            $manager = Employee::query()->firstOrCreate(
                 [
                     'company_id' => $company->id,
                     'email' => 'manager@booksy.demo',
@@ -118,7 +118,15 @@ class DemoOwnerSeeder extends Seeder
                     'name_ar' => 'مدير تجريبي',
                     'password' => Hash::make('password'),
                     'is_active' => true,
+                    // Must be bookable to be assignable on appointments.
+                    'is_bookable' => true,
                 ]
+            );
+
+            // Link the manager to the branch services so they appear as a
+            // selectable provider in the "add booking" staff dropdown.
+            $manager->services()->syncWithoutDetaching(
+                Service::query()->where('branch_id', $branch->id)->pluck('id')->all()
             );
         }
 

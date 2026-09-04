@@ -8,36 +8,10 @@
 <script src="{{ asset('vendor/echo/echo.iife.js') }}"></script>
 <script src="{{ asset('vendor/echo/pusher.min.js') }}"></script>
 
+{{-- Real-time booking alerts use the unified GlowRez toast engine --}}
+@include('partials.glow-toast')
+
 <style>
-/* Toast notification */
-.bk-rt-toast {
-    position:fixed;top:80px;{{ $isAr ? 'left' : 'right' }}:20px;
-    z-index:99999;
-    background:var(--bg3,#1a1a1a);
-    border:1.5px solid rgba(201,162,39,.35);
-    border-radius:16px;
-    padding:16px 20px;
-    box-shadow:0 8px 40px rgba(0,0,0,.5);
-    max-width:340px;
-    display:flex;gap:12px;align-items:flex-start;
-    animation:bkSlideIn .35s ease;
-    cursor:pointer;
-}
-@keyframes bkSlideIn {
-    from { opacity:0; transform:translateX({{ $isAr ? '-' : '' }}30px); }
-    to   { opacity:1; transform:translateX(0); }
-}
-.bk-rt-icon {
-    width:40px;height:40px;border-radius:50%;flex-shrink:0;
-    background:rgba(201,162,39,.15);
-    display:flex;align-items:center;justify-content:center;
-    font-size:1.1rem;
-}
-.bk-rt-body { flex:1; }
-.bk-rt-title { font-size:.85rem;font-weight:700;color:var(--text,#111);margin-bottom:4px; }
-.bk-rt-sub   { font-size:.75rem;color:var(--text-2,rgba(0,0,0,.55));line-height:1.5; }
-.bk-rt-time  { font-size:.68rem;color:rgba(201,162,39,.8);margin-top:4px; }
-.bk-rt-close { background:none;border:none;color:var(--text-2,rgba(0,0,0,.4));cursor:pointer;font-size:.75rem;padding:0; }
 /* Notification bell badge */
 .bk-notif-badge {
     display:inline-flex;align-items:center;justify-content:center;
@@ -49,8 +23,6 @@
 }
 @keyframes bkPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }
 </style>
-
-<div id="bk-toast-container"></div>
 
 <script>
 (function(){
@@ -92,25 +64,14 @@
         const time = data.start_display;
         const customer = data.customer_name;
 
-        const toast = document.createElement('div');
-        toast.className = 'bk-rt-toast';
-        toast.innerHTML = `
-            <div class="bk-rt-icon">📅</div>
-            <div class="bk-rt-body">
-                <div class="bk-rt-title">${IS_AR ? '📌 حجز جديد!' : '📌 New Booking!'}</div>
-                <div class="bk-rt-sub">
-                    <strong>${customer}</strong><br>
-                    ${svc} ${emp ? `· ${emp}` : ''}<br>
-                    ${time}
-                </div>
-                <div class="bk-rt-time">● ${IS_AR ? 'الآن' : 'Just now'}</div>
-            </div>
-            <button class="bk-rt-close" onclick="this.closest('.bk-rt-toast').remove()">✕</button>
-        `;
-        document.getElementById('bk-toast-container').appendChild(toast);
-
-        // Auto remove after 8s
-        setTimeout(() => toast.remove(), 8000);
+        // Unified GlowRez toast (brand chime) — one visual language everywhere
+        const lines = [customer, [svc, emp].filter(Boolean).join(' · '), time].filter(Boolean).join('\n');
+        if (window.GlowToast) {
+            window.GlowToast.brand(lines, {
+                title: IS_AR ? 'حجز جديد' : 'New booking',
+                duration: 8000,
+            });
+        }
 
         // Browser notification
         if (Notification.permission === 'granted') {

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->decimal('price', 10, 2)->default(0);
             $table->string('currency', 10)->default('USD');
             $table->unsignedSmallInteger('duration_days')->default(30);
+            $table->unsignedSmallInteger('grace_days')->default(0);
             $table->json('features')->nullable();
             $table->unsignedSmallInteger('max_branches')->nullable();
             $table->unsignedSmallInteger('max_employees')->nullable();

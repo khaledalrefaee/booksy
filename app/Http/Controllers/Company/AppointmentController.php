@@ -72,6 +72,12 @@ class AppointmentController extends Controller
 
         $selectedBranchId = $request->input('branch_id');
 
+        // Auto-select when the company has a single branch, so the customer /
+        // service fields appear immediately instead of forcing an extra click.
+        if (! $selectedBranchId && $branches->count() === 1) {
+            $selectedBranchId = $branches->first()->id;
+        }
+
         return view('company.appointments.create', compact('company', 'branches', 'selectedBranchId'));
     }
 

@@ -25,8 +25,15 @@ return new class extends Migration
             $table->date('paid_at');
 
             $table->date('expires_before')->nullable();
+            // Company's plan before this payment — needed to revert cleanly on void.
+            $table->foreignId('plan_id_before')->nullable()->constrained('plans')->nullOnDelete();
             $table->date('expires_after')->nullable();
             $table->string('notes', 500)->nullable();
+
+            // Financial rows are never hard-deleted — they get voided with a reason.
+            $table->timestamp('voided_at')->nullable();
+            $table->string('void_reason', 500)->nullable();
+            $table->foreignId('voided_by')->nullable()->constrained('owners')->nullOnDelete();
 
             $table->timestamps();
 

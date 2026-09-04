@@ -29,6 +29,8 @@ class Company extends Authenticatable
         'category_id',
         'password',
         'status',
+        'suspended_at',
+        'suspension_reason',
         'plan_id',
         'plan_expires_at',
         'feature_overrides',
@@ -45,6 +47,7 @@ class Company extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
+            'suspended_at' => 'datetime',
             'password' => 'hashed',
             'plan_expires_at' => 'date',
             'feature_overrides' => 'array',
@@ -183,6 +186,100 @@ class Company extends Authenticatable
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);
+    }
+
+    // ── SMS credit system ────────────────────────────────────────────────────
+
+    /** Every wallet under this company (its branch wallets + the company pool). */
+    public function smsWallets(): HasMany
+    {
+        return $this->hasMany(SmsWallet::class);
+    }
+
+    /** The shared company-level pool wallet (branch_id null), if one exists. */
+    public function smsPoolWallet(): HasOne
+    {
+        return $this->hasOne(SmsWallet::class)->whereNull('branch_id');
+    }
+
+    public function smsMessages(): HasMany
+    {
+        return $this->hasMany(SmsMessage::class);
+    }
+
+    public function smsAutomationSettings(): HasMany
+    {
+        return $this->hasMany(SmsAutomationSetting::class);
+    }
+
+    public function smsTemplates(): HasMany
+    {
+        return $this->hasMany(SmsTemplate::class);
+    }
+
+    /** The primary branch — the auto-seeded head office, or the oldest branch. */
+    public function headOffice(): ?Branch
+    {
+        return $this->branches()->where('is_head_office', true)->orderBy('id')->first()
+            ?? $this->branches()->orderBy('id')->first();
+    }
+
+    /** Live on the public marketplace. */
+    public function isPublished(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    /** Account approved and fully operational. */
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    /** Awaiting platform review — created but not yet approved. */
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    /** Access revoked by the platform: login is blocked and sessions are killed. */
+    public function isSuspended(): bool
+    {
+        return $this->status === 'suspended';
+    }
+
+    /**
+     * Owner-facing explanation shown wherever a suspended account is turned away
+     * (login screen, mid-session logout). Appends the recorded reason if any.
+     */
+    public function suspendedNotice(): string
+    {
+        $base = __('Your account has been suspended. Please contact support.');
+
+        return $this->suspension_reason
+            ? $base.' '.__('Reason:').' '.$this->suspension_reason
+            : $base;
+    }
+
+    /**
+     * Flip the business live once the required setup is done: company → active
+     * and the head-office branch → active (so it clears the marketplace gate).
+     * Returns false when required steps are still missing.
+     */
+    public function publish(): bool
+    {
+        if (! \App\Services\OnboardingService::canPublish($this)) {
+            return false;
+        }
+
+        $this->update(['status' => 'active']);
+
+        $headOffice = $this->headOffice();
+        if ($headOffice && $headOffice->isInactive()) {
+            $headOffice->update(['status' => 'active']);
+        }
+
+        return true;
     }
 
     public function onboarding(): HasOne

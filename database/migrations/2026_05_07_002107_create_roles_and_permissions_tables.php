@@ -25,6 +25,9 @@ return new class extends Migration
             $table->id();
             $table->string('slug', 96)->unique();
             $table->string('group', 48)->nullable();
+            // `level` decides whether a permission is gated by the acting employee's
+            // branch access (`branch`) or is a company-wide ability (`company`).
+            $table->string('level', 16)->default('branch');
             $table->timestamps();
         });
 

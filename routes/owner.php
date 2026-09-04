@@ -63,6 +63,16 @@ Route::prefix('owner')->name('owner.')->group(function () {
         Route::patch('companies/{company}/subscription', [CompanyController::class, 'updateSubscription'])
             ->middleware('owner.can:companies.manage')
             ->name('companies.update-subscription');
+        // Export must be declared before the {company} resource routes so the
+        // literal "export" segment isn't captured as a company id. Same auth as
+        // the listing (owner.auth); honours all active filters.
+        Route::get('companies/export', [CompanyController::class, 'export'])
+            ->name('companies.export');
+        Route::get('companies/import/template', [CompanyController::class, 'importTemplate'])
+            ->name('companies.import-template');
+        Route::post('companies/import', [CompanyController::class, 'import'])
+            ->middleware('owner.can:companies.manage')
+            ->name('companies.import');
         Route::resource('companies', CompanyController::class)->only(['index', 'show']);
         Route::resource('companies', CompanyController::class)
             ->only(['store', 'update', 'destroy'])
@@ -192,6 +202,27 @@ Route::prefix('owner')->name('owner.')->group(function () {
             Route::post('locations/areas',                           [LocationController::class, 'storeArea'])->name('locations.areas.store');
             Route::put('locations/areas/{area}',                     [LocationController::class, 'updateArea'])->name('locations.areas.update');
             Route::delete('locations/areas/{area}',                  [LocationController::class, 'destroyArea'])->name('locations.areas.destroy');
+        });
+
+        // ── SMS credit system ────────────────────────────────────────────────
+        Route::prefix('sms')->name('sms.')->controller(\App\Http\Controllers\Owner\SmsController::class)->group(function () {
+            Route::get('/',              'overview')->name('overview');
+            Route::get('analytics',      'analytics')->name('analytics');
+            Route::get('companies',      'companies')->name('companies');
+            Route::get('branches',       'branches')->name('branches');
+            Route::get('transactions',   'transactions')->name('transactions');
+            Route::get('logs',           'logs')->name('logs');
+
+            Route::get('packages',       'packages')->name('packages');
+            Route::post('packages',      'storePackage')->name('packages.store');
+            Route::put('packages/{package}',    'updatePackage')->name('packages.update');
+            Route::delete('packages/{package}', 'destroyPackage')->name('packages.destroy');
+
+            Route::get('pricing',        'pricing')->name('pricing');
+            Route::put('pricing',        'updatePricing')->name('pricing.update');
+
+            Route::post('grant',         'grant')->name('grant');
+            Route::get('companies/{company}/branches', 'companyBranches')->name('company-branches');
         });
     });
 });

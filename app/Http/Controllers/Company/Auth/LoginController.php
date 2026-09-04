@@ -26,6 +26,21 @@ class LoginController extends Controller
         $remember = $request->boolean('remember');
 
         if (Auth::guard('company')->attempt($credentials, $remember)) {
+            /** @var \App\Models\Company $company */
+            $company = Auth::guard('company')->user();
+
+            // Credentials are valid, but a suspended account may not enter — undo
+            // the company login and explain why. Only the company guard is logged
+            // out (not session()->invalidate()), so an owner signed in in the same
+            // browser keeps their session.
+            if ($company->isSuspended()) {
+                Auth::guard('company')->logout();
+
+                return back()
+                    ->withInput($request->only('email'))
+                    ->withErrors(['email' => $company->suspendedNotice()]);
+            }
+
             $request->session()->regenerate();
             LoginActivityService::record(
                 $request, true, Auth::guard('company')->id(), $credentials['email']

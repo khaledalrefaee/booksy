@@ -12,7 +12,9 @@
             $stripped     = ltrim($raw, '+');
             $codeStripped = ltrim($code, '+');
             if (str_starts_with($stripped, $codeStripped)) {
-                return [$code, '+' . $stripped];
+                // Return the national part only — the dial code is shown by the
+                // dropdown, so keeping it in the field duplicates it.
+                return [$code, substr($stripped, strlen($codeStripped))];
             }
         }
         return [$defaultDial, $raw];
@@ -94,7 +96,7 @@
 <div class="row g-3">
 
     {{-- ── الجوال ─────────────────────────────────── --}}
-    <div class="col-12">
+    <div class="col-md-6">
         <div class="d-flex align-items-center justify-content-between mb-2">
             <label class="form-label fw-semibold mb-0 d-flex align-items-center gap-1">
                 <i data-feather="smartphone" style="width:14px;height:14px;"></i>
@@ -135,7 +137,7 @@
     </div>
 
     {{-- ── الأرضي (بدون كود دولة) ───────────────── --}}
-    <div class="col-12">
+    <div class="col-md-6">
         <div class="d-flex align-items-center justify-content-between mb-2">
             <label class="form-label fw-semibold mb-0 d-flex align-items-center gap-1">
                 <i data-feather="phone" style="width:14px;height:14px;"></i>

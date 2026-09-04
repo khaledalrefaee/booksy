@@ -43,7 +43,14 @@ class AppointmentObserver
                 $lock = 'booked_msg_' . $appointment->booking_group_id;
                 if (! Cache::add($lock, 1, 600)) return;
             }
+            // WhatsApp path (non-SMS numbers, and SMS numbers whose branch hasn't
+            // opted into the new SMS confirmation). Suppression lives inside the
+            // service so it only skips the SMS channel, never WhatsApp.
             app(WhatsappService::class)->sendAppointmentBooked($appointment);
+
+            // New credit-tracked SMS confirmation. No-ops unless the branch enabled
+            // it AND the number routes over SMS; deduped by booking group.
+            app(\App\Services\Sms\SmsService::class)->confirmation($appointment);
         })->afterResponse();
 
         if ($appointment->customer_id) {

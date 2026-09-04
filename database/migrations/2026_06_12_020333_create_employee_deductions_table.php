@@ -19,6 +19,7 @@ return new class extends Migration
             $table->boolean('is_sick_leave')->default(false); // sick leave — not deducted
             $table->date('deduction_date');
             $table->decimal('amount', 10, 2)->nullable();   // fixed money deduction
+            $table->string('currency', 5)->default('SYP');
             $table->decimal('hours', 4, 2)->nullable();     // hours absent/late
             $table->text('notes')->nullable();
             $table->timestamps();

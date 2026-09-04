@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('loyalty_point_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
+            // Loyalty is scoped per branch (null = a legacy/company-wide adjustment).
+            $table->foreignId('branch_id')->nullable()->constrained()->nullOnDelete();
             $table->integer('points');
             $table->string('reason');
             $table->string('reference_type')->nullable();

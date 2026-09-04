@@ -1,19 +1,22 @@
 @php
     $current = $currentStep ?? 1;
+    $steps = [
+        1 => ['label' => __('Branch details'),  'icon' => 'map-pin'],
+        2 => ['label' => __('Working hours'),   'icon' => 'clock'],
+        3 => ['label' => __('Employees'),       'icon' => 'users'],
+    ];
 @endphp
-<div class="d-flex align-items-center gap-2 mb-4 flex-wrap">
-    <div class="d-flex align-items-center gap-2 {{ $current === 1 ? 'text-primary fw-semibold' : 'text-muted' }}">
-        <span class="badge rounded-pill {{ $current === 1 ? 'bg-primary' : 'bg-light text-muted border' }}">1</span>
-        <span>{{ __('Branch details') }}</span>
-    </div>
-    <i data-feather="chevron-right" class="text-muted" style="width:16px;height:16px;"></i>
-    <div class="d-flex align-items-center gap-2 {{ $current === 2 ? 'text-primary fw-semibold' : 'text-muted' }}">
-        <span class="badge rounded-pill {{ $current === 2 ? 'bg-primary' : 'bg-light text-muted border' }}">2</span>
-        <span>{{ __('Working hours') }}</span>
-    </div>
-    <i data-feather="chevron-right" class="text-muted" style="width:16px;height:16px;"></i>
-    <div class="d-flex align-items-center gap-2 {{ $current === 3 ? 'text-primary fw-semibold' : 'text-muted' }}">
-        <span class="badge rounded-pill {{ $current === 3 ? 'bg-primary' : 'bg-light text-muted border' }}">3</span>
-        <span>{{ __('Employees') }}</span>
-    </div>
+<div class="bm-wizard" aria-label="{{ __('Setup progress') }}">
+    @foreach($steps as $n => $step)
+        @php $state = $n === $current ? 'is-active' : ($n < $current ? 'is-done' : ''); @endphp
+        <div class="bm-step {{ $state }}">
+            <span class="bm-step-num">
+                @if($n < $current)<i data-feather="check" style="width:14px;height:14px;"></i>@else{{ $n }}@endif
+            </span>
+            <span>{{ $step['label'] }}</span>
+        </div>
+        @if(!$loop->last)
+            <i data-feather="chevron-right" class="bm-wizard-sep"></i>
+        @endif
+    @endforeach
 </div>

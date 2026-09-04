@@ -839,6 +839,18 @@ select.f-input {
     background-color: var(--bk-surface) !important;
     color: var(--bk-text) !important;
     border-color: var(--bk-border-strong) !important;
+    /* Keep the dropdown chevron a single, correctly-placed glyph even when a
+       page-level `.f-input { background: … }` shorthand resets these props. */
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 12px !important;
+    padding-right: 2.25rem !important;
+}
+[dir="rtl"] .form-select,
+[dir="rtl"] select.f-input {
+    background-position: left 0.75rem center !important;
+    padding-right: 0.9rem !important;
+    padding-left: 2.25rem !important;
 }
 .form-select:focus,
 select.f-input:focus {

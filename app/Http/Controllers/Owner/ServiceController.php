@@ -11,6 +11,7 @@ use App\Models\Service;
 use App\Models\ServiceCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ServiceController extends Controller
@@ -78,8 +79,12 @@ class ServiceController extends Controller
     {
         $this->authorizeBranch($branch);
 
-        $data = $request->validated();
-        $data['is_active'] = $request->boolean('is_active');
+        $data = $this->prepareData($request);
+
+        if ($request->hasFile('image')) {
+            $data['image_path'] = $request->file('image')->store('services/images', 'public');
+        }
+        unset($data['image']);
 
         $branch->services()->create($data);
 
@@ -103,14 +108,58 @@ class ServiceController extends Controller
     {
         $this->authorizeService($service);
 
-        $data = $request->validated();
-        $data['is_active'] = $request->boolean('is_active');
+        $data = $this->prepareData($request);
+
+        if ($request->hasFile('image')) {
+            if ($service->image_path) {
+                Storage::disk('public')->delete($service->image_path);
+            }
+            $data['image_path'] = $request->file('image')->store('services/images', 'public');
+        } elseif ($request->boolean('remove_image') && $service->image_path) {
+            Storage::disk('public')->delete($service->image_path);
+            $data['image_path'] = null;
+        }
+        unset($data['image']);
 
         $service->update($data);
 
         return redirect()
             ->route('owner.branches.services.index', $service->branch)
             ->with('success', __('Service updated successfully.'));
+    }
+
+    /**
+     * Normalise validated form data: cast the toggle flags and clear the
+     * discount block when it is switched off.
+     *
+     * @return array<string, mixed>
+     */
+    private function prepareData(Request $request): array
+    {
+        /** @var StoreServiceRequest|UpdateServiceRequest $request */
+        $data = $request->validated();
+
+        $data['is_active']          = $request->boolean('is_active');
+        $data['is_bookable_online'] = $request->boolean('is_bookable_online');
+        $data['is_popular']         = $request->boolean('is_popular');
+        $data['is_recommended']     = $request->boolean('is_recommended');
+        $data['price_type']         = $data['price_type'] ?? 'fixed';
+        $data['service_type']       = $data['service_type'] ?? 'standard';
+
+        if (($data['price_type'] ?? 'fixed') !== 'range') {
+            $data['price_to'] = null;
+        }
+
+        // No discount value → wipe the whole discount block so a disabled
+        // promotion never lingers in the database.
+        if (empty($data['discount_value']) || empty($data['discount_type'])) {
+            $data['discount_type']      = null;
+            $data['discount_value']     = null;
+            $data['discount_starts_at'] = null;
+            $data['discount_ends_at']   = null;
+        }
+
+        return $data;
     }
 
     public function toggleActive(Service $service): RedirectResponse

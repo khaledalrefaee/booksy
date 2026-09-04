@@ -24,6 +24,28 @@ return new class extends Migration
             $table->decimal('discount_value', 12, 2)->nullable();
             $table->timestamp('discount_starts_at')->nullable();
             $table->timestamp('discount_ends_at')->nullable();
+
+            // Service classification: standard | package | membership | addon | consultation
+            $table->string('service_type', 20)->default('standard');
+            // Pricing model: fixed | from | range. `price` is the base/"from" value,
+            // `price_to` is the upper bound of a range.
+            $table->string('price_type', 10)->default('fixed');
+            $table->decimal('price_to', 10, 2)->nullable();
+            // Merchandising / visibility
+            $table->string('image_path')->nullable();
+            $table->boolean('is_bookable_online')->default(true);
+            $table->boolean('is_popular')->default(false);
+            $table->boolean('is_recommended')->default(false);
+            // Manual ordering within a branch (drag-and-drop)
+            $table->unsignedInteger('sort_order')->default(0);
+            // Membership-specific (nullable; only used when service_type = membership)
+            $table->unsignedInteger('membership_validity_days')->nullable();
+            $table->unsignedInteger('membership_sessions')->nullable();
+            // Optional merchandising badges: ["most_requested","new","special_offer","premium"]
+            $table->json('badges')->nullable();
+            // Consultation semantics (only meaningful when service_type = consultation)
+            $table->boolean('is_free')->default(false);
+            $table->boolean('requires_approval')->default(false);
             $table->timestamps();
         });
 

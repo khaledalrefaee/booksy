@@ -20,6 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('booksy:process-recurring-expenses')->dailyAt('06:00');
         $schedule->command('employees:license-reminders')->dailyAt('09:00');
         $schedule->command('subscriptions:expiry-reminders')->dailyAt('08:00');
+
+        // SMS credit system
+        $schedule->command('sms:send-reminders')->everyTenMinutes();
+        $schedule->command('sms:send-followups')->dailyAt('10:00');
+        $schedule->command('sms:expire-credits')->dailyAt('00:30');
     })
     ->withRouting(
         web: __DIR__.'/../routes/web.php',

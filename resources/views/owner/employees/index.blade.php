@@ -1,188 +1,168 @@
 @extends('owner.dashboard')
+@section('content')
+@include('owner.branches.partials._ui')
 
 @push('owner-styles')
 <style>
-.emp-hero {
-    background: linear-gradient(135deg, var(--bk-accent) 0%, #a07d10 100%);
-    border-radius: 20px; padding: 26px 30px;
-    margin-bottom: 24px; color: #000;
-    position: relative; overflow: hidden;
-}
-.emp-hero::before {
-    content: ''; position: absolute; top: -50px; right: -50px;
-    width: 180px; height: 180px; border-radius: 50%;
-    background: rgba(255,255,255,.1); pointer-events: none;
-}
-[dir="rtl"] .emp-hero::before { right: auto; left: -50px; }
-
-.emp-row {
-    display: flex; align-items: center; gap: 14px;
-    padding: 14px 22px;
-    border-bottom: 1px solid rgba(255,255,255,.05);
-    transition: background .18s, transform .18s;
-}
-.bk-theme-light .emp-row { border-bottom-color: rgba(0,0,0,.05); }
-.emp-row:last-child { border-bottom: none; }
-.emp-row:hover { background: rgba(12,110,116,.06); }
-[dir="ltr"] .emp-row:hover { transform: translateX(3px); }
-[dir="rtl"] .emp-row:hover { transform: translateX(-3px); }
-.emp-row:hover .emp-actions { opacity: 1; }
-
-.emp-avatar {
-    width: 44px; height: 44px; border-radius: 13px;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 16px; color: #fff; flex-shrink: 0;
-}
-.emp-name  { font-weight: 600; font-size: 14px; }
-.emp-meta  { font-size: 12px; color: rgba(255,255,255,.45); margin-top: 2px; }
-.bk-theme-light .emp-meta { color: rgba(0,0,0,.45); }
-.status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-
-.emp-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; opacity: 0; transition: opacity .2s; }
-@media (max-width: 768px) { .emp-actions { opacity: 1; } }
-
-.btn-act {
-    border: none; border-radius: 9px; font-size: 12px; font-weight: 600;
-    padding: 5px 12px; cursor: pointer; transition: opacity .18s;
-    display: inline-flex; align-items: center; gap: 4px; text-decoration: none;
-}
-.btn-act:hover { opacity: .85; }
-.btn-act-leave { background: linear-gradient(135deg,#f093fb,#f5576c); color:#fff !important; }
-.btn-act-edit  { background: linear-gradient(135deg,var(--bk-accent),var(--bk-accent-hover)); color:#fff !important; }
-.btn-act-del   { background: transparent; color: rgba(255,255,255,.4) !important; border: 1.5px solid rgba(255,255,255,.15); }
-.btn-act-del:hover { border-color: #f5576c; color: #f5576c !important; }
-.bk-theme-light .btn-act-del { color: rgba(0,0,0,.4) !important; border-color: rgba(0,0,0,.15); }
-.bk-theme-light .btn-act-del:hover { border-color: #dc3545; color: #dc3545 !important; }
-
-.bk-empty-emp { display: flex; flex-direction: column; align-items: center; padding: 60px 20px; gap: 12px; text-align: center; }
-.bk-empty-emp svg { opacity: .18; }
-.bk-empty-emp p { font-size: 14px; color: rgba(255,255,255,.4); margin: 0; }
-.bk-theme-light .bk-empty-emp p { color: rgba(0,0,0,.4); }
+/* Employee identity cell (built on bm-*) */
+.bm-emp-avatar { width:46px; height:46px; border-radius:13px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:16px; color:#fff; overflow:hidden; }
+.bm-emp-avatar img { width:100%; height:100%; object-fit:cover; }
+.bm-status { display:inline-flex; align-items:center; gap:5px; font-size:.75rem; font-weight:600; }
+.bm-status .dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
 </style>
 @endpush
 
-@section('content')
-<div class="page-content">
+<div class="page-content bm-wrap">
 
-    <div class="emp-hero bk-a1">
-        <div class="d-flex justify-content-between align-items-start align-items-sm-center flex-wrap gap-3 position-relative" style="z-index:1;">
-            <div>
-                <nav aria-label="breadcrumb" class="mb-2">
-                    <ol class="breadcrumb mb-0" style="--bs-breadcrumb-divider-color:rgba(0,0,0,.4);">
-                        <li class="breadcrumb-item">
-                            <a href="{{ route('owner.branches.index') }}" class="text-decoration-none" style="color:rgba(0,0,0,.6);font-size:13px;">{{ __('Branches') }}</a>
-                        </li>
-                        <li class="breadcrumb-item active" style="color:rgba(0,0,0,.5);font-size:13px;">{{ $branch->localizedName() }}</li>
-                    </ol>
-                </nav>
-                <h3 class="fw-bold mb-1" style="font-family:'Poppins',sans-serif;">{{ __('Employees') }}</h3>
-                <p class="mb-0" style="color:rgba(0,0,0,.6);font-size:13px;">
-                    {{ $employees->total() }} {{ __('team member(s) in') }} {{ $branch->localizedName() }}
-                    @if($branch->company)· <span style="font-weight:600;">{{ $branch->company->localizedName() }}</span>@endif
-                </p>
+    {{-- ═══════════ HEADER ═══════════ --}}
+    <header class="bm-head bm-reveal">
+        <div>
+            <div class="bm-eyebrow">
+                <a href="{{ route('owner.dashboard') }}">{{ __('Dashboard') }}</a>
+                <span aria-hidden="true">·</span>
+                <a href="{{ route('owner.branches.index') }}">{{ __('Branches') }}</a>
+                <span aria-hidden="true">·</span> {{ __('Employees') }}
             </div>
-            <div class="d-flex gap-2 flex-wrap">
-                <a href="{{ route('owner.employee-leaves.index') }}"
-                   class="btn btn-sm rounded-pill px-3"
-                   style="background:rgba(0,0,0,.15); color:#000; border:1.5px solid rgba(0,0,0,.25); font-weight:600; font-size:13px;">
-                    <i data-feather="calendar" style="width:13px;height:13px;"></i>
-                    <span class="{{ app()->getLocale()==='ar' ? 'me-1' : 'ms-1' }}">{{ __('Leaves') }}</span>
-                </a>
-                <a href="{{ route('owner.branches.employees.create', $branch) }}"
-                   class="btn btn-sm rounded-pill px-3"
-                   style="background:#fff; color:#a07d10; font-weight:700; font-size:13px;">
-                    <i data-feather="plus" style="width:13px;height:13px;"></i>
-                    <span class="{{ app()->getLocale()==='ar' ? 'me-1' : 'ms-1' }}">{{ __('Add Employee') }}</span>
-                </a>
-            </div>
+            <h1 class="bm-title">{{ __('Employees') }}</h1>
+            <p class="bm-subtitle" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span class="bm-chip"><i data-feather="users"></i><span>{{ $employees->total() }} {{ __('team member(s)') }}</span></span>
+                <span class="bm-chip"><i data-feather="map-pin"></i><span>{{ $branch->localizedName() }}</span></span>
+                @if($branch->company)<span class="bm-chip"><i data-feather="briefcase"></i><span>{{ $branch->company->localizedName() }}</span></span>@endif
+            </p>
         </div>
-    </div>
+        <div class="bm-head-actions">
+            <a href="{{ route('owner.employee-leaves.index') }}" class="bm-btn bm-btn-gold"><i data-feather="calendar"></i>{{ __('Leaves') }}</a>
+            <a href="{{ route('owner.branches.employees.create', $branch) }}" class="bm-btn bm-btn-primary"><i data-feather="plus"></i>{{ __('Add Employee') }}</a>
+        </div>
+    </header>
 
     @include('owner.partials.flash')
 
-    @include('owner.partials._search-sort-bar', [
-        'sortField'       => $sortField,
-        'sortDir'         => $sortDir,
-        'extraFilterKeys' => ['is_active'],
-        'sortOptions'     => [
-            ['field' => 'name',       'label' => __('الاسم')],
-            ['field' => 'created_at', 'label' => __('تاريخ الإضافة')],
-        ],
-        'extraFilters' => '
-            <select name="is_active" class="bk-ssb-select" style="min-width:130px;" onchange="document.getElementById(\'bk-sf-form\').submit()">
-                <option value="">' . __('كل الحالات') . '</option>
-                <option value="1" ' . ($isActive === '1' ? 'selected' : '') . '>' . __('نشط')    . '</option>
-                <option value="0" ' . ($isActive === '0' ? 'selected' : '') . '>' . __('غير نشط') . '</option>
+    <form method="GET" action="{{ route('owner.branches.employees.index', $branch) }}" class="bm-toolbar bm-reveal" id="bm-filter-form">
+        <input type="hidden" name="dir" value="{{ $sortDir }}" id="bm-dir-input">
+        <div class="bm-toolbar-row">
+            <div class="bm-search">
+                <button type="submit" class="bm-search-btn" aria-label="{{ __('Search') }}" tabindex="-1"><i data-feather="search"></i></button>
+                <input type="text" name="q" value="{{ $q }}"
+                       placeholder="{{ __('Search by name, email or phone…') }}" autocomplete="off"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();this.form.submit();}">
+            </div>
+            <select name="is_active" class="bm-select" onchange="document.getElementById('bm-filter-form').submit()">
+                <option value="">{{ __('All statuses') }}</option>
+                <option value="1" @selected($isActive === '1')>{{ __('Active') }}</option>
+                <option value="0" @selected($isActive === '0')>{{ __('Inactive') }}</option>
             </select>
-        ',
-    ])
+            <select name="sort" class="bm-select" onchange="document.getElementById('bm-filter-form').submit()">
+                <option value="name"       @selected($sortField === 'name')>{{ __('Name') }}</option>
+                <option value="created_at" @selected($sortField === 'created_at')>{{ __('Newest') }}</option>
+            </select>
+            <button type="button" class="bm-dir" id="bm-dir-btn" title="{{ $sortDir === 'asc' ? __('Ascending') : __('Descending') }}">
+                <i data-feather="{{ $sortDir === 'asc' ? 'arrow-up' : 'arrow-down' }}"></i>
+            </button>
+            @if($q !== '' || $isActive !== '')
+                <a href="{{ route('owner.branches.employees.index', $branch) }}" class="bm-clear"><i data-feather="x"></i> {{ __('Clear') }}</a>
+            @endif
+        </div>
+    </form>
 
-    <div class="card border-0 bk-a2" style="border-radius:18px !important; overflow:hidden;">
-        <div class="card-body p-0">
-            @forelse($employees as $emp)
-            @php
-                $palette = ['#5C7038','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1'];
-                $bg = $palette[$emp->id % count($palette)];
-                $initial = strtoupper(mb_substr($emp->name_en ?? $emp->name_ar ?? '?', 0, 1));
-            @endphp
-            <div class="emp-row">
-                <div class="emp-avatar" style="background:linear-gradient(135deg,{{ $bg }}bb,{{ $bg }});">{{ $initial }}</div>
-                <div class="flex-grow-1" style="min-width:0;">
-                    <div class="d-flex align-items-center flex-wrap gap-2">
-                        <span class="emp-name">
-                            {{ app()->getLocale()==='ar' ? ($emp->name_ar ?: $emp->name_en) : ($emp->name_en ?: $emp->name_ar) }}
-                        </span>
-                        @if($emp->is_active)
-                            <span class="d-flex align-items-center gap-1" style="font-size:11px;font-weight:600;color:#43e97b;">
-                                <span class="status-dot" style="background:#43e97b;"></span>{{ __('Active') }}
-                            </span>
-                        @else
-                            <span class="d-flex align-items-center gap-1" style="font-size:11px;color:#6c757d;">
-                                <span class="status-dot" style="background:#6c757d;"></span>{{ __('Inactive') }}
-                            </span>
-                        @endif
-                    </div>
-                    <div class="emp-meta d-flex flex-wrap gap-3 mt-1">
-                        @if($emp->email)
-                        <span><i data-feather="mail" style="width:11px;height:11px;" class="{{ app()->getLocale()==='ar' ? 'ms-1' : 'me-1' }}"></i>{{ $emp->email }}</span>
-                        @endif
-                        @if($emp->phone)
-                        <span><i data-feather="phone" style="width:11px;height:11px;" class="{{ app()->getLocale()==='ar' ? 'ms-1' : 'me-1' }}"></i>{{ $emp->phone }}</span>
-                        @endif
-                    </div>
-                </div>
-                <div class="emp-actions">
-                    <a href="{{ route('owner.employee-leaves.create', $emp) }}" class="btn-act btn-act-leave">
-                        <i data-feather="calendar" style="width:11px;height:11px;"></i>{{ __('Leave') }}
-                    </a>
-                    <a href="{{ route('owner.employees.edit', $emp) }}" class="btn-act btn-act-edit">
-                        <i data-feather="edit-2" style="width:11px;height:11px;"></i>{{ __('Edit') }}
-                    </a>
-                    <form action="{{ route('owner.employees.destroy', $emp) }}" method="post"
-                          onsubmit="return confirm('{{ __('Delete this employee?') }}')">
-                        @csrf @method('DELETE')
-                        <button type="submit" class="btn-act btn-act-del">
-                            <i data-feather="trash-2" style="width:11px;height:11px;"></i>
-                        </button>
-                    </form>
-                </div>
-            </div>
-            @empty
-            <div class="bk-empty-emp">
-                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                <p>{{ __('No employees for this branch.') }}</p>
-                <a href="{{ route('owner.branches.employees.create', $branch) }}"
-                   class="btn btn-primary rounded-pill px-4 mt-1">{{ __('Add Employee') }}</a>
-            </div>
-            @endforelse
+    <div class="bm-card bm-reveal">
+        <div class="bm-table-scroll">
+            <table class="bm-table">
+                <thead>
+                    <tr>
+                        <th>{{ __('Employee') }}</th>
+                        <th class="bm-col-phone">{{ __('Contact') }}</th>
+                        <th class="bm-center">{{ __('Status') }}</th>
+                        <th class="bm-end">{{ __('Actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($employees as $emp)
+                        @php
+                            $palette = ['#5C7038','#a07d10','#4facfe','#43a047','#c2185b','#6d4c41'];
+                            $bg = $palette[$emp->id % count($palette)];
+                            $initial = strtoupper(mb_substr($emp->name_en ?? $emp->name_ar ?? '?', 0, 1));
+                            $name = app()->getLocale()==='ar' ? ($emp->name_ar ?: $emp->name_en) : ($emp->name_en ?: $emp->name_ar);
+                        @endphp
+                        <tr>
+                            <td>
+                                <div class="bm-branch">
+                                    <div class="bm-emp-avatar" style="background:linear-gradient(135deg,{{ $bg }}cc,{{ $bg }});">
+                                        @if($emp->image)
+                                            <img src="{{ asset('storage/'.$emp->image) }}" alt="">
+                                        @else
+                                            {{ $initial }}
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <div class="bm-branch-name">{{ $name ?: '—' }}</div>
+                                        @if($emp->name_ar && $emp->name_en)<div class="bm-branch-ar" dir="rtl" lang="ar">{{ $emp->name_ar }}</div>@endif
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="bm-col-phone">
+                                <div class="bm-branch-meta">
+                                    @if($emp->email)<span class="bm-meta-line"><i data-feather="mail"></i>{{ $emp->email }}</span>@endif
+                                    @if($emp->phone)<span class="bm-meta-line"><i data-feather="phone"></i>{{ $emp->phone }}</span>@endif
+                                    @if(!$emp->email && !$emp->phone)<span class="bm-dash">—</span>@endif
+                                </div>
+                            </td>
+                            <td class="bm-center">
+                                @if($emp->is_active)
+                                    <span class="bm-badge bm-badge-active"><i data-feather="check-circle"></i>{{ __('Active') }}</span>
+                                @else
+                                    <span class="bm-badge bm-badge-inactive"><i data-feather="slash"></i>{{ __('Inactive') }}</span>
+                                @endif
+                            </td>
+                            <td class="bm-end">
+                                <div class="bm-actions">
+                                    <a href="{{ route('owner.employee-leaves.create', $emp) }}" class="bm-act" title="{{ __('Leave') }}"><i data-feather="calendar"></i></a>
+                                    <a href="{{ route('owner.employees.edit', $emp) }}" class="bm-act bm-act-primary" title="{{ __('Edit') }}"><i data-feather="edit-2"></i></a>
+                                    <form action="{{ route('owner.employees.destroy', $emp) }}" method="post" class="d-inline" onsubmit="return confirm('{{ __('Delete this employee?') }}')">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="bm-act bm-act-danger" title="{{ __('Delete') }}"><i data-feather="trash-2"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4">
+                                <div class="bm-empty">
+                                    <div class="bm-empty-ic"><i data-feather="users"></i></div>
+                                    <h3 class="bm-empty-title">{{ __('No employees for this branch.') }}</h3>
+                                    <a href="{{ route('owner.branches.employees.create', $branch) }}" class="bm-btn bm-btn-primary"><i data-feather="plus"></i>{{ __('Add Employee') }}</a>
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
         @if($employees->hasPages())
-            <div class="card-footer bg-transparent border-0 py-3">{{ $employees->links() }}</div>
+            <div class="bm-pagination">
+                <span class="bm-pagination-info">{{ __('Showing') }} {{ $employees->firstItem() }}–{{ $employees->lastItem() }} {{ __('of') }} {{ $employees->total() }}</span>
+                {{ $employees->links() }}
+            </div>
         @endif
     </div>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.feather) window.feather.replace();
+    var dirBtn = document.getElementById('bm-dir-btn');
+    var dirInp = document.getElementById('bm-dir-input');
+    var form   = document.getElementById('bm-filter-form');
+    if (dirBtn && dirInp && form) {
+        dirBtn.addEventListener('click', function () {
+            dirInp.value = dirInp.value === 'asc' ? 'desc' : 'asc';
+            form.submit();
+        });
+    }
+});
+</script>
+@endpush
 @endsection

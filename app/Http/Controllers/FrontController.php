@@ -225,6 +225,9 @@ class FrontController extends Controller
 
     public function show(\App\Models\Company $company)
     {
+        // Hidden from the public until the company is live (published).
+        abort_unless($company->status === 'active', 404);
+
         $company->load([
             'category',
             'branches.images',
@@ -236,7 +239,7 @@ class FrontController extends Controller
             'socialLinks',
         ]);
 
-        $branch      = $company->branches->first();
+        $branch      = $company->branches->firstWhere('status', 'active') ?? $company->branches->first();
         $allImages   = $company->branches->flatMap(fn($b) => $b->images);
         $serviceCategories = $branch
             ? $branch->services
@@ -255,6 +258,15 @@ class FrontController extends Controller
 
     public function branchShow(\App\Models\Branch $branch)
     {
+        // Not publicly reachable unless the branch is active, on the marketplace,
+        // and its company is active — otherwise the direct link 404s.
+        abort_unless(
+            $branch->status === 'active'
+                && $branch->booking_mode !== 'private'
+                && $branch->company?->status === 'active',
+            404
+        );
+
         $branch->load([
             'company.category',
             'company.socialLinks',

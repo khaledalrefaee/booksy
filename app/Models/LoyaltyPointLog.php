@@ -10,7 +10,7 @@ class LoyaltyPointLog extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'customer_id', 'points', 'reason', 'reference_type', 'reference_id', 'created_at',
+        'customer_id', 'branch_id', 'points', 'reason', 'reference_type', 'reference_id', 'created_at',
     ];
 
     protected function casts(): array
@@ -21,5 +21,10 @@ class LoyaltyPointLog extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 }

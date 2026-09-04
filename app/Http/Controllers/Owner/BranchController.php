@@ -19,10 +19,13 @@ class BranchController extends Controller
 {
     public function index(\Illuminate\Http\Request $request): View
     {
-        $search     = trim($request->input('q', ''));
+        // Empty query params arrive as NULL (ConvertEmptyStringsToNull middleware),
+        // so coalesce to '' for the view and guard the query with filled() — never
+        // a bare `!== ''`, which would let NULL through to where(company_id, 0).
+        $search     = trim((string) $request->input('q', ''));
         $sortField  = in_array($request->input('sort'), ['name', 'created_at', 'sort_order']) ? $request->input('sort') : 'created_at';
         $sortDir    = $request->input('dir') === 'asc' ? 'asc' : 'desc';
-        $filterCompanyId = $request->input('company_id', '');
+        $filterCompanyId = $request->input('company_id') ?? '';
 
         $query = Branch::query()
             ->with(['company', 'services', 'employees', 'workingHours']);
@@ -39,7 +42,7 @@ class BranchController extends Controller
             });
         }
 
-        if ($filterCompanyId !== '') {
+        if (filled($filterCompanyId)) {
             $query->where('company_id', (int) $filterCompanyId);
         }
 
@@ -54,7 +57,15 @@ class BranchController extends Controller
         $branches  = $query->paginate(15)->withQueryString();
         $companies = Company::query()->orderByLocalizedName()->get();
 
-        return view('owner.branches.index', compact('branches', 'search', 'sortField', 'sortDir', 'filterCompanyId', 'companies'));
+        // Read-only overview metrics (not affected by the current filters).
+        $stats = [
+            'total'        => Branch::query()->count(),
+            'active'       => Branch::query()->where('status', 'active')->count(),
+            'head_offices' => Branch::query()->where('is_head_office', true)->count(),
+            'companies'    => Branch::query()->distinct()->count('company_id'),
+        ];
+
+        return view('owner.branches.index', compact('branches', 'search', 'sortField', 'sortDir', 'filterCompanyId', 'companies', 'stats'));
     }
 
     public function create(): View

@@ -48,7 +48,7 @@
   function initMap() {
     if (mapInited || !window.L) return; mapInited = true;
     map = L.map('bkf-leaflet', { scrollWheelZoom: false }).setView([33.5138, 36.2765], 11);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap, &copy; CARTO' }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
     fetch(URL).then(function (r) { return r.json(); }).then(function (list) {
       var pts = [];
       list.forEach(function (b) {

@@ -45,6 +45,8 @@ return new class extends Migration
             $table->foreignId('appointment_id')->constrained()->cascadeOnDelete();
             $table->string('token', 64)->unique();
             $table->string('action', 20)->nullable();
+            // Customer-supplied cancellation reason (preset label + optional note).
+            $table->string('reason', 500)->nullable();
             $table->timestamp('acted_at')->nullable();
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();

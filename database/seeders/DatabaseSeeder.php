@@ -17,10 +17,12 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             CategorySeeder::class,
+            LocationsSeeder::class, // essential reference data (Syrian governorates/areas)
             OwnerSeeder::class,
-            DemoOwnerSeeder::class,
-            DemoCompany2Seeder::class,
-            DamascusSeeder::class,
+            // Disabled — keep only the base reference data + owner on a fresh DB.
+            // DemoOwnerSeeder::class,
+            // DemoCompany2Seeder::class,
+            // DamascusSeeder::class,
         ]);
 
         User::firstOrCreate(

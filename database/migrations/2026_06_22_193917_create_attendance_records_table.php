@@ -28,6 +28,8 @@ return new class extends Migration
             $table->string('location_status', 10)->nullable();
             $table->text('notes')->nullable();
             $table->unsignedInteger('late_minutes')->default(0);
+            $table->integer('overtime_minutes')->default(0);
+            $table->integer('early_leave_minutes')->default(0);
             $table->timestamps();
 
             $table->unique(['employee_id', 'date']);

@@ -34,6 +34,9 @@ return new class extends Migration
             $table->string('landline_phone')->nullable();
             $table->json('landlines')->nullable();
             $table->string('overpayment_to')->nullable();
+            $table->unsignedSmallInteger('loyalty_points_per_visit')->default(10);
+            $table->unsignedSmallInteger('loyalty_points_per_extra_service')->default(5);
+            $table->unsignedInteger('loyalty_points_per_currency_unit')->default(10000);
             $table->timestamps();
 
             $table->foreign('country_id')->references('id')->on('countries')->nullOnDelete();

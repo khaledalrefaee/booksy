@@ -303,6 +303,36 @@ class BranchController extends Controller
             ->with('success', __('Branch status updated.'));
     }
 
+    /**
+     * Deactivate a branch and immediately end the owner's session. Called via
+     * AJAX from the status control so the client can redirect to login without a
+     * page refresh. Also emails the owner a notification (best-effort).
+     */
+    public function deactivate(Request $request, Branch $branch): \Illuminate\Http\JsonResponse
+    {
+        $this->authoriseBranch($branch);
+
+        $company = $branch->company;
+        $branch->update(['status' => 'inactive']);
+        \App\Support\Auditor::log("Deactivated branch {$branch->localizedName()} (owner signed out)", $branch);
+
+        // Notify the owner — never let a mail failure block the sign-out.
+        try {
+            if (filled($company->email)) {
+                \Illuminate\Support\Facades\Mail::to($company->email)
+                    ->send(new \App\Mail\BranchDeactivatedNotification($company, $branch));
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Branch deactivation email failed: ' . $e->getMessage());
+        }
+
+        Auth::guard('company')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return response()->json(['redirect' => route('company.login')]);
+    }
+
     public function regenerateQr(Branch $branch): RedirectResponse
     {
         $this->authoriseBranch($branch);

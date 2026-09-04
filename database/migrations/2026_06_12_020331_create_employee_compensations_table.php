@@ -17,6 +17,8 @@ return new class extends Migration
             $table->enum('pay_period', ['daily', 'weekly', 'monthly'])->default('monthly');
             $table->enum('commission_type', ['flat', 'per_service'])->nullable();
             $table->decimal('commission_rate', 5, 2)->nullable();
+            $table->decimal('product_commission_rate', 5, 2)->default(0);
+            $table->decimal('overtime_hourly_rate', 12, 2)->nullable();
             $table->timestamps();
         });
     }

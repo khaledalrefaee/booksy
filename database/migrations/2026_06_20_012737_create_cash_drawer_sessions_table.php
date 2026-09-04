@@ -13,7 +13,9 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('branch_id')->constrained()->cascadeOnDelete();
             $table->foreignId('opened_by')->nullable()->constrained('employees')->nullOnDelete();
+            $table->string('opened_by_name', 100)->nullable();
             $table->foreignId('closed_by')->nullable()->constrained('employees')->nullOnDelete();
+            $table->string('closed_by_name', 100)->nullable();
             $table->decimal('opening_balance', 14, 2)->default(0);
             $table->decimal('closing_balance', 14, 2)->nullable();
             $table->decimal('expected_balance', 14, 2)->nullable();
@@ -26,7 +28,13 @@ return new class extends Migration
             $table->string('reconcile_reason', 50)->nullable();
             $table->text('reconcile_notes')->nullable();
             $table->foreignId('reconciled_by')->nullable()->constrained('employees')->nullOnDelete();
+            $table->string('reconciled_by_name', 100)->nullable();
             $table->timestamp('reconciled_at')->nullable();
+            // Financial rows are never hard-deleted — they get voided with a reason.
+            $table->timestamp('voided_at')->nullable();
+            $table->foreignId('voided_by')->nullable()->constrained('employees')->nullOnDelete();
+            $table->string('voided_by_name', 100)->nullable();
+            $table->string('void_reason', 255)->nullable();
             $table->timestamps();
         });
     }

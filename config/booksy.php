@@ -109,11 +109,31 @@ return [
     */
     'sms' => [
         'driver'    => env('BOOKSY_SMS_DRIVER', 'rasel'),
+        // Send endpoint — PENDING the real Rassel send URL from the account owner.
+        // Left config-driven and inert (no API key in dev) until confirmed; never
+        // guess a different path here.
         'url'       => env('BOOKSY_SMS_URL', 'https://raselsms.com/api/v2/messages/send'),
         'api_key'   => env('BOOKSY_SMS_KEY', ''),
         'channel'   => env('BOOKSY_SMS_CHANNEL', 'local_sms'),
         'sender'    => env('BOOKSY_SMS_SENDER', 'GlowRez'),
         'countries' => array_filter(explode(',', env('BOOKSY_SMS_COUNTRIES', '963'))),
+
+        // Confirmed read-only Rassel account APIs (GET): account profile, wallet
+        // balance, subscriptions, remaining segments, free grants, usage, and
+        // wallet transactions. Used only for the OWNER's provider dashboard —
+        // GlowRez branch credits live in its own ledger, never in Rassel's balance.
+        'api_base'  => rtrim(env('BOOKSY_SMS_API_BASE', 'https://raselsms.com/api/v2'), '/'),
+
+        /*
+        | SMS credit system — the price a single SMS is billed at, the default
+        | balance below which a wallet warns, and the currency shown in the
+        | owner/company SMS panels. The owner can override pricing per package.
+        */
+        'credits' => [
+            'default_price'          => (float) env('BOOKSY_SMS_PRICE', 25),
+            'currency'               => env('BOOKSY_SMS_CURRENCY', 'SYP'),
+            'low_balance_threshold'  => (int) env('BOOKSY_SMS_LOW_THRESHOLD', 50),
+        ],
     ],
 
 ];

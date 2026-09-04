@@ -1,546 +1,466 @@
 @extends('owner.dashboard')
 @section('content')
-<div class="page-content">
+@include('owner.branches.partials._ui')
 
-    {{-- ── Header ── --}}
-    <div class="d-flex justify-content-between align-items-center flex-wrap grid-margin">
+@php
+    $currency   = config('app.currency', 'SAR');
+    $dayLabels  = [__('Sun'), __('Mon'), __('Tue'), __('Wed'), __('Thu'), __('Fri'), __('Sat')];
+    $statusMeta = [
+        'active'      => ['label' => __('Active'),      'cls' => 'bm-badge-active',      'icon' => 'check-circle'],
+        'inactive'    => ['label' => __('Inactive'),    'cls' => 'bm-badge-inactive',    'icon' => 'slash'],
+        'maintenance' => ['label' => __('Maintenance'), 'cls' => 'bm-badge-maintenance', 'icon' => 'tool'],
+    ];
+    // Sort links preserve q + company filter, toggle direction on the active column.
+    $sortUrl = function (string $field) use ($sortField, $sortDir) {
+        $dir = ($sortField === $field && $sortDir === 'asc') ? 'desc' : 'asc';
+        return request()->fullUrlWithQuery(['sort' => $field, 'dir' => $dir, 'page' => 1]);
+    };
+    $sortCaret = fn (string $field) => $sortField === $field ? ($sortDir === 'asc' ? 'chevron-up' : 'chevron-down') : null;
+@endphp
+
+<div class="page-content bm-wrap">
+
+    {{-- ═══════════ HEADER ═══════════ --}}
+    <header class="bm-head bm-reveal">
         <div>
-            <h4 class="mb-3 mb-md-0">{{ __('Branches') }}</h4>
-            <nav aria-label="breadcrumb" class="mb-3">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="{{ route('owner.dashboard') }}">{{ __('Dashboard') }}</a></li>
-                    <li class="breadcrumb-item active">{{ __('Branches') }}</li>
-                </ol>
-            </nav>
+            <div class="bm-eyebrow">
+                <a href="{{ route('owner.dashboard') }}">{{ __('Dashboard') }}</a>
+                <span aria-hidden="true">·</span> {{ __('Platform') }}
+            </div>
+            <h1 class="bm-title">{{ __('Branches') }}</h1>
+            <p class="bm-subtitle">{{ __('Every location across all businesses on GlowRez — services, staff and opening hours in one place.') }}</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            {{-- View toggle --}}
-            <div class="bk-view-toggle" id="bk-view-toggle">
-                <button class="bk-vt-btn" data-view="table" title="{{ __('Table view') }}">
-                    <i data-feather="list" style="width:15px;height:15px;"></i>
+        <div class="bm-head-actions">
+            <div class="bm-viewtoggle" id="bm-view-toggle" role="group" aria-label="{{ __('View mode') }}">
+                <button type="button" class="bm-vt" data-view="table" title="{{ __('Table view') }}" aria-label="{{ __('Table view') }}">
+                    <i data-feather="list"></i>
                 </button>
-                <button class="bk-vt-btn" data-view="card" title="{{ __('Card view') }}">
-                    <i data-feather="grid" style="width:15px;height:15px;"></i>
+                <button type="button" class="bm-vt" data-view="card" title="{{ __('Card view') }}" aria-label="{{ __('Card view') }}">
+                    <i data-feather="grid"></i>
                 </button>
             </div>
-            <a href="{{ route('owner.branches.create') }}" class="btn btn-primary btn-icon-text rounded-pill shadow-sm">
-                <i class="btn-icon-prepend" data-feather="plus"></i>
+            <a href="{{ route('owner.branches.create') }}" class="bm-btn bm-btn-primary">
+                <i data-feather="plus"></i>
                 {{ __('Add branch') }}
             </a>
         </div>
-    </div>
+    </header>
 
     @include('owner.partials.flash')
 
-    @include('owner.partials._search-sort-bar', [
-        'dtTableId'       => 'bk-table',
-        'sortField'       => $sortField,
-        'sortDir'         => $sortDir,
-        'extraFilterKeys' => ['company_id'],
-        'sortOptions'     => [
-            ['field' => 'created_at',  'label' => __('تاريخ الإضافة')],
-            ['field' => 'name',        'label' => __('الاسم')],
-            ['field' => 'sort_order',  'label' => __('الترتيب')],
-        ],
-        'extraFilters' => '
-            <select name="company_id" class="bk-ssb-select" style="min-width:160px;" onchange="document.getElementById(\'bk-sf-form\').submit()">
-                <option value="">' . __('كل الشركات') . '</option>
-                ' . $companies->map(fn($c) => '<option value="' . $c->id . '" ' . ((string)$filterCompanyId === (string)$c->id ? 'selected' : '') . '>' . e($c->localizedName()) . '</option>')->implode('') . '
-            </select>
-        ',
-    ])
+    {{-- ═══════════ OVERVIEW ═══════════ --}}
+    <section class="bm-stats bm-reveal" aria-label="{{ __('Overview') }}">
+        <div class="bm-stat" style="--accent:var(--bk-accent);">
+            <span class="bm-stat-label"><i data-feather="map-pin"></i>{{ __('Total branches') }}</span>
+            <span class="bm-stat-value">{{ number_format($stats['total']) }}</span>
+        </div>
+        <div class="bm-stat" style="--accent:var(--bk-success);">
+            <span class="bm-stat-label"><i data-feather="check-circle"></i>{{ __('Active') }}</span>
+            <span class="bm-stat-value">{{ number_format($stats['active']) }}</span>
+        </div>
+        <div class="bm-stat" style="--accent:var(--bk-gold);">
+            <span class="bm-stat-label"><i data-feather="star"></i>{{ __('Head offices') }}</span>
+            <span class="bm-stat-value">{{ number_format($stats['head_offices']) }}</span>
+        </div>
+        <div class="bm-stat" style="--accent:var(--bk-info);">
+            <span class="bm-stat-label"><i data-feather="briefcase"></i>{{ __('Businesses') }}</span>
+            <span class="bm-stat-value">{{ number_format($stats['companies']) }}</span>
+        </div>
+    </section>
 
-    {{-- ══════════ TABLE VIEW ══════════ --}}
-    <div id="bk-view-table">
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="bk-table">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="ps-4">{{ __('الشركة') }}</th>
-                                <th>{{ __('اسم الفرع') }}</th>
-                                <th>{{ __('الهاتف') }}</th>
-                                <th>{{ __('المقر الرئيسي') }}</th>
-                                <th class="text-center">{{ __('الخدمات') }}</th>
-                                <th class="text-center">{{ __('الموظفون') }}</th>
-                                <th class="text-end pe-4 no-export">{{ __('الإجراءات') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($branches as $branch)
-                                <tr style="cursor:pointer;" onclick="location.href='{{ route('owner.branches.edit', $branch) }}'">
-                                    <td class="ps-4">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <div class="wd-36 ht-36 rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
-                                                 style="background:rgba(12,110,116,.12);color:var(--bk-accent);border:1px solid rgba(12,110,116,.2);">
-                                                <i data-feather="map-pin" style="width:15px;height:15px;"></i>
-                                            </div>
-                                            <div>
-                                                <p class="fw-semibold mb-0 tx-13">{{ $branch->company?->localizedName() ?? '—' }}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <p class="fw-semibold mb-0 tx-13">{{ $branch->name_en ?: $branch->name_ar ?: '—' }}</p>
-                                        @if($branch->name_ar && $branch->name_en)
-                                            <p class="tx-12 text-muted mb-0" dir="rtl" lang="ar">{{ $branch->name_ar }}</p>
-                                        @endif
-                                    </td>
-                                    <td class="text-muted tx-13">{{ $branch->phone ?: '—' }}</td>
-                                    <td>
-                                        @if($branch->is_head_office)
-                                            <span class="badge rounded-pill fw-semibold tx-11"
-                                                  style="background:rgba(12,110,116,.15);color:var(--bk-accent);border:1px solid rgba(12,110,116,.25);">
-                                                <i data-feather="star" style="width:10px;height:10px;"></i> {{ __('نعم') }}
-                                            </span>
-                                        @else
-                                            <span class="text-muted opacity-40 tx-12">{{ __('لا') }}</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge rounded-pill bg-light text-muted border tx-12">{{ $branch->services->count() }}</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge rounded-pill bg-light text-muted border tx-12">{{ $branch->employees->count() }}</span>
-                                    </td>
-                                    <td class="text-end pe-4 text-nowrap" onclick="event.stopPropagation()">
-                                        <a href="{{ route('owner.branches.edit', $branch) }}"
-                                           class="btn btn-sm btn-outline-primary rounded-pill me-1">
-                                            <i data-feather="edit-2" style="width:13px;height:13px;"></i>
-                                        </a>
-                                        <div class="btn-group">
-                                            <button type="button"
-                                                    class="btn btn-sm btn-outline-secondary rounded-pill dropdown-toggle px-3"
-                                                    data-bs-toggle="dropdown">
-                                                {{ __('المزيد') }}
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                                                <li>
-                                                    <a class="dropdown-item d-flex align-items-center gap-2"
-                                                       href="{{ route('owner.branches.working-hours.create', $branch) }}">
-                                                        <i data-feather="clock" style="width:14px;height:14px;"></i>
-                                                        {{ __('أوقات العمل') }}
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item d-flex align-items-center gap-2"
-                                                       href="{{ route('owner.branches.services.index', $branch) }}">
-                                                        <i data-feather="scissors" style="width:14px;height:14px;"></i>
-                                                        {{ __('الخدمات') }}
-                                                        @if($branch->services->count())
-                                                            <span class="ms-auto badge bg-secondary rounded-pill">{{ $branch->services->count() }}</span>
-                                                        @endif
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item d-flex align-items-center gap-2"
-                                                       href="{{ route('owner.branches.employees.index', $branch) }}">
-                                                        <i data-feather="users" style="width:14px;height:14px;"></i>
-                                                        {{ __('الموظفون') }}
-                                                        @if($branch->employees->count())
-                                                            <span class="ms-auto badge bg-secondary rounded-pill">{{ $branch->employees->count() }}</span>
-                                                        @endif
-                                                    </a>
-                                                </li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <form action="{{ route('owner.branches.destroy', $branch) }}"
-                                                          method="post"
-                                                          onsubmit="return confirm('{{ __('حذف هذا الفرع؟') }}');">
-                                                        @csrf @method('DELETE')
-                                                        <button type="submit"
-                                                                class="dropdown-item d-flex align-items-center gap-2 text-danger">
-                                                            <i data-feather="trash-2" style="width:14px;height:14px;"></i>
-                                                            {{ __('حذف') }}
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted py-5">
-                                        <div class="d-flex flex-column align-items-center gap-2">
-                                            <i data-feather="map-pin" style="width:40px;height:40px;" class="text-muted opacity-50"></i>
-                                            <p class="mb-0">{{ __('لا توجد فروع بعد.') }}</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+    {{-- ═══════════ TOOLBAR ═══════════ --}}
+    <form method="GET" action="{{ route('owner.branches.index') }}" class="bm-toolbar bm-reveal" id="bm-filter-form">
+        <input type="hidden" name="sort" value="{{ $sortField }}">
+        <input type="hidden" name="dir"  value="{{ $sortDir }}" id="bm-dir-input">
+
+        <div class="bm-toolbar-row">
+            <div class="bm-search">
+                <button type="submit" class="bm-search-btn" aria-label="{{ __('Search') }}" tabindex="-1">
+                    <i data-feather="search"></i>
+                </button>
+                <input type="text" name="q" value="{{ $search }}"
+                       placeholder="{{ __('Search by branch, company or phone…') }}"
+                       autocomplete="off" aria-label="{{ __('Search branches') }}"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();this.form.submit();}">
             </div>
+
+            <select name="company_id" class="bm-select" aria-label="{{ __('Company') }}"
+                    onchange="document.getElementById('bm-filter-form').submit()">
+                <option value="">{{ __('All companies') }}</option>
+                @foreach($companies as $c)
+                    <option value="{{ $c->id }}" @selected((string) $filterCompanyId === (string) $c->id)>{{ $c->localizedName() }}</option>
+                @endforeach
+            </select>
+
+            <select name="sort" class="bm-select" aria-label="{{ __('Sort by') }}"
+                    onchange="document.getElementById('bm-filter-form').submit()">
+                <option value="created_at" @selected($sortField === 'created_at')>{{ __('Newest') }}</option>
+                <option value="name"       @selected($sortField === 'name')>{{ __('Name') }}</option>
+                <option value="sort_order" @selected($sortField === 'sort_order')>{{ __('Display order') }}</option>
+            </select>
+
+            <button type="button" class="bm-dir" id="bm-dir-btn"
+                    title="{{ $sortDir === 'asc' ? __('Ascending') : __('Descending') }}"
+                    aria-label="{{ $sortDir === 'asc' ? __('Ascending') : __('Descending') }}">
+                <i data-feather="{{ $sortDir === 'asc' ? 'arrow-up' : 'arrow-down' }}"></i>
+            </button>
+
+            @if($search !== '' || $filterCompanyId !== '')
+                <a href="{{ route('owner.branches.index') }}" class="bm-clear">
+                    <i data-feather="x"></i> {{ __('Clear') }}
+                </a>
+            @endif
+        </div>
+    </form>
+
+    {{-- ═══════════ TABLE VIEW ═══════════ --}}
+    <div id="bm-view-table" class="bm-reveal">
+        <div class="bm-card">
+            <div class="bm-table-scroll">
+                <table class="bm-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                <a href="{{ $sortUrl('name') }}" class="bm-sort {{ $sortField === 'name' ? 'is-active' : '' }}">
+                                    {{ __('Branch') }}
+                                    @if($ic = $sortCaret('name'))<i data-feather="{{ $ic }}" class="bm-sort-caret"></i>@endif
+                                </a>
+                            </th>
+                            <th>{{ __('Company') }}</th>
+                            <th>{{ __('Status') }}</th>
+                            <th class="bm-center bm-col-count">{{ __('Services') }}</th>
+                            <th class="bm-center bm-col-count">{{ __('Staff') }}</th>
+                            <th class="bm-end">{{ __('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($branches as $branch)
+                            @php
+                                $st  = $statusMeta[$branch->status] ?? $statusMeta['inactive'];
+                                $svc = $branch->services->count();
+                                $emp = $branch->employees->count();
+                                $editUrl = route('owner.branches.edit', $branch);
+                            @endphp
+                            <tr class="bm-row-link" onclick="window.location='{{ $editUrl }}'">
+                                {{-- Branch identity --}}
+                                <td>
+                                    <div class="bm-branch">
+                                        <span class="bm-avatar" aria-hidden="true"><i data-feather="map-pin"></i></span>
+                                        <div style="min-width:0;">
+                                            <div class="bm-branch-name">
+                                                {{ $branch->name_en ?: $branch->name_ar ?: '—' }}
+                                                @if($branch->is_head_office)
+                                                    <span class="bm-badge bm-badge-head"><i data-feather="star"></i>{{ __('HQ') }}</span>
+                                                @endif
+                                            </div>
+                                            @if($branch->name_ar && $branch->name_en)
+                                                <div class="bm-branch-ar" lang="ar" dir="rtl">{{ $branch->name_ar }}</div>
+                                            @endif
+                                            <div class="bm-branch-meta">
+                                                @if($branch->phone)
+                                                    <span class="bm-meta-line" dir="ltr"><i data-feather="phone"></i>{{ $branch->phone }}</span>
+                                                @endif
+                                                @if($branch->address)
+                                                    <span class="bm-meta-line bm-col-address"><i data-feather="navigation"></i>{{ Str::limit($branch->address, 42) }}</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                {{-- Company --}}
+                                <td>
+                                    <span class="bm-chip"><i data-feather="briefcase"></i><span>{{ $branch->company?->localizedName() ?? '—' }}</span></span>
+                                </td>
+
+                                {{-- Status (read-only badge) --}}
+                                <td>
+                                    <span class="bm-badge {{ $st['cls'] }}"><i data-feather="{{ $st['icon'] }}"></i>{{ $st['label'] }}</span>
+                                </td>
+
+                                {{-- Services count --}}
+                                <td class="bm-center bm-col-count">
+                                    <span class="bm-count {{ $svc ? '' : 'is-zero' }}">{{ $svc }}</span>
+                                </td>
+
+                                {{-- Staff count --}}
+                                <td class="bm-center bm-col-count">
+                                    <span class="bm-count {{ $emp ? '' : 'is-zero' }}">{{ $emp }}</span>
+                                </td>
+
+                                {{-- Actions --}}
+                                <td class="bm-end" onclick="event.stopPropagation()">
+                                    <div class="bm-actions">
+                                        <a href="{{ $editUrl }}" class="bm-act bm-act-primary" title="{{ __('Edit') }}" aria-label="{{ __('Edit branch') }}">
+                                            <i data-feather="edit-2"></i>
+                                        </a>
+                                        <button type="button" class="bm-act dropdown-toggle" data-bs-toggle="dropdown" data-bs-boundary="viewport"
+                                                title="{{ __('More') }}" aria-label="{{ __('More actions') }}" aria-expanded="false">
+                                            <i data-feather="more-horizontal"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end bm-menu">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('owner.branches.working-hours.create', $branch) }}">
+                                                    <i data-feather="clock"></i>{{ __('Working hours') }}
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('owner.branches.services.index', $branch) }}">
+                                                    <i data-feather="scissors"></i>{{ __('Services') }}
+                                                    @if($svc)<span class="bm-count bm-menu-count">{{ $svc }}</span>@endif
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="{{ route('owner.branches.employees.index', $branch) }}">
+                                                    <i data-feather="users"></i>{{ __('Employees') }}
+                                                    @if($emp)<span class="bm-count bm-menu-count">{{ $emp }}</span>@endif
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form action="{{ route('owner.branches.destroy', $branch) }}" method="post"
+                                                      onsubmit="return confirm('{{ __('Delete this branch? This cannot be undone.') }}');">
+                                                    @csrf @method('DELETE')
+                                                    <button type="submit" class="dropdown-item text-danger">
+                                                        <i data-feather="trash-2"></i>{{ __('Delete branch') }}
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6">
+                                    <div class="bm-empty">
+                                        <span class="bm-empty-ic"><i data-feather="map-pin"></i></span>
+                                        <p class="bm-empty-title">{{ __('No branches found') }}</p>
+                                        <p class="bm-empty-sub">
+                                            @if($search !== '' || $filterCompanyId !== '')
+                                                {{ __('No branches match your search or filters.') }}
+                                            @else
+                                                {{ __('Add your first branch to start managing services, staff and hours.') }}
+                                            @endif
+                                        </p>
+                                        @if($search !== '' || $filterCompanyId !== '')
+                                            <a href="{{ route('owner.branches.index') }}" class="bm-btn bm-btn-ghost">{{ __('Clear filters') }}</a>
+                                        @else
+                                            <a href="{{ route('owner.branches.create') }}" class="bm-btn bm-btn-primary"><i data-feather="plus"></i>{{ __('Add branch') }}</a>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
             @if($branches->hasPages())
-                <div class="card-footer bg-transparent border-0 py-3">{{ $branches->links() }}</div>
+                <div class="bm-pagination">
+                    <div class="bm-pagination-info">
+                        {{ __('Showing :from–:to of :total', ['from' => $branches->firstItem(), 'to' => $branches->lastItem(), 'total' => $branches->total()]) }}
+                    </div>
+                    {{ $branches->onEachSide(1)->links() }}
+                </div>
             @endif
         </div>
     </div>
 
-    {{-- ══════════ CARD VIEW ══════════ --}}
-    <div id="bk-view-card" style="display:none;">
-        @forelse($branches as $branch)
-        <div class="bk-branch-card bk-a{{ ($loop->index % 6) + 1 }}">
-
-            <div class="bk-branch-card-header">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="bk-branch-avatar">
-                        <i data-feather="map-pin" style="width:20px;height:20px;"></i>
-                    </div>
-                    <div>
-                        <div class="bk-branch-name">{{ $branch->localizedName() }}</div>
-                        <div class="bk-branch-company">
-                            <i data-feather="briefcase" style="width:11px;height:11px;display:inline;"></i>
-                            {{ $branch->company?->localizedName() ?? '—' }}
-                        </div>
-                    </div>
-                </div>
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    @if($branch->is_head_office)
-                        <span class="badge rounded-pill fw-semibold tx-11" style="background:rgba(12,110,116,.15);color:var(--bk-accent);border:1px solid rgba(12,110,116,.25);">
-                            <i data-feather="star" style="width:10px;height:10px;"></i> {{ __('المقر الرئيسي') }}
-                        </span>
-                    @endif
-                    @if($branch->phone)
-                        <span style="font-size:.75rem;color:rgba(255,255,255,.4);">
-                            <i data-feather="phone" style="width:11px;height:11px;display:inline;"></i> {{ $branch->phone }}
-                        </span>
-                    @endif
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-secondary rounded-pill dropdown-toggle px-3" data-bs-toggle="dropdown">
-                            {{ __('الإجراءات') }}
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                            <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('owner.branches.edit', $branch) }}">
-                                <i data-feather="edit-2" style="width:14px;height:14px;"></i>{{ __('تعديل') }}</a></li>
-                            <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('owner.branches.working-hours.create', $branch) }}">
-                                <i data-feather="clock" style="width:14px;height:14px;"></i>{{ __('أوقات العمل') }}</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form action="{{ route('owner.branches.destroy', $branch) }}" method="post" onsubmit="return confirm('{{ __('حذف هذا الفرع؟') }}');">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="dropdown-item d-flex align-items-center gap-2 text-danger">
-                                        <i data-feather="trash-2" style="width:14px;height:14px;"></i>{{ __('حذف') }}
-                                    </button>
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            @php $bid = $branch->id; @endphp
-            <ul class="bk-branch-tabs">
-                <li class="bk-branch-tab active" data-tab="services-{{ $bid }}">
-                    <i data-feather="scissors" style="width:13px;height:13px;"></i>
-                    {{ __('الخدمات') }}
-                    <span class="bk-branch-tab-count">{{ $branch->services->count() }}</span>
-                </li>
-                <li class="bk-branch-tab" data-tab="employees-{{ $bid }}">
-                    <i data-feather="users" style="width:13px;height:13px;"></i>
-                    {{ __('الموظفون') }}
-                    <span class="bk-branch-tab-count">{{ $branch->employees->count() }}</span>
-                </li>
-                <li class="bk-branch-tab" data-tab="hours-{{ $bid }}">
-                    <i data-feather="clock" style="width:13px;height:13px;"></i>
-                    {{ __('أوقات العمل') }}
-                    <span class="bk-branch-tab-count">{{ $branch->workingHours->count() }}</span>
-                </li>
-            </ul>
-
-            {{-- Services Panel --}}
-            <div class="bk-branch-panel active" id="services-{{ $bid }}">
-                @if($branch->services->count())
-                    <div class="bk-branch-grid">
-                        @foreach($branch->services as $svc)
-                        <div class="bk-branch-item">
-                            <div class="bk-branch-item-icon" style="background:rgba(61,187,212,.12);color:#3dbbd4;">
-                                <i data-feather="scissors" style="width:14px;height:14px;"></i>
+    {{-- ═══════════ CARD VIEW ═══════════ --}}
+    <div id="bm-view-card" style="display:none;">
+        @if($branches->count())
+            <div class="bm-grid">
+                @foreach($branches as $branch)
+                    @php
+                        $bid = $branch->id;
+                        $st  = $statusMeta[$branch->status] ?? $statusMeta['inactive'];
+                        $svc = $branch->services->count();
+                        $emp = $branch->employees->count();
+                    @endphp
+                    <article class="bm-bcard bm-reveal">
+                        <div class="bm-bcard-head">
+                            <span class="bm-avatar" aria-hidden="true"><i data-feather="map-pin"></i></span>
+                            <div class="bm-bcard-id">
+                                <div class="bm-branch-name">
+                                    {{ $branch->localizedName() }}
+                                    @if($branch->is_head_office)
+                                        <span class="bm-badge bm-badge-head"><i data-feather="star"></i>{{ __('HQ') }}</span>
+                                    @endif
+                                </div>
+                                <div class="bm-meta-line" style="margin-top:4px;"><i data-feather="briefcase"></i>{{ $branch->company?->localizedName() ?? '—' }}</div>
+                                <div style="margin-top:8px;"><span class="bm-badge {{ $st['cls'] }}"><i data-feather="{{ $st['icon'] }}"></i>{{ $st['label'] }}</span></div>
                             </div>
-                            <div class="bk-branch-item-body">
-                                <div class="bk-branch-item-name">{{ $svc->localizedName() }}</div>
-                                @if($svc->duration_minutes || $svc->price)
-                                    <div class="bk-branch-item-meta">
-                                        @if($svc->duration_minutes)<i data-feather="clock" style="width:10px;height:10px;"></i> {{ $svc->duration_minutes }} {{ __('د') }}@endif
-                                        @if($svc->price) · {{ number_format($svc->price, 0) }} {{ config('app.currency','SAR') }}@endif
+                            <div class="bm-actions">
+                                <a href="{{ route('owner.branches.edit', $branch) }}" class="bm-act bm-act-primary" title="{{ __('Edit') }}" aria-label="{{ __('Edit branch') }}">
+                                    <i data-feather="edit-2"></i>
+                                </a>
+                                <button type="button" class="bm-act dropdown-toggle" data-bs-toggle="dropdown" data-bs-boundary="viewport"
+                                        title="{{ __('More') }}" aria-label="{{ __('More actions') }}" aria-expanded="false">
+                                    <i data-feather="more-horizontal"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end bm-menu">
+                                    <li><a class="dropdown-item" href="{{ route('owner.branches.working-hours.create', $branch) }}"><i data-feather="clock"></i>{{ __('Working hours') }}</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form action="{{ route('owner.branches.destroy', $branch) }}" method="post" onsubmit="return confirm('{{ __('Delete this branch? This cannot be undone.') }}');">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="dropdown-item text-danger"><i data-feather="trash-2"></i>{{ __('Delete branch') }}</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="bm-bcard-tabs" role="tablist">
+                            <button type="button" class="bm-tab is-active" data-tab="svc-{{ $bid }}"><i data-feather="scissors"></i>{{ __('Services') }}<span class="bm-tab-count">{{ $svc }}</span></button>
+                            <button type="button" class="bm-tab" data-tab="emp-{{ $bid }}"><i data-feather="users"></i>{{ __('Staff') }}<span class="bm-tab-count">{{ $emp }}</span></button>
+                            <button type="button" class="bm-tab" data-tab="hrs-{{ $bid }}"><i data-feather="clock"></i>{{ __('Hours') }}<span class="bm-tab-count">{{ $branch->workingHours->where('is_open', true)->count() }}</span></button>
+                        </div>
+
+                        {{-- Services --}}
+                        <div class="bm-panel is-active" id="svc-{{ $bid }}">
+                            @forelse($branch->services->take(4) as $s)
+                                <div class="bm-mini">
+                                    <span class="bm-mini-ic"><i data-feather="scissors"></i></span>
+                                    <div class="bm-mini-body">
+                                        <div class="bm-mini-name">{{ $s->localizedName() }}</div>
+                                        @if($s->duration_minutes || $s->price)
+                                            <div class="bm-mini-meta">
+                                                @if($s->duration_minutes){{ $s->duration_minutes }} {{ __('min') }}@endif
+                                                @if($s->duration_minutes && $s->price) · @endif
+                                                @if($s->price){{ number_format($s->price, 0) }} {{ $currency }}@endif
+                                            </div>
+                                        @endif
                                     </div>
-                                @endif
+                                </div>
+                            @empty
+                                <div class="bm-panel-empty"><i data-feather="scissors"></i><span>{{ __('No services yet') }}</span></div>
+                            @endforelse
+                            <div class="bm-panel-foot">
+                                <a href="{{ route('owner.branches.services.index', $branch) }}" class="bm-panel-add"><i data-feather="{{ $svc ? 'arrow-right' : 'plus' }}"></i>{{ $svc > 4 ? __('View all :n services', ['n' => $svc]) : ($svc ? __('Manage services') : __('Add service')) }}</a>
                             </div>
-                            <a href="{{ route('owner.branches.services.index', $branch) }}" class="bk-branch-item-action">
-                                <i data-feather="arrow-right" style="width:12px;height:12px;"></i>
-                            </a>
                         </div>
-                        @endforeach
-                    </div>
-                    <a href="{{ route('owner.branches.services.create', $branch) }}" class="bk-branch-add-btn mt-2">
-                        <i data-feather="plus" style="width:13px;height:13px;"></i> {{ __('إضافة خدمة') }}
-                    </a>
-                @else
-                    <div class="bk-branch-empty">
-                        <i data-feather="scissors" style="width:22px;height:22px;opacity:.3;"></i>
-                        <span>{{ __('لا توجد خدمات بعد') }}</span>
-                        <a href="{{ route('owner.branches.services.create', $branch) }}" class="bk-branch-add-btn">
-                            <i data-feather="plus" style="width:13px;height:13px;"></i> {{ __('إضافة خدمة') }}
-                        </a>
-                    </div>
-                @endif
-            </div>
 
-            {{-- Employees Panel --}}
-            <div class="bk-branch-panel" id="employees-{{ $bid }}">
-                @if($branch->employees->count())
-                    <div class="bk-branch-grid">
-                        @foreach($branch->employees as $emp)
-                        <div class="bk-branch-item">
-                            <div class="bk-branch-item-icon" style="background:rgba(43,207,126,.12);color:#2bcf7e;">
-                                <span style="font-size:.7rem;font-weight:800;">{{ strtoupper(substr($emp->localizedName(),0,2)) }}</span>
+                        {{-- Staff --}}
+                        <div class="bm-panel" id="emp-{{ $bid }}">
+                            @forelse($branch->employees->take(4) as $e)
+                                <div class="bm-mini">
+                                    <span class="bm-mini-ic">{{ mb_strtoupper(mb_substr($e->localizedName(), 0, 2)) }}</span>
+                                    <div class="bm-mini-body"><div class="bm-mini-name">{{ $e->localizedName() }}</div></div>
+                                </div>
+                            @empty
+                                <div class="bm-panel-empty"><i data-feather="users"></i><span>{{ __('No staff yet') }}</span></div>
+                            @endforelse
+                            <div class="bm-panel-foot">
+                                <a href="{{ route('owner.branches.employees.index', $branch) }}" class="bm-panel-add"><i data-feather="{{ $emp ? 'arrow-right' : 'plus' }}"></i>{{ $emp > 4 ? __('View all :n staff', ['n' => $emp]) : ($emp ? __('Manage staff') : __('Add employee')) }}</a>
                             </div>
-                            <div class="bk-branch-item-body">
-                                <div class="bk-branch-item-name">{{ $emp->localizedName() }}</div>
-                            </div>
-                            <a href="{{ route('owner.branches.employees.index', $branch) }}" class="bk-branch-item-action">
-                                <i data-feather="arrow-right" style="width:12px;height:12px;"></i>
-                            </a>
                         </div>
-                        @endforeach
-                    </div>
-                    <a href="{{ route('owner.branches.employees.create', $branch) }}" class="bk-branch-add-btn mt-2">
-                        <i data-feather="plus" style="width:13px;height:13px;"></i> {{ __('إضافة موظف') }}
-                    </a>
-                @else
-                    <div class="bk-branch-empty">
-                        <i data-feather="users" style="width:22px;height:22px;opacity:.3;"></i>
-                        <span>{{ __('لا يوجد موظفون بعد') }}</span>
-                        <a href="{{ route('owner.branches.employees.create', $branch) }}" class="bk-branch-add-btn">
-                            <i data-feather="plus" style="width:13px;height:13px;"></i> {{ __('إضافة موظف') }}
-                        </a>
-                    </div>
-                @endif
-            </div>
 
-            {{-- Working Hours Panel --}}
-            <div class="bk-branch-panel" id="hours-{{ $bid }}">
-                @if($branch->workingHours->count())
-                    @php $days = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت']; @endphp
-                    <div class="bk-hours-grid">
-                        @foreach($days as $di => $day)
-                            @php $wh = $branch->workingHours->firstWhere('day_of_week', $di); @endphp
-                            <div class="bk-hours-row {{ $wh && !$wh->is_closed ? 'open' : 'closed' }}">
-                                <span class="bk-hours-day">{{ $day }}</span>
-                                @if($wh && !$wh->is_closed)
-                                    <span class="bk-hours-time">{{ substr($wh->open_time,0,5) }} — {{ substr($wh->close_time,0,5) }}</span>
-                                @else
-                                    <span class="bk-hours-closed">{{ __('مغلق') }}</span>
-                                @endif
+                        {{-- Hours --}}
+                        <div class="bm-panel" id="hrs-{{ $bid }}">
+                            @php $openCount = $branch->workingHours->where('is_open', true)->count(); @endphp
+                            @if($openCount)
+                                <div class="bm-hours">
+                                    @foreach($dayLabels as $di => $dl)
+                                        @php $shifts = $branch->workingHours->where('day_of_week', $di)->where('is_open', true)->sortBy('shift_number'); @endphp
+                                        <div class="bm-hrow {{ $shifts->count() ? 'is-open' : '' }}">
+                                            <span class="bm-hday">{{ $dl }}</span>
+                                            @if($shifts->count())
+                                                <span class="bm-htime">{{ $shifts->map(fn($w) => substr($w->open_time, 0, 5).'–'.substr($w->close_time, 0, 5))->implode(' / ') }}</span>
+                                            @else
+                                                <span class="bm-hclosed">{{ __('Closed') }}</span>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="bm-panel-empty"><i data-feather="clock"></i><span>{{ __('No working hours set') }}</span></div>
+                            @endif
+                            <div class="bm-panel-foot">
+                                <a href="{{ route('owner.branches.working-hours.create', $branch) }}" class="bm-panel-add"><i data-feather="{{ $openCount ? 'edit-2' : 'plus' }}"></i>{{ $openCount ? __('Edit hours') : __('Set hours') }}</a>
                             </div>
-                        @endforeach
-                    </div>
-                    <a href="{{ route('owner.branches.working-hours.create', $branch) }}" class="bk-branch-add-btn mt-3">
-                        <i data-feather="edit-2" style="width:13px;height:13px;"></i> {{ __('تعديل الأوقات') }}
-                    </a>
-                @else
-                    <div class="bk-branch-empty">
-                        <i data-feather="clock" style="width:22px;height:22px;opacity:.3;"></i>
-                        <span>{{ __('لم يتم تحديد أوقات العمل') }}</span>
-                        <a href="{{ route('owner.branches.working-hours.create', $branch) }}" class="bk-branch-add-btn">
-                            <i data-feather="plus" style="width:13px;height:13px;"></i> {{ __('تحديد الأوقات') }}
-                        </a>
-                    </div>
-                @endif
+                        </div>
+                    </article>
+                @endforeach
             </div>
 
-        </div>
-        @empty
-            <div class="card border-0 shadow-sm rounded-4 p-5 text-center">
-                <div class="d-flex flex-column align-items-center gap-2">
-                    <i data-feather="map-pin" style="width:40px;height:40px;" class="text-muted opacity-50"></i>
-                    <p class="mb-0 text-muted">{{ __('لا توجد فروع بعد.') }}</p>
+            @if($branches->hasPages())
+                <div class="bm-card" style="margin-top:16px;">
+                    <div class="bm-pagination" style="border-top:none;">
+                        <div class="bm-pagination-info">
+                            {{ __('Showing :from–:to of :total', ['from' => $branches->firstItem(), 'to' => $branches->lastItem(), 'total' => $branches->total()]) }}
+                        </div>
+                        {{ $branches->onEachSide(1)->links() }}
+                    </div>
                 </div>
-            </div>
-        @endforelse
-
-        @if($branches->hasPages())
-            <div class="card border-0 shadow-sm rounded-4 mt-3 px-4 py-3">
-                {{ $branches->links() }}
+            @endif
+        @else
+            <div class="bm-card">
+                <div class="bm-empty">
+                    <span class="bm-empty-ic"><i data-feather="map-pin"></i></span>
+                    <p class="bm-empty-title">{{ __('No branches found') }}</p>
+                    <p class="bm-empty-sub">{{ __('Add your first branch to start managing services, staff and hours.') }}</p>
+                    <a href="{{ route('owner.branches.create') }}" class="bm-btn bm-btn-primary"><i data-feather="plus"></i>{{ __('Add branch') }}</a>
+                </div>
             </div>
         @endif
     </div>
 
 </div>
 
-@push('owner-styles')
-<style>
-/* ── View Toggle ── */
-.bk-view-toggle {
-    display:inline-flex; gap:3px; padding:4px;
-    background:rgba(255,255,255,.05);
-    border:1px solid rgba(255,255,255,.1); border-radius:10px;
-}
-.bk-theme-light .bk-view-toggle { background:rgba(0,0,0,.04); border-color:rgba(0,0,0,.08); }
-.bk-vt-btn {
-    display:flex; align-items:center; justify-content:center;
-    width:32px; height:32px; border-radius:7px;
-    border:none; background:transparent;
-    color:rgba(255,255,255,.4); cursor:pointer; transition:all .18s;
-}
-.bk-theme-light .bk-vt-btn { color:rgba(0,0,0,.4); }
-.bk-vt-btn.active { background:var(--bk-accent); color:#000 !important; }
-.bk-vt-btn:hover:not(.active) { background:rgba(255,255,255,.08); color:rgba(255,255,255,.8); }
-.bk-theme-light .bk-vt-btn:hover:not(.active) { background:rgba(0,0,0,.06); color:rgba(0,0,0,.8); }
-
-/* ── Branch Card ── */
-.bk-branch-card {
-    background:var(--card-bg, #1a2234);
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:18px; margin-bottom:18px; overflow:hidden;
-    transition:box-shadow .25s, border-color .25s;
-}
-.bk-theme-light .bk-branch-card { background:#fff; border-color:rgba(0,0,0,.07); box-shadow:0 2px 12px rgba(0,0,0,.06); }
-.bk-branch-card:hover { box-shadow:0 8px 32px rgba(0,0,0,.2); border-color:rgba(12,110,116,.2); }
-.bk-theme-light .bk-branch-card:hover { box-shadow:0 8px 28px rgba(0,0,0,.1); border-color:rgba(12,110,116,.15); }
-
-.bk-branch-card-header {
-    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
-    padding:20px 24px;
-    border-bottom:1px solid rgba(255,255,255,.06);
-    background:linear-gradient(135deg,rgba(12,110,116,.05),transparent);
-}
-.bk-theme-light .bk-branch-card-header { border-bottom-color:rgba(0,0,0,.05); }
-
-.bk-branch-avatar {
-    width:46px; height:46px; border-radius:14px; flex-shrink:0;
-    background:rgba(12,110,116,.15); color:var(--bk-accent);
-    display:flex; align-items:center; justify-content:center;
-    border:1px solid rgba(12,110,116,.2);
-}
-.bk-branch-name { font-size:1rem; font-weight:800; font-family:'Poppins',sans-serif; }
-.bk-branch-company { font-size:.73rem; color:var(--bk-accent); margin-top:2px; display:flex; align-items:center; gap:4px; }
-
-/* ── Branch Tabs ── */
-.bk-branch-tabs {
-    list-style:none; margin:0; padding:0 20px;
-    display:flex; gap:2px; border-bottom:1px solid rgba(255,255,255,.06); overflow-x:auto;
-}
-.bk-theme-light .bk-branch-tabs { border-bottom-color:rgba(0,0,0,.06); }
-.bk-branch-tab {
-    display:flex; align-items:center; gap:6px; padding:12px 16px;
-    font-size:.78rem; font-weight:600; color:rgba(255,255,255,.4);
-    cursor:pointer; border-bottom:2px solid transparent; transition:all .18s; white-space:nowrap;
-}
-.bk-theme-light .bk-branch-tab { color:rgba(0,0,0,.45); }
-.bk-branch-tab:hover { color:rgba(255,255,255,.8); }
-.bk-theme-light .bk-branch-tab:hover { color:rgba(0,0,0,.8); }
-.bk-branch-tab.active { color:var(--bk-accent) !important; border-bottom-color:var(--bk-accent); }
-.bk-branch-tab-count {
-    background:rgba(255,255,255,.08); border-radius:20px;
-    padding:1px 7px; font-size:.65rem; font-weight:800;
-}
-.bk-theme-light .bk-branch-tab-count { background:rgba(0,0,0,.06); color:rgba(0,0,0,.6); }
-.bk-branch-tab.active .bk-branch-tab-count { background:rgba(12,110,116,.2); color:var(--bk-accent); }
-
-.bk-branch-panel { display:none; padding:20px 24px; }
-.bk-branch-panel.active { display:block; }
-
-/* ── Branch Grid Items ── */
-.bk-branch-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; margin-bottom:14px; }
-.bk-branch-item {
-    display:flex; align-items:center; gap:10px; padding:10px 12px;
-    border-radius:10px; background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.06); transition:background .18s;
-}
-.bk-theme-light .bk-branch-item { background:rgba(0,0,0,.02); border-color:rgba(0,0,0,.06); }
-.bk-branch-item:hover { background:rgba(255,255,255,.06); }
-.bk-theme-light .bk-branch-item:hover { background:rgba(0,0,0,.04); }
-.bk-branch-item-icon { width:34px; height:34px; border-radius:9px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-.bk-branch-item-body { flex:1; min-width:0; }
-.bk-branch-item-name { font-size:.82rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.bk-branch-item-meta { font-size:.7rem; color:rgba(255,255,255,.4); margin-top:2px; display:flex; align-items:center; gap:4px; }
-.bk-theme-light .bk-branch-item-meta { color:rgba(0,0,0,.4); }
-.bk-branch-item-action {
-    width:28px; height:28px; border-radius:8px; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center;
-    background:rgba(255,255,255,.05); color:rgba(255,255,255,.3);
-    text-decoration:none; transition:all .18s;
-}
-.bk-theme-light .bk-branch-item-action { background:rgba(0,0,0,.04); color:rgba(0,0,0,.35); }
-.bk-branch-item-action:hover { background:var(--bk-accent); color:#000 !important; }
-
-.bk-branch-add-btn {
-    display:inline-flex; align-items:center; gap:6px; padding:7px 16px; border-radius:20px;
-    font-size:.76rem; font-weight:700;
-    background:rgba(12,110,116,.1); color:var(--bk-accent) !important;
-    border:1px solid rgba(12,110,116,.2); text-decoration:none; transition:all .2s;
-}
-.bk-branch-add-btn:hover { background:var(--bk-accent); color:#000 !important; box-shadow:0 4px 14px rgba(12,110,116,.3); }
-
-.bk-branch-empty {
-    display:flex; flex-direction:column; align-items:center;
-    gap:10px; padding:28px; color:rgba(255,255,255,.3); font-size:.82rem;
-}
-.bk-theme-light .bk-branch-empty { color:rgba(0,0,0,.3); }
-
-/* ── Working Hours ── */
-.bk-hours-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px; }
-.bk-hours-row {
-    display:flex; justify-content:space-between; align-items:center;
-    padding:9px 14px; border-radius:10px;
-    border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.02);
-}
-.bk-theme-light .bk-hours-row { background:rgba(0,0,0,.02); border-color:rgba(0,0,0,.06); }
-.bk-hours-row.open { border-color:rgba(43,207,126,.2); background:rgba(43,207,126,.05); }
-.bk-hours-day { font-size:.78rem; font-weight:700; }
-.bk-hours-time { font-size:.75rem; color:#2bcf7e; font-weight:600; }
-.bk-hours-closed { font-size:.72rem; color:rgba(255,255,255,.25); font-weight:600; }
-.bk-theme-light .bk-hours-closed { color:rgba(0,0,0,.25); }
-</style>
-@endpush
-
 @push('scripts')
 <script>
-(function(){
-    /* ── View Toggle ── */
+(function () {
+    'use strict';
+
+    /* ── Sort direction toggle ── */
+    var dirBtn = document.getElementById('bm-dir-btn');
+    var dirInp = document.getElementById('bm-dir-input');
+    if (dirBtn && dirInp) {
+        dirBtn.addEventListener('click', function () {
+            dirInp.value = dirInp.value === 'asc' ? 'desc' : 'asc';
+            document.getElementById('bm-filter-form').submit();
+        });
+    }
+
+    /* ── View toggle (table / card), persisted ── */
+    var tableView = document.getElementById('bm-view-table');
+    var cardView  = document.getElementById('bm-view-card');
     function setView(v) {
-        document.getElementById('bk-view-table').style.display = v === 'table' ? '' : 'none';
-        document.getElementById('bk-view-card').style.display  = v === 'card'  ? '' : 'none';
-        document.querySelectorAll('.bk-vt-btn').forEach(function(b){
-            b.classList.toggle('active', b.dataset.view === v);
+        var isCard = v === 'card';
+        if (tableView) tableView.style.display = isCard ? 'none' : '';
+        if (cardView)  cardView.style.display  = isCard ? '' : 'none';
+        document.querySelectorAll('#bm-view-toggle .bm-vt').forEach(function (b) {
+            b.classList.toggle('is-active', b.dataset.view === v);
         });
         if (typeof feather !== 'undefined') feather.replace();
     }
-    var saved = localStorage.getItem('bk_branch_view') || 'table';
+    var saved = 'table';
+    try { saved = localStorage.getItem('bm_branch_view') || 'table'; } catch (e) {}
     setView(saved);
-    document.querySelectorAll('.bk-vt-btn').forEach(function(btn){
-        btn.addEventListener('click', function(){
+    document.querySelectorAll('#bm-view-toggle .bm-vt').forEach(function (btn) {
+        btn.addEventListener('click', function () {
             var v = this.dataset.view;
-            localStorage.setItem('bk_branch_view', v);
+            try { localStorage.setItem('bm_branch_view', v); } catch (e) {}
             setView(v);
         });
     });
 
-    /* ── Card Tabs ── */
-    document.querySelectorAll('.bk-branch-tab').forEach(function(tab){
-        tab.addEventListener('click', function(){
-            var card = this.closest('.bk-branch-card');
-            card.querySelectorAll('.bk-branch-tab').forEach(function(t){ t.classList.remove('active'); });
-            card.querySelectorAll('.bk-branch-panel').forEach(function(p){ p.classList.remove('active'); });
-            this.classList.add('active');
+    /* ── Card tabs ── */
+    document.querySelectorAll('.bm-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            var card = this.closest('.bm-bcard');
+            card.querySelectorAll('.bm-tab').forEach(function (t) { t.classList.remove('is-active'); });
+            card.querySelectorAll('.bm-panel').forEach(function (p) { p.classList.remove('is-active'); });
+            this.classList.add('is-active');
             var panel = document.getElementById(this.dataset.tab);
-            if (panel) panel.classList.add('active');
+            if (panel) panel.classList.add('is-active');
         });
     });
 
-    setTimeout(function(){ if (typeof feather !== 'undefined') feather.replace(); }, 80);
+    if (typeof feather !== 'undefined') setTimeout(function () { feather.replace(); }, 60);
 })();
 </script>
 @endpush
-
-@include('owner.partials._datatable', [
-    'tableId'    => 'bk-table',
-    'exportName' => 'Branches',
-    'noSortCols' => [-1],
-])
-
 @endsection

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
 
@@ -63,7 +64,9 @@ class Branch extends Model
 
     public function scopeMarketplace($query)
     {
-        return $query->where('booking_mode', '!=', 'private');
+        // Public listings: marketplace booking mode AND an active branch only.
+        return $query->where('booking_mode', '!=', 'private')
+                     ->where('status', 'active');
     }
 
     public function generateSlug(): string
@@ -127,6 +130,24 @@ class Branch extends Model
     public function country(): BelongsTo
     {
         return $this->belongsTo(Country::class);
+    }
+
+    // ── SMS credit system ────────────────────────────────────────────────────
+
+    /** This branch's own SMS wallet (may be null → it uses the company pool). */
+    public function smsWallet(): HasOne
+    {
+        return $this->hasOne(SmsWallet::class);
+    }
+
+    public function smsAutomationSetting(): HasOne
+    {
+        return $this->hasOne(SmsAutomationSetting::class);
+    }
+
+    public function smsMessages(): HasMany
+    {
+        return $this->hasMany(SmsMessage::class);
     }
 
     public function governorate(): BelongsTo
@@ -203,5 +224,10 @@ class Branch extends Model
     public function images(): HasMany
     {
         return $this->hasMany(BranchImage::class)->orderBy('sort_order');
+    }
+
+    public function loyaltyRewards(): HasMany
+    {
+        return $this->hasMany(LoyaltyReward::class)->orderBy('sort_order')->orderBy('points_cost');
     }
 }

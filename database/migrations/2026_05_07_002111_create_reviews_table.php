@@ -17,6 +17,8 @@ return new class extends Migration
             $table->foreignId('customer_id')->constrained('users')->cascadeOnDelete();
             $table->unsignedTinyInteger('rating');
             $table->text('comment')->nullable();
+            $table->boolean('is_hidden')->default(false);
+            $table->string('hidden_reason', 500)->nullable();
             $table->nullableMorphs('reviewable');
             $table->timestamps();
 

@@ -26,6 +26,23 @@ class OnboardingController extends Controller
         return back();
     }
 
+    /** Go live: flip the business to active so it appears on the marketplace. */
+    public function publish(): RedirectResponse
+    {
+        /** @var \App\Models\Company $company */
+        $company = Auth::guard('company')->user();
+
+        if ($company->isPublished()) {
+            return back()->with('status', __('Your business is already live.'));
+        }
+
+        if (! $company->publish()) {
+            return back()->with('error', __('Please finish the required setup steps before publishing.'));
+        }
+
+        return back()->with('status', __('🎉 Your business is now live on GlowRez!'));
+    }
+
     private function state(): CompanyOnboarding
     {
         return CompanyOnboarding::firstOrCreate([

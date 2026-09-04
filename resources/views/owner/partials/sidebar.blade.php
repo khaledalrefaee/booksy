@@ -21,6 +21,8 @@
     if (request()->routeIs('owner.plans.*') || request()->routeIs('owner.subscriptions.*')
         || request()->routeIs('owner.subscription-payments.*') || request()->routeIs('owner.coupons.*')) {
         $activeSection = 'billing';
+    } elseif (request()->routeIs('owner.sms.*')) {
+        $activeSection = 'sms';
     } elseif (request()->routeIs('owner.reports.*') || request()->routeIs('owner.audit-log.*')) {
         $activeSection = 'insights';
     } elseif (request()->routeIs('owner.companies.*') || request()->routeIs('owner.branches.*')
@@ -39,6 +41,7 @@
         'home'    => ['icon' => 'home',      'label' => __('Main')],
         'tenants' => ['icon' => 'briefcase', 'label' => __('Companies')],
         'billing' => ['icon' => 'credit-card', 'label' => __('Billing')],
+        'sms'     => ['icon' => 'message-square', 'label' => __('SMS')],
     ];
     if ($can('reports.view') || $can('audit-log.view')) {
         $railSections['insights'] = ['icon' => 'bar-chart-2', 'label' => __('Insights')];
@@ -165,6 +168,43 @@
                     <i data-feather="tag"></i><span>{{ __('Coupons') }}</span>
                 </a>
                 @endcan
+            </div>
+
+            {{-- SMS credit system --}}
+            <div class="bk-panel-sec {{ $activeSection === 'sms' ? 'active' : '' }}" data-bk-panel="sms">
+                <div class="bk-panel-title">{{ __('SMS credits') }}</div>
+                <a href="{{ route('owner.sms.overview') }}"
+                   class="bk-pl {{ request()->routeIs('owner.sms.overview') ? 'active' : '' }}">
+                    <i data-feather="layout"></i><span>{{ __('Overview') }}</span>
+                </a>
+                <a href="{{ route('owner.sms.analytics') }}"
+                   class="bk-pl {{ request()->routeIs('owner.sms.analytics') ? 'active' : '' }}">
+                    <i data-feather="trending-up"></i><span>{{ __('Analytics') }}</span>
+                </a>
+                <a href="{{ route('owner.sms.companies') }}"
+                   class="bk-pl {{ request()->routeIs('owner.sms.companies') ? 'active' : '' }}">
+                    <i data-feather="briefcase"></i><span>{{ __('Companies usage') }}</span>
+                </a>
+                <a href="{{ route('owner.sms.branches') }}"
+                   class="bk-pl {{ request()->routeIs('owner.sms.branches') ? 'active' : '' }}">
+                    <i data-feather="map-pin"></i><span>{{ __('Branches usage') }}</span>
+                </a>
+                <a href="{{ route('owner.sms.packages') }}"
+                   class="bk-pl {{ request()->routeIs('owner.sms.packages') ? 'active' : '' }}">
+                    <i data-feather="box"></i><span>{{ __('Packages') }}</span>
+                </a>
+                <a href="{{ route('owner.sms.pricing') }}"
+                   class="bk-pl {{ request()->routeIs('owner.sms.pricing') ? 'active' : '' }}">
+                    <i data-feather="tag"></i><span>{{ __('Pricing') }}</span>
+                </a>
+                <a href="{{ route('owner.sms.transactions') }}"
+                   class="bk-pl {{ request()->routeIs('owner.sms.transactions') ? 'active' : '' }}">
+                    <i data-feather="repeat"></i><span>{{ __('Transactions') }}</span>
+                </a>
+                <a href="{{ route('owner.sms.logs') }}"
+                   class="bk-pl {{ request()->routeIs('owner.sms.logs') ? 'active' : '' }}">
+                    <i data-feather="list"></i><span>{{ __('Message logs') }}</span>
+                </a>
             </div>
 
             {{-- Insights --}}

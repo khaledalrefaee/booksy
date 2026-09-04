@@ -22,6 +22,10 @@ class DashboardController extends Controller
         /** @var \App\Models\Company $company */
         $company = Auth::guard('company')->user();
 
+        // Safety net for accounts created before auto-provisioning existed, so
+        // the setup checklist always has a branch to work with.
+        \App\Services\CompanySetupService::ensureHeadOffice($company);
+
         $stats = $this->dashboardStatistics->forCompany($company);
         $chartData = $this->dashboardStatistics->chartDataForCompany($company);
 

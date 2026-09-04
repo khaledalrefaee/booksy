@@ -96,6 +96,16 @@ class Customer extends Model
     public function branchNotes(): HasMany      { return $this->hasMany(CustomerBranchNote::class); }
     public function treatmentPlans(): HasMany   { return $this->hasMany(TreatmentPlan::class); }
     public function loyaltyPointLogs(): HasMany { return $this->hasMany(LoyaltyPointLog::class); }
+    public function loyaltyBalances(): HasMany  { return $this->hasMany(CustomerLoyalty::class); }
+    public function loyaltyRedemptions(): HasMany { return $this->hasMany(LoyaltyRedemption::class); }
+
+    /** Current point balance at a given branch (0 when none yet). */
+    public function pointsAt(int $branchId): int
+    {
+        return (int) ($this->loyaltyBalances->firstWhere('branch_id', $branchId)->points
+            ?? \App\Models\CustomerLoyalty::where('customer_id', $this->id)->where('branch_id', $branchId)->value('points')
+            ?? 0);
+    }
     public function communications(): HasMany   { return $this->hasMany(CustomerCommunication::class); }
     public function reviews(): HasMany          { return $this->hasMany(Review::class); }
     public function debts(): HasMany            { return $this->hasMany(CustomerDebt::class); }

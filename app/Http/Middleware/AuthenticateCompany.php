@@ -15,6 +15,25 @@ class AuthenticateCompany
             return redirect()->route('company.login');
         }
 
+        /** @var \App\Models\Company $company */
+        $company = Auth::guard('company')->user();
+
+        // A live session must not outlive a suspension: the next request the
+        // company makes logs it straight out and bounces it to the login screen
+        // with the reason — no page of the panel stays reachable.
+        //
+        // Only the company guard is logged out — NOT session()->invalidate(),
+        // which would wipe the whole shared session and sign out any owner
+        // authenticated in the same browser too.
+        if ($company->isSuspended()) {
+            $notice = $company->suspendedNotice();
+
+            Auth::guard('company')->logout();
+
+            return redirect()->route('company.login')
+                ->withErrors(['email' => $notice]);
+        }
+
         return $next($request);
     }
 }

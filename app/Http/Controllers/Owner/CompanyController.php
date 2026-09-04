@@ -25,24 +25,104 @@ class CompanyController extends Controller
         $sortDir    = $request->input('dir') === 'asc' ? 'asc' : 'desc';
         $filterStatus     = $request->input('status', '');
         $filterCategoryId = $request->input('category_id', '');
+        $filterPlanId     = $request->input('plan_id', '');
+        $filterDate       = $request->input('date', '');
+        $dateFrom         = $request->input('date_from', '');
+        $dateTo           = $request->input('date_to', '');
 
-        $query = Company::query()->with('category');
+        $companies  = $this->filteredQuery($request)->with(['category', 'plan'])->paginate(15)->withQueryString();
+        $categories = Category::query()->orderBy('sort_order')->get();
+        $plans      = Plan::query()->orderBy('sort_order')->get(['id', 'name_en', 'name_ar']);
+
+        // Global overview counts — one grouped query for the status tallies, plus
+        // "new this month". These describe the whole platform, not the filtered view.
+        $statusCounts = Company::query()
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $stats = [
+            'total'     => (int) $statusCounts->sum(),
+            'active'    => (int) ($statusCounts['active']    ?? 0),
+            'pending'   => (int) ($statusCounts['pending']   ?? 0),
+            'suspended' => (int) ($statusCounts['suspended'] ?? 0),
+            'new_month' => (int) Company::query()
+                ->where('created_at', '>=', now()->startOfMonth())
+                ->count(),
+        ];
+
+        // How many filters are actually applied (drives the "Filters · N" badge).
+        $activeFilters = collect([$filterStatus, $filterCategoryId, $filterPlanId, $filterDate])
+            ->filter(fn ($v) => $v !== '' && $v !== null)
+            ->count();
+
+        return view('owner.companies.index', compact(
+            'companies', 'categories', 'plans', 'stats', 'activeFilters',
+            'q', 'sortField', 'sortDir',
+            'filterStatus', 'filterCategoryId', 'filterPlanId', 'filterDate', 'dateFrom', 'dateTo'
+        ));
+    }
+
+    /**
+     * The single source of truth for the companies listing query — shared by the
+     * on-screen table and the Excel export so both honour the exact same filters
+     * (search, status, category, plan, date range, sort).
+     */
+    private function filteredQuery(Request $request): \Illuminate\Database\Eloquent\Builder
+    {
+        // NOTE: Laravel's ConvertEmptyStringsToNull middleware turns empty query
+        // params (e.g. ?status=) into NULL — so guard every filter with filled(),
+        // never a bare `!== ''` check (null would slip through and filter to 0).
+        $q          = trim((string) $request->input('q', ''));
+        $sortField  = in_array($request->input('sort'), ['name', 'created_at', 'status']) ? $request->input('sort') : 'created_at';
+        $sortDir    = $request->input('dir') === 'asc' ? 'asc' : 'desc';
+        $status     = $request->input('status');
+        $categoryId = $request->input('category_id');
+        $planId     = $request->input('plan_id');
+        $date       = $request->input('date');
+
+        $query = Company::query();
 
         if ($q !== '') {
             $query->where(function ($sub) use ($q) {
                 $sub->where('name_en', 'like', "%{$q}%")
                     ->orWhere('name_ar', 'like', "%{$q}%")
-                    ->orWhere('email', 'like', "%{$q}%");
+                    ->orWhere('owner_name', 'like', "%{$q}%")
+                    ->orWhere('email', 'like', "%{$q}%")
+                    ->orWhere('phone', 'like', "%{$q}%");
             });
         }
 
-        if ($filterStatus !== '') {
-            $query->where('status', $filterStatus);
+        if (filled($status)) {
+            $query->where('status', $status);
         }
 
-        if ($filterCategoryId !== '') {
-            $query->where('category_id', (int) $filterCategoryId);
+        if (filled($categoryId)) {
+            $query->where('category_id', (int) $categoryId);
         }
+
+        if (filled($planId)) {
+            $planId === 'none'
+                ? $query->whereNull('plan_id')
+                : $query->where('plan_id', (int) $planId);
+        }
+
+        // created_at presets + custom range
+        $tz = config('app.timezone');
+        match ($date) {
+            'today' => $query->where('created_at', '>=', now($tz)->startOfDay()),
+            'week'  => $query->where('created_at', '>=', now($tz)->startOfWeek()),
+            'month' => $query->where('created_at', '>=', now($tz)->startOfMonth()),
+            'custom' => (function () use ($query, $request) {
+                if ($from = $request->input('date_from')) {
+                    $query->whereDate('created_at', '>=', $from);
+                }
+                if ($to = $request->input('date_to')) {
+                    $query->whereDate('created_at', '<=', $to);
+                }
+            })(),
+            default => null,
+        };
 
         if ($sortField === 'name') {
             $query->orderByRaw("COALESCE(NULLIF(name_en,''), name_ar) {$sortDir}");
@@ -50,10 +130,71 @@ class CompanyController extends Controller
             $query->orderBy($sortField, $sortDir);
         }
 
-        $companies  = $query->paginate(15)->withQueryString();
-        $categories = Category::query()->orderBy('sort_order')->get();
+        return $query;
+    }
 
-        return view('owner.companies.index', compact('companies', 'categories', 'q', 'sortField', 'sortDir', 'filterStatus', 'filterCategoryId'));
+    /**
+     * Export the currently-filtered companies to .xlsx. Same auth as the listing
+     * (owner.auth group) and the same query, so it never leaks rows the filters
+     * hide. Filename carries the date, e.g. glowrez-companies-2026-08-30.xlsx.
+     */
+    public function export(Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $companies = $this->filteredQuery($request)->with(['category', 'plan'])->get();
+
+        $filename = 'glowrez-companies-'.now()->format('Y-m-d').'.xlsx';
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\CompaniesExport($companies),
+            $filename
+        );
+    }
+
+    /** The blank .xlsx template the owner fills in before importing. */
+    public function importTemplate(): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\CompaniesImportTemplate(),
+            'glowrez-companies-template.xlsx'
+        );
+    }
+
+    /**
+     * Bulk-create companies from an uploaded spreadsheet. Each row is validated
+     * independently; bad rows are skipped and reported so a single mistake never
+     * loses the whole file. Same permission as creating a company (companies.manage).
+     */
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:5120'],
+        ], [], ['file' => __('file')]);
+
+        $import = new \App\Imports\CompaniesImport();
+        $import->import($request->file('file'));
+
+        OwnerAudit::record('company.import', new Company(), new: ['created' => $import->created]);
+
+        if ($import->created > 0) {
+            session()->flash('success', __(':count companies imported successfully.', ['count' => $import->created]));
+        }
+
+        // Surface up to a handful of row errors; summarise the rest.
+        if (! empty($import->errors)) {
+            $shown = array_slice($import->errors, 0, 5);
+            $extra = count($import->errors) - count($shown);
+            $msg = implode(' • ', $shown);
+            if ($extra > 0) {
+                $msg .= ' • '.__('(+:n more rows skipped)', ['n' => $extra]);
+            }
+            session()->flash('error', $msg);
+        }
+
+        if ($import->created === 0 && empty($import->errors)) {
+            session()->flash('warning', __('No rows found to import.'));
+        }
+
+        return redirect()->route('owner.companies.index');
     }
 
     public function show(Company $company): View
@@ -105,10 +246,30 @@ class CompanyController extends Controller
 
     public function updateStatus(UpdateCompanyStatusRequest $request, Company $company): RedirectResponse
     {
-        $company->fill(['status' => $request->validated('status')]);
+        $newStatus = $request->validated('status');
+        $reason    = $request->validated('reason');
 
-        OwnerAudit::recordChanges('company.status-update', $company, $request->validated('reason'));
+        $company->fill(['status' => $newStatus]);
+
+        // Track the suspension metadata so the login screen and the notice can
+        // explain the block; clear it again the moment the account is restored.
+        if ($newStatus === 'suspended') {
+            $company->suspended_at = $company->suspended_at ?? now();
+            $company->suspension_reason = $reason;
+        } else {
+            $company->suspended_at = null;
+            $company->suspension_reason = null;
+        }
+
+        OwnerAudit::recordChanges('company.status-update', $company, $reason);
         $company->save();
+
+        // Notify the owner (email + phone) whenever the admin sets the account to
+        // suspended. The panel's own UI blocks a no-op save (from === to), so
+        // reaching here with "suspended" is always a deliberate suspend action.
+        if ($newStatus === 'suspended') {
+            app(\App\Services\CompanyStatusNotifier::class)->sendSuspended($company, $reason);
+        }
 
         return redirect()
             ->route('owner.companies.index')

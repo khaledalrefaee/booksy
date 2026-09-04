@@ -123,6 +123,6 @@ return [
     | "from" address when CONTACT_INBOX is not set.
     */
 
-    'contact_to' => env('CONTACT_INBOX'),
+    'contact_to' => env('CONTACT_INBOX', env('contact_to')),
 
 ];

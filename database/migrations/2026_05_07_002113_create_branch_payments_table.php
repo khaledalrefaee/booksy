@@ -25,6 +25,7 @@ return new class extends Migration
             $table->foreignId('recorded_by_employee_id')->nullable()->constrained('employees')->nullOnDelete();
             $table->timestamp('paid_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::enableForeignKeyConstraints();

@@ -17,6 +17,9 @@
 <head>
 	@include('owner.partials.css')
 	@stack('owner-styles')
+	{{-- Shared partials (e.g. social-links-form) push their CSS here; render it so
+	     those components look identical on the owner dashboard. --}}
+	@stack('company-styles')
 </head>
 <body>
 	<div class="main-wrapper">

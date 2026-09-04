@@ -69,23 +69,32 @@
 
 {{-- ════ ONBOARDING SETUP CHECKLIST ════ --}}
 @php
-    $obSteps = $onboarding['steps'] ?? [];
-    $obPct   = $onboarding['percent'] ?? 100;
-    $obDismissed = $onboarding['dismissed'] ?? false;
+    $obSteps      = $onboarding['steps'] ?? [];
+    $obPct        = $onboarding['percent'] ?? 100;
+    $obDismissed  = $onboarding['dismissed'] ?? false;
+    $obPublished  = $onboarding['published'] ?? true;
+    $obCanPublish = $onboarding['canPublish'] ?? false;
+    $obHo         = $onboarding['headOfficeId'] ?? null;
+    // Ordered flow: logo (soft quick-win) → location → hours → service.
+    // The last three are required to go live.
     $obList = [
-        ['key' => 'service',       'icon' => 'scissors', 'title' => __('Add your first service'),        'route' => 'company.branches.index'],
-        ['key' => 'employee',      'icon' => 'users',    'title' => __('Add your team'),                  'route' => 'company.branches.index'],
-        ['key' => 'working_hours', 'icon' => 'clock',    'title' => __('Set working hours'),              'route' => 'company.branches.index'],
-        ['key' => 'appointment',   'icon' => 'calendar', 'title' => __('Create your first appointment'),  'route' => 'company.appointments.create'],
+        ['key' => 'logo',          'icon' => 'image',    'title' => __('Add your logo'),            'required' => false,
+            'url' => route('company.profile.show')],
+        ['key' => 'location',      'icon' => 'map-pin',  'title' => __('Set your location'),        'required' => true,
+            'url' => $obHo ? route('company.branches.edit', $obHo) : route('company.branches.index')],
+        ['key' => 'working_hours', 'icon' => 'clock',    'title' => __('Set working hours'),        'required' => true,
+            'url' => $obHo ? route('company.branches.working-hours.edit', $obHo) : route('company.branches.index')],
+        ['key' => 'service',       'icon' => 'scissors', 'title' => __('Add your first service'),   'required' => true,
+            'url' => $obHo ? route('company.branches.services.create', $obHo) : route('company.branches.index')],
     ];
 @endphp
-@if($obPct < 100 && ! $obDismissed)
+@if(! $obDismissed && ! $obPublished)
 <div class="card border-0 shadow-sm rounded-4 mb-4" style="border-inline-start:4px solid var(--bk-accent) !important;">
     <div class="card-body">
         <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
             <div>
                 <h5 class="fw-bold mb-1">🚀 {{ __('Welcome to GlowRez Business!') }}</h5>
-                <p class="text-muted tx-13 mb-0">{{ __('Finish setting up your business to start taking bookings.') }}</p>
+                <p class="text-muted tx-13 mb-0">{{ __('Complete the required steps, then publish your business to appear on GlowRez.') }}</p>
             </div>
             <form method="POST" action="{{ route('company.onboarding.dismiss') }}" class="m-0">
                 @csrf
@@ -107,21 +116,41 @@
             @foreach($obList as $s)
                 @php $done = $obSteps[$s['key']] ?? false; @endphp
                 <div class="col-sm-6 col-lg-3">
-                    <a href="{{ route($s['route']) }}"
+                    <a href="{{ $s['url'] }}"
                        class="d-flex align-items-center gap-2 p-2 rounded-3 text-decoration-none h-100"
                        style="border:1px solid var(--bk-border);{{ $done ? 'background:var(--bk-success-bg);' : '' }}">
                         <span class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-circle"
                               style="width:30px;height:30px;background:{{ $done ? 'var(--bk-success)' : 'var(--bk-accent-wash)' }};color:{{ $done ? '#fff' : 'var(--bk-accent)' }};">
                             <i data-feather="{{ $done ? 'check' : $s['icon'] }}" style="width:14px;height:14px;"></i>
                         </span>
-                        <span class="tx-12 fw-semibold" style="color:var(--bk-text);{{ $done ? 'text-decoration:line-through;opacity:.7;' : '' }}">{{ $s['title'] }}</span>
+                        <span class="d-flex flex-column">
+                            <span class="tx-12 fw-semibold" style="color:var(--bk-text);{{ $done ? 'text-decoration:line-through;opacity:.7;' : '' }}">{{ $s['title'] }}</span>
+                            <span class="tx-10 {{ $s['required'] ? 'text-danger' : 'text-muted' }}">{{ $s['required'] ? __('Required') : __('Optional') }}</span>
+                        </span>
                     </a>
                 </div>
             @endforeach
         </div>
 
-        <div class="mt-3">
-            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#bkHelpModal">
+        <div class="d-flex align-items-center flex-wrap gap-2 mt-3">
+            @if($obCanPublish)
+                <form method="POST" action="{{ route('company.onboarding.publish') }}" class="m-0">
+                    @csrf
+                    <button type="submit" class="btn btn-sm rounded-pill px-4 fw-semibold text-white" style="background:var(--bk-accent);">
+                        <i data-feather="globe" style="width:14px;height:14px;vertical-align:-2px;"></i>
+                        {{ __('Publish my business') }}
+                    </button>
+                </form>
+                <span class="tx-12 text-muted">{{ __('You can add your logo & team anytime later.') }}</span>
+            @else
+                <button type="button" class="btn btn-sm rounded-pill px-4 fw-semibold" disabled
+                        style="background:var(--bk-border);color:var(--bk-text-muted);cursor:not-allowed;">
+                    <i data-feather="lock" style="width:14px;height:14px;vertical-align:-2px;"></i>
+                    {{ __('Publish my business') }}
+                </button>
+                <span class="tx-12 text-muted">{{ __('Finish the required steps above to go live.') }}</span>
+            @endif
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 ms-auto" data-bs-toggle="modal" data-bs-target="#bkHelpModal">
                 <i data-feather="help-circle" style="width:13px;height:13px;vertical-align:-2px;"></i>
                 {{ __('Need help?') }}
             </button>

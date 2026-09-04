@@ -17,15 +17,23 @@ return new class extends Migration
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('branch_id')->nullable()->constrained()->cascadeOnDelete();
+            // Product category (table created later — safe under the disabled FK wrapper).
+            $table->foreignId('product_category_id')->nullable()->constrained('product_categories')->nullOnDelete();
             $table->string('name_en')->nullable();
             $table->string('name_ar')->nullable();
             $table->text('description')->nullable();
             $table->decimal('price', 12, 2);
+            $table->decimal('cost_price', 12, 2)->default(0);
+            $table->string('currency', 3)->default('SYP');
+            $table->string('unit', 32)->default('piece');
+            $table->unsignedInteger('low_stock_threshold')->default(5);
             $table->string('image')->nullable();
             $table->string('sku', 64)->nullable();
+            $table->string('barcode', 64)->nullable();
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->boolean('is_display_only')->default(true);
+            $table->boolean('track_stock')->default(true);
             $table->timestamps();
         });
 

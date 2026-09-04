@@ -637,9 +637,10 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
                                     </div>
                                 </div>
 
-                                {{-- Book Button --}}
+                                {{-- Book Button — go to the branch's public booking page (customer flow),
+                                     NOT the owner-only company panel. --}}
                                 <div class="bk-svc-action">
-                                    <a href="{{ route('company.appointments.create') }}"
+                                    <a href="{{ $branch ? route('front.branch', $branch) : '#' }}"
                                        class="bk-svc-book">
                                         <i class="far fa-calendar-plus"></i>
                                         {{ $isAr ? 'احجز' : 'Book' }}
@@ -718,7 +719,7 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
                             @if($emp->bio)
                             <p style="font-size:.78rem;color:rgba(255,255,255,.4);margin:8px 0 0;line-height:1.5;">{{ Str::limit($emp->bio, 80) }}</p>
                             @endif
-                            <a href="{{ route('company.appointments.create') }}" class="bk-emp-book">
+                            <a href="{{ $branch ? route('front.branch', $branch) : '#' }}" class="bk-emp-book">
                                 <i class="far fa-calendar-plus {{ $isAr ? 'ms-1' : 'me-1' }}"></i>{{ $isAr ? 'احجز معه' : 'Book Now' }}
                             </a>
                         </div>
@@ -814,8 +815,9 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
                 </div>
                 @endif
 
-                {{-- Book button --}}
-                <a href="{{ route('company.appointments.create') }}" class="bk-btn-book-big mb-4">
+                {{-- Book button — go to the branch's public booking page (customer flow),
+                     NOT the owner-only company panel. --}}
+                <a href="{{ $branch ? route('front.branch', $branch) : '#' }}" class="bk-btn-book-big mb-4">
                     <i class="far fa-calendar-check"></i>
                     {{ $isAr ? 'احجز موعداً الآن' : 'Book an Appointment' }}
                 </a>

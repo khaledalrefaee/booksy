@@ -221,6 +221,11 @@ class WhatsappService
         // Whole visit as one message; one confirmation token acts on every row.
         $visit        = $this->visitAppointments($appointment);
         $primary      = $visit->first();
+
+        // The new SMS system owns confirmation for this branch/number → skip the
+        // legacy SMS so the customer doesn't get two copies.
+        if ($this->smsSystemOwns($primary, 'confirmation')) return false;
+
         $confirmation = AppointmentConfirmation::activeFor($primary);
         $confirmUrl   = route('appointment.confirm', ['token' => $confirmation->token]);
         $cancelUrl    = route('appointment.cancel-form', ['token' => $confirmation->token]);
@@ -291,55 +296,38 @@ class WhatsappService
     }
 
     /**
-     * SMS channel. Posts to a generic HTTP gateway (works with most local
-     * Syrian aggregators and Twilio-style JSON endpoints). Inert until
-     * config('booksy.sms') is filled in — returns a clear, logged reason so
+     * SMS channel. Delegates to the single Rassel client so there is one code
+     * path to the provider (shared with the credit-tracked SMS system). Inert
+     * until config('booksy.sms') is filled in — returns a clear reason so
      * nothing silently disappears.
      *
      * @return array{0: bool, 1: ?string} [ok, error]
      */
     private function dispatchViaSms(string $phone, string $message): array
     {
-        $driver = config('booksy.sms.driver', 'rasel');
-        $url    = config('booksy.sms.url');
-        $apiKey = config('booksy.sms.api_key');
+        [$ok, , $error] = app(\App\Services\Sms\RasselClient::class)->send($phone, $message);
 
-        if (! $url) {
-            return [false, 'SMS channel selected but no SMS provider is configured (set BOOKSY_SMS_URL / BOOKSY_SMS_KEY).'];
-        }
-        if (! $apiKey) {
-            return [false, 'SMS channel selected but no API key is configured (set BOOKSY_SMS_KEY).'];
-        }
+        return [$ok, $error];
+    }
 
-        // Rasel SMS (Syria): X-API-Key header + { to, channel, messageType, content }.
-        // Rasel expects digits only, no leading "+" (e.g. 963949863373).
-        if ($driver === 'rasel') {
-            $response = Http::withHeaders([
-                    'X-API-Key'    => $apiKey,
-                    'Content-Type' => 'application/json',
-                ])
-                ->timeout(30)
-                ->post($url, [
-                    'to'          => preg_replace('/\D+/', '', $phone),
-                    'channel'     => config('booksy.sms.channel', 'local_sms'),
-                    'messageType' => 'free_text',
-                    'content'     => ['text' => $message],
-                ]);
-
-            return [$response->successful(), $response->successful() ? null : $response->body()];
+    /**
+     * True when the new credit-tracked SMS system owns this message for this
+     * appointment — i.e. the number routes over SMS and the branch has opted the
+     * matching automation on. When so, the legacy path skips the SMS send to
+     * avoid a duplicate; WhatsApp numbers are never affected.
+     */
+    private function smsSystemOwns(Appointment $appointment, string $type): bool
+    {
+        $phone = $appointment->customer_phone ?? $appointment->customer?->phone;
+        if (! $phone || $this->channelFor($phone) !== 'sms') {
+            return false;
         }
 
-        // Generic Twilio-style gateway: Bearer key + { to, from, message }.
-        $sender = config('booksy.sms.sender', 'GlowRez');
-        $response = Http::withToken($apiKey)
-            ->timeout(30)
-            ->post($url, [
-                'to'      => preg_replace('/\D+/', '', $phone),
-                'from'    => $sender,
-                'message' => $message,
-            ]);
-
-        return [$response->successful(), $response->successful() ? null : $response->body()];
+        try {
+            return app(\App\Services\Sms\SmsService::class)->automationHandles($appointment, $type, $phone);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function sendAppointmentConfirmed(Appointment $appointment): bool
@@ -505,6 +493,9 @@ class WhatsappService
 
         $visit   = $this->visitAppointments($appointment);
         $primary = $visit->first();
+
+        // New SMS system owns the reminder for this branch/number → skip legacy SMS.
+        if ($this->smsSystemOwns($primary, 'reminder')) return false;
 
         $type = 'reminder_' . $slot;
         $alreadySent = WhatsappLog::where('appointment_id', $primary->id)

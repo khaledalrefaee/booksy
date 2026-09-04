@@ -98,6 +98,12 @@
             role="listbox" aria-label="{{ __('Search suggestions') }}"></ul>
     </div>
 
+    <button type="button" id="branch-map-locate"
+            class="btn btn-outline-primary btn-sm rounded-3 mb-2 d-inline-flex align-items-center gap-1">
+        <i data-feather="crosshair" style="width:15px;height:15px;"></i>
+        {{ __("I'm at the location") }}
+    </button>
+
     <div id="branch-map" class="rounded-3 border mb-2" style="height:320px;z-index:1;"></div>
 
     <input type="hidden" name="latitude"  id="branch-latitude"  value="{{ $lat }}">
@@ -138,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function loadOptions(url, params, targetSel, keepVal) {
         targetSel.disabled = true;
         targetSel.innerHTML = '<option value="">{{ __("Loading…") }}</option>';
-        fetch(url + '?' + new URLSearchParams(params), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        return fetch(url + '?' + new URLSearchParams(params), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) { return r.json(); })
             .then(function (items) {
                 var ph = targetSel === selGov ? '— {{ __("Select governorate") }} —' : '— {{ __("Select area") }} —';
@@ -152,7 +158,66 @@ document.addEventListener('DOMContentLoaded', function () {
                     targetSel.appendChild(opt);
                 });
                 targetSel.disabled = items.length === 0;
+                return items;
             });
+    }
+
+    // ── Fuzzy name matching (Arabic/English) for reverse-geocode fill ──
+    function normalizeName(s) {
+        return (s || '').toString().toLowerCase()
+            .replace(/[ً-ْـ]/g, '')                                   // arabic diacritics + tatweel
+            .replace(/\b(governorate|province|district|subdistrict|region|muhafazat|mohafazat|city)\b/g, '')
+            .replace(/محافظة|منطقة|ناحية|مدينة|حيّ|حي /g, '')
+            .replace(/[إأآا]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه')
+            .replace(/\s+/g, ' ').trim();
+    }
+
+    function findOption(sel, name) {
+        var n = normalizeName(name);
+        if (!n) return null;
+        var best = null;
+        Array.prototype.forEach.call(sel.options, function (o) {
+            if (!o.value) return;
+            var on = normalizeName(o.dataset.name || o.text);
+            if (!on) return;
+            if (on === n) { best = o; }                                            // exact wins
+            else if (!best && (on.indexOf(n) >= 0 || n.indexOf(on) >= 0)) { best = o; }
+        });
+        return best;
+    }
+
+    // ── Reverse-geocode a point → auto-select country / governorate / area ──
+    function reverseFill(lat, lng) {
+        var lang = document.documentElement.lang === 'ar' ? 'ar' : 'en';
+        return fetch('https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&zoom=16&lat=' + lat + '&lon=' + lng,
+            { headers: { 'Accept': 'application/json', 'Accept-Language': lang + ',en' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var a = (d && d.address) || {};
+                var countryName = a.country;
+                var stateName   = a.state || a.region || a.state_district || a.province;
+                var areaName    = a.suburb || a.neighbourhood || a.city_district || a.quarter
+                                || a.city || a.town || a.village || a.county;
+
+                var co = findOption(selCountry, countryName);
+                if (!co) {
+                    var only = Array.prototype.filter.call(selCountry.options, function (o) { return o.value; });
+                    if (only.length === 1) co = only[0];                            // single-country DB fallback
+                }
+                if (!co) return;
+                selCountry.value = co.value;
+
+                return loadOptions(govUrl, { country_id: co.value }, selGov, null).then(function () {
+                    var go = findOption(selGov, stateName);
+                    if (!go) return;
+                    selGov.value = go.value;
+                    return loadOptions(areaUrl, { governorate_id: go.value }, selArea, null).then(function () {
+                        var ao = findOption(selArea, areaName);
+                        if (ao) selArea.value = ao.value;
+                    });
+                });
+            })
+            .catch(function () {});
     }
 
     selCountry.addEventListener('change', function () {
@@ -200,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var map    = L.map('branch-map').setView([startLat, startLng], 13);
     var marker = L.marker([startLat, startLng], { draggable: true }).addTo(map);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19, attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
@@ -288,6 +353,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
     searchBtn && searchBtn.addEventListener('click', function () { clearTimeout(debounceTimer); runSearch(); });
 
+    // ── "I'm at the location" — one-tap GPS, then drag to fine-tune ────
+    var locateBtn = document.getElementById('branch-map-locate');
+    locateBtn && locateBtn.addEventListener('click', function () {
+        if (!navigator.geolocation) {
+            setStatus('{{ __("Your browser does not support location.") }}', true);
+            return;
+        }
+        setStatus('{{ __("Getting your location…") }}', false);
+        locateBtn.disabled = true;
+        navigator.geolocation.getCurrentPosition(function (pos) {
+            locateBtn.disabled = false;
+            setCoords(pos.coords.latitude, pos.coords.longitude, 17);
+            hideResults();
+            // Fill country / governorate / area from the coordinates.
+            setStatus('{{ __("Detecting your area…") }}', false);
+            reverseFill(pos.coords.latitude, pos.coords.longitude).then(function () {
+                setStatus('{{ __("Location found — drag the marker to fine-tune.") }}', false);
+            });
+        }, function () {
+            locateBtn.disabled = false;
+            setStatus('{{ __("Could not get your location. Allow location access or search manually.") }}', true);
+        }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+    });
+
     function nominatim(q, callback) {
         var now = Date.now();
         if (now - lastCallAt < 1050) {
@@ -362,6 +451,15 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     setTimeout(function () { map.invalidateSize(); }, 300);
+
+    // The map may be initialised inside a hidden tab (0×0), which leaves Leaflet
+    // stuck on a zoomed-out world view centred on null island. Call this when the
+    // Location tab becomes visible to fix the size and re-centre.
+    window.__branchMapShow = function () {
+        map.invalidateSize();
+        if (map.getZoom() < 6) map.setView(marker.getLatLng(), 13);
+    };
+
     if (typeof window.feather !== 'undefined') window.feather.replace();
 });
 </script>

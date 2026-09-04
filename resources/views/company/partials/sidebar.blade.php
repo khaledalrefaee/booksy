@@ -10,8 +10,9 @@
         : (request()->routeIs('company.branches.employees.*') ? 'employees'
         : (request()->routeIs('company.branches.working-hours.*') ? 'hours'
         : (request()->routeIs('company.branches.gallery') ? 'gallery'
+        : (request()->routeIs('company.branches.loyalty.*') ? 'loyalty'
         : (request()->routeIs('company.branches.cash.index') ? 'cash'
-        : (request()->routeIs('company.branches.cash.drawer.archive') ? 'archive' : null))))));
+        : (request()->routeIs('company.branches.cash.drawer.archive') ? 'archive' : null)))))));
 
     $branchData = $sidebarBranches->map(fn ($b) => [
         'id'   => $b->id,
@@ -49,6 +50,8 @@
         || request()->routeIs('company.recurring-expenses.*') || request()->routeIs('company.debts.*')
         || request()->routeIs('company.inventory.*') || request()->routeIs('company.product-categories.*')) {
         $activeSection = 'finance';
+    } elseif (request()->routeIs('company.sms.*')) {
+        $activeSection = 'sms';
     } elseif (request()->routeIs('company.reports.*') || request()->routeIs('company.activity-log.*')) {
         $activeSection = 'reports';
     } elseif (request()->routeIs('company.service-categories.*') || request()->routeIs('company.resources.*')
@@ -65,6 +68,7 @@
         'home'   => ['icon' => 'home',    'label' => __('Main')],
         'branch' => ['icon' => 'map-pin', 'label' => __('Branch')],
         'team'   => ['icon' => 'users',   'label' => __('Team')],
+        'sms'    => ['icon' => 'message-square', 'label' => __('SMS')],
     ];
     if ($feat('finance') || $feat('inventory')) {
         $railSections['finance'] = ['icon' => 'credit-card', 'label' => __('Finance')];
@@ -194,6 +198,10 @@
                    class="bk-pl {{ $activeBranchPage === 'gallery' ? 'active' : '' }}">
                     <i data-feather="image"></i><span>{{ __('Gallery') }}</span>
                 </a>
+                <a href="{{ route('company.branches.loyalty.index', $selBranch) }}" data-bk-branch-link="loyalty"
+                   class="bk-pl {{ $activeBranchPage === 'loyalty' ? 'active' : '' }}">
+                    <i data-feather="award"></i><span>{{ __('Loyalty') }}</span>
+                </a>
                 @feature('finance')
                 <a href="{{ route('company.branches.cash.index', $selBranch) }}" data-bk-branch-link="cash"
                    class="bk-pl {{ $activeBranchPage === 'cash' || $activeBranchPage === 'archive' ? 'active' : '' }}">
@@ -273,6 +281,31 @@
                 <a href="{{ route('company.activity-log.index') }}"
                    class="bk-pl {{ request()->routeIs('company.activity-log.*') ? 'active' : '' }}">
                     <i data-feather="shield"></i><span>{{ __('Activity Log') }}</span>
+                </a>
+            </div>
+
+            {{-- SMS credit system --}}
+            <div class="bk-panel-sec {{ $activeSection === 'sms' ? 'active' : '' }}" data-bk-panel="sms">
+                <div class="bk-panel-title">{{ __('SMS') }}</div>
+                <a href="{{ route('company.sms.overview') }}"
+                   class="bk-pl {{ request()->routeIs('company.sms.overview') ? 'active' : '' }}">
+                    <i data-feather="layout"></i><span>{{ __('Overview') }}</span>
+                </a>
+                <a href="{{ route('company.sms.automations') }}"
+                   class="bk-pl {{ request()->routeIs('company.sms.automations') ? 'active' : '' }}">
+                    <i data-feather="zap"></i><span>{{ __('Automations') }}</span>
+                </a>
+                <a href="{{ route('company.sms.templates') }}"
+                   class="bk-pl {{ request()->routeIs('company.sms.templates') ? 'active' : '' }}">
+                    <i data-feather="edit-3"></i><span>{{ __('Templates') }}</span>
+                </a>
+                <a href="{{ route('company.sms.history') }}"
+                   class="bk-pl {{ request()->routeIs('company.sms.history') ? 'active' : '' }}">
+                    <i data-feather="list"></i><span>{{ __('History') }}</span>
+                </a>
+                <a href="{{ route('company.sms.purchase') }}"
+                   class="bk-pl {{ request()->routeIs('company.sms.purchase') ? 'active' : '' }}">
+                    <i data-feather="shopping-bag"></i><span>{{ __('Purchase SMS') }}</span>
                 </a>
             </div>
 

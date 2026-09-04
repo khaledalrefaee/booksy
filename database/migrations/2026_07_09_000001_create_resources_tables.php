@@ -29,6 +29,8 @@ return new class extends Migration
         Schema::table('appointments', function (Blueprint $table) {
             $table->foreignId('resource_id')->nullable()->after('employee_id')
                 ->constrained('resources')->nullOnDelete();
+            // Resource-conflict lookups filter by resource_id + start_time range.
+            $table->index(['resource_id', 'start_time'], 'appts_resource_start_idx');
         });
     }
 

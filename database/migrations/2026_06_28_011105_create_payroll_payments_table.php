@@ -16,6 +16,9 @@ return new class extends Migration
             $table->foreignId('branch_payment_id')->nullable()->constrained()->nullOnDelete();
             $table->unsignedTinyInteger('month');
             $table->unsignedSmallInteger('year');
+            $table->unsignedTinyInteger('week_number')->nullable();
+            $table->unsignedTinyInteger('day')->nullable();
+            $table->string('pay_period', 10)->default('monthly');
             $table->decimal('base_salary', 12, 2)->default(0);
             $table->decimal('commissions', 12, 2)->default(0);
             $table->decimal('deductions', 12, 2)->default(0);
@@ -26,7 +29,7 @@ return new class extends Migration
             $table->timestamp('paid_at');
             $table->timestamps();
 
-            $table->unique(['employee_id', 'month', 'year']);
+            $table->unique(['employee_id', 'month', 'year', 'week_number', 'day'], 'payroll_unique_period');
         });
     }
 

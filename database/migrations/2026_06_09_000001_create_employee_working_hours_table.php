@@ -15,9 +15,10 @@ return new class extends Migration
             $table->boolean('is_working')->default(true);
             $table->time('start_time')->nullable();
             $table->time('end_time')->nullable();
+            $table->unsignedTinyInteger('shift_number')->default(1);
             $table->timestamps();
 
-            $table->unique(['employee_id', 'day_of_week']);
+            $table->unique(['employee_id', 'day_of_week', 'shift_number'], 'emp_wh_day_shift_unique');
         });
     }
 

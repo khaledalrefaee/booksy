@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('parent_id')->nullable()->constrained('product_categories')->nullOnDelete();
+            $table->string('color', 7)->default('#667eea');
             $table->string('name_en')->nullable();
             $table->string('name_ar')->nullable();
             $table->string('slug')->nullable();

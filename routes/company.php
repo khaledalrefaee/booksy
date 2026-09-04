@@ -71,9 +71,24 @@ Route::prefix('company')->name('company.')->group(function () {
         // Onboarding (guided tour + setup checklist state, persisted cross-device)
         Route::post('/onboarding/tour-complete', [\App\Http\Controllers\Company\OnboardingController::class, 'tourComplete'])->name('onboarding.tour-complete');
         Route::post('/onboarding/dismiss', [\App\Http\Controllers\Company\OnboardingController::class, 'dismiss'])->name('onboarding.dismiss');
+        Route::post('/onboarding/publish', [\App\Http\Controllers\Company\OnboardingController::class, 'publish'])->name('onboarding.publish');
 
         // Global search
         Route::get('/search', [SearchController::class, 'index'])->name('search.index');
+
+        // ── SMS credit system ────────────────────────────────────────────────
+        Route::prefix('sms')->name('sms.')->controller(\App\Http\Controllers\Company\SmsController::class)->group(function () {
+            Route::get('/',            'overview')->name('overview');
+            Route::get('automations',  'automations')->name('automations');
+            Route::put('automations/{branch}', 'updateAutomations')->name('automations.update');
+            Route::get('templates',    'templates')->name('templates');
+            Route::put('templates',    'updateTemplate')->name('templates.update');
+            Route::post('templates/preview', 'previewSegments')->name('templates.preview');
+            Route::get('history',      'history')->name('history');
+            Route::get('purchase',     'purchase')->name('purchase');
+            Route::post('purchase',    'requestPurchase')->name('purchase.request');
+            Route::put('threshold',    'updateThreshold')->name('threshold');
+        });
 
         // Staff & Services (all branches)
         Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
@@ -96,6 +111,7 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::resource('branches', BranchController::class)->except(['show']);
         Route::get('branches/{branch}', [BranchController::class, 'show'])->name('branches.show');
         Route::patch('branches/{branch}/status', [BranchController::class, 'updateStatus'])->name('branches.status');
+        Route::post( 'branches/{branch}/deactivate', [BranchController::class, 'deactivate'])->name('branches.deactivate');
         Route::post( 'branches/{branch}/regenerate-qr', [BranchController::class, 'regenerateQr'])->name('branches.regenerate-qr');
 
         // Branch gallery
@@ -118,6 +134,12 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::get( 'branches/{branch}/services/export',  [ServiceController::class, 'exportCsv'])->name('branches.services.export');
         Route::post('branches/{branch}/services/import',  [ServiceController::class, 'importCsv'])->name('branches.services.import');
         Route::resource('branches.services', ServiceController::class)->shallow()->except(['show']);
+
+        // Loyalty program (per branch): earn settings + rewards catalog
+        Route::get(   'branches/{branch}/loyalty',          [\App\Http\Controllers\Company\LoyaltyController::class, 'index'])->name('branches.loyalty.index');
+        Route::put(   'branches/{branch}/loyalty/settings', [\App\Http\Controllers\Company\LoyaltyController::class, 'updateSettings'])->name('branches.loyalty.settings');
+        Route::post(  'branches/{branch}/loyalty/rewards',  [\App\Http\Controllers\Company\LoyaltyController::class, 'store'])->name('branches.loyalty.rewards.store');
+        Route::delete('loyalty/rewards/{reward}',           [\App\Http\Controllers\Company\LoyaltyController::class, 'destroy'])->name('loyalty.rewards.destroy');
         // Service category reordering (drag-and-drop in the rail)
         Route::post('service-categories/reorder', [ServiceCategoryController::class, 'reorder'])->name('service-categories.reorder');
 
@@ -356,6 +378,7 @@ Route::prefix('company')->name('company.')->group(function () {
         });
 
         // Notifications
+        Route::get('notifications', [\App\Http\Controllers\Company\NotificationController::class, 'index'])->name('notifications.index');
         Route::post('notifications/{notification}/read', function (\App\Models\StaffNotification $notification) {
             $notification->update(['read_at' => now()]);
             return response()->json(['ok' => true]);

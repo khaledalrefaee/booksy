@@ -25,7 +25,7 @@ class DashboardController extends Controller
         $recentAppointments = Appointment::query()
             ->with(['branch', 'customer', 'service', 'service.serviceCategory'])
             ->orderByDesc('start_time')
-            ->limit(6)
+            ->limit(30)
             ->get();
 
         $today = Carbon::today();
@@ -44,7 +44,7 @@ class DashboardController extends Controller
         $recentActivity = CompanyLoginActivity::query()
             ->with('company:id,name_en,name_ar')
             ->latest()
-            ->limit(8)
+            ->limit(40)
             ->get();
 
         // Businesses that likely need help: signed up recently but setup is
@@ -66,7 +66,7 @@ class DashboardController extends Controller
             })
             ->filter(fn ($row) => $row['percent'] < 100)
             ->sortBy('percent')
-            ->take(6)
+            ->take(24)
             ->values();
 
         return view('owner.index', compact(

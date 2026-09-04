@@ -11,6 +11,21 @@
     $isAr = app()->getLocale() === 'ar';
 @endphp
 
+@push('owner-styles')
+<style>
+/* Client-side widget pagination */
+.bk-pager-nav { display:flex; align-items:center; justify-content:center; gap:12px; padding-top:12px; margin-top:10px; border-top:1px solid var(--bk-border); }
+.bk-pager-btn { width:32px; height:32px; border-radius:9px; border:1px solid var(--bk-border); background:var(--bk-surface);
+    color:var(--bk-text-soft); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s; }
+.bk-pager-btn:hover:not(:disabled) { border-color:var(--bk-accent); color:var(--bk-accent); background:var(--bk-accent-wash); }
+.bk-pager-btn:disabled { opacity:.4; cursor:not-allowed; }
+.bk-pager-btn i, .bk-pager-btn svg { width:15px; height:15px; }
+.bk-pager-info { font-size:.8rem; font-weight:600; color:var(--bk-text-muted); font-variant-numeric:tabular-nums; min-width:52px; text-align:center; }
+/* Beat Bootstrap's `.d-flex/.d-block { display:…!important }` on paged-out rows */
+.bk-pager .bk-pager-hide { display:none !important; }
+</style>
+@endpush
+
 <div class="page-content">
 
 {{-- ════ HERO HEADER ════ --}}
@@ -108,9 +123,11 @@
                     </h6>
                     <a href="{{ route('owner.companies.index') }}" class="tx-12 text-decoration-none" style="color:var(--bk-accent);">{{ __('All companies') }}</a>
                 </div>
+                <div class="bk-pager" data-page-size="5">
+                    <div class="bk-pager-items">
                 @forelse($recentActivity as $act)
                     @php $name = $act->company?->localizedName() ?? ($act->email_attempted ?? __('Unknown')); @endphp
-                    <div class="d-flex align-items-center gap-3 py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                    <div class="d-flex align-items-center gap-3 py-2 border-bottom">
                         <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                              style="width:34px;height:34px;background:{{ $act->successful ? 'var(--bk-success-bg)' : 'var(--bk-danger-bg)' }};color:{{ $act->successful ? 'var(--bk-success)' : 'var(--bk-danger)' }};">
                             <i data-feather="{{ $act->successful ? 'log-in' : 'alert-triangle' }}" style="width:15px;height:15px;"></i>
@@ -129,6 +146,8 @@
                 @empty
                     <div class="text-center text-muted py-4 tx-13">{{ __('No activity yet') }}</div>
                 @endforelse
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -141,9 +160,11 @@
                     <i data-feather="life-buoy" style="width:16px;height:16px;color:var(--bk-warning);"></i>
                     {{ __('Businesses needing help') }}
                 </h6>
+                <div class="bk-pager" data-page-size="5">
+                    <div class="bk-pager-items">
                 @forelse($needsHelp as $row)
                     <a href="{{ route('owner.companies.show', $row['company']->id) }}"
-                       class="d-block text-decoration-none py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                       class="d-block text-decoration-none py-2 border-bottom">
                         <div class="d-flex align-items-center justify-content-between mb-1">
                             <span class="tx-13 fw-semibold text-truncate" style="color:var(--bk-text);max-width:60%;">{{ $row['company']->localizedName() }}</span>
                             <span class="tx-11 fw-bold" style="color:{{ $row['percent'] < 50 ? 'var(--bk-danger)' : 'var(--bk-warning)' }};">{{ $row['percent'] }}%</span>
@@ -168,6 +189,8 @@
                         <div class="mt-2">{{ __('All recent businesses are set up') }}</div>
                     </div>
                 @endforelse
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -382,7 +405,9 @@
                         {{ __('All') }} <i data-feather="arrow-right" style="width:12px;height:12px;"></i>
                     </a>
                 </div>
-                @forelse($recentAppointments->take(7) as $row)
+                <div class="bk-pager" data-page-size="5">
+                    <div class="bk-pager-items">
+                @forelse($recentAppointments as $row)
                 @php
                     $ic  = $row->status->color();
                     $ini = strtoupper(substr($row->customer?->name ?? 'C', 0, 1));
@@ -406,6 +431,8 @@
                     <p>{{ __('No appointments yet.') }}</p>
                 </div>
                 @endforelse
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -430,6 +457,7 @@
                 </div>
                 @endif
 
+                <div class="bk-pager" data-page-size="5">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
@@ -441,7 +469,7 @@
                                 <th>{{ __('Customer') }}</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="bk-pager-items">
                             @forelse($recentAppointments as $row)
                             <tr class="bk-table-row"
                                 onclick="location.href='{{ route('owner.appointments.show', $row) }}'">
@@ -470,6 +498,7 @@
                         </tbody>
                     </table>
                 </div>
+                </div>{{-- .bk-pager --}}
             </div>
         </div>
     </div>
@@ -477,6 +506,60 @@
 </div>
 
 </div>{{-- .page-content --}}
+
+@push('scripts')
+<script>
+(function () {
+    'use strict';
+    var rtl = document.documentElement.getAttribute('dir') === 'rtl';
+
+    function buildPager(pager) {
+        var size = parseInt(pager.getAttribute('data-page-size'), 10) || 6;
+        var wrap = pager.querySelector('.bk-pager-items');
+        if (!wrap) return;
+        var items = Array.prototype.filter.call(wrap.children, function (el) { return el.nodeType === 1; });
+        if (items.length <= size) return; // nothing to page
+
+        var pageCount = Math.ceil(items.length / size);
+        var current = 0;
+
+        var nav = document.createElement('div');
+        nav.className = 'bk-pager-nav';
+        nav.innerHTML =
+            '<button type="button" class="bk-pager-btn" data-dir="prev"><i data-feather="chevron-' + (rtl ? 'right' : 'left') + '"></i></button>' +
+            '<span class="bk-pager-info"></span>' +
+            '<button type="button" class="bk-pager-btn" data-dir="next"><i data-feather="chevron-' + (rtl ? 'left' : 'right') + '"></i></button>';
+        pager.appendChild(nav);
+
+        var info = nav.querySelector('.bk-pager-info');
+        var prev = nav.querySelector('[data-dir="prev"]');
+        var next = nav.querySelector('[data-dir="next"]');
+
+        function render() {
+            items.forEach(function (el, i) {
+                el.classList.toggle('bk-pager-hide', Math.floor(i / size) !== current);
+            });
+            info.textContent = (current + 1) + ' / ' + pageCount;
+            prev.disabled = current === 0;
+            next.disabled = current === pageCount - 1;
+        }
+        prev.addEventListener('click', function () { if (current > 0) { current--; render(); } });
+        next.addEventListener('click', function () { if (current < pageCount - 1) { current++; render(); } });
+        render();
+    }
+
+    function init() {
+        document.querySelectorAll('.bk-pager[data-page-size]').forEach(buildPager);
+        if (typeof feather !== 'undefined') feather.replace();
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
+@endpush
 
 @push('owner-after-template')
 @php
