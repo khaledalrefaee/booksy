@@ -172,7 +172,7 @@ class SmsController extends Controller
 
     // ── Transactions (credit ledger) ─────────────────────────────────────────
 
-    public function transactions(Request $request)
+    public function transactions(Request $request, RasselAccountClient $rassel)
     {
         $type      = $request->get('type', '');
         $companyId = $request->get('company', '');
@@ -186,7 +186,50 @@ class SmsController extends Controller
         $companies = Company::orderBy('name_en')->get(['id', 'name_en', 'name_ar']);
         $types = ['grant', 'purchase', 'consume', 'refund', 'expire', 'adjustment'];
 
-        return view('owner.sms.transactions', compact('tx', 'companies', 'types', 'type', 'companyId'));
+        // Rasel provider wallet ledger — REFERENCE ONLY, kept strictly separate
+        // from the GlowRez credit ledger above. Shows what the provider actually
+        // billed the platform account (USD, by segment). Never mixed into a
+        // company's credit figures.
+        $providerLedger = $this->raselLedger($rassel);
+
+        return view('owner.sms.transactions', compact(
+            'tx', 'companies', 'types', 'type', 'companyId', 'providerLedger'
+        ));
+    }
+
+    /** Normalize GET /account/wallet/transactions into a small, safe view model. */
+    private function raselLedger(RasselAccountClient $rassel): array
+    {
+        if (! $rassel->configured()) {
+            return ['configured' => false, 'ok' => false, 'rows' => []];
+        }
+
+        $res = $rassel->walletTransactions(0, 25);
+        if (! ($res['ok'] ?? false)) {
+            return ['configured' => true, 'ok' => false, 'rows' => [], 'error' => $res['error'] ?? 'Unavailable'];
+        }
+
+        $data = $res['data']['data'] ?? [];
+        $rows = [];
+        foreach (($data['transactions'] ?? []) as $t) {
+            $rows[] = [
+                'id'            => $t['id'] ?? null,
+                'amount'        => $t['amount'] ?? null,
+                'type'          => $t['type'] ?? null,
+                'source'        => $t['source'] ?? null,
+                'description'   => $t['description'] ?? null,
+                'balance_after' => $t['balanceAfter'] ?? null,
+                'message_count' => $t['messageCount'] ?? null,
+                'created_at'    => $t['createdAt'] ?? null,
+            ];
+        }
+
+        return [
+            'configured' => true,
+            'ok'         => true,
+            'balance'    => $data['balance'] ?? null,
+            'rows'       => $rows,
+        ];
     }
 
     // ── Message logs ─────────────────────────────────────────────────────────
@@ -261,12 +304,21 @@ class SmsController extends Controller
 
     // ── Pricing ──────────────────────────────────────────────────────────────
 
-    public function pricing()
+    public function pricing(RasselAccountClient $rassel)
     {
         $setting  = SmsSetting::current();
         $packages = SmsPackage::orderBy('credits')->get();
 
-        return view('owner.sms.pricing', compact('setting', 'packages'));
+        // Approved Rasel sender names (sender.id) the platform can send under.
+        // Read-only reference; the chosen id is stored on the settings row and
+        // passed to Rasel at send time. Fails soft when the provider is down.
+        $senders = $rassel->approvedSenders();
+
+        // Message types the local_sms channel currently allows (GET
+        // /messages/policies). Informational; [] when unavailable (fails open).
+        $allowedTypes = $rassel->localSmsAllowedTypes();
+
+        return view('owner.sms.pricing', compact('setting', 'packages', 'senders', 'allowedTypes'));
     }
 
     public function updatePricing(Request $request)
@@ -281,9 +333,43 @@ class SmsController extends Controller
         return back()->with('success', __('Pricing updated.'));
     }
 
+    // ── Rasel SMS sender (platform-level) ─────────────────────────────────────
+
+    /** Choose which approved Rasel sender.id local sends go out under. */
+    public function updateDefaultSender(Request $request)
+    {
+        $data = $request->validate([
+            'default_sender_id'   => ['nullable', 'string', 'max:191'],
+            'default_sender_name' => ['nullable', 'string', 'max:191'],
+        ]);
+
+        SmsSetting::current()->update([
+            'default_sender_id'   => $data['default_sender_id'] ?: null,
+            'default_sender_name' => $data['default_sender_name'] ?: null,
+        ]);
+
+        return back()->with('success', __('Default SMS sender updated.'));
+    }
+
+    /** Request a brand-new sender name from Rasel (POST /sms-senders, owner only). */
+    public function requestSender(Request $request, RasselAccountClient $rassel)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:191'],
+        ]);
+
+        $res = $rassel->requestSmsSender($data['name']);
+
+        if ($res['ok'] ?? false) {
+            return back()->with('success', __('Sender name submitted to Rasel for review.'));
+        }
+
+        return back()->with('error', __('Could not submit sender name:') . ' ' . ($res['error'] ?? __('Unavailable')));
+    }
+
     // ── Grant free credits (to a company pool or a specific branch) ───────────
 
-    public function grant(Request $request)
+    public function grant(Request $request, RasselAccountClient $rassel)
     {
         $data = $request->validate([
             'company_id'    => ['required', 'exists:companies,id'],
@@ -299,6 +385,23 @@ class SmsController extends Controller
             if (! $branch || $branch->company_id != $data['company_id']) {
                 return back()->with('error', __('Selected branch does not belong to that company.'));
             }
+        }
+
+        // Capacity guard: never distribute more GlowRez credits than Rasel can
+        // actually deliver this cycle. Fails open when the provider is unreachable.
+        $cap = $this->credits->distributionCapacity($rassel->snapshot());
+        if (($cap['enforce'] ?? false) && (int) $data['credits'] > (int) $cap['available']) {
+            return back()->withInput()->with('error', __(
+                'Not enough Rasel sending capacity: you asked to grant :n but only :avail can still be distributed (Rasel can deliver :cap this cycle — :plan plan + :grant free grant — and :out is already distributed). Top up the Rasel plan/balance or grant a smaller amount.',
+                [
+                    'n'     => number_format((int) $data['credits']),
+                    'avail' => number_format((int) $cap['available']),
+                    'cap'   => number_format((int) $cap['capacity']),
+                    'plan'  => number_format((int) $cap['plan_remaining']),
+                    'grant' => number_format((int) $cap['grant_remaining']),
+                    'out'   => number_format((int) $cap['outstanding']),
+                ]
+            ));
         }
 
         $wallet = $this->credits->firstOrCreateWallet($data['company_id'], $data['branch_id'] ?? null);

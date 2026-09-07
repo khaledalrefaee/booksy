@@ -8,8 +8,34 @@
 
 <style>
 .navbar .navbar-content { gap: 6px !important; }
-.navbar .navbar-nav { gap: 0 !important; }
+/* Greeting keeps its me-auto (pins it to the start); neutralise NobleUI's own
+   auto margin on .navbar-nav so the search, actions and utility icons pack
+   together at the end instead of stranding the buttons in the middle. */
+.navbar .navbar-nav { gap: 0 !important; margin-inline-start: 0 !important; }
 .navbar .navbar-nav .nav-link { padding-inline: 6px !important; }
+
+/* ── Global search (pill, tokenised, accent focus ring) ── */
+.bk-search{ position:relative; align-self:center; width:240px; max-width:260px; }
+.bk-search-ic{
+    position:absolute; inset-inline-start:13px; top:50%; transform:translateY(-50%);
+    width:15px; height:15px; color:var(--bk-text-muted);
+    pointer-events:none; transition:color .18s ease;
+}
+.bk-search input{
+    width:100%; height:38px; border-radius:20px;
+    padding-inline-start:38px; padding-inline-end:16px;
+    background:var(--bk-surface-2); border:1px solid var(--bk-border);
+    color:var(--bk-text); font-size:.8rem; line-height:1;
+    transition:border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.bk-search input::placeholder{ color:var(--bk-text-muted); opacity:1; }
+.bk-search input:hover{ border-color:var(--bk-border-strong, var(--bk-border)); }
+.bk-search input:focus{
+    outline:none; background:var(--bk-surface);
+    border-color:var(--bk-accent);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--bk-accent) 16%, transparent);
+}
+.bk-search:focus-within .bk-search-ic{ color:var(--bk-accent); }
 
 /* ── Notification bell (DB-backed, unified GlowRez style) ── */
 .bk-notif-badge{
@@ -96,20 +122,19 @@
                 {{ $greeting }} 👋
             </div>
             <div style="font-size:.88rem;font-weight:700;color:var(--bk-accent);">
-                {{ $authCompany?->localizedName() }}
+                {{ $authCompany?->owner_name ?: $authCompany?->localizedName() }}
             </div>
         </div>
 
         {{-- Global search --}}
         <form method="GET" action="{{ route('company.search.index') }}"
-              class="d-none d-md-flex align-items-center me-2" style="min-width:200px;max-width:260px;">
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-transparent border-end-0">
-                    <i data-feather="search" style="width:13px;height:13px;opacity:.5;"></i>
-                </span>
-                <input type="text" name="q" class="form-control border-start-0"
-                       placeholder="{{ __('Search') }}…" style="font-size:.8rem;">
-            </div>
+              class="bk-search d-none d-md-block me-2" role="search">
+            <svg class="bk-search-ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+            <input type="search" name="q" autocomplete="off"
+                   placeholder="{{ __('Search') }}…" aria-label="{{ __('Search') }}">
         </form>
         <a href="{{ route('company.search.index') }}" class="nav-link d-md-none" style="padding:0 8px;">
             <i data-feather="search" style="width:18px;height:18px;"></i>
@@ -117,7 +142,7 @@
 
         {{-- Action Buttons --}}
         <div class="d-none d-lg-flex align-items-center gap-1 me-1">
-            <a href="{{ route('company.appointments.create') }}" data-tour="new-booking"
+            <a href="{{ route('company.appointments.index') }}" data-tour="new-booking"
                class="btn btn-primary btn-sm rounded-pill d-flex align-items-center gap-1 px-3">
                 <i class="feather icon-plus" style="font-size:13px;line-height:1;"></i>
                 {{ __('New booking') }}
@@ -256,11 +281,10 @@
                         </a>
                     </div>
                     <ul class="list-unstyled p-2 mb-0">
-                         <li >
+                        <li>
                             <a href="{{ route('company.profile.show') }}"
-                            class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
-                                <i class="link-icon" data-feather="user"></i>
-                                <span class="icon-sm link-title " >{{ __('Profile') }}</span>
+                               class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
+                                <i class="icon-sm feather icon-user"></i> {{ __('Profile') }}
                             </a>
                         </li>
                         <li><hr class="dropdown-divider my-1"></li>

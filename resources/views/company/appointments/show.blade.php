@@ -274,9 +274,9 @@
                 <div class="modal-body px-4 py-3">
 
                     {{-- Price banner --}}
-                    <div style="background:rgba(102,126,234,.08);border:1.5px solid rgba(102,126,234,.15);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">
+                    <div style="background:rgba(92,112,56,.08);border:1.5px solid rgba(92,112,56,.15);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">
                         <div style="font-size:12px;opacity:.5;">{{ __('Service price') }}</div>
-                        <div style="font-size:22px;font-weight:900;color:#667eea;">
+                        <div style="font-size:22px;font-weight:900;color:#5C7038;">
                             {{ number_format($apptPrice, 2) }}
                             <span style="font-size:13px;opacity:.6;">{{ $svcSymbol }}</span>
                         </div>
@@ -384,8 +384,8 @@
                 b.classList.remove('active');
             });
             var btn = this.closest('label').querySelector('.pay-method-btn');
-            btn.style.borderColor = '#667eea';
-            btn.style.background  = 'rgba(102,126,234,.12)';
+            btn.style.borderColor = '#5C7038';
+            btn.style.background  = 'rgba(92,112,56,.12)';
             btn.classList.add('active');
         });
     });

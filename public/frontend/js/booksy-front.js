@@ -376,7 +376,33 @@
     }
   }
 
-  function boot() { initReveal(); initNav(); initCounters(); initParallax(); initTilt(); refreshDrag(); initRailArrows(); initFavorites(); initPWA(); }
+  /* ── Live countdown for short (≤24h) venue-card offers ── */
+  function initOfferCountdowns() {
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function tick() {
+      var nodes = document.querySelectorAll('[data-offer-ends]');
+      if (!nodes.length) return;
+      var now = Date.now();
+      nodes.forEach(function (el) {
+        var ends = (+el.dataset.offerEnds || 0) * 1000;
+        var left = Math.floor((ends - now) / 1000);
+        var cd = el.querySelector('.cd');
+        if (left <= 0) {                 // offer just ended — drop the flag
+          el.removeAttribute('data-offer-ends');
+          el.remove();
+          return;
+        }
+        if (cd) {
+          var h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
+          cd.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+        }
+      });
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  function boot() { initReveal(); initNav(); initCounters(); initParallax(); initTilt(); refreshDrag(); initRailArrows(); initFavorites(); initPWA(); initOfferCountdowns(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();

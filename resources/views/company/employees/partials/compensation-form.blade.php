@@ -37,7 +37,7 @@
 .comp-type-card:hover { border-color:rgba(255,255,255,.25); transform:translateY(-2px); }
 .bk-theme-light .comp-type-card:hover { border-color:#94a3b8; }
 .comp-type-card.active {
-    border-color:#667eea; background:rgba(102,126,234,.12);
+    border-color:#5C7038; background:rgba(92,112,56,.12);
 }
 .comp-type-card .ct-icon {
     font-size:24px; margin-bottom:6px; display:block; line-height:1;
@@ -85,7 +85,7 @@
     transition:border-color .18s;
 }
 .bk-theme-light .svc-rate-input { background:#fff; border-color:#e2e8f0; color:#1e293b; }
-.svc-rate-input:focus { border-color:#667eea; }
+.svc-rate-input:focus { border-color:#5C7038; }
 .svc-rate-suffix { font-size:11px; opacity:.5; flex-shrink:0; }
 
 /* animated panels */

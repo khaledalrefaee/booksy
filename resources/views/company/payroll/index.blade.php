@@ -3,7 +3,7 @@
 @push('company-styles')
 <style>
 .pay-hero {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5C7038 0%, #3C4B29 100%);
     border-radius: 20px; padding: 24px 28px; margin-bottom: 24px;
     color: #fff; position: relative; overflow: hidden;
 }
@@ -21,8 +21,8 @@
     text-decoration: none; color: inherit;
 }
 .emp-pay-row:hover {
-    background: rgba(102,126,234,.07);
-    border-color: rgba(102,126,234,.25);
+    background: rgba(92,112,56,.07);
+    border-color: rgba(92,112,56,.25);
     color: inherit;
 }
 .bk-theme-light .emp-pay-row { border-color: #e2e8f0; background: #fafafa; }
@@ -34,7 +34,7 @@
 }
 .emp-avatar-placeholder {
     width: 40px; height: 40px; border-radius: 50%;
-    background: linear-gradient(135deg,#667eea,#764ba2);
+    background: linear-gradient(135deg,#5C7038,#3C4B29);
     display: flex; align-items: center; justify-content: center;
     font-size: 14px; font-weight: 800; color: #fff; flex-shrink: 0;
 }

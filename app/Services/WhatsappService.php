@@ -305,9 +305,11 @@ class WhatsappService
      */
     private function dispatchViaSms(string $phone, string $message): array
     {
-        [$ok, , $error] = app(\App\Services\Sms\RasselClient::class)->send($phone, $message);
+        // RasselClient::send() now returns a structured result; this legacy path
+        // only needs the accepted flag and a human-readable reason.
+        $result = app(\App\Services\Sms\RasselClient::class)->send($phone, $message);
 
-        return [$ok, $error];
+        return [(bool) ($result['ok'] ?? false), $result['error'] ?? null];
     }
 
     /**

@@ -25,10 +25,10 @@ function initImageCompressor(inputId, previewBoxId) {
         if (!infoEl) {
             infoEl = document.createElement('div');
             infoEl.className = 'js-compress-info';
-            infoEl.style.cssText = 'font-size:11px;margin-top:6px;padding:6px 10px;border-radius:8px;background:rgba(102,126,234,.08);border:1px solid rgba(102,126,234,.15);';
+            infoEl.style.cssText = 'font-size:11px;margin-top:6px;padding:6px 10px;border-radius:8px;background:rgba(92,112,56,.08);border:1px solid rgba(92,112,56,.15);';
             hint.appendChild(infoEl);
         }
-        infoEl.innerHTML = '<span style="color:#667eea;">⏳ {{ __("Compressing image...") }}</span>';
+        infoEl.innerHTML = '<span style="color:#5C7038;">⏳ {{ __("Compressing image...") }}</span>';
 
         var reader = new FileReader();
         reader.onload = function (ev) {

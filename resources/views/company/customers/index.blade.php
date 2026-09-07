@@ -356,7 +356,7 @@
                     @csrf @method('PUT')
                     <div class="modal-header border-0 pb-0">
                         <h5 class="modal-title fw-bold">
-                            <i data-feather="edit" style="width:18px;height:18px;margin-inline-end:6px;color:#667eea;"></i>
+                            <i data-feather="edit" style="width:18px;height:18px;margin-inline-end:6px;color:#5C7038;"></i>
                             {{ __('Edit Customer') }}
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -535,7 +535,7 @@
                                 onclick="sendWA('welcome')">
                             👋 {{ __('Welcome message') }}
                         </button>
-                        <button type="button" class="btn btn-sm text-start rounded-3 px-3 py-2" style="background:rgba(102,126,234,.08);border:1px solid rgba(102,126,234,.15);"
+                        <button type="button" class="btn btn-sm text-start rounded-3 px-3 py-2" style="background:rgba(92,112,56,.08);border:1px solid rgba(92,112,56,.15);"
                                 onclick="sendWA('reminder')">
                             ⏰ {{ __('Appointment reminder') }}
                         </button>

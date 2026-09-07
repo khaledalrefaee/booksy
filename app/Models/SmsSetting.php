@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SmsSetting extends Model
 {
-    protected $fillable = ['price_per_sms', 'currency'];
+    protected $fillable = ['price_per_sms', 'currency', 'default_sender_id', 'default_sender_name'];
 
     protected function casts(): array
     {

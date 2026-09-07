@@ -150,3 +150,4 @@ Route::get('/locale/{locale}', function (string $locale) {
 
 require __DIR__.'/owner.php';
 require __DIR__.'/company.php';
+require __DIR__.'/staff.php';

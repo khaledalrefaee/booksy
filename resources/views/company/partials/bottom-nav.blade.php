@@ -24,11 +24,11 @@
         <span>{{ __('Calendar') }}</span>
     </a>
     @endfeature
-    <a href="{{ route('company.appointments.create') }}" class="bk-bn-fab" aria-label="{{ __('New booking') }}">
+    <a href="{{ route('company.appointments.index') }}" class="bk-bn-fab" aria-label="{{ __('New booking') }}">
         <i data-feather="plus"></i>
     </a>
     <a href="{{ route('company.appointments.index') }}"
-       class="bk-bn-item {{ request()->routeIs('company.appointments.*') && !request()->routeIs('company.appointments.create') ? 'active' : '' }}">
+       class="bk-bn-item {{ request()->routeIs('company.appointments.*') ? 'active' : '' }}">
         <span class="bk-bn-ic">
             <i data-feather="check-square"></i>
             @if($bnPending > 0)<span class="bk-bn-badge">{{ $bnPending > 9 ? '9+' : $bnPending }}</span>@endif

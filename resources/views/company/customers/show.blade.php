@@ -12,7 +12,7 @@
                 @endif
                 <button class="btn btn-sm p-1" style="opacity:.5;" title="{{ __('Edit') }}"
                         onclick="openEditCustomer({{ json_encode(['id'=>$customer->id,'name'=>$customer->name,'phone'=>$customer->phone,'age'=>$customer->age,'notes'=>$customer->notes,'date_of_birth'=>$customer->date_of_birth?->format('Y-m-d'),'source'=>$customer->source]) }})">
-                    <i data-feather="edit-2" style="width:14px;height:14px;color:#667eea;"></i>
+                    <i data-feather="edit-2" style="width:14px;height:14px;color:#5C7038;"></i>
                 </button>
             </div>
             <nav aria-label="breadcrumb">
@@ -56,7 +56,7 @@
                     {{-- Source badge --}}
                     @if($customer->source)
                     <div class="mb-2">
-                        <span style="font-size:11px;font-weight:700;background:rgba(102,126,234,.12);color:#667eea;padding:2px 10px;border-radius:12px;">
+                        <span style="font-size:11px;font-weight:700;background:rgba(92,112,56,.12);color:#5C7038;padding:2px 10px;border-radius:12px;">
                             {{ __(ucfirst($customer->source)) }}
                         </span>
                     </div>
@@ -254,7 +254,7 @@
                         $planRemaining = $plan->total_amount - $planPaid;
                         $statusColors = [
                             'active' => ['bg' => 'rgba(34,197,94,.12)', 'color' => '#22c55e'],
-                            'completed' => ['bg' => 'rgba(102,126,234,.12)', 'color' => '#667eea'],
+                            'completed' => ['bg' => 'rgba(92,112,56,.12)', 'color' => '#5C7038'],
                             'cancelled' => ['bg' => 'rgba(239,68,68,.12)', 'color' => '#ef4444'],
                             'on_hold' => ['bg' => 'rgba(251,191,36,.12)', 'color' => '#fbbf24'],
                         ];
@@ -530,14 +530,14 @@
                                 💬 {{ __('Communication Log') }}
                             </div>
                             @if($communications->total() > 0)
-                            <span style="font-size:12px;font-weight:700;background:rgba(102,126,234,.12);color:#667eea;padding:3px 10px;border-radius:20px;">
+                            <span style="font-size:12px;font-weight:700;background:rgba(92,112,56,.12);color:#5C7038;padding:3px 10px;border-radius:20px;">
                                 {{ $communications->total() }}
                             </span>
                             @endif
                         </div>
                         <button class="btn btn-sm p-1" style="opacity:.5;" type="button"
                                 data-bs-toggle="collapse" data-bs-target="#addCommForm">
-                            <i data-feather="plus" style="width:14px;height:14px;color:#667eea;"></i>
+                            <i data-feather="plus" style="width:14px;height:14px;color:#5C7038;"></i>
                         </button>
                     </div>
 
@@ -580,7 +580,7 @@
                     @php
                         $commIcons = ['call'=>'phone','sms'=>'message-square','email'=>'mail','whatsapp'=>'message-circle','note'=>'file-text'];
                         $commIcon = $commIcons[$comm->type] ?? 'message-square';
-                        $dirColor = $comm->direction === 'outgoing' ? '#667eea' : '#5C7038';
+                        $dirColor = $comm->direction === 'outgoing' ? '#5C7038' : '#5C7038';
                     @endphp
                     <div class="px-4 py-3" style="border-bottom:1px solid rgba(255,255,255,.04);">
                         <div class="d-flex gap-3">

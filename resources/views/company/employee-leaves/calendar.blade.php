@@ -3,7 +3,7 @@
 @push('company-styles')
 <style>
 .cal-hero {
-    background: linear-gradient(135deg, #4facfe 0%, #667eea 100%);
+    background: linear-gradient(135deg, #4facfe 0%, #5C7038 100%);
     border-radius: 20px; padding: 24px 28px; margin-bottom: 20px;
     color: #fff; position: relative; overflow: hidden;
 }
@@ -38,10 +38,10 @@
 }
 .bk-theme-light .cal-cell { background: #fafbfc; border-color: #eef0f3; }
 .cal-cell.other-month { opacity: .3; }
-.cal-cell.today { border-color: rgba(102,126,234,.55); background: rgba(102,126,234,.07); }
+.cal-cell.today { border-color: rgba(92,112,56,.55); background: rgba(92,112,56,.07); }
 .cal-cell.weekend-off { background: rgba(255,255,255,.012); }
 .cal-daynum { font-size: 12px; font-weight: 800; opacity: .55; }
-.cal-cell.today .cal-daynum { color: #a5b4fd; opacity: 1; }
+.cal-cell.today .cal-daynum { color: #A6BC7E; opacity: 1; }
 
 .cal-chip {
     display: flex; align-items: center; gap: 4px;

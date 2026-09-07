@@ -38,15 +38,18 @@ Route::prefix('company')->name('company.')->group(function () {
     // Guest-only routes
     Route::middleware('company.guest')->group(function () {
         Route::get('/login',    [LoginController::class, 'showLogin'])->name('login');
-        Route::post('/login',   [LoginController::class, 'login'])->name('login.attempt');
+        // Guards against password brute-force: 10 attempts / 10 min per IP.
+        Route::post('/login',   [LoginController::class, 'login'])->middleware('throttle:10,10')->name('login.attempt');
         Route::get('/register', [RegisterController::class, 'showRegister'])->name('register');
-        Route::post('/register',[RegisterController::class, 'register'])->name('register.attempt');
+        // Blocks mass fake sign-ups (and the paid SMS they trigger): 6 / hour per IP.
+        Route::post('/register',[RegisterController::class, 'register'])->middleware('throttle:6,60')->name('register.attempt');
 
         // Password reset (code-based via WhatsApp or email)
         Route::get('/forgot-password',  [PasswordResetController::class, 'showForgot'])->name('password.forgot');
-        Route::post('/forgot-password', [PasswordResetController::class, 'sendCode'])->name('password.send');
+        // Sending a reset code costs SMS/WhatsApp — throttle it: 4 / 10 min per IP.
+        Route::post('/forgot-password', [PasswordResetController::class, 'sendCode'])->middleware('throttle:4,10')->name('password.send');
         Route::get('/reset-password',   [PasswordResetController::class, 'showReset'])->name('password.reset');
-        Route::post('/reset-password',  [PasswordResetController::class, 'reset'])->name('password.update');
+        Route::post('/reset-password',  [PasswordResetController::class, 'reset'])->middleware('throttle:6,10')->name('password.update');
     });
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
@@ -56,8 +59,9 @@ Route::prefix('company')->name('company.')->group(function () {
         return redirect()->back()->cookie('company_theme', $mode === 'light' ? 'light' : 'dark', 60 * 24 * 365);
     })->whereIn('mode', ['light', 'dark'])->name('theme');
 
-    // Protected routes
-    Route::middleware('company.auth')->group(function () {
+    // Protected routes — company.verified gates the whole panel behind OTP
+    // confirmation (the verify.* routes exempt themselves inside the middleware).
+    Route::middleware(['company.auth', 'company.verified'])->group(function () {
 
         // Account verification (code sent after registration via WhatsApp + email)
         Route::get('/verify',         [VerificationController::class, 'showNotice'])->name('verify.notice');

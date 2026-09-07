@@ -11,18 +11,18 @@
     color: #fff;
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(102,126,234,.2);
+    border: 1px solid rgba(92,112,56,.2);
 }
 .branch-hero::before {
     content: '';
     position: absolute; top: -60px; right: -60px;
     width: 220px; height: 220px; border-radius: 50%;
-    background: rgba(102,126,234,.08);
+    background: rgba(92,112,56,.08);
     pointer-events: none;
 }
 [dir="rtl"] .branch-hero::before { right: auto; left: -60px; }
 .bk-theme-light .branch-hero {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5C7038 0%, #3C4B29 100%);
     border: none;
 }
 
@@ -55,7 +55,7 @@
 }
 .bk-theme-light .emp-row { border-bottom-color: rgba(0,0,0,.05); }
 .emp-row:last-child { border-bottom: none; }
-.emp-row:hover { background: rgba(102,126,234,.08); }
+.emp-row:hover { background: rgba(92,112,56,.08); }
 [dir="ltr"] .emp-row:hover { transform: translateX(3px); }
 [dir="rtl"] .emp-row:hover { transform: translateX(-3px); }
 
@@ -72,9 +72,9 @@
 .badge-role {
     font-size: 11px; font-weight: 600;
     padding: 2px 9px; border-radius: 7px;
-    background: rgba(102,126,234,.18); color: #a5b4fd;
+    background: rgba(92,112,56,.18); color: #A6BC7E;
 }
-.bk-theme-light .badge-role { background: rgba(102,126,234,.12); color: #4f46e5; }
+.bk-theme-light .badge-role { background: rgba(92,112,56,.12); color: #4f46e5; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 
 /* Appointments table */
@@ -87,7 +87,7 @@
 .appt-table tbody tr { border-bottom: 1px solid rgba(255,255,255,.05); transition: background .15s; }
 .bk-theme-light .appt-table tbody tr { border-bottom-color: rgba(0,0,0,.05); }
 .appt-table tbody tr:last-child { border-bottom: none; }
-.appt-table tbody tr:hover { background: rgba(102,126,234,.06); }
+.appt-table tbody tr:hover { background: rgba(92,112,56,.06); }
 
 .status-pill {
     font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
@@ -263,7 +263,7 @@
                 </a>
                 <a href="{{ route('company.branches.edit', $branch) }}"
                    class="btn btn-sm rounded-pill px-3"
-                   style="background:#fff;color:#667eea;font-weight:700;font-size:13px;">
+                   style="background:#fff;color:#5C7038;font-weight:700;font-size:13px;">
                     <i data-feather="edit-2" style="width:13px;height:13px;"></i>
                     <span class="ms-1">{{ __('Edit Branch') }}</span>
                 </a>
@@ -274,8 +274,8 @@
         <div class="row g-3 mt-2 position-relative" style="z-index:1;">
             <div class="col-6 col-md-3">
                 <div class="stat-card bk-a2">
-                    <div class="stat-icon" style="background:rgba(102,126,234,.15);">
-                        <i data-feather="users" style="width:20px;height:20px;color:#a5b4fd;"></i>
+                    <div class="stat-icon" style="background:rgba(92,112,56,.15);">
+                        <i data-feather="users" style="width:20px;height:20px;color:#A6BC7E;"></i>
                     </div>
                     <div>
                         <div class="stat-value">{{ $stats['employees'] }}</div>
@@ -328,7 +328,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold mb-0" style="font-size:15px;">{{ __('Team') }}</h5>
                 <a href="{{ route('company.branches.employees.index', $branch) }}" class="btn btn-sm rounded-pill px-3"
-                   style="font-size:12px;font-weight:600;background:rgba(102,126,234,.12);color:#a5b4fd;border:none;">
+                   style="font-size:12px;font-weight:600;background:rgba(92,112,56,.12);color:#A6BC7E;border:none;">
                     {{ __('Manage all') }} →
                 </a>
             </div>
@@ -336,7 +336,7 @@
                 <div class="card-body p-0">
                     @forelse($employees as $emp)
                     @php
-                        $palette = ['#667eea','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1','#fda085'];
+                        $palette = ['#5C7038','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1','#fda085'];
                         $bg = $palette[$emp->id % count($palette)];
                         $initial = strtoupper(mb_substr($emp->name_en ?? $emp->name_ar ?? '?', 0, 1));
 
@@ -386,7 +386,7 @@
                                     </span>
                                 @endif
                                 @if(($emp->appointments_this_month ?? 0) > 0)
-                                    <span style="font-size:11px;background:rgba(102,126,234,.1);color:#a5b4fd;border-radius:6px;padding:2px 8px;font-weight:600;">
+                                    <span style="font-size:11px;background:rgba(92,112,56,.1);color:#A6BC7E;border-radius:6px;padding:2px 8px;font-weight:600;">
                                         📅 {{ $emp->appointments_this_month }} {{ __('appts this month') }}
                                     </span>
                                 @endif
@@ -411,7 +411,7 @@
                 <h5 class="fw-bold mb-3" style="font-size:15px;">{{ __('Quick Links') }}</h5>
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('company.branches.services.index', $branch) }}"
-                       class="btn btn-sm rounded-pill px-3" style="font-size:12px;font-weight:600;background:rgba(102,126,234,.12);color:#a5b4fd;border:none;">
+                       class="btn btn-sm rounded-pill px-3" style="font-size:12px;font-weight:600;background:rgba(92,112,56,.12);color:#A6BC7E;border:none;">
                         <i data-feather="scissors" style="width:12px;height:12px;" class="me-1"></i>{{ __('Services') }}
                     </a>
                     <a href="{{ route('company.branches.working-hours.edit', $branch) }}"

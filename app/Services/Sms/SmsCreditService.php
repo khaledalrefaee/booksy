@@ -54,6 +54,49 @@ class SmsCreditService
         return $branchWallet ?: $pool;
     }
 
+    /**
+     * How many more GlowRez credits the owner can safely distribute, measured
+     * against what Rasel can ACTUALLY deliver this cycle. Rasel is the transport,
+     * so distributing more credits than the provider can send would leave
+     * companies holding credits that can't go out.
+     *
+     * Deliverable capacity = plan segments still available + free-grant segments
+     * still available. Available-to-grant = capacity − credits already handed out
+     * (the sum of every wallet balance). The Rasel USD wallet is shown for
+     * context but not converted to segments (no fixed rate), matching how the
+     * owner reads "balance 0 + free grant 58".
+     *
+     * Fails OPEN: when the provider snapshot is unavailable, enforce=false so the
+     * owner is never blocked from granting just because Rasel is unreachable.
+     *
+     * @param array $snapshot RasselAccountClient::snapshot()
+     */
+    public function distributionCapacity(array $snapshot): array
+    {
+        $outstanding = (int) SmsWallet::sum('balance');
+
+        if (! ($snapshot['ok'] ?? false)) {
+            return ['ok' => false, 'enforce' => false, 'outstanding' => $outstanding];
+        }
+
+        $planRemaining  = (int) ($snapshot['remaining_segments'] ?? 0);
+        $grantRemaining = (int) ($snapshot['free_grant']['remaining'] ?? 0);
+        $capacity       = $planRemaining + $grantRemaining;
+
+        return [
+            'ok'              => true,
+            'enforce'         => true,
+            'capacity'        => $capacity,
+            'plan_remaining'  => $planRemaining,
+            'grant_remaining' => $grantRemaining,
+            'grant_total'     => (int) ($snapshot['free_grant']['granted'] ?? 0),
+            'wallet_balance'  => $snapshot['wallet_balance'] ?? 0,
+            'wallet_currency' => $snapshot['wallet_currency'] ?? 'USD',
+            'outstanding'     => $outstanding,
+            'available'       => max(0, $capacity - $outstanding),
+        ];
+    }
+
     /** Owner adds free credits to a wallet (e.g. 200 SMS to a branch). */
     public function grant(SmsWallet $wallet, int $credits, array $opts = []): SmsCreditBatch
     {
@@ -170,6 +213,22 @@ class SmsCreditService
 
             return true;
         });
+    }
+
+    /**
+     * Whether this message currently holds a net charge (consumed and not yet
+     * refunded). Lets a retried SendSmsJob avoid charging the same message twice
+     * while still allowing a refund-then-retry cycle to re-charge cleanly.
+     */
+    public function isCharged(SmsMessage $message): bool
+    {
+        $net = (int) SmsTransaction::where('sms_message_id', $message->id)
+            ->whereIn('type', ['consume', 'refund'])
+            ->sum('credits');
+
+        // consume rows are negative, refund rows positive; a net-negative sum
+        // means the message is still paid for.
+        return $net < 0;
     }
 
     /** Give charged credits back (used when a send fails after consuming). */

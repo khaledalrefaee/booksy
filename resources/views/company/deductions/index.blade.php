@@ -19,7 +19,7 @@
 .ded-badge.absence   { background:rgba(239,68,68,.15);  color:#ef4444; }
 .ded-badge.tardiness { background:rgba(245,158,11,.15); color:#f59e0b; }
 .ded-badge.advance   { background:rgba(6,182,212,.15); color:#06b6d4; }
-.ded-badge.other     { background:rgba(99,102,241,.15); color:#818cf8; }
+.ded-badge.other     { background:rgba(99,102,241,.15); color:#A6BC7E; }
 .ded-badge.sick      { background:rgba(34,197,94,.15);  color:#22c55e; }
 </style>
 @endpush

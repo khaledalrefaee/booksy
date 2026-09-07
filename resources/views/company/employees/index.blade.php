@@ -3,7 +3,7 @@
 @push('company-styles')
 <style>
 .emp-hero {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5C7038 0%, #3C4B29 100%);
     border-radius: 20px; padding: 24px 28px;
     margin-bottom: 20px; color: #fff;
     position: relative; overflow: hidden;
@@ -24,7 +24,7 @@
 }
 .bk-theme-light .emp-row { border-bottom-color: rgba(0,0,0,.05); }
 .emp-row:last-child { border-bottom: none; }
-.emp-row:hover { background: rgba(102,126,234,.08); }
+.emp-row:hover { background: rgba(92,112,56,.08); }
 [dir="ltr"] .emp-row:hover { transform: translateX(3px); }
 [dir="rtl"] .emp-row:hover { transform: translateX(-3px); }
 .emp-row:hover .emp-actions { opacity: 1; }
@@ -39,9 +39,9 @@
 .badge-role {
     font-size: 11px; font-weight: 600;
     padding: 2px 9px; border-radius: 7px;
-    background: rgba(102,126,234,.18); color: #a5b4fd;
+    background: rgba(92,112,56,.18); color: #A6BC7E;
 }
-.bk-theme-light .badge-role { background: rgba(102,126,234,.12); color: #4f46e5; }
+.bk-theme-light .badge-role { background: rgba(92,112,56,.12); color: #4f46e5; }
 .badge-access {
     font-size: 10.5px; font-weight: 700;
     padding: 2px 8px; border-radius: 7px;
@@ -90,10 +90,10 @@
     transition: border-color .2s, background .2s;
 }
 .emp-search-box::placeholder { color: rgba(255,255,255,.35); }
-.emp-search-box:focus { border-color: rgba(102,126,234,.5); background: rgba(102,126,234,.08); }
+.emp-search-box:focus { border-color: rgba(92,112,56,.5); background: rgba(92,112,56,.08); }
 .bk-theme-light .emp-search-box { background: #f8f9fa; border-color: #dee2e6; color: #212529; }
 .bk-theme-light .emp-search-box::placeholder { color: rgba(0,0,0,.3); }
-.bk-theme-light .emp-search-box:focus { border-color: #667eea; background: #fff; }
+.bk-theme-light .emp-search-box:focus { border-color: #5C7038; background: #fff; }
 
 .emp-filter-btn {
     display: inline-flex; align-items: center; gap: 5px;
@@ -103,12 +103,12 @@
     cursor: pointer; transition: all .15s; white-space: nowrap;
 }
 .bk-theme-light .emp-filter-btn { border-color: rgba(0,0,0,.1); color: rgba(0,0,0,.5); }
-.emp-filter-btn:hover { border-color: rgba(102,126,234,.3); color: rgba(255,255,255,.8); }
+.emp-filter-btn:hover { border-color: rgba(92,112,56,.3); color: rgba(255,255,255,.8); }
 .bk-theme-light .emp-filter-btn:hover { color: rgba(0,0,0,.8); }
 .emp-filter-btn.active {
-    background: rgba(102,126,234,.15); border-color: rgba(102,126,234,.4); color: #a5b4fd;
+    background: rgba(92,112,56,.15); border-color: rgba(92,112,56,.4); color: #A6BC7E;
 }
-.bk-theme-light .emp-filter-btn.active { background: rgba(102,126,234,.1); color: #667eea; }
+.bk-theme-light .emp-filter-btn.active { background: rgba(92,112,56,.1); color: #5C7038; }
 .emp-filter-count {
     font-size: 10px; font-weight: 800; opacity: .5;
     background: rgba(255,255,255,.08); padding: 1px 6px; border-radius: 10px;
@@ -156,7 +156,7 @@
                 </a>
                 <a href="{{ route('company.branches.employees.create', $branch) }}"
                    class="btn btn-sm rounded-pill px-3"
-                   style="background:#fff;color:#667eea;font-weight:700;font-size:13px;">
+                   style="background:#fff;color:#5C7038;font-weight:700;font-size:13px;">
                     <i data-feather="plus" style="width:13px;height:13px;"></i>
                     <span class="{{ app()->getLocale()==='ar' ? 'me-1' : 'ms-1' }}">{{ __('Add Employee') }}</span>
                 </a>
@@ -293,7 +293,7 @@
         <div class="card-body p-0 emp-scroll-wrap">
             @forelse($employees as $emp)
             @php
-                $palette = ['#667eea','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1','#fda085'];
+                $palette = ['#5C7038','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1','#fda085'];
                 $bg = $palette[$emp->id % count($palette)];
                 $initial = strtoupper(mb_substr($emp->name_en ?? $emp->name_ar ?? '?', 0, 1));
             @endphp
@@ -383,7 +383,7 @@
                             </span>
                         @endif
                         @if(($emp->appointments_this_month ?? 0) > 0)
-                            <span style="font-size:11px;background:rgba(102,126,234,.1);color:#a5b4fd;border-radius:6px;padding:2px 8px;font-weight:600;">
+                            <span style="font-size:11px;background:rgba(92,112,56,.1);color:#A6BC7E;border-radius:6px;padding:2px 8px;font-weight:600;">
                                 📅 {{ $emp->appointments_this_month }} {{ __('appts this month') }}
                             </span>
                         @endif
@@ -392,7 +392,7 @@
                 </div>
 
                 <div class="emp-actions">
-                    <a href="{{ route('company.employees.show', $emp) }}" class="btn-act" style="background:rgba(102,126,234,.18);color:#a5b4fd;">
+                    <a href="{{ route('company.employees.show', $emp) }}" class="btn-act" style="background:rgba(92,112,56,.18);color:#A6BC7E;">
                         <i data-feather="eye" style="width:11px;height:11px;"></i>{{ __('Show') }}
                     </a>
                     <a href="{{ route('company.employee-leaves.create', $emp) }}" class="btn-act btn-act-leave">

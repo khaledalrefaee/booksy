@@ -53,7 +53,7 @@
                    style="width:150px;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff;"
                    value="{{ $customTo ?? now()->toDateString() }}">
             <button class="btn btn-sm rounded-pill px-3"
-                    style="background:#667eea;color:#fff;border:none;font-weight:600;">
+                    style="background:#5C7038;color:#fff;border:none;font-weight:600;">
                 {{ __('Apply') }}
             </button>
         </div>
@@ -155,7 +155,7 @@
                             <div style="font-size:13px;font-weight:800;color:var(--text-color);">
                                 🏪 {{ $br?->localizedName() ?? '—' }}
                             </div>
-                            <span style="font-size:10px;color:#667eea;font-weight:600;">
+                            <span style="font-size:10px;color:#5C7038;font-weight:600;">
                                 {{ __('View') }} →
                             </span>
                         </div>
@@ -182,7 +182,7 @@
                     <div style="font-size:12px;font-weight:700;opacity:.4;text-transform:uppercase;letter-spacing:.5px;">
                         {{ __('Transactions') }}
                     </div>
-                    <span style="font-size:12px;font-weight:700;background:rgba(102,126,234,.1);color:#667eea;padding:3px 10px;border-radius:20px;">
+                    <span style="font-size:12px;font-weight:700;background:rgba(92,112,56,.1);color:#5C7038;padding:3px 10px;border-radius:20px;">
                         {{ $paginatedTx->total() }}
                     </span>
                 </div>
@@ -200,7 +200,7 @@
                 </div>
                 @foreach($rows as $tx)
                 @php
-                    $catMeta  = $cats[$tx->category] ?? ['icon'=>'💵','color'=>'#667eea','label_key'=>$tx->category,'type'=>'income'];
+                    $catMeta  = $cats[$tx->category] ?? ['icon'=>'💵','color'=>'#5C7038','label_key'=>$tx->category,'type'=>'income'];
                     $isIncome = $catMeta['type'] === 'income';
                     $sym      = config("booksy.currencies.{$tx->currency}.symbol", $tx->currency);
                 @endphp
@@ -301,11 +301,11 @@
                         @foreach($branches as $b)
                         <a href="{{ route('company.branches.cash.index', $b) }}"
                            class="d-flex align-items-center justify-content-between text-decoration-none"
-                           style="padding:8px 12px;border-radius:10px;background:rgba(102,126,234,.08);border:1px solid rgba(102,126,234,.15);transition:background .12s;"
-                           onmouseover="this.style.background='rgba(102,126,234,.16)'"
-                           onmouseout="this.style.background='rgba(102,126,234,.08)'">
+                           style="padding:8px 12px;border-radius:10px;background:rgba(92,112,56,.08);border:1px solid rgba(92,112,56,.15);transition:background .12s;"
+                           onmouseover="this.style.background='rgba(92,112,56,.16)'"
+                           onmouseout="this.style.background='rgba(92,112,56,.08)'">
                             <span style="font-size:12px;font-weight:700;color:var(--text-color);">🏪 {{ $b->localizedName() }}</span>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2.5"><polyline points="{{ $isRtl ? '15 18 9 12 15 6' : '9 18 15 12 9 6' }}"/></svg>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5C7038" stroke-width="2.5"><polyline points="{{ $isRtl ? '15 18 9 12 15 6' : '9 18 15 12 9 6' }}"/></svg>
                         </a>
                         @endforeach
                     </div>
@@ -324,10 +324,10 @@
                         @endphp
                         <a href="{{ $baseUrl }}?period=custom&from={{ $am['from'] }}&to={{ $am['to'] }}{{ $branchId ? '&branch_id='.$branchId : '' }}"
                            class="d-flex align-items-center justify-content-between text-decoration-none"
-                           style="padding:6px 10px;border-radius:8px;transition:background .12s;{{ $isActive ? 'background:rgba(102,126,234,.15);' : '' }}"
-                           onmouseover="this.style.background='rgba(102,126,234,.1)'"
-                           onmouseout="this.style.background='{{ $isActive ? 'rgba(102,126,234,.15)' : 'transparent' }}'">
-                            <span style="font-size:12px;font-weight:600;color:var(--text-color);{{ $isActive ? 'color:#667eea;' : '' }}">{{ $am['label'] }}</span>
+                           style="padding:6px 10px;border-radius:8px;transition:background .12s;{{ $isActive ? 'background:rgba(92,112,56,.15);' : '' }}"
+                           onmouseover="this.style.background='rgba(92,112,56,.1)'"
+                           onmouseout="this.style.background='{{ $isActive ? 'rgba(92,112,56,.15)' : 'transparent' }}'">
+                            <span style="font-size:12px;font-weight:600;color:var(--text-color);{{ $isActive ? 'color:#5C7038;' : '' }}">{{ $am['label'] }}</span>
                             <span style="font-size:10px;font-weight:700;opacity:.4;background:rgba(255,255,255,.06);padding:1px 7px;border-radius:10px;">{{ $am['count'] }}</span>
                         </a>
                         @endforeach
@@ -340,10 +340,10 @@
                         @endphp
                         <a href="{{ $baseUrl }}?period=custom&from={{ $am['from'] }}&to={{ $am['to'] }}{{ $branchId ? '&branch_id='.$branchId : '' }}"
                            class="d-flex align-items-center justify-content-between text-decoration-none"
-                           style="padding:6px 10px;border-radius:8px;transition:background .12s;{{ $isActive ? 'background:rgba(102,126,234,.15);' : '' }}"
-                           onmouseover="this.style.background='rgba(102,126,234,.1)'"
-                           onmouseout="this.style.background='{{ $isActive ? 'rgba(102,126,234,.15)' : 'transparent' }}'">
-                            <span style="font-size:12px;font-weight:600;color:var(--text-color);{{ $isActive ? 'color:#667eea;' : '' }}">{{ $am['label'] }}</span>
+                           style="padding:6px 10px;border-radius:8px;transition:background .12s;{{ $isActive ? 'background:rgba(92,112,56,.15);' : '' }}"
+                           onmouseover="this.style.background='rgba(92,112,56,.1)'"
+                           onmouseout="this.style.background='{{ $isActive ? 'rgba(92,112,56,.15)' : 'transparent' }}'">
+                            <span style="font-size:12px;font-weight:600;color:var(--text-color);{{ $isActive ? 'color:#5C7038;' : '' }}">{{ $am['label'] }}</span>
                             <span style="font-size:10px;font-weight:700;opacity:.4;background:rgba(255,255,255,.06);padding:1px 7px;border-radius:10px;">{{ $am['count'] }}</span>
                         </a>
                         @endforeach

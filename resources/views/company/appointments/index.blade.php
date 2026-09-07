@@ -683,7 +683,7 @@
         'appointmentsUpdateStatus'     => route('company.appointments.update-status', '__ID__'),
         'appointmentsStaffEvents'      => route('company.appointments.staff-events'),
         'appointmentsReschedule'       => route('company.appointments.reschedule', '__ID__'),
-        'appointmentsCreate'           => route('company.appointments.create'),
+        'appointmentsCreate'           => route('company.appointments.index'),
         'appointmentsQuickStore'       => route('company.appointments.quick-store'),
         'appointmentsQuickGroupStore'  => route('company.appointments.quick-group-store'),
         'appointmentsBranchData'       => route('company.appointments.branch-data'),

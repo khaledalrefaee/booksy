@@ -17,7 +17,7 @@
 
 @include('company.partials.team-nav')
 
-@php $avatarColors = ['#5C7038','#667eea','#22c55e','#ef4444','#f59e0b','#a78bfa','#fb923c','#06b6d4']; @endphp
+@php $avatarColors = ['#5C7038','#5C7038','#22c55e','#ef4444','#f59e0b','#a78bfa','#fb923c','#06b6d4']; @endphp
 
 {{-- Hero --}}
 <div class="rpt-hero">

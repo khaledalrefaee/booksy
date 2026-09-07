@@ -9,7 +9,7 @@
 }
 .show-hero-bg {
     position: absolute; inset: 0;
-    background: linear-gradient(135deg,#667eea,#764ba2);
+    background: linear-gradient(135deg,#5C7038,#3C4B29);
 }
 .show-hero-img {
     position: absolute; inset: 0;

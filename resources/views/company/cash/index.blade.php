@@ -8,14 +8,14 @@
 .btn-add-tx {
     position:fixed; bottom:28px; inset-inline-end:28px; z-index:900;
     width:56px; height:56px; border-radius:50%;
-    background:linear-gradient(135deg,#667eea,#764ba2);
-    box-shadow:0 6px 24px rgba(102,126,234,.5);
+    background:linear-gradient(135deg,#5C7038,#3C4B29);
+    box-shadow:0 6px 24px rgba(92,112,56,.5);
     display:flex; align-items:center; justify-content:center;
     color:#fff; font-size:24px; cursor:pointer; border:none;
     transition:transform .15s, box-shadow .15s;
     text-decoration:none;
 }
-.btn-add-tx:hover { transform:scale(1.08); box-shadow:0 10px 32px rgba(102,126,234,.6); color:#fff; }
+.btn-add-tx:hover { transform:scale(1.08); box-shadow:0 10px 32px rgba(92,112,56,.6); color:#fff; }
 
 /* ─── Overpayment hint ──────────────────────────────────────────────────── */
 #diff-hint {
@@ -28,10 +28,10 @@
 /* ─── Bulk action bar ──────────────────────────────────────────────────── */
 .bulk-bar {
     position:sticky; top:60px; z-index:50;
-    background:linear-gradient(135deg,#667eea,#764ba2);
+    background:linear-gradient(135deg,#5C7038,#3C4B29);
     color:#fff; border-radius:12px; padding:10px 16px;
     display:none; align-items:center; gap:12px; margin-bottom:12px;
-    box-shadow:0 4px 20px rgba(102,126,234,.4);
+    box-shadow:0 4px 20px rgba(92,112,56,.4);
 }
 .bulk-bar.show { display:flex; }
 .bulk-bar .count { font-weight:800; font-size:14px; }
@@ -43,8 +43,8 @@
     text-decoration:none; border:1px solid rgba(255,255,255,.1);
     color:var(--text-color); transition:all .15s;
 }
-.filter-pill:hover { background:rgba(102,126,234,.1); color:#667eea; }
-.filter-pill.active { background:#667eea; color:#fff; border-color:#667eea; }
+.filter-pill:hover { background:rgba(92,112,56,.1); color:#5C7038; }
+.filter-pill.active { background:#5C7038; color:#fff; border-color:#5C7038; }
 
 /* ─── Multi-currency row ───────────────────────────────────────────────── */
 .currency-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
@@ -111,7 +111,7 @@
                        style="width:150px;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff;"
                        value="{{ $customTo ?? now()->toDateString() }}">
                 <button class="btn btn-sm rounded-pill px-3"
-                        style="background:#667eea;color:#fff;border:none;font-weight:600;">
+                        style="background:#5C7038;color:#fff;border:none;font-weight:600;">
                     {{ __('Apply') }}
                 </button>
             </div>
@@ -216,7 +216,7 @@
                 {{ __('Recent drawer sessions') }}
             </div>
             <a href="{{ route('company.branches.cash.drawer.archive', $branch) }}"
-               style="font-size:11px;font-weight:700;color:#667eea;text-decoration:none;">
+               style="font-size:11px;font-weight:700;color:#5C7038;text-decoration:none;">
                 {{ __('View all') }} →
             </a>
         </div>
@@ -249,7 +249,7 @@
                 <div class="d-flex gap-1 flex-wrap mt-2" style="justify-content:center;">
                     @if($ds->isClosed())
                     <button class="btn btn-sm px-2"
-                            style="font-size:.58rem;font-weight:700;background:rgba(102,126,234,.1);color:#667eea;border:none;border-radius:6px;"
+                            style="font-size:.58rem;font-weight:700;background:rgba(92,112,56,.1);color:#5C7038;border:none;border-radius:6px;"
                             data-bs-toggle="modal" data-bs-target="#reconcileModal-{{ $ds->id }}">
                         📋 {{ __('Reconcile') }}
                     </button>
@@ -334,7 +334,7 @@
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                    <button type="submit" class="btn btn-sm rounded-pill px-5 fw-bold" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;">
+                    <button type="submit" class="btn btn-sm rounded-pill px-5 fw-bold" style="background:linear-gradient(135deg,#5C7038,#3C4B29);color:#fff;border:none;">
                         ✔ {{ __('Reconcile') }}
                     </button>
                 </div>
@@ -433,7 +433,7 @@
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                    <button type="submit" class="btn btn-sm rounded-pill px-5 fw-bold" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;">
+                    <button type="submit" class="btn btn-sm rounded-pill px-5 fw-bold" style="background:linear-gradient(135deg,#5C7038,#3C4B29);color:#fff;border:none;">
                         ✔ {{ __('Save') }}
                     </button>
                 </div>
@@ -506,7 +506,7 @@
                             {{ __('Transactions') }}
                         </div>
                     </div>
-                    <span style="font-size:12px;font-weight:700;background:rgba(102,126,234,.1);color:#667eea;padding:3px 10px;border-radius:20px;">
+                    <span style="font-size:12px;font-weight:700;background:rgba(92,112,56,.1);color:#5C7038;padding:3px 10px;border-radius:20px;">
                         {{ $paginatedTx->total() }}
                     </span>
                 </div>
@@ -523,7 +523,7 @@
                 </div>
                 @foreach($rows as $tx)
                 @php
-                    $catMeta = $cats[$tx->category] ?? ['icon'=>'💵','color'=>'#667eea','label_key'=>$tx->category,'type'=>'income'];
+                    $catMeta = $cats[$tx->category] ?? ['icon'=>'💵','color'=>'#5C7038','label_key'=>$tx->category,'type'=>'income'];
                     $isIncome = $catMeta['type'] === 'income';
                     $sym = config("booksy.currencies.{$tx->currency}.symbol", $tx->currency);
                 @endphp
@@ -645,7 +645,7 @@
                                    onchange="saveOverpaymentSetting('{{ $val }}')"
                                    class="d-none">
                             <div class="cat-card text-center {{ ($branch->overpayment_to ?? 'treasury') === $val ? 'active' : '' }}"
-                                 style="--cat-color:#667eea;--cat-rgb:102,126,234;">
+                                 style="--cat-color:#5C7038;--cat-rgb:92,112,56;">
                                 <span style="font-size:20px;display:block;margin-bottom:4px;">{{ $ico }}</span>
                                 <div style="font-size:10px;font-weight:700;">{{ $lbl }}</div>
                             </div>
@@ -667,10 +667,10 @@
                         @endphp
                         <a href="{{ route('company.branches.cash.index', [$branch, 'period' => 'custom', 'from' => $am['from'], 'to' => $am['to']]) }}"
                            class="d-flex align-items-center justify-content-between text-decoration-none"
-                           style="padding:6px 10px;border-radius:8px;transition:background .12s;{{ $isActive ? 'background:rgba(102,126,234,.15);' : '' }}"
-                           onmouseover="this.style.background='rgba(102,126,234,.1)'"
-                           onmouseout="this.style.background='{{ $isActive ? 'rgba(102,126,234,.15)' : 'transparent' }}'">
-                            <span style="font-size:12px;font-weight:600;color:var(--text-color);{{ $isActive ? 'color:#667eea;' : '' }}">{{ $am['label'] }}</span>
+                           style="padding:6px 10px;border-radius:8px;transition:background .12s;{{ $isActive ? 'background:rgba(92,112,56,.15);' : '' }}"
+                           onmouseover="this.style.background='rgba(92,112,56,.1)'"
+                           onmouseout="this.style.background='{{ $isActive ? 'rgba(92,112,56,.15)' : 'transparent' }}'">
+                            <span style="font-size:12px;font-weight:600;color:var(--text-color);{{ $isActive ? 'color:#5C7038;' : '' }}">{{ $am['label'] }}</span>
                             <span style="font-size:10px;font-weight:700;opacity:.4;background:rgba(255,255,255,.06);padding:1px 7px;border-radius:10px;">{{ $am['count'] }}</span>
                         </a>
                         @endforeach
@@ -683,10 +683,10 @@
                         @endphp
                         <a href="{{ route('company.branches.cash.index', [$branch, 'period' => 'custom', 'from' => $am['from'], 'to' => $am['to']]) }}"
                            class="d-flex align-items-center justify-content-between text-decoration-none"
-                           style="padding:6px 10px;border-radius:8px;transition:background .12s;{{ $isActive ? 'background:rgba(102,126,234,.15);' : '' }}"
-                           onmouseover="this.style.background='rgba(102,126,234,.1)'"
-                           onmouseout="this.style.background='{{ $isActive ? 'rgba(102,126,234,.15)' : 'transparent' }}'">
-                            <span style="font-size:12px;font-weight:600;color:var(--text-color);{{ $isActive ? 'color:#667eea;' : '' }}">{{ $am['label'] }}</span>
+                           style="padding:6px 10px;border-radius:8px;transition:background .12s;{{ $isActive ? 'background:rgba(92,112,56,.15);' : '' }}"
+                           onmouseover="this.style.background='rgba(92,112,56,.1)'"
+                           onmouseout="this.style.background='{{ $isActive ? 'rgba(92,112,56,.15)' : 'transparent' }}'">
+                            <span style="font-size:12px;font-weight:600;color:var(--text-color);{{ $isActive ? 'color:#5C7038;' : '' }}">{{ $am['label'] }}</span>
                             <span style="font-size:10px;font-weight:700;opacity:.4;background:rgba(255,255,255,.06);padding:1px 7px;border-radius:10px;">{{ $am['count'] }}</span>
                         </a>
                         @endforeach
@@ -908,7 +908,7 @@
                             style="background:rgba(255,255,255,.07);font-weight:600;"
                             data-bs-dismiss="modal">{{ __('Cancel') }}</button>
                     <button type="submit" class="btn btn-sm rounded-pill px-5 fw-bold"
-                            style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;">
+                            style="background:linear-gradient(135deg,#5C7038,#3C4B29);color:#fff;border:none;">
                         ✔ {{ __('Save') }}
                     </button>
                 </div>
@@ -1003,7 +1003,7 @@
                             style="background:rgba(255,255,255,.07);font-weight:600;"
                             data-bs-dismiss="modal">{{ __('Cancel') }}</button>
                     <button type="submit" class="btn btn-sm rounded-pill px-5 fw-bold"
-                            style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;">
+                            style="background:linear-gradient(135deg,#5C7038,#3C4B29);color:#fff;border:none;">
                         ✔ {{ __('Save') }}
                     </button>
                 </div>
@@ -1038,7 +1038,7 @@
                     </div>
 
                     <button type="button" class="btn btn-sm mt-2"
-                            style="font-size:11px;font-weight:700;color:#667eea;background:rgba(102,126,234,.1);border:none;border-radius:8px;padding:4px 12px;"
+                            style="font-size:11px;font-weight:700;color:#5C7038;background:rgba(92,112,56,.1);border:none;border-radius:8px;padding:4px 12px;"
                             onclick="addCurrencyRow('openBalances','opening_amount')">
                         + {{ __('Add currency') }}
                     </button>
@@ -1083,7 +1083,7 @@
                             <span>{{ $bal->currency }}</span>
                             <span style="opacity:.5;">{{ __('Opening') }}: {{ number_format($bal->opening_amount, 2) }}</span>
                         </div>
-                        <div class="expected-line" data-currency="{{ $bal->currency }}" style="font-size:.78rem;color:#667eea;margin-bottom:8px;display:none;">
+                        <div class="expected-line" data-currency="{{ $bal->currency }}" style="font-size:.78rem;color:#5C7038;margin-bottom:8px;display:none;">
                             {{ __('Expected') }}: <strong class="expected-val">—</strong>
                         </div>
                         <input type="hidden" name="balances[{{ $i }}][currency]" value="{{ $bal->currency }}">

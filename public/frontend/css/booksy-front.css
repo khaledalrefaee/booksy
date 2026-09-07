@@ -653,7 +653,7 @@ html[dir="rtl"] .bkf-cat-pill{ padding:9px 10px 9px 18px; }
 .bkf-vp-fav.is-on .heart-off{ display:none; }
 .bkf-vp-fav.is-on .heart-on{ display:block; }
 /* company logo chip overlapping media */
-.bkf-vp-logo{ position:absolute; z-index:2; bottom:-18px; inset-inline-start:16px; width:46px; height:46px; border-radius:14px; overflow:hidden; background:var(--bk-surface); border:2px solid var(--bk-surface); box-shadow:var(--bk-shadow); display:grid; place-items:center; }
+.bkf-vp-logo{ position:absolute; z-index:2; pointer-events:none; bottom:-20px; inset-inline-start:16px; width:56px; height:56px; border-radius:16px; overflow:hidden; background:var(--bk-surface); border:3px solid var(--bk-surface); box-shadow:0 6px 18px rgba(0,0,0,.22),0 0 0 1px color-mix(in srgb,var(--bk-border-strong) 60%,transparent); display:grid; place-items:center; }
 .bkf-vp-logo img{ width:100%; height:100%; object-fit:cover; }
 .bkf-vp-logo .fb{ width:100%; height:100%; display:grid; place-items:center; background:var(--bk-accent-wash); color:var(--bk-accent); font-weight:800; font-family:var(--bk-font-ui); }
 /* body */
@@ -678,9 +678,39 @@ html[dir="rtl"] .bkf-cat-pill{ padding:9px 10px 9px 18px; }
 .bkf-vp-slot{ display:inline-flex; align-items:center; gap:5px; margin-top:4px; font-size:var(--bk-fs-xs); font-weight:600; color:var(--bk-success); }
 .bkf-vp-slot svg{ width:13px; height:13px; }
 .bkf-vp-actions{ display:flex; gap:8px; flex-shrink:0; }
-.bkf-vp-book{ flex:1.7; }              /* primary action leads */
-.bkf-vp-details{ flex:1; color:var(--bk-accent); }   /* subordinate, lighter ghost */
+.bkf-vp-book{ flex:1; }                /* single primary action fills the row */
 @media (max-width:400px){ .bkf-vp-foot{ flex-direction:column; align-items:stretch; } .bkf-vp-actions .bkf-btn{ flex:1; } }
+
+/* Whole-card link: sits above the body text, below the fav + book controls, so a
+   click anywhere on the card opens the venue while those keep their own action. */
+.bkf-vp-cover{ position:absolute; inset:0; z-index:1; border-radius:inherit; }
+.bkf-vp-cover:focus-visible{ outline:2px solid var(--bk-accent); outline-offset:-3px; }
+.bkf-vp-badge{ pointer-events:none; }                 /* decorative — let clicks pass through */
+.bkf-vp-fav{ z-index:3; }                             /* interactive — stays above the cover */
+.bkf-vp-book{ position:relative; z-index:3; }
+
+/* Live open/closed status — mirrors the branch page's green/red convention. */
+.bkf-vp-status{ position:absolute; z-index:2; pointer-events:none; bottom:12px; inset-inline-end:12px;
+  display:inline-flex; align-items:center; gap:6px; font-family:var(--bk-font-ui); font-size:var(--bk-fs-xs); font-weight:700;
+  padding:5px 10px; border-radius:var(--bk-r-pill); background:color-mix(in srgb,var(--bk-surface) 88%,transparent);
+  backdrop-filter:blur(6px); box-shadow:var(--bk-shadow-xs); }
+.bkf-vp-status .dot{ width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 0 3px color-mix(in srgb,currentColor 22%,transparent); }
+.bkf-vp-status.on{ color:var(--bk-success); }
+.bkf-vp-status.off{ color:var(--bk-danger); }
+
+/* Special-offer bar — sits in the body (not on the busy photo). Bold red to grab
+   attention, with an optional live "ends within 24h" countdown chip. */
+.bkf-vp-offer{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px;
+  padding:7px 12px; border-radius:var(--bk-r-pill); background:linear-gradient(120deg,#e53935,#c1121f); color:#fff;
+  font-family:var(--bk-font-ui); font-size:var(--bk-fs-xs); font-weight:800; box-shadow:0 3px 12px rgba(193,18,31,.34); }
+.bkf-vp-offer svg{ width:13px; height:13px; }
+.bkf-vp-offer-lbl{ display:inline-flex; align-items:center; gap:5px; letter-spacing:.01em; }
+.bkf-vp-offer-cd{ display:inline-flex; align-items:center; gap:5px; padding:2px 9px; border-radius:var(--bk-r-pill);
+  background:rgba(255,255,255,.2); letter-spacing:.04em; font-variant-numeric:tabular-nums; }
+.bkf-vp-offer-cd svg{ width:12px; height:12px; }
+.bkf-vp-offer.has-cd{ animation:bkf-offer-pulse 2.2s var(--bk-ease) infinite; }
+@keyframes bkf-offer-pulse{ 0%,100%{ box-shadow:0 3px 12px rgba(193,18,31,.34); } 50%{ box-shadow:0 5px 18px rgba(193,18,31,.6); } }
+@media (prefers-reduced-motion:reduce){ .bkf-vp-offer.has-cd{ animation:none; } }
 
 /* rail cards get a fixed width */
 .bkf-rail .bkf-vp{ flex:0 0 300px; width:300px; }

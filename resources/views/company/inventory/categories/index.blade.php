@@ -3,7 +3,7 @@
 @push('company-styles')
 <style>
 .cat-hero {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5C7038 0%, #3C4B29 100%);
     border-radius: 20px; padding: 26px 30px; margin-bottom: 24px;
     color: #fff; position: relative; overflow: hidden;
 }
@@ -103,7 +103,7 @@
     {{-- ── Cards ── --}}
     <div class="row g-3">
         @forelse($categories as $cat)
-            @php $color = $cat->color ?? '#667eea'; @endphp
+            @php $color = $cat->color ?? '#5C7038'; @endphp
             <div class="col-sm-6 col-md-4 col-lg-3 cat-filterable"
                  data-name="{{ strtolower($cat->name_en . ' ' . $cat->name_ar) }}">
                 <div class="cat-card h-100 d-flex flex-column">
@@ -216,10 +216,10 @@
                 <div class="mb-3">
                     <label class="form-label fw-semibold">{{ __('Color') }}</label>
                     <div class="d-flex align-items-center gap-3">
-                        <input type="color" name="color" id="addColor" value="#667eea"
+                        <input type="color" name="color" id="addColor" value="#5C7038"
                             class="form-control form-control-color" style="width:50px;height:38px;padding:2px;cursor:pointer;">
                         <div id="addColorPreview" class="px-3 py-1 rounded-pill text-white fw-semibold"
-                            style="background:#667eea;font-size:12px;transition:background .2s;">
+                            style="background:#5C7038;font-size:12px;transition:background .2s;">
                             {{ __('Preview') }}
                         </div>
                     </div>
@@ -264,10 +264,10 @@
                 <div class="mb-3">
                     <label class="form-label fw-semibold">{{ __('Color') }}</label>
                     <div class="d-flex align-items-center gap-3">
-                        <input type="color" name="color" id="editColor" value="#667eea"
+                        <input type="color" name="color" id="editColor" value="#5C7038"
                             class="form-control form-control-color" style="width:50px;height:38px;padding:2px;cursor:pointer;">
                         <div id="editColorPreview" class="px-3 py-1 rounded-pill text-white fw-semibold"
-                            style="background:#667eea;font-size:12px;transition:background .2s;">
+                            style="background:#5C7038;font-size:12px;transition:background .2s;">
                             {{ __('Preview') }}
                         </div>
                     </div>
@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Edit buttons
     document.querySelectorAll('[data-edit-id]').forEach(function(btn) {
         btn.addEventListener('click', function() {
-            var color = this.dataset.editColor || '#667eea';
+            var color = this.dataset.editColor || '#5C7038';
             document.getElementById('editCatForm').action = "{{ url('company/product-categories') }}/" + this.dataset.editId;
             document.getElementById('editNameEn').value  = this.dataset.editNameEn || '';
             document.getElementById('editNameAr').value  = this.dataset.editNameAr || '';

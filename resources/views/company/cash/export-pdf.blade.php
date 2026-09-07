@@ -30,7 +30,7 @@
         .summary-value { font-size:18px; font-weight:800; margin-top:4px; }
         .income { color:#22c55e; }
         .expense { color:#ef4444; }
-        .net-pos { color:#667eea; }
+        .net-pos { color:#5C7038; }
 
         /* Data table */
         .data-table { width:100%; border-collapse:collapse; margin-top:10px; }
@@ -99,7 +99,7 @@
         <tbody>
             @foreach($transactions as $i => $tx)
             @php
-                $catMeta = $cats[$tx->category] ?? ['label_key' => $tx->category, 'type' => 'income', 'color' => '#667eea'];
+                $catMeta = $cats[$tx->category] ?? ['label_key' => $tx->category, 'type' => 'income', 'color' => '#5C7038'];
                 $pmMeta  = \App\Models\BranchPayment::PAYMENT_METHODS[$tx->payment_method] ?? null;
                 $isIncome = $catMeta['type'] === 'income';
             @endphp

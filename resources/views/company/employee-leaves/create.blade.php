@@ -105,7 +105,7 @@
     display: flex; align-items: center; justify-content: space-between;
     gap: 10px; flex-wrap: wrap;
     border-radius: 12px; padding: 12px 16px; margin-bottom: 18px;
-    background: rgba(102,126,234,.07); border: 1.5px solid rgba(102,126,234,.18);
+    background: rgba(92,112,56,.07); border: 1.5px solid rgba(92,112,56,.18);
     font-size: 13px;
 }
 .lv-balance-num { font-size: 20px; font-weight: 800; }

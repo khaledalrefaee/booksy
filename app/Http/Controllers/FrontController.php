@@ -25,6 +25,7 @@ class FrontController extends Controller
                 'images',
                 'governorate',
                 'area',
+                'workingHours',
                 'services' => fn($q) => $q->where('is_active', true),
             ])
             ->withCount(['reviews', 'appointments'])
@@ -75,11 +76,46 @@ class FrontController extends Controller
     {
         $img      = $b->images->first();
         $services = $b->services;
-        $prices   = $services->pluck('price')->filter(fn ($p) => $p > 0);
+        // Prices may be entered in different currencies; comparing raw numbers
+        // across them is meaningless, so the card anchors to the branch's dominant
+        // currency (falling back to the platform default) and takes the minimum
+        // within it — a stray foreign-currency service can't mislabel the price.
+        $priced   = $services->filter(fn ($s) => $s->price > 0);
+        $curCode  = $priced->countBy('currency')->sortDesc()->keys()->first()
+            ?? config('booksy.default_currency', 'SYP');
+        $curPrices = $priced->where('currency', $curCode)->pluck('price');
+        $minPrice  = $curPrices->isNotEmpty() ? (float) $curPrices->min() : null;
         $topSvc   = $services->take(3)
             ->map(fn ($s) => $isAr ? ($s->name_ar ?? $s->name_en) : ($s->name_en ?? $s->name_ar))
             ->filter()->values();
         $company  = $b->company;
+
+        // "Open now" — asserted only when today's hours are actually loaded, so a
+        // page that skips the relation simply gets null (unknown) instead of a lie.
+        $isOpen = null;
+        if ($b->relationLoaded('workingHours')) {
+            $dow    = now()->dayOfWeek;
+            $nowT   = now()->format('H:i:s');
+            $todays = $b->workingHours->where('day_of_week', $dow)->where('is_open', true);
+            $isOpen = $todays->isNotEmpty()
+                ? $todays->contains(fn ($w) => $w->open_time && $w->close_time
+                    && $nowT >= $w->open_time && $nowT <= $w->close_time)
+                : false;
+        }
+
+        // Live offers: only bookable-online services with a currently-active discount
+        // count (respects each discount's own start/end window via the model). The
+        // soonest end-time drives a countdown, but only when it lands within the next
+        // 24h — a "today only" push. Longer/open-ended offers show the badge, no timer.
+        $offers      = $services->filter(fn ($s) => $s->is_bookable_online && $s->hasActiveDiscount());
+        $hasOffer    = $offers->isNotEmpty();
+        $offerEndsTs = null;
+        if ($hasOffer) {
+            $soonest = $offers->pluck('discount_ends_at')->filter()->sort()->first();
+            if ($soonest && $soonest->isFuture() && $soonest->lte(now()->addDay())) {
+                $offerEndsTs = $soonest->timestamp;
+            }
+        }
 
         return (object) [
             'id'         => $b->id,
@@ -95,11 +131,15 @@ class FrontController extends Controller
             'rating'     => $b->reviews_count ? round((float) $b->reviews_avg_rating, 1) : null,
             'reviews'    => (int) $b->reviews_count,
             'bookings'   => (int) $b->appointments_count,
-            'min_price'  => $prices->isNotEmpty() ? (float) $prices->min() : null,
+            'min_price'  => $minPrice,
+            'currency'   => $curCode,
             'services'   => $topSvc,
             'svc_count'  => $services->count(),
             'created_ts' => $b->created_at?->timestamp ?? 0,
             'is_new'     => $b->created_at ? $b->created_at->gt(now()->subDays(30)) : false,
+            'is_open'      => $isOpen,
+            'has_offer'    => $hasOffer,
+            'offer_ends_ts'=> $offerEndsTs,
             'url'        => route('front.branch', $b),
         ];
     }
@@ -165,7 +205,7 @@ class FrontController extends Controller
         $city   = trim((string) $request->get('city', ''));
 
         $query = \App\Models\Branch::query()
-            ->with(['company.category','images','governorate','area','services' => fn($q) => $q->where('is_active', true)])
+            ->with(['company.category','images','governorate','area','workingHours','services' => fn($q) => $q->where('is_active', true)])
             ->withCount(['reviews','appointments'])
             ->withAvg('reviews','rating')
             ->marketplace()
@@ -272,7 +312,11 @@ class FrontController extends Controller
             'company.socialLinks',
             'images',
             'workingHours',
-            'services' => fn($q) => $q->where('is_active', true)->with('serviceCategory'),
+            // Only services the merchant has published AND exposed for online booking
+            // reach the public page; contents of packages are loaded for display.
+            'services' => fn($q) => $q->where('is_active', true)
+                ->where('is_bookable_online', true)
+                ->with(['serviceCategory', 'packageItems']),
             'employees' => fn($q) => $q->where('is_active', true)->with(['role', 'serviceCategories']),
             'reviews.customer',
         ]);

@@ -25,27 +25,30 @@
 
                 {{-- Basics --}}
                 <div class="wb-sec">
+                    <label class="wb-label">{{ __('Basics') }}</label>
                     <div class="row g-3">
                         <div class="col-12">
-                            <label class="form-label fw-semibold small">{{ __('Category') }}</label>
+                            <label class="form-label fw-semibold small mb-1" for="wb-f-category">{{ __('Category') }}</label>
                             <select name="service_category_id" id="wb-f-category" class="form-select rounded-3">
                                 <option value="">{{ __('No category') }}</option>
                                 @foreach($serviceCategories as $cat)
                                     <option value="{{ $cat->id }}">{{ $cat->localizedName() }}</option>
                                 @endforeach
                             </select>
+                            <div class="form-text">{{ __('Groups this service under a heading on your public page.') }}</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold small">{{ __('Name (EN)') }} <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold small mb-1" for="wb-f-name-en">{{ __('Name (EN)') }} <span class="text-danger">*</span></label>
                             <input type="text" name="name_en" id="wb-f-name-en" class="form-control rounded-3" maxlength="255">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold small">{{ __('Name (AR)') }}</label>
+                            <label class="form-label fw-semibold small mb-1" for="wb-f-name-ar">{{ __('Name (AR)') }}</label>
                             <input type="text" name="name_ar" id="wb-f-name-ar" class="form-control rounded-3" dir="rtl" maxlength="255">
                         </div>
                         <div class="col-12">
-                            <label class="form-label fw-semibold small">{{ __('Description') }}</label>
+                            <label class="form-label fw-semibold small mb-1" for="wb-f-desc">{{ __('Description') }}</label>
                             <textarea name="description" id="wb-f-desc" class="form-control rounded-3" rows="2"></textarea>
+                            <div class="form-text">{{ __('A short line shown to customers under the service name.') }}</div>
                         </div>
                     </div>
                 </div>
@@ -66,18 +69,19 @@
                     </div>
                 </div>
 
-                {{-- Pricing --}}
+                {{-- Pricing & duration --}}
                 <div class="wb-sec">
-                    <label class="wb-label">{{ __('Pricing') }}</label>
-                    <div class="wb-seg mb-3" id="wb-pricetype">
+                    <label class="wb-label">{{ __('Price & duration') }}</label>
+                    <div class="wb-seg mb-2" id="wb-pricetype">
                         <button type="button" data-pt="fixed" class="active">{{ __('Fixed') }}</button>
                         <button type="button" data-pt="from">{{ __('Starting from') }}</button>
                         <button type="button" data-pt="range">{{ __('Range') }}</button>
                     </div>
                     <input type="hidden" name="price_type" id="wb-f-pricetype" value="fixed">
+                    <p class="form-text mt-0 mb-3">{{ __('“Starting from” shows a “from” price, and “Range” shows a from–to span on your page.') }}</p>
                     <div class="row g-2 align-items-end">
                         <div class="col">
-                            <label class="form-label fw-semibold small" id="wb-price-label">{{ __('Price') }} <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold small mb-1" id="wb-price-label">{{ __('Price') }} <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <button type="button" class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-1 px-3" data-bs-toggle="dropdown" style="min-width:84px;">
                                     <span id="wb-cur-sym" class="fw-bold">{{ config('booksy.currencies')[config('booksy.default_currency')]['symbol'] }}</span>
@@ -96,15 +100,18 @@
                             </div>
                         </div>
                         <div class="col wb-hide" id="wb-priceto-col">
-                            <label class="form-label fw-semibold small">{{ __('Up to') }}</label>
+                            <label class="form-label fw-semibold small mb-1">{{ __('Up to') }}</label>
                             <input type="number" name="price_to" id="wb-f-priceto" class="form-control" min="0" step="0.01" placeholder="0">
                         </div>
-                        <div class="col-4">
-                            <label class="form-label fw-semibold small">{{ __('Duration') }} <span class="text-danger">*</span></label>
+                    </div>
+                    <div class="row g-2 mt-1">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small mb-1" for="wb-f-duration">{{ __('Duration') }} <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <input type="number" name="duration_minutes" id="wb-f-duration" class="form-control" min="1" max="1440" value="30">
                                 <span class="input-group-text">{{ __('min') }}</span>
                             </div>
+                            <div class="form-text">{{ __('Shown next to the service and used to schedule the appointment.') }}</div>
                         </div>
                     </div>
                 </div>
@@ -114,11 +121,11 @@
                     <label class="wb-label">{{ __('Membership terms') }}</label>
                     <div class="row g-2">
                         <div class="col-6">
-                            <label class="form-label fw-semibold small">{{ __('Valid for (days)') }}</label>
+                            <label class="form-label fw-semibold small mb-1" for="wb-f-mem-days">{{ __('Valid for (days)') }}</label>
                             <input type="number" name="membership_validity_days" id="wb-f-mem-days" class="form-control rounded-3" min="0" placeholder="{{ __('e.g. 30') }}">
                         </div>
                         <div class="col-6">
-                            <label class="form-label fw-semibold small">{{ __('Included sessions') }}</label>
+                            <label class="form-label fw-semibold small mb-1" for="wb-f-mem-sessions">{{ __('Included sessions') }}</label>
                             <input type="number" name="membership_sessions" id="wb-f-mem-sessions" class="form-control rounded-3" min="0" placeholder="{{ __('e.g. 10') }}">
                         </div>
                     </div>
@@ -132,7 +139,7 @@
                         <button type="button" data-free="1">{{ __('Free') }}</button>
                     </div>
                     <input type="hidden" name="is_free" id="wb-f-is-free" value="0">
-                    <label class="d-flex align-items-center justify-content-between">
+                    <label class="wb-switch d-flex align-items-center justify-content-between">
                         <span class="small"><i data-feather="check-circle" style="width:14px;height:14px;" class="me-1"></i>{{ __('Requires approval before booking') }}</span>
                         <span class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" name="requires_approval" id="wb-f-requires-approval" value="1"></span>
                     </label>
@@ -150,6 +157,7 @@
                     <div id="wb-addon-parents" class="wb-chips"></div>
                 </div>
 
+                {{-- ── How it appears to customers ───────────────────────────── --}}
                 {{-- Discount --}}
                 <div class="wb-sec">
                     <div class="d-flex align-items-center justify-content-between">
@@ -171,29 +179,14 @@
                         </div>
                         <div class="row g-2">
                             <div class="col-6">
-                                <label class="form-label small mb-1">{{ __('Starts at') }}</label>
+                                <label class="form-label small mb-1" for="wb-f-disc-start">{{ __('Starts at') }}</label>
                                 <input type="datetime-local" name="discount_starts_at" id="wb-f-disc-start" class="form-control form-control-sm rounded-3">
                             </div>
                             <div class="col-6">
-                                <label class="form-label small mb-1">{{ __('Ends at') }}</label>
+                                <label class="form-label small mb-1" for="wb-f-disc-end">{{ __('Ends at') }}</label>
                                 <input type="datetime-local" name="discount_ends_at" id="wb-f-disc-end" class="form-control form-control-sm rounded-3">
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                {{-- Visibility & badges --}}
-                <div class="wb-sec">
-                    <label class="wb-label">{{ __('Visibility') }}</label>
-                    <div class="d-flex flex-column gap-2">
-                        <label class="d-flex align-items-center justify-content-between">
-                            <span class="small"><i data-feather="power" style="width:14px;height:14px;" class="me-1"></i>{{ __('Active') }}</span>
-                            <span class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" name="is_active" id="wb-f-active" value="1" checked></span>
-                        </label>
-                        <label class="d-flex align-items-center justify-content-between">
-                            <span class="small"><i data-feather="globe" style="width:14px;height:14px;" class="me-1"></i>{{ __('Visible in online booking') }}</span>
-                            <span class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" name="is_bookable_online" id="wb-f-online" value="1" checked></span>
-                        </label>
                     </div>
                 </div>
 
@@ -209,9 +202,31 @@
                     </div>
                 </div>
 
+                {{-- ── Availability ──────────────────────────────────────────── --}}
+                <div class="wb-sec">
+                    <label class="wb-label">{{ __('Availability') }}</label>
+                    <div class="d-flex flex-column gap-3">
+                        <label class="wb-switch d-flex align-items-start justify-content-between gap-3">
+                            <span>
+                                <span class="d-flex align-items-center gap-2 small fw-semibold"><i data-feather="power" style="width:14px;height:14px;"></i>{{ __('Active') }}</span>
+                                <span class="form-text d-block mt-1 mb-0">{{ __('Turn off to hide the service everywhere without deleting it.') }}</span>
+                            </span>
+                            <span class="form-check form-switch mb-0 mt-1"><input class="form-check-input" type="checkbox" name="is_active" id="wb-f-active" value="1" checked></span>
+                        </label>
+                        <label class="wb-switch d-flex align-items-start justify-content-between gap-3">
+                            <span>
+                                <span class="d-flex align-items-center gap-2 small fw-semibold"><i data-feather="globe" style="width:14px;height:14px;"></i>{{ __('Visible in online booking') }}</span>
+                                <span class="form-text d-block mt-1 mb-0">{{ __('Let customers book this service themselves online.') }}</span>
+                            </span>
+                            <span class="form-check form-switch mb-0 mt-1"><input class="form-check-input" type="checkbox" name="is_bookable_online" id="wb-f-online" value="1" checked></span>
+                        </label>
+                    </div>
+                </div>
+
                 {{-- Assignment --}}
                 <div class="wb-sec" id="wb-assign-sec">
                     <label class="wb-label">{{ __('Assign staff') }}</label>
+                    <p class="form-text mt-0 mb-2">{{ __('Only assigned staff can be booked for this service.') }}</p>
                     <div class="wb-chips mb-3" id="wb-emp-chips">
                         @forelse($branchEmployees as $emp)
                             <span class="wb-chip" data-emp="{{ $emp->id }}"><i data-feather="user" style="width:13px;height:13px;"></i>{{ $emp->localizedName() }}</span>

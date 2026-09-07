@@ -190,11 +190,33 @@
 .br-svc:hover{ border-color:color-mix(in srgb,var(--bk-accent) 30%,var(--bk-border)); box-shadow:var(--bk-shadow-sm); }
 .br-svc-info{ min-width:0; }
 .br-svc-nm{ font-family:var(--bk-font-ui); font-weight:600; color:var(--bk-text); }
-.br-svc-meta{ display:flex; align-items:center; gap:12px; margin-top:6px; font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); color:var(--bk-text-muted); }
-.br-svc-meta svg{ width:14px; height:14px; }
+.br-svc-meta{ display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; margin-top:6px; font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); color:var(--bk-text-muted); }
+/* each meta item aligns its icon + text on one line, vertically centred */
+.br-svc-meta > span{ display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+.br-svc-meta svg{ width:14px; height:14px; flex-shrink:0; }
 .br-svc-price{ color:var(--bk-gold-strong); font-weight:700; }
+/* merchandising badges — mirror the labels set in the services workbench */
+.br-svc-tags{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.br-svc-tag{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:var(--bk-r-pill); font-family:var(--bk-font-ui); font-size:.6875rem; font-weight:700; line-height:1.5; letter-spacing:.01em; border:1px solid transparent; }
+.br-svc-tag svg{ width:12px; height:12px; }
+.br-svc-tag--popular{ color:var(--bk-gold-strong); background:color-mix(in srgb,var(--bk-gold-strong) 12%,transparent); border-color:color-mix(in srgb,var(--bk-gold-strong) 26%,transparent); }
+.br-svc-tag--new{ color:var(--bk-accent); background:var(--bk-accent-wash); border-color:color-mix(in srgb,var(--bk-accent) 28%,transparent); }
+.br-svc-tag--offer{ color:#c0392b; background:color-mix(in srgb,#e53935 12%,transparent); border-color:color-mix(in srgb,#e53935 26%,transparent); }
+.br-svc-tag--premium{ color:var(--bk-text); background:color-mix(in srgb,var(--bk-text) 8%,transparent); border-color:color-mix(in srgb,var(--bk-text) 20%,transparent); }
 .br-svc-add{ flex-shrink:0; }
 .br-svc-add.is-added{ background:var(--bk-accent-wash); color:var(--bk-accent); border-color:var(--bk-accent); }
+/* service name row: name + a small type chip for non-standard services */
+.br-svc-nm-row{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.br-svc-type{ display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border-radius:var(--bk-r-pill); font-family:var(--bk-font-ui); font-size:.6875rem; font-weight:700; line-height:1.6; color:var(--bk-accent); background:var(--bk-accent-wash); border:1px solid color-mix(in srgb,var(--bk-accent) 26%,transparent); }
+.br-svc-type svg{ width:11px; height:11px; }
+/* short customer-facing description under the name */
+.br-svc-desc{ margin-top:5px; font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); color:var(--bk-text-soft); line-height:1.6; overflow-wrap:break-word; }
+/* what a package bundles */
+.br-svc-incl{ margin-top:6px; font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); color:var(--bk-text-muted); line-height:1.6; }
+.br-svc-incl b{ color:var(--bk-text-soft); font-weight:700; }
+/* discounted pricing: struck original + accent final + savings chip */
+.br-svc-price-was{ color:var(--bk-text-muted); font-weight:600; text-decoration:line-through; }
+.br-svc-off{ display:inline-flex; align-items:center; padding:1px 7px; border-radius:var(--bk-r-pill); font-family:var(--bk-font-ui); font-size:.6875rem; font-weight:700; line-height:1.6; color:#c0392b; background:color-mix(in srgb,#e53935 12%,transparent); border:1px solid color-mix(in srgb,#e53935 26%,transparent); }
 
 /* team — bare circular avatars (no card): photo · name · role, Fresha-style */
 .br-staff{ display:flex; gap:8px; overflow-x:auto; scroll-snap-type:x mandatory; padding:6px 2px 14px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
@@ -436,16 +458,79 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
             <div class="br-svc-cat-h"><x-icon name="tag" :size="18"/>{{ $scName }}</div>
             @foreach($services->where('is_active', true) as $svc)
               @php $sName = $isAr ? ($svc->name_ar ?: $svc->name_en) : ($svc->name_en ?: $svc->name_ar); @endphp
+              @php
+                $svcBadges = array_values(array_intersect((array) ($svc->badges ?? []), \App\Models\Service::BADGES));
+                $badgeMeta = [
+                    'most_requested' => ['popular', 'trending-up', $t('الأكثر طلباً','Most requested')],
+                    'new'            => ['new', 'sparkles', $t('جديد','New')],
+                    'special_offer'  => ['offer', 'tag', $t('عرض خاص','Special offer')],
+                    'premium'        => ['premium', 'star', $t('مميّزة','Premium')],
+                ];
+                // Non-standard classifications get a small chip so the customer sees
+                // whether this is a package, membership, consultation or add-on.
+                $typeMeta = [
+                    'package'      => ['gift', $t('باقة','Package')],
+                    'membership'   => ['award', $t('عضوية','Membership')],
+                    'consultation' => ['message', $t('استشارة','Consultation')],
+                    'addon'        => ['layers', $t('إضافة','Add-on')],
+                ];
+                // Service-level currency, localised for Arabic (matches the merchant setting).
+                $svcCurrency = $svc->currency === 'SYP' ? $currency : $svc->currency;
+                // Discount is only surfaced when actually active (respects start/end
+                // window) and on a fixed price, where a strike-through reads cleanly.
+                $hasOffer   = $svc->hasActiveDiscount() && $svc->price_type === 'fixed' && $svc->price > 0;
+                $finalPrice = $svc->finalPrice();
+                $cartPrice  = $hasOffer ? $finalPrice : ($svc->price ?: 0);
+                $offerLabel = $svc->discount_type === 'percent'
+                    ? '-'.rtrim(rtrim(number_format((float) $svc->discount_value, 2, '.', ''), '0'), '.').'%'
+                    : '-'.number_format((float) $svc->discount_value, 0).' '.$svcCurrency;
+              @endphp
               <div class="br-svc">
                 <div class="br-svc-info">
-                  <div class="br-svc-nm">{{ $sName }}</div>
+                  <div class="br-svc-nm-row">
+                    <span class="br-svc-nm">{{ $sName }}</span>
+                    @if(isset($typeMeta[$svc->service_type]))
+                      @php [$tIcon, $tLabel] = $typeMeta[$svc->service_type]; @endphp
+                      <span class="br-svc-type"><x-icon :name="$tIcon" :size="11"/>{{ $tLabel }}</span>
+                    @endif
+                  </div>
+                  @if($svcBadges)
+                  <div class="br-svc-tags">
+                    @foreach($svcBadges as $b)
+                      @php [$variant, $icon, $label] = $badgeMeta[$b]; @endphp
+                      <span class="br-svc-tag br-svc-tag--{{ $variant }}"><x-icon :name="$icon" :size="12"/>{{ $label }}</span>
+                    @endforeach
+                  </div>
+                  @endif
+                  @if(filled($svc->description))
+                    <div class="br-svc-desc">{{ $svc->description }}</div>
+                  @endif
+                  @if($svc->bundlesServices() && $svc->packageItems->isNotEmpty())
+                    <div class="br-svc-incl"><b>{{ $t('يشمل','Includes') }}:</b>
+                      {{ $svc->packageItems->map(fn($c) => $c->localizedName() . ($c->pivot->quantity > 1 ? ' ×'.$c->pivot->quantity : ''))->implode('، ') }}</div>
+                  @endif
                   <div class="br-svc-meta">
                     @if($svc->duration_minutes)<span><x-icon name="clock" :size="14"/> {{ $svc->duration_minutes }} {{ $t('دقيقة','min') }}</span>@endif
-                    <span class="br-svc-price bkf-tnum">{{ $svc->price ? number_format($svc->price,0).' '.$currency : $t('حسب الطلب','On request') }}</span>
+                    @if($svc->service_type === 'consultation' && $svc->is_free)
+                      <span class="br-svc-price bkf-tnum">{{ $t('مجانية','Free') }}</span>
+                    @elseif($svc->price)
+                      @if($hasOffer)
+                        <span class="br-svc-price-was bkf-tnum">{{ number_format((float) $svc->price, 0).' '.$svcCurrency }}</span>
+                        <span class="br-svc-price bkf-tnum">{{ number_format($finalPrice, 0).' '.$svcCurrency }}</span>
+                        <span class="br-svc-off">{{ $offerLabel }}</span>
+                      @else
+                        <span class="br-svc-price bkf-tnum">{{ $svc->priceLabel().' '.$svcCurrency }}</span>
+                      @endif
+                    @else
+                      <span class="br-svc-price bkf-tnum">{{ $t('حسب الطلب','On request') }}</span>
+                    @endif
+                    @if($svc->requires_approval)
+                      <span><x-icon name="check-circle" :size="14"/> {{ $t('يتطلب تأكيد','Requires approval') }}</span>
+                    @endif
                   </div>
                 </div>
                 <button type="button" class="br-svc-add bkf-btn bkf-btn-ghost bkf-btn-sm"
-                        data-svc="{{ $svc->id }}" data-name="{{ $sName }}" data-price="{{ $svc->price ?: 0 }}"
+                        data-svc="{{ $svc->id }}" data-name="{{ $sName }}" data-price="{{ $cartPrice }}"
                         data-duration="{{ $svc->duration_minutes ?: 0 }}" data-cat="{{ $svc->service_category_id ?: '' }}"
                         onclick="brToggle(this)">
                   <x-icon name="check" :size="16" class="ic-on" style="display:none"/><span class="lbl">{{ $t('أضف','Add') }}</span>

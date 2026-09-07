@@ -3,7 +3,7 @@
 @push('company-styles')
 <style>
 .emp-show-hero {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5C7038 0%, #3C4B29 100%);
     border-radius: 20px; padding: 24px 24px 20px;
     margin-bottom: 24px; color: #fff;
     position: relative; overflow: hidden;
@@ -58,10 +58,10 @@
 }
 .bk-theme-light .emp-show-tab { color: rgba(0,0,0,.4); }
 .emp-show-tab.active {
-    background: rgba(102,126,234,.2); color: #a5b4fd;
-    box-shadow: 0 2px 8px rgba(102,126,234,.12);
+    background: rgba(92,112,56,.2); color: #A6BC7E;
+    box-shadow: 0 2px 8px rgba(92,112,56,.12);
 }
-.bk-theme-light .emp-show-tab.active { background: rgba(102,126,234,.1); color: #667eea; }
+.bk-theme-light .emp-show-tab.active { background: rgba(92,112,56,.1); color: #5C7038; }
 .emp-show-pane { display: none; }
 .emp-show-pane.active { display: block; }
 
@@ -83,7 +83,7 @@
 
 @section('content')
 @php
-    $palette = ['#667eea','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1','#fda085'];
+    $palette = ['#5C7038','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1','#fda085'];
     $bg = $palette[$employee->id % count($palette)];
     $locale = app()->getLocale();
     $comp = $employee->compensation;
@@ -168,7 +168,7 @@
             {{-- Stats row --}}
             <div class="stat-chips">
                 <div class="stat-chip">
-                    <div class="stat-chip-num" style="color:#a5b4fd;">{{ $appointmentsThisMonth }}</div>
+                    <div class="stat-chip-num" style="color:#A6BC7E;">{{ $appointmentsThisMonth }}</div>
                     <div class="stat-chip-lbl">{{ __('Appts this month') }}</div>
                 </div>
                 <div class="stat-chip">
@@ -435,7 +435,7 @@
                             @foreach($employee->serviceCommissions as $sc)
                             @php $scService = $services->firstWhere('id', $sc->service_id); @endphp
                             @if($scService)
-                            <span style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:8px;background:rgba(102,126,234,.1);color:#8da2f0;border:1px solid rgba(102,126,234,.25);">
+                            <span style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:8px;background:rgba(92,112,56,.1);color:#8da2f0;border:1px solid rgba(92,112,56,.25);">
                                 {{ $locale === 'ar' ? ($scService->name_ar ?: $scService->name_en) : ($scService->name_en ?: $scService->name_ar) }}
                                 — {{ rtrim(rtrim(number_format($sc->rate, 2), '0'), '.') }}%
                             </span>
@@ -536,7 +536,7 @@
                         <div class="px-4 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-bottom:1px solid rgba(255,255,255,.06);">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="tx-11 fw-bold text-muted text-uppercase" style="letter-spacing:.8px;">{{ __('Recent Appointments') }}</span>
-                                <span style="font-size:12px;font-weight:700;background:rgba(102,126,234,.12);color:#667eea;padding:3px 10px;border-radius:20px;">{{ $appointments->total() }}</span>
+                                <span style="font-size:12px;font-weight:700;background:rgba(92,112,56,.12);color:#5C7038;padding:3px 10px;border-radius:20px;">{{ $appointments->total() }}</span>
                             </div>
                             <div class="tx-12 text-muted">
                                 {{ __('Total Revenue') }}: <span class="fw-bold" style="color:#43e97b;">{{ number_format((float)$totalRevenue, 0) }}</span>
@@ -593,7 +593,7 @@
                             $usedPct   = $totalDays > 0 ? min(100, round($annualUsed / $totalDays * 100)) : 0;
                             $balColor  = $annualRemaining <= 0 ? '#ef4444' : ($annualRemaining <= 5 ? '#f59e0b' : '#22c55e');
                         @endphp
-                        <div class="px-4 py-3 d-flex align-items-center gap-3 flex-wrap" style="border-bottom:1px solid rgba(255,255,255,.04);background:rgba(102,126,234,.04);">
+                        <div class="px-4 py-3 d-flex align-items-center gap-3 flex-wrap" style="border-bottom:1px solid rgba(255,255,255,.04);background:rgba(92,112,56,.04);">
                             <span style="font-size:18px;">🏖️</span>
                             <div style="flex:1;min-width:140px;">
                                 <div class="tx-11 text-muted">{{ __('Annual leave balance') }} {{ now()->year }}</div>
@@ -690,7 +690,7 @@
                                 </div>
                                 <div class="col-2 text-center">
                                     @if($rec->check_out)
-                                        <div class="tx-13 fw-bold" style="color:#667eea;">{{ $rec->check_out->format('h:i A') }}</div>
+                                        <div class="tx-13 fw-bold" style="color:#5C7038;">{{ $rec->check_out->format('h:i A') }}</div>
                                         <div class="tx-11 text-muted" style="font-size:9px;">{{ __('Check Out') }}</div>
                                     @else
                                         <span style="opacity:.25;">—</span>

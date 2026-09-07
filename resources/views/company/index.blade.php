@@ -175,7 +175,7 @@
                 <i data-feather="external-link" style="width:14px;height:14px;"></i>
                 {{ __('Public page') }}
             </a>
-            <a href="{{ route('company.appointments.create') }}"
+            <a href="{{ route('company.appointments.index') }}"
                class="bk-navbar-action bk-navbar-action-primary d-flex align-items-center gap-2">
                 <i data-feather="plus" style="width:14px;height:14px;"></i>
                 {{ __('New booking') }}
@@ -265,7 +265,7 @@
             <span class="bk-sh-title">{{ __('Quick Actions') }}</span>
         </div>
         <div class="bk-qa-grid">
-            <a href="{{ route('company.appointments.create') }}" class="bk-qa">
+            <a href="{{ route('company.appointments.index') }}" class="bk-qa">
                 <div class="bk-qa-ic"><i class="feather icon-plus-circle bk-ic-qa"></i></div>
                 <span class="bk-qa-lbl">{{ __('New booking') }}</span>
             </a>
@@ -456,7 +456,7 @@
                 <div class="bk-empty">
                     <div class="bk-empty-ic"><i data-feather="calendar" style="width:26px;height:26px;"></i></div>
                     <p>{{ __('No appointments yet.') }}</p>
-                    <a href="{{ route('company.appointments.create') }}" class="btn btn-primary rounded-pill px-4">
+                    <a href="{{ route('company.appointments.index') }}" class="btn btn-primary rounded-pill px-4">
                         {{ __('Create first booking') }}
                     </a>
                 </div>

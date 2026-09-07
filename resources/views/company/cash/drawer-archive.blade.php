@@ -9,14 +9,14 @@
     border:1px solid rgba(255,255,255,.06);
     transition:all .15s;
 }
-.archive-card:hover { border-color:rgba(102,126,234,.3); }
+.archive-card:hover { border-color:rgba(92,112,56,.3); }
 .archive-card.voided { opacity:.5; border-color:rgba(239,68,68,.2); }
 .status-pill {
     font-size:10px; font-weight:700; padding:2px 10px; border-radius:12px;
 }
 .status-open       { background:rgba(34,197,94,.15);  color:#22c55e; }
 .status-closed     { background:rgba(245,158,11,.15); color:#f59e0b; }
-.status-reconciled { background:rgba(102,126,234,.15); color:#667eea; }
+.status-reconciled { background:rgba(92,112,56,.15); color:#5C7038; }
 .status-voided     { background:rgba(239,68,68,.15);  color:#ef4444; }
 .action-btn {
     font-size:10px; font-weight:700; padding:3px 10px; border-radius:8px;
@@ -36,7 +36,7 @@
             <h4 class="fw-bold mb-0">🗄 {{ __('Drawer Archive') }}</h4>
         </div>
         <a href="{{ route('company.branches.cash.index', $branch) }}"
-           class="btn btn-sm rounded-pill px-3" style="background:rgba(102,126,234,.1);color:#667eea;font-weight:700;border:none;">
+           class="btn btn-sm rounded-pill px-3" style="background:rgba(92,112,56,.1);color:#5C7038;font-weight:700;border:none;">
             ← {{ __('Back to Cash Register') }}
         </a>
     </div>
@@ -48,7 +48,7 @@
         <span style="opacity:.4;">—</span>
         <input type="date" name="to" class="form-control form-control-sm rounded-pill" style="width:160px;"
                value="{{ request('to') }}" placeholder="{{ __('To') }}">
-        <button class="btn btn-sm rounded-pill px-3" style="background:#667eea;color:#fff;border:none;font-weight:600;">
+        <button class="btn btn-sm rounded-pill px-3" style="background:#5C7038;color:#fff;border:none;font-weight:600;">
             {{ __('Filter') }}
         </button>
         @if(request('from') || request('to'))
@@ -88,7 +88,7 @@
             @if(!$ds->isVoided())
             <div class="d-flex gap-2 flex-wrap">
                 @if($ds->isClosed())
-                <button class="action-btn" style="background:rgba(102,126,234,.1);color:#667eea;"
+                <button class="action-btn" style="background:rgba(92,112,56,.1);color:#5C7038;"
                         data-bs-toggle="modal" data-bs-target="#reconcileArchiveModal-{{ $ds->id }}">
                     📋 {{ __('Reconcile') }}
                 </button>
@@ -285,7 +285,7 @@
                     </div>
                     <div class="modal-footer border-0 pt-0">
                         <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                        <button type="submit" class="btn btn-sm rounded-pill px-5 fw-bold" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;">
+                        <button type="submit" class="btn btn-sm rounded-pill px-5 fw-bold" style="background:linear-gradient(135deg,#5C7038,#3C4B29);color:#fff;border:none;">
                             ✔ {{ __('Save') }}
                         </button>
                     </div>
@@ -338,7 +338,7 @@
                     </div>
                     <div class="modal-footer border-0 pt-0">
                         <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                        <button type="submit" class="btn btn-sm rounded-pill px-5 fw-bold" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;">
+                        <button type="submit" class="btn btn-sm rounded-pill px-5 fw-bold" style="background:linear-gradient(135deg,#5C7038,#3C4B29);color:#fff;border:none;">
                             ✔ {{ __('Reconcile') }}
                         </button>
                     </div>

@@ -25,6 +25,25 @@
             .catch(function () {})
             .finally(function () { branch.disabled = false; });
     });
+
+    // Client-side mirror of the server capacity guard: warn + block submit when
+    // the requested credits exceed what Rasel can still deliver. The server
+    // re-checks regardless, so this is UX only.
+    var credits = document.getElementById('sxGrantCredits');
+    var hint    = document.getElementById('sxGrantCreditsHint');
+    var submit  = document.getElementById('sxGrantSubmit');
+    if (credits && credits.dataset.available !== undefined) {
+        var available = parseInt(credits.dataset.available, 10);
+        var overMsg   = credits.dataset.overMsg || '';
+        var check = function () {
+            var n = parseInt(credits.value, 10);
+            var over = !isNaN(n) && n > available;
+            if (hint) { hint.textContent = over ? overMsg : ''; hint.hidden = !over; }
+            if (submit) { submit.disabled = over; }
+        };
+        credits.addEventListener('input', check);
+        check();
+    }
 })();
 </script>
 @endpush

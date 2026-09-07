@@ -36,11 +36,11 @@
     background:rgba(255,255,255,.03); transition:border-color .18s, background .18s; height:100%;
 }
 .bk-theme-light .ap-opt-card { background:#f8f9fa; border-color:#dee2e6; }
-.ap-opt input:checked + .ap-opt-card { border-color:#667eea; background:rgba(102,126,234,.09); }
-.ap-opt input:focus-visible + .ap-opt-card { box-shadow:0 0 0 3px rgba(102,126,234,.35); }
+.ap-opt input:checked + .ap-opt-card { border-color:#5C7038; background:rgba(92,112,56,.09); }
+.ap-opt input:focus-visible + .ap-opt-card { box-shadow:0 0 0 3px rgba(92,112,56,.35); }
 .ap-opt-ico { width:30px; height:30px; border-radius:9px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
-    background:rgba(102,126,234,.15); color:#a5b4fd; }
-.bk-theme-light .ap-opt-ico { color:#667eea; }
+    background:rgba(92,112,56,.15); color:#A6BC7E; }
+.bk-theme-light .ap-opt-ico { color:#5C7038; }
 .ap-opt-t { font-weight:700; font-size:13px; }
 .ap-opt-d { font-size:11px; color:rgba(255,255,255,.45); margin-top:2px; line-height:1.4; }
 .bk-theme-light .ap-opt-d { color:rgba(0,0,0,.5); }
@@ -56,7 +56,7 @@
 .bk-theme-light .ap-branch-chip { background:#f8f9fa; border-color:#dee2e6; }
 .ap-branch input:checked + .ap-branch-chip { border-color:rgba(67,233,123,.55); background:rgba(67,233,123,.1); color:#43e97b; }
 .bk-theme-light .ap-branch input:checked + .ap-branch-chip { color:#1a7a36; border-color:#28a745; background:rgba(40,167,69,.08); }
-.ap-branch input:focus-visible + .ap-branch-chip { box-shadow:0 0 0 3px rgba(102,126,234,.3); }
+.ap-branch input:focus-visible + .ap-branch-chip { box-shadow:0 0 0 3px rgba(92,112,56,.3); }
 .ap-branch input:disabled + .ap-branch-chip { opacity:.4; cursor:not-allowed; }
 .ap-branch-tick { width:14px; height:14px; opacity:.35; }
 .ap-branch input:checked + .ap-branch-chip .ap-branch-tick { opacity:1; }
@@ -90,8 +90,8 @@
 .ap-lvl { font-size:11px; font-weight:800; letter-spacing:.3px; padding:3px 10px; border-radius:999px; white-space:nowrap; }
 .ap-lvl-manage { background:rgba(67,233,123,.14); color:#43e97b; }
 .bk-theme-light .ap-lvl-manage { color:#1a7a36; background:rgba(40,167,69,.12); }
-.ap-lvl-view { background:rgba(102,126,234,.16); color:#a5b4fd; }
-.bk-theme-light .ap-lvl-view { color:#667eea; background:rgba(102,126,234,.1); }
+.ap-lvl-view { background:rgba(92,112,56,.16); color:#A6BC7E; }
+.bk-theme-light .ap-lvl-view { color:#5C7038; background:rgba(92,112,56,.1); }
 .ap-lvl-none { background:rgba(255,255,255,.06); color:rgba(255,255,255,.4); }
 .bk-theme-light .ap-lvl-none { color:rgba(0,0,0,.4); background:rgba(0,0,0,.05); }
 .ap-lvl-full { background:rgba(255,193,7,.16); color:#ffc107; }
@@ -104,10 +104,10 @@
 
 /* Advanced */
 .ap-adv-toggle { margin-top:14px; display:inline-flex; align-items:center; gap:8px; cursor:pointer;
-    background:transparent; border:1.5px dashed rgba(102,126,234,.4); color:#667eea; border-radius:10px;
+    background:transparent; border:1.5px dashed rgba(92,112,56,.4); color:#5C7038; border-radius:10px;
     padding:8px 14px; font-size:12px; font-weight:700; transition:background .15s, border-color .15s; }
-.ap-adv-toggle:hover { background:rgba(102,126,234,.08); border-color:#667eea; }
-.bk-theme-light .ap-adv-toggle { color:#667eea; }
+.ap-adv-toggle:hover { background:rgba(92,112,56,.08); border-color:#5C7038; }
+.bk-theme-light .ap-adv-toggle { color:#5C7038; }
 .ap-adv-toggle svg { width:14px; height:14px; transition:transform .2s; }
 .ap-adv[open] .ap-adv-toggle svg.ap-chev { transform:rotate(180deg); }
 .ap-adv-body { margin-top:14px; padding:16px; border-radius:13px; border:1.5px solid rgba(255,255,255,.08);
@@ -119,8 +119,8 @@
 .ap-branch-tabs { display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 10px; }
 .ap-branch-tab { padding:6px 12px; border-radius:9px; border:1.5px solid rgba(255,255,255,.1);
     background:transparent; color:inherit; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; }
-.ap-branch-tab.active { border-color:#667eea; background:rgba(102,126,234,.12); color:#a5b4fd; }
-.bk-theme-light .ap-branch-tab.active { color:#667eea; }
+.ap-branch-tab.active { border-color:#5C7038; background:rgba(92,112,56,.12); color:#A6BC7E; }
+.bk-theme-light .ap-branch-tab.active { color:#5C7038; }
 .ap-per-branch-panel { display:none; }
 .ap-per-branch-panel.active { display:block; }
 .ap-adv summary { list-style:none; }
@@ -139,7 +139,8 @@
          data-level-none="{{ $isAr ? 'بلا وصول' : 'No access' }}">
 
         {{-- ── Branch access (WHERE) ── --}}
-        <label class="f-label">{{ $isAr ? 'الوصول للفروع' : 'Branch access' }} <span class="text-danger">*</span></label>
+        <label class="f-label">{{ $isAr ? 'في أي فروع يشتغل؟' : 'Which branches can they work in?' }} <span class="text-danger">*</span></label>
+        <div class="ap-opt-d" style="margin:-2px 0 10px;">{{ $isAr ? 'يقدر يشوف ويشتغل فقط بالفروع المختارة هون.' : 'They can only see and work in the branches selected here.' }}</div>
         <div class="ap-choice" role="radiogroup" aria-label="{{ $isAr ? 'الوصول للفروع' : 'Branch access' }}">
             <label class="ap-opt">
                 <input type="radio" name="access_mode" value="selected" id="ap-mode-selected"
@@ -192,18 +193,21 @@
                     <span class="ap-switch-track"></span><span class="ap-switch-thumb"></span>
                 </span>
                 <span style="flex:1;">
-                    <span style="font-weight:700;font-size:13px;display:block;">{{ $isAr ? 'صلاحيات كاملة (Full Access)' : 'Full Access' }}</span>
-                    <span class="ap-opt-d">{{ $isAr ? 'كل الصلاحيات (ماذا يفعل). مستقل عن الفروع (أين يفعل).' : 'Every permission (what they can do). Independent of branch access (where).' }}</span>
+                    <span style="font-weight:700;font-size:13px;display:block;">{{ $isAr ? 'صلاحيات كاملة — اختصار اختياري' : 'Full access — optional shortcut' }}</span>
+                    <span class="ap-opt-d">{{ $isAr ? 'يمنح كل الصلاحيات دفعة وحدة (بغضّ النظر عن الدور). اتركه مطفأ إذا مش متأكد.' : 'Grants every permission at once (regardless of role). Leave it off if unsure.' }}</span>
                 </span>
             </label>
         </div>
 
-        {{-- ── Permissions summary (read-only) ── --}}
+        {{-- ── Permissions summary (read-only) — can be relocated by the host view --}}
+        @if(($showSummary ?? true))
         <div class="ap-summary-wrap" style="margin-top:16px;">
-            <label class="f-label">{{ $isAr ? 'ملخّص الصلاحيات' : 'Permissions summary' }}</label>
+            <label class="f-label">{{ $isAr ? 'ماذا يستطيع أن يفعل؟' : 'What can they do?' }}</label>
+            <div class="ap-opt-d" style="margin:-2px 0 4px;">{{ $isAr ? 'ملخّص جاهز بناءً على الدور المختار — راجعه قبل الحفظ.' : 'A ready summary based on the selected role — review it before saving.' }}</div>
             <div class="ap-summary-banner"><i data-feather="zap"></i>{{ $isAr ? 'صلاحيات كاملة — كل الصلاحيات ممنوحة (يمكن تقييدها من المتقدّم).' : 'Full access — every permission granted (can be narrowed in Advanced).' }}</div>
             <div class="ap-summary" id="ap-summary" role="list"></div>
         </div>
+        @endif
 
         {{-- ── Advanced (opt-in) ── --}}
         <details class="ap-adv" id="ap-adv" {{ (! empty($l3Levels) || $perBranch) ? 'open' : '' }}>
@@ -236,7 +240,7 @@
                     <label class="toggle-row" style="cursor:pointer;">
                         <span class="ap-switch">
                             <input type="checkbox" name="per_branch" value="1" id="ap-per-branch-input" {{ $perBranch ? 'checked' : '' }}>
-                            <span class="ap-switch-track" style="background:rgba(102,126,234,.25);"></span><span class="ap-switch-thumb"></span>
+                            <span class="ap-switch-track" style="background:rgba(92,112,56,.25);"></span><span class="ap-switch-thumb"></span>
                         </span>
                         <span style="flex:1;">
                             <span style="font-weight:700;font-size:13px;display:block;">{{ $isAr ? 'صلاحيات مختلفة لكل فرع' : 'Different permissions per branch' }}</span>
@@ -280,7 +284,8 @@
 
     const roleSelect  = document.getElementById('role-select');
     const fullInput   = document.getElementById('ap-full-input');
-    const summaryEl   = document.getElementById('ap-summary');
+    // Looked up lazily inside renderSummary: the host view may render #ap-summary
+    // after this script (e.g. relocated to a sticky sidebar).
     const modeSelected = document.getElementById('ap-mode-selected');
     const modeAll      = document.getElementById('ap-mode-all');
     const branchPicker = document.getElementById('ap-branch-picker');
@@ -303,8 +308,10 @@
     }
 
     function renderSummary() {
+        const summaryEl = document.getElementById('ap-summary');
         const isFull = fullInput && fullInput.checked;
         fullWrap.classList.toggle('on', !!isFull);
+        if (!summaryEl) return;
 
         if (!roleSelect || !roleSelect.value) {
             summaryEl.innerHTML = '<div class="ap-empty">' + (document.documentElement.lang === 'ar' ? 'اختر دوراً لعرض الصلاحيات' : 'Pick a role to see permissions') + '</div>';

@@ -5,18 +5,20 @@ namespace App\Models;
 use App\Models\Concerns\HasBranchScopedAccess;
 use App\Models\Concerns\HasLocalizedNames;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
-class Employee extends Model
+class Employee extends Authenticatable
 {
     use HasBranchScopedAccess;
     use HasFactory;
     use HasLocalizedNames;
+    use Notifiable;
 
     public const CONTRACT_TYPES = [
         'full_time'  => ['label_key' => 'Full-time',  'icon' => '📋', 'color' => '#22c55e'],
@@ -47,6 +49,7 @@ class Employee extends Model
         'is_active',
         'is_bookable',
         'password',
+        'must_change_password',
         'contract_type',
         'hire_date',
         'contract_end_date',
@@ -77,6 +80,7 @@ class Employee extends Model
             'is_bookable'       => 'boolean',
             'all_branches'      => 'boolean',
             'full_access'       => 'boolean',
+            'must_change_password' => 'boolean',
             'password'          => 'hashed',
             'hire_date'         => 'date',
             'contract_end_date' => 'date',

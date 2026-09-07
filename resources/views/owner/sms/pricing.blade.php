@@ -72,6 +72,74 @@
             </div>
         </div>
     </div>
+
+    {{-- Rasel SMS sender name (platform-level). Local sends can go out under an
+         APPROVED sender.id from Rasel; this is the provider transport identity,
+         entirely separate from GlowRez credits/packages. --}}
+    <div class="sx-card sx-reveal" style="margin-top:20px;">
+        <div class="sx-card-head">
+            <div>
+                <h2 class="sx-card-title">{{ __('SMS sender name (Rasel)') }}</h2>
+                <p class="sx-card-note">{{ __('The approved name local SMS is sent under. One choice for the whole platform.') }}</p>
+            </div>
+            <span class="sx-ref-tag"><i data-feather="send"></i>{{ __('Provider') }}</span>
+        </div>
+        <div class="sx-card-pad">
+            @if(!($senders['ok'] ?? false))
+                <div class="sx-note sx-note-warn">
+                    <i data-feather="alert-circle"></i>
+                    <span>{{ __('Approved senders are unavailable right now (Rasel not configured or unreachable). Sends will use the account default sender.') }}</span>
+                </div>
+                @if(!empty($setting->default_sender_id))
+                    <div class="sx-sub" style="margin-top:10px;">
+                        {{ __('Currently selected') }}: <strong>{{ $setting->default_sender_name ?: $setting->default_sender_id }}</strong>
+                    </div>
+                @endif
+            @elseif(empty($senders['senders']))
+                <div class="sx-note sx-note-info">
+                    <i data-feather="info"></i>
+                    <span>{{ __('No approved sender names yet. Request one below; sends use the account default until one is approved.') }}</span>
+                </div>
+            @else
+                <form method="POST" action="{{ route('owner.sms.sender.update') }}">
+                    @csrf @method('PUT')
+                    <input type="hidden" name="default_sender_name" id="sx-sender-name" value="{{ $setting->default_sender_name }}">
+                    <div class="sx-field">
+                        <label>{{ __('Send under') }}</label>
+                        <select name="default_sender_id" class="sx-input" onchange="document.getElementById('sx-sender-name').value = this.options[this.selectedIndex].dataset.name || '';">
+                            <option value="" data-name="">{{ __('Account default sender') }}</option>
+                            @foreach($senders['senders'] as $s)
+                                <option value="{{ $s['id'] }}" data-name="{{ $s['name'] }}" @selected($setting->default_sender_id === $s['id'])>
+                                    {{ $s['name'] }}@if($s['is_default']) · {{ __('default') }}@endif ({{ $s['status'] }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="sx-hint">{{ __('Only approved senders can deliver. Leaving this on the account default is fine.') }}</p>
+                    </div>
+                    <button type="submit" class="sx-btn sx-btn-primary"><i data-feather="save"></i>{{ __('Save sender') }}</button>
+                </form>
+            @endif
+
+            @if(!empty($allowedTypes))
+                <div class="sx-note sx-note-info" style="margin-top:14px;">
+                    <i data-feather="check-circle"></i>
+                    <span>{{ __('Local SMS allows these message types') }}: <strong>{{ implode(' · ', $allowedTypes) }}</strong></span>
+                </div>
+            @endif
+
+            <hr style="border:none;border-top:1px solid var(--bk-border);margin:18px 0;">
+
+            <form method="POST" action="{{ route('owner.sms.sender.request') }}">
+                @csrf
+                <div class="sx-field">
+                    <label>{{ __('Request a new sender name') }}</label>
+                    <input type="text" name="name" class="sx-input" maxlength="191" placeholder="MyBrand" required>
+                    <p class="sx-hint">{{ __('Submitted to Rasel for review. Approval is handled on the Rasel side.') }}</p>
+                </div>
+                <button type="submit" class="sx-btn sx-btn-ghost"><i data-feather="plus"></i>{{ __('Submit for review') }}</button>
+            </form>
+        </div>
+    </div>
 </div>
 
 @push('owner-styles')

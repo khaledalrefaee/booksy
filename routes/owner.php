@@ -221,6 +221,10 @@ Route::prefix('owner')->name('owner.')->group(function () {
             Route::get('pricing',        'pricing')->name('pricing');
             Route::put('pricing',        'updatePricing')->name('pricing.update');
 
+            // Rasel SMS sender names (platform-level, one approved sender.id).
+            Route::put('sender',         'updateDefaultSender')->name('sender.update');
+            Route::post('sender',        'requestSender')->name('sender.request');
+
             Route::post('grant',         'grant')->name('grant');
             Route::get('companies/{company}/branches', 'companyBranches')->name('company-branches');
         });

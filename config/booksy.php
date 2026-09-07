@@ -102,27 +102,29 @@ return [
     |                          content:{text} } with an "X-API-Key" header.
     |   driver  = 'generic' → Twilio-style gateway. POST { to, from, message }
     |                          with an "Authorization: Bearer <key>" header.
-    | Leave the URL empty to keep SMS inert (failures log a clear reason).
+    | Leave the API key empty to keep SMS inert (failures log a clear reason).
+    |
+    | 'api_base' is the SINGLE source for the Rasel API root; the send endpoint
+    | and every read-only account/senders/policies call derive from it. 'url' is
+    | only an optional explicit override for a non-standard send path.
     |
     | 'countries' lists the dial codes that are delivered over SMS instead of
     | WhatsApp — Syria (963) by default. Everyone else gets WhatsApp.
     */
     'sms' => [
         'driver'    => env('BOOKSY_SMS_DRIVER', 'rasel'),
-        // Send endpoint — PENDING the real Rassel send URL from the account owner.
-        // Left config-driven and inert (no API key in dev) until confirmed; never
-        // guess a different path here.
-        'url'       => env('BOOKSY_SMS_URL', 'https://raselsms.com/api/v2/messages/send'),
+
+        // The single Rasel API root. Everything (send + read-only account APIs +
+        // sms-senders + policies) is built from this base — one place to change.
+        'api_base'  => rtrim(env('BOOKSY_SMS_API_BASE', 'https://raselsms.com/api/v2'), '/'),
+
+        // Optional explicit send-endpoint override. Empty → derived as
+        // {api_base}/messages/send. Set only for a non-standard gateway path.
+        'url'       => env('BOOKSY_SMS_URL', ''),
         'api_key'   => env('BOOKSY_SMS_KEY', ''),
         'channel'   => env('BOOKSY_SMS_CHANNEL', 'local_sms'),
         'sender'    => env('BOOKSY_SMS_SENDER', 'GlowRez'),
         'countries' => array_filter(explode(',', env('BOOKSY_SMS_COUNTRIES', '963'))),
-
-        // Confirmed read-only Rassel account APIs (GET): account profile, wallet
-        // balance, subscriptions, remaining segments, free grants, usage, and
-        // wallet transactions. Used only for the OWNER's provider dashboard —
-        // GlowRez branch credits live in its own ledger, never in Rassel's balance.
-        'api_base'  => rtrim(env('BOOKSY_SMS_API_BASE', 'https://raselsms.com/api/v2'), '/'),
 
         /*
         | SMS credit system — the price a single SMS is billed at, the default

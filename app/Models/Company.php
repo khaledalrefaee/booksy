@@ -248,6 +248,12 @@ class Company extends Authenticatable
         return $this->status === 'suspended';
     }
 
+    /** True once the owner has confirmed the account with the OTP code. */
+    public function isVerified(): bool
+    {
+        return ! is_null($this->phone_verified_at);
+    }
+
     /**
      * Owner-facing explanation shown wherever a suspended account is turned away
      * (login screen, mid-session logout). Appends the recorded reason if any.

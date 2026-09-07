@@ -38,7 +38,7 @@
     padding: 12px 16px; cursor: pointer; transition: border-color .2s, background .2s;
     display: flex; align-items: center; gap: 12px;
 }
-.toggle-card.active { border-color: #667eea; background: rgba(102,126,234,.06); }
+.toggle-card.active { border-color: #5C7038; background: rgba(92,112,56,.06); }
 .toggle-card input { display: none; }
 </style>
 @endpush

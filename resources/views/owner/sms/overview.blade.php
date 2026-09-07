@@ -286,12 +286,14 @@
                         <div class="sx-prov-cell">
                             <span class="sx-prov-label">{{ __('Effective limit') }}</span>
                             <span class="sx-prov-value">{{ number_format($provider['effective_limit']) }}
-                                <small>({{ number_format($provider['period_limit']) }}+{{ number_format($provider['bonus']) }})</small></span>
+                                @if(!empty($provider['cycle_end']))
+                                    <small style="display:block;">{{ __('Resets') }} {{ \Illuminate\Support\Carbon::parse($provider['cycle_end'])->translatedFormat('d M Y') }}</small>
+                                @endif</span>
                         </div>
                         <div class="sx-prov-cell">
                             <span class="sx-prov-label">{{ __('Free grant left') }}</span>
                             <span class="sx-prov-value">{{ number_format($provider['free_grant']['remaining']) }}
-                                <small>/ {{ number_format($provider['free_grant']['granted']) }}</small></span>
+                                @if($provider['free_grant']['granted'] > 0)<small>/ {{ number_format($provider['free_grant']['granted']) }}</small>@endif</span>
                         </div>
                         <div class="sx-prov-cell">
                             <span class="sx-prov-label">{{ __('Plan') }}</span>
@@ -300,38 +302,56 @@
                         </div>
                     </div>
 
-                    {{-- Free message grants from Rassel — per-grant detail --}}
-                    @if(!empty($provider['free_grants']))
-                        @php
-                            $chLabel = ['sms_syria' => __('SMS Syria'), 'sms_local' => __('Local SMS'), 'whatsapp' => 'WhatsApp'];
-                            $pkLabel = ['sms_mtn' => 'MTN', 'sms_syriatel' => 'Syriatel'];
-                        @endphp
+                    @if(!($provider['can_send'] ?? true) && !empty($provider['reason']))
+                        <div class="sx-card-pad" style="padding-top:12px;">
+                            <div class="sx-note sx-note-warn">
+                                <i data-feather="alert-circle"></i>
+                                <span>{{ __('Provider cannot send right now') }}: <strong>{{ $provider['reason'] }}</strong></span>
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Free message grants from Rassel — documented fields only.
+                         Rasel returns remaining-per-scope (byScope) and per-grant
+                         remaining/status/reason; it does NOT return per-grant
+                         original/consumed amounts, so none are shown here. --}}
+                    @php
+                        $chLabel = ['sms_syria' => __('SMS Syria'), 'sms_local' => __('Local SMS'), 'whatsapp' => 'WhatsApp'];
+                        $pkLabel = ['sms_mtn' => 'MTN', 'sms_syriatel' => 'Syriatel'];
+                    @endphp
+                    @if(!empty($provider['by_scope']))
+                        <div class="sx-card-pad" style="padding-bottom:6px;">
+                            <div class="sx-name" style="margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+                                <i data-feather="gift" style="width:15px;height:15px; color:var(--bk-gold-strong);"></i>{{ __('Free message grants') }}
+                            </div>
+                            @foreach($provider['by_scope'] as $s)
+                                <div style="padding:12px 0; border-bottom:1px solid var(--bk-border); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                        <span class="sx-chip">{{ $chLabel[$s['channel']] ?? $s['channel'] }}</span>
+                                        @if($s['provider_key'])<span class="sx-sub">{{ $pkLabel[$s['provider_key']] ?? strtoupper(str_replace('sms_','',$s['provider_key'])) }}</span>@endif
+                                        @if($s['message_type'] && $s['message_type'] !== 'all')<span class="sx-sub">{{ $s['message_type'] }}</span>@endif
+                                        @if($s['grant_count'] > 1)<span class="sx-sub">×{{ $s['grant_count'] }}</span>@endif
+                                    </div>
+                                    <div class="sx-sub sx-mono">
+                                        <strong style="color:var(--bk-text); font-size:1rem;">{{ number_format($s['remaining']) }}</strong> {{ __('left') }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @elseif(!empty($provider['free_grants']))
                         <div class="sx-card-pad" style="padding-bottom:6px;">
                             <div class="sx-name" style="margin-bottom:10px; display:flex; align-items:center; gap:8px;">
                                 <i data-feather="gift" style="width:15px;height:15px; color:var(--bk-gold-strong);"></i>{{ __('Free message grants') }}
                             </div>
                             @foreach($provider['free_grants'] as $g)
-                                @php $gpct = $g['granted'] > 0 ? min(100, round($g['consumed'] / $g['granted'] * 100)) : 0; @endphp
-                                <div style="padding:12px 0; border-bottom:1px solid var(--bk-border);">
-                                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-                                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                                            <span class="sx-chip">{{ $chLabel[$g['channel']] ?? $g['channel'] }}</span>
-                                            @if($g['provider_key'])<span class="sx-sub">{{ $pkLabel[$g['provider_key']] ?? strtoupper(str_replace('sms_','',$g['provider_key'])) }}</span>@endif
-                                            @if($g['status'] === 'active')<span class="sx-pill sx-pill-sent" style="padding:2px 8px;">{{ __('Active') }}</span>@endif
-                                        </div>
-                                        <div class="sx-sub sx-mono">
-                                            <strong style="color:var(--bk-text); font-size:1rem;">{{ number_format($g['remaining']) }}</strong> {{ __('left') }} / {{ number_format($g['granted']) }}
-                                        </div>
+                                <div style="padding:12px 0; border-bottom:1px solid var(--bk-border); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                        <span class="sx-chip">{{ $chLabel[$g['channel']] ?? $g['channel'] }}</span>
+                                        @if($g['status'] === 'active')<span class="sx-pill sx-pill-sent" style="padding:2px 8px;">{{ __('Active') }}</span>@endif
+                                        @if($g['reason'])<span class="sx-sub">{{ $g['reason'] }}</span>@endif
                                     </div>
-                                    <div class="sx-meter" style="margin-top:8px; height:8px;">
-                                        <span class="sx-meter-fill is-gold" style="width:{{ $gpct }}%"></span>
-                                    </div>
-                                    <div class="sx-meter-legend" style="margin-top:8px; gap:14px;">
-                                        <span class="sx-legend" style="font-size:.76rem;">{{ __('Used') }} <strong class="sx-mono">&nbsp;{{ number_format($g['consumed']) }}</strong></span>
-                                        @if($g['expires_at'])
-                                            <span class="sx-legend" style="font-size:.76rem;"><i data-feather="clock" style="width:12px;height:12px;"></i>{{ __('Expires') }} {{ \Illuminate\Support\Carbon::parse($g['expires_at'])->translatedFormat('d M Y') }}</span>
-                                        @endif
-                                        @if($g['reason'])<span class="sx-legend" style="font-size:.76rem; color:var(--bk-text-muted);">{{ $g['reason'] }}</span>@endif
+                                    <div class="sx-sub sx-mono">
+                                        <strong style="color:var(--bk-text); font-size:1rem;">{{ number_format($g['remaining']) }}</strong> {{ __('left') }}
                                     </div>
                                 </div>
                             @endforeach

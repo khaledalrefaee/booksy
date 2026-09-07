@@ -193,7 +193,7 @@
         <div class="card-body p-0" id="lvList">
             @forelse($leaves as $leave)
             @php
-                $palette = ['#667eea','#f093fb','#4facfe','#43e97b','#fa709a'];
+                $palette = ['#5C7038','#f093fb','#4facfe','#43e97b','#fa709a'];
                 $bg = $palette[$leave->employee_id % count($palette)];
                 $initial = strtoupper(mb_substr($leave->employee->name_en ?? $leave->employee->name_ar ?? '?', 0, 1));
             @endphp

@@ -52,7 +52,7 @@
 
             {{-- Summary badges --}}
             <div class="ms-auto d-flex gap-2 flex-wrap">
-                <span class="badge rounded-pill px-3 py-2" style="background:rgba(102,126,234,.15);color:#a5b4fd;font-size:.72rem;">
+                <span class="badge rounded-pill px-3 py-2" style="background:rgba(92,112,56,.15);color:#A6BC7E;font-size:.72rem;">
                     <i data-feather="users" style="width:11px;height:11px;margin-inline-end:4px;"></i>
                     {{ $employees->count() }} {{ __('employees') }}
                 </span>
@@ -77,7 +77,7 @@
                 type="button" role="tab" onclick="setTab('employees')">
             <i data-feather="users" style="width:14px;height:14px;"></i>
             {{ __('Employees') }}
-            <span class="badge rounded-pill ms-1" style="background:rgba(102,126,234,.2);color:#a5b4fd;font-size:.65rem;">
+            <span class="badge rounded-pill ms-1" style="background:rgba(92,112,56,.2);color:#A6BC7E;font-size:.65rem;">
                 {{ $employees->count() }}
             </span>
         </button>
@@ -114,7 +114,7 @@
             <div class="card-body p-0">
                 @forelse($employees as $emp)
                 @php
-                    $palette = ['#667eea','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1','#fda085'];
+                    $palette = ['#5C7038','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1','#fda085'];
                     $bg      = $palette[$emp->id % count($palette)];
                     $initial = strtoupper(mb_substr($emp->name_en ?? $emp->name_ar ?? '?', 0, 1));
                     $name    = $isAr ? ($emp->name_ar ?: $emp->name_en) : ($emp->name_en ?: $emp->name_ar);
@@ -131,7 +131,7 @@
                         <div class="d-flex align-items-center flex-wrap gap-2">
                             <span style="font-weight:600;font-size:.875rem;">{{ $name }}</span>
                             @if($emp->role)
-                                <span style="font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(102,126,234,.15);color:#a5b4fd;">
+                                <span style="font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(92,112,56,.15);color:#A6BC7E;">
                                     {{ $isAr ? ($emp->role->label_ar ?: $emp->role->label_en) : ($emp->role->label_en ?: $emp->role->label_ar) }}
                                 </span>
                             @endif
@@ -323,7 +323,7 @@
 }
 .bk-theme-light .staff-row { border-bottom-color: rgba(0,0,0,.05); }
 .staff-row:last-child { border-bottom: none; }
-.staff-row:hover { background: rgba(102,126,234,.05); }
+.staff-row:hover { background: rgba(92,112,56,.05); }
 .nav-tabs .nav-link {
     font-size: .82rem;
     font-weight: 600;

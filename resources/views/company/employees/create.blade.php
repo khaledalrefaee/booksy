@@ -4,7 +4,7 @@
 <style>
 /* ── Create Employee ── */
 .emp-form-hero {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5C7038 0%, #3C4B29 100%);
     border-radius: 20px; padding: 26px 30px;
     margin-bottom: 24px; color: #fff;
     position: relative; overflow: hidden;
@@ -40,12 +40,86 @@
     display: flex; align-items: center; justify-content: center;
 }
 .emp-tab-btn.active {
-    background: rgba(102,126,234,.2); color: #a5b4fd;
-    box-shadow: 0 2px 10px rgba(102,126,234,.15);
+    background: rgba(92,112,56,.2); color: #A6BC7E;
+    box-shadow: 0 2px 10px rgba(92,112,56,.15);
 }
-.bk-theme-light .emp-tab-btn.active { background: rgba(102,126,234,.12); color: #667eea; }
+.bk-theme-light .emp-tab-btn.active { background: rgba(92,112,56,.12); color: #5C7038; }
 .emp-tab-pane { display: none; }
 .emp-tab-pane.active { display: block; }
+@media (max-width: 640px) {
+    .emp-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .emp-tabs::-webkit-scrollbar { display: none; }
+    .emp-tab-btn { flex: 0 0 auto; padding: 10px 14px; }
+}
+
+/* ── Access tab helpers ── */
+.ap-intro {
+    display: flex; gap: 11px; align-items: flex-start;
+    padding: 13px 15px; border-radius: 13px;
+    background: rgba(92,112,56,.08); border: 1.5px solid rgba(92,112,56,.22);
+    margin-bottom: 20px;
+}
+.ap-intro svg { width: 18px; height: 18px; color: #A6BC7E; flex-shrink: 0; margin-top: 1px; }
+.bk-theme-light .ap-intro svg { color: #5C7038; }
+.ap-intro-t { font-size: 12.5px; line-height: 1.6; }
+.ap-intro-t b { color: #A6BC7E; font-weight: 700; }
+.bk-theme-light .ap-intro-t b { color: #5C7038; }
+/* Role cards */
+.ap-role-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.ap-role-cards.is-invalid { outline: 1.5px solid #f5576c; outline-offset: 4px; border-radius: 14px; }
+@media (max-width: 575px) { .ap-role-cards { grid-template-columns: 1fr; } }
+.ap-role-card { position: relative; margin: 0; }
+.ap-role-card input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.ap-role-card-in {
+    display: flex; align-items: flex-start; gap: 11px; height: 100%;
+    padding: 13px 14px; border-radius: 13px; cursor: pointer;
+    border: 1.5px solid rgba(255,255,255,.1); background: rgba(255,255,255,.03);
+    transition: border-color .16s, background .16s;
+}
+.bk-theme-light .ap-role-card-in { background: #f8f9fa; border-color: #dee2e6; }
+.ap-role-card input:checked + .ap-role-card-in,
+.ap-role-card.is-selected .ap-role-card-in { border-color: #5C7038; background: rgba(92,112,56,.1); }
+.ap-role-card input:focus-visible + .ap-role-card-in { box-shadow: 0 0 0 3px rgba(92,112,56,.35); }
+.ap-role-ico {
+    width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(92,112,56,.15); color: #A6BC7E;
+}
+.bk-theme-light .ap-role-ico { color: #5C7038; }
+.ap-role-card input:checked + .ap-role-card-in .ap-role-ico,
+.ap-role-card.is-selected .ap-role-ico { background: rgba(92,112,56,.22); }
+.ap-role-ico svg { width: 17px; height: 17px; }
+.ap-role-txt { flex: 1; min-width: 0; }
+.ap-role-name { font-weight: 700; font-size: 13.5px; display: block; }
+.ap-role-desc { font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,.5); margin-top: 3px; display: block; }
+.bk-theme-light .ap-role-desc { color: rgba(0,0,0,.5); }
+.ap-role-check { width: 16px; height: 16px; flex-shrink: 0; color: #5C7038; opacity: 0; transition: opacity .16s; }
+.ap-role-card input:checked + .ap-role-card-in .ap-role-check,
+.ap-role-card.is-selected .ap-role-check { opacity: 1; }
+/* Sticky live-summary sidebar */
+.ap-summary-side {
+    position: sticky; top: 16px;
+    border-radius: 14px; padding: 15px 16px;
+    background: rgba(255,255,255,.03); border: 1.5px solid rgba(255,255,255,.08);
+}
+.bk-theme-light .ap-summary-side { background: #f8f9fa; border-color: #e8ecf1; }
+.ap-edit-perms {
+    width: 100%; margin-top: 12px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    background: transparent; border: 1.5px dashed rgba(92,112,56,.4); color: #5C7038;
+    border-radius: 10px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+.ap-edit-perms:hover { background: rgba(92,112,56,.08); border-color: #5C7038; }
+.ap-edit-perms svg { width: 14px; height: 14px; }
+.ap-howto { margin-top: 12px; }
+.ap-howto > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 700; color: rgba(255,255,255,.55); }
+.bk-theme-light .ap-howto > summary { color: rgba(0,0,0,.5); }
+.ap-howto > summary::-webkit-details-marker { display: none; }
+.ap-howto > summary svg { width: 13px; height: 13px; }
+.ap-howto-body { margin-top: 8px; }
+.ap-howto-body p { font-size: 11.5px; line-height: 1.5; opacity: .75; margin: 0 0 5px; }
 
 /* ── Section cards ── */
 .sec-card { border-radius: 16px !important; margin-bottom: 18px; }
@@ -77,10 +151,10 @@
     transition: border-color .2s, background .2s, box-shadow .2s; outline: none;
 }
 .f-input::placeholder { color: rgba(255,255,255,.25); }
-.f-input:focus { border-color: #667eea; background: rgba(102,126,234,.08); box-shadow: 0 0 0 3px rgba(102,126,234,.15); }
+.f-input:focus { border-color: #5C7038; background: rgba(92,112,56,.08); box-shadow: 0 0 0 3px rgba(92,112,56,.15); }
 .bk-theme-light .f-input { background: #f8f9fa; border-color: #dee2e6; color: #212529; }
 .bk-theme-light .f-input::placeholder { color: rgba(0,0,0,.3); }
-.bk-theme-light .f-input:focus { background: #fff; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,.12); }
+.bk-theme-light .f-input:focus { background: #fff; border-color: #5C7038; box-shadow: 0 0 0 3px rgba(92,112,56,.12); }
 .f-input.is-invalid { border-color: #f5576c !important; }
 /* Fix select arrow in dark theme */
 .f-input.form-select {
@@ -101,8 +175,8 @@
     background: rgba(255,255,255,.03);
 }
 .bk-theme-light .day-pill { border-color: #e8ecf1; background: #fafbfc; }
-.day-pill.active { border-color: rgba(102,126,234,.5); background: rgba(102,126,234,.07); }
-.bk-theme-light .day-pill.active { border-color: #667eea; background: rgba(102,126,234,.06); }
+.day-pill.active { border-color: rgba(92,112,56,.5); background: rgba(92,112,56,.07); }
+.bk-theme-light .day-pill.active { border-color: #5C7038; background: rgba(92,112,56,.06); }
 .day-name { font-weight: 700; font-size: 13px; }
 .day-times { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .shift-row { display: flex; align-items: center; gap: 6px; }
@@ -115,11 +189,11 @@
 .shift-del:hover { background: rgba(245,87,108,.25); }
 .shift-add {
     align-self: flex-start;
-    border: 1.5px dashed rgba(102,126,234,.4); background: transparent; color: #667eea;
+    border: 1.5px dashed rgba(92,112,56,.4); background: transparent; color: #5C7038;
     border-radius: 9px; padding: 4px 12px; font-size: 11px; font-weight: 700; cursor: pointer;
     transition: background .15s, border-color .15s;
 }
-.shift-add:hover { background: rgba(102,126,234,.08); border-color: #667eea; }
+.shift-add:hover { background: rgba(92,112,56,.08); border-color: #5C7038; }
 .shift-hint { font-size: 10px; opacity: .4; }
 .shift-copy {
     border: 1.5px dashed rgba(255,255,255,.2); background: transparent; color: rgba(255,255,255,.5);
@@ -135,7 +209,7 @@
     background: rgba(255,255,255,.05); color: inherit; outline: none;
     transition: border-color .2s;
 }
-.day-times input:focus { border-color: #667eea; }
+.day-times input:focus { border-color: #5C7038; }
 .day-times input:disabled { opacity: .3; cursor: not-allowed; }
 .bk-theme-light .day-times input { background: #fff; border-color: #dee2e6; color: #212529; }
 .day-times .sep { color: rgba(255,255,255,.3); font-size: 12px; flex-shrink: 0; }
@@ -173,46 +247,48 @@
     display: flex; align-items: center; justify-content: center;
 }
 
-/* ── Sticky save bar ── */
+/* ── Sticky save bar ── (blends with the page canvas, no dark band) */
 .emp-save-bar {
     position: sticky; bottom: 0; z-index: 20;
-    padding: 14px 0 10px;
-    border-top: 1px solid rgba(255,255,255,.07);
-    backdrop-filter: blur(10px);
-    background: rgba(0,0,0,.3);
-    margin-top: 8px;
-}
-.bk-theme-light .emp-save-bar {
-    background: rgba(255,255,255,.85);
-    border-top-color: rgba(0,0,0,.08);
+    display: flex; justify-content: flex-end;
+    padding: 12px 0; margin-top: 10px;
+    border-top: 1px solid var(--bk-border, rgba(255,255,255,.08));
+    background: var(--bk-bg, #1b2015);
 }
 .btn-submit-emp {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: #fff; border: none; border-radius: 13px;
-    padding: 12px 36px; font-weight: 700; font-size: 14px;
-    cursor: pointer; width: 100%;
-    box-shadow: 0 4px 18px rgba(102,126,234,.3);
+    background: linear-gradient(135deg, #5C7038, #3C4B29);
+    color: #fff; border: none; border-radius: 12px;
+    padding: 11px 30px; font-weight: 700; font-size: 13.5px;
+    cursor: pointer; width: auto; min-width: 200px;
+    box-shadow: 0 4px 16px rgba(92,112,56,.25);
     transition: opacity .2s, transform .15s;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
 }
-.btn-submit-emp:hover { opacity: .9; transform: translateY(-1px); }
+.btn-submit-emp:hover { opacity: .92; transform: translateY(-1px); }
+@media (max-width: 640px) {
+    .emp-save-bar { justify-content: stretch; }
+    .btn-submit-emp { width: 100%; min-width: 0; }
+}
 </style>
 @endpush
 
 @section('content')
 @php
-    $errKeys    = $errors->keys();
-    $tab1Fields = ['name_en','name_ar','email','phone','phone_number','dial_code','role_id','password','bio','image'];
-    $tab2Fields = ['comp_type','comp_base_amount','comp_commission_rate','service_ids'];
-    $tab4Fields = ['contract_type','hire_date','contract_end_date','national_id','iban','bank_name','emergency_contact_name','emergency_contact_phone','emergency_contact_relation','qualifications','license_number','license_expiry'];
-    $initTab    = 1;
-    if (collect($errKeys)->some(fn($k) => in_array($k,$tab4Fields))) $initTab = 4;
-    elseif (collect($errKeys)->some(fn($k) => str_starts_with($k,'working_hours') || str_starts_with($k,'social_links'))) $initTab = 3;
-    elseif (collect($errKeys)->some(fn($k) => in_array($k,$tab2Fields) || str_starts_with($k,'comp_') || str_starts_with($k,'service_'))) $initTab = 2;
+    $errKeys      = $errors->keys();
+    // Tab 1 = Basic · Tab 2 = Access · Tab 3 = Services & Pay · Tab 4 = Schedule · Tab 5 = HR
+    $tab1Fields   = ['name_en','name_ar','email','phone','phone_number','dial_code','password','bio','image'];
+    $tab2Fields   = ['role_id','access_mode','branch_ids','full_access','per_branch'];
+    $tab3Fields   = ['comp_type','comp_base_amount','comp_commission_rate','service_ids'];
+    $tab5Fields   = ['contract_type','hire_date','contract_end_date','national_id','iban','bank_name','emergency_contact_name','emergency_contact_phone','emergency_contact_relation','qualifications','license_number','license_expiry'];
+
     $errTab1 = collect($errKeys)->some(fn($k) => in_array($k,$tab1Fields));
-    $errTab2 = collect($errKeys)->some(fn($k) => in_array($k,$tab2Fields) || str_starts_with($k,'comp_') || str_starts_with($k,'service_'));
-    $errTab3 = collect($errKeys)->some(fn($k) => str_starts_with($k,'working_hours') || str_starts_with($k,'social_links'));
-    $errTab4 = collect($errKeys)->some(fn($k) => in_array($k,$tab4Fields));
+    $errTab2 = collect($errKeys)->some(fn($k) => in_array($k,$tab2Fields) || str_starts_with($k,'branch_ids') || str_starts_with($k,'overrides') || str_starts_with($k,'branch_overrides'));
+    $errTab3 = collect($errKeys)->some(fn($k) => in_array($k,$tab3Fields) || str_starts_with($k,'comp_') || str_starts_with($k,'service_'));
+    $errTab4 = collect($errKeys)->some(fn($k) => str_starts_with($k,'working_hours') || str_starts_with($k,'social_links'));
+    $errTab5 = collect($errKeys)->some(fn($k) => in_array($k,$tab5Fields));
+
+    // Open the earliest tab that has an error
+    $initTab = $errTab1 ? 1 : ($errTab2 ? 2 : ($errTab3 ? 3 : ($errTab4 ? 4 : ($errTab5 ? 5 : 1))));
 @endphp
 
 <div class="page-content">
@@ -269,19 +345,24 @@
                 @if($errTab1)<span class="tab-badge">!</span>@endif
             </button>
             <button type="button" class="emp-tab-btn{{ $initTab===2 ? ' active' : '' }}" data-tab="2">
-                <i data-feather="scissors"></i>
-                {{ __('Services & Pay') }}
+                <i data-feather="shield"></i>
+                {{ __('Access') }}
                 @if($errTab2)<span class="tab-badge">!</span>@endif
             </button>
             <button type="button" class="emp-tab-btn{{ $initTab===3 ? ' active' : '' }}" data-tab="3">
-                <i data-feather="clock"></i>
-                {{ __('Schedule') }}
+                <i data-feather="scissors"></i>
+                {{ __('Services & Pay') }}
                 @if($errTab3)<span class="tab-badge">!</span>@endif
             </button>
             <button type="button" class="emp-tab-btn{{ $initTab===4 ? ' active' : '' }}" data-tab="4">
+                <i data-feather="clock"></i>
+                {{ __('Schedule') }}
+                @if($errTab4)<span class="tab-badge">!</span>@endif
+            </button>
+            <button type="button" class="emp-tab-btn{{ $initTab===5 ? ' active' : '' }}" data-tab="5">
                 <i data-feather="briefcase"></i>
                 {{ __('HR') }}
-                @if($errTab4 ?? false)<span class="tab-badge">!</span>@endif
+                @if($errTab5)<span class="tab-badge">!</span>@endif
             </button>
         </div>
 
@@ -292,8 +373,8 @@
                     <div class="card border-0 sec-card bk-a2">
                         <div class="card-body p-0">
                             <div class="sec-header">
-                                <div class="sec-icon" style="background:rgba(102,126,234,.15);">
-                                    <i data-feather="user" style="width:15px;height:15px;color:#a5b4fd;"></i>
+                                <div class="sec-icon" style="background:rgba(92,112,56,.15);">
+                                    <i data-feather="user" style="width:15px;height:15px;color:#A6BC7E;"></i>
                                 </div>
                                 <div>
                                     <div class="sec-title">{{ __('Basic Information') }}</div>
@@ -310,7 +391,7 @@
                                                 <i data-feather="user" style="width:24px;height:24px;opacity:.25;"></i>
                                             </div>
                                             <label for="create-photo-input"
-                                                   style="position:absolute;bottom:-6px;inset-inline-end:-6px;width:30px;height:30px;border-radius:50%;background:#667eea;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(102,126,234,.4);">
+                                                   style="position:absolute;bottom:-6px;inset-inline-end:-6px;width:30px;height:30px;border-radius:50%;background:#5C7038;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(92,112,56,.4);">
                                                 <i data-feather="camera" style="width:14px;height:14px;color:#fff;"></i>
                                             </label>
                                         </div>
@@ -319,7 +400,7 @@
                                                    class="f-input form-control" style="font-size:12px;padding:7px 10px;">
                                             <div class="mt-2" style="font-size:11px;opacity:.4;">
                                                 {{ __('Any image size — auto-compressed before upload') }}<br>
-                                                <span style="color:#a5b4fd;opacity:.8;">{{ __('Will be resized to 800px and saved as WebP') }}</span>
+                                                <span style="color:#A6BC7E;opacity:.8;">{{ __('Will be resized to 800px and saved as WebP') }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -351,20 +432,6 @@
                                         <label class="f-label">{{ __('Phone') }} <span class="text-danger">*</span></label>
                                         @include('company.partials.phone-field', ['value' => null, 'inputClass' => 'f-input'])
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="f-label">{{ __('Role') }} <span class="text-danger">*</span></label>
-                                        <select name="role_id" id="role-select" class="f-input form-select @error('role_id') is-invalid @enderror">
-                                            <option value="">{{ __('Select role…') }}</option>
-                                            @foreach($roles as $role)
-                                            <option value="{{ $role->id }}" data-slug="{{ $role->slug }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
-                                                {{ app()->getLocale()==='ar' ? ($role->label_ar ?: $role->label_en) : ($role->label_en ?: $role->label_ar) }}
-                                            </option>
-                                            @endforeach
-                                        </select>
-                                        @error('role_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                    </div>
-
-                                    @include('company.employees.partials.access-permissions', ['defaultBranchId' => $branch->id])
                                     <div class="col-md-6">
                                         <label class="f-label">{{ __('Password') }} <span class="text-danger">*</span></label>
                                         <div class="input-group">
@@ -408,8 +475,8 @@
                     </div>
 
                     {{-- Tips --}}
-                    <div style="border-radius:14px;padding:16px 18px;background:rgba(102,126,234,.07);border:1.5px solid rgba(102,126,234,.2);">
-                        <div style="font-size:12px;font-weight:700;color:#a5b4fd;margin-bottom:8px;">💡 {{ __('Tips') }}</div>
+                    <div style="border-radius:14px;padding:16px 18px;background:rgba(92,112,56,.07);border:1.5px solid rgba(92,112,56,.2);">
+                        <div style="font-size:12px;font-weight:700;color:#A6BC7E;margin-bottom:8px;">💡 {{ __('Tips') }}</div>
                         <ul style="font-size:12px;opacity:.7;margin:0;padding-inline-start:18px;line-height:2;">
                             <li>{{ app()->getLocale()==='ar' ? 'الحقول المميزة بـ * إلزامية' : 'Fields marked * are required' }}</li>
                             <li>{{ app()->getLocale()==='ar' ? 'أضف الخدمات من تبويب الخدمات' : 'Add services from the Services tab' }}</li>
@@ -422,15 +489,137 @@
             {{-- Next button --}}
             <div class="d-flex justify-content-end mt-2 mb-1">
                 <button type="button" class="btn-tab-next" data-next="2"
-                        style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(102,126,234,.3);">
+                        style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:none;background:linear-gradient(135deg,#5C7038,#3C4B29);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(92,112,56,.3);">
                     {{ __('Next') }}
                     <i data-feather="arrow-left" style="width:14px;height:14px;"></i>
                 </button>
             </div>
         </div>
 
-        {{-- ══ TAB 2 — Services & Compensation ══ --}}
+        {{-- ══ TAB 2 — Access & Permissions ══ --}}
         <div class="emp-tab-pane{{ $initTab===2 ? ' active' : '' }}" id="tab-pane-2">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="card border-0 sec-card bk-a2">
+                        <div class="card-body p-0">
+                            <div class="sec-header">
+                                <div class="sec-icon" style="background:rgba(92,112,56,.15);">
+                                    <i data-feather="shield" style="width:15px;height:15px;color:#A6BC7E;"></i>
+                                </div>
+                                <div>
+                                    <div class="sec-title">{{ __('Access & Permissions') }}</div>
+                                    <div class="sec-sub">{{ __('What this employee can see and do, and where') }}</div>
+                                </div>
+                            </div>
+                            <div class="sec-body">
+
+                                {{-- Plain-language intro --}}
+                                <div class="ap-intro">
+                                    <i data-feather="info"></i>
+                                    <div class="ap-intro-t">
+                                        {{ app()->getLocale()==='ar'
+                                            ? 'الصلاحيات = تقرّر شو يشوف ويعمل هذا الموظف داخل النظام، وفي أي فروع. اختَر الدور المناسب وبينضبط كل شي تلقائياً — ما في داعي تفهم التفاصيل التقنية.'
+                                            : "Permissions decide what this employee can see and do in the system, and in which branches. Pick a role and everything is set automatically — no technical details needed." }}
+                                    </div>
+                                </div>
+
+                                {{-- Role cards (the driver of permissions) --}}
+                                @php
+                                    $roleMeta = [
+                                        'company_owner'    => ['icon' => 'shield',       'ar' => 'صلاحية كاملة على الشركة وكل الفروع.',                       'en' => 'Full control over the company and all branches.'],
+                                        'branch_manager'   => ['icon' => 'award',        'ar' => 'يدير كل شي في الفرع: المواعيد، الموظفين، الخدمات والتقارير.', 'en' => 'Manages everything in the branch: appointments, staff, services and reports.'],
+                                        'reception'        => ['icon' => 'headphones',   'ar' => 'يحجز المواعيد ويتعامل مع الزبائن.',                          'en' => 'Books appointments and handles customers.'],
+                                        'service_provider' => ['icon' => 'scissors',     'ar' => 'يشوف مواعيده والخدمات اللي يقدّمها.',                        'en' => 'Sees their own appointments and the services they provide.'],
+                                        'finance'          => ['icon' => 'dollar-sign',  'ar' => 'يشوف الفواتير والتقارير المالية.',                          'en' => 'Views invoices and financial reports.'],
+                                        'shop_staff'       => ['icon' => 'shopping-bag', 'ar' => 'يدير المتجر والكتالوج والعرض.',                             'en' => 'Manages the shop, catalog and display.'],
+                                    ];
+                                    $isAr = app()->getLocale() === 'ar';
+                                @endphp
+                                <label class="f-label">{{ $isAr ? 'شو وظيفة هذا الشخص؟' : "What is this person's job?" }} <span class="text-danger">*</span></label>
+                                <div class="ap-opt-d" style="margin:-2px 0 10px;">{{ $isAr ? 'اختر الدور، وبتنضبط الصلاحيات تلقائياً.' : 'Pick the role — permissions are set automatically.' }}</div>
+
+                                <div class="ap-role-cards" id="ap-role-cards">
+                                    @foreach($roles as $role)
+                                    @php
+                                        $rm      = $roleMeta[$role->slug] ?? null;
+                                        $rIcon   = $rm['icon'] ?? 'user';
+                                        $rDesc   = $rm ? ($isAr ? $rm['ar'] : $rm['en']) : ($role->description ?: '');
+                                        $rLabel  = $isAr ? ($role->label_ar ?: $role->label_en) : ($role->label_en ?: $role->label_ar);
+                                        $rChecked= old('role_id') == $role->id;
+                                    @endphp
+                                    <label class="ap-role-card">
+                                        <input type="radio" name="role_id" value="{{ $role->id }}" data-slug="{{ $role->slug }}" {{ $rChecked ? 'checked' : '' }}>
+                                        <span class="ap-role-card-in">
+                                            <span class="ap-role-ico"><i data-feather="{{ $rIcon }}"></i></span>
+                                            <span class="ap-role-txt">
+                                                <span class="ap-role-name">{{ $rLabel }}</span>
+                                                @if($rDesc)<span class="ap-role-desc">{{ $rDesc }}</span>@endif
+                                            </span>
+                                            <i data-feather="check" class="ap-role-check"></i>
+                                        </span>
+                                    </label>
+                                    @endforeach
+                                </div>
+                                @error('role_id')<div style="color:#f5576c;font-size:12px;margin-top:7px;">{{ $message }}</div>@enderror
+
+                                {{-- Hidden mirror: drives the live summary logic inside the shared partial --}}
+                                <select id="role-select" aria-hidden="true" tabindex="-1" style="display:none;">
+                                    <option value="">—</option>
+                                    @foreach($roles as $role)
+                                    <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>{{ $role->id }}</option>
+                                    @endforeach
+                                </select>
+
+                                <div style="height:1px;background:rgba(255,255,255,.07);margin:18px 0;"></div>
+
+                                {{-- Branch access, full access, advanced (summary is relocated to the sticky sidebar) --}}
+                                @include('company.employees.partials.access-permissions', ['defaultBranchId' => $branch->id, 'showSummary' => false])
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Sticky live summary — visible next to the role cards, no scrolling --}}
+                <div class="col-lg-4">
+                    <div class="ap-summary-side">
+                        <label class="f-label" style="display:flex;align-items:center;gap:6px;">
+                            <i data-feather="list" style="width:14px;height:14px;"></i>
+                            {{ $isAr ? 'ماذا يستطيع أن يفعل؟' : 'What can they do?' }}
+                        </label>
+                        <div class="ap-opt-d" style="margin:-2px 0 10px;">{{ $isAr ? 'يتغيّر حسب الدور المختار — راجعه قبل الحفظ.' : 'Updates with the selected role — review before saving.' }}</div>
+                        <div class="ap-summary" id="ap-summary" role="list"></div>
+                        <button type="button" class="ap-edit-perms" onclick="openAdvancedPerms()">
+                            <i data-feather="sliders"></i>{{ $isAr ? 'تعديل الصلاحيات يدوياً' : 'Edit permissions manually' }}
+                        </button>
+                        <details class="ap-howto">
+                            <summary><i data-feather="help-circle"></i>{{ $isAr ? 'كيف تعمل الصلاحيات؟' : 'How permissions work' }}</summary>
+                            <div class="ap-howto-body">
+                                <p>{{ $isAr ? '• الدور يضبط الصلاحيات الأساسية تلقائياً.' : '• The role sets base permissions automatically.' }}</p>
+                                <p>{{ $isAr ? '• الفروع تحدّد أين يقدر يشتغل.' : '• Branches decide where they can work.' }}</p>
+                                <p>{{ $isAr ? '• «صلاحيات كاملة» اختصار اختياري — اتركه مطفأ إذا مش متأكد.' : '• “Full access” is an optional shortcut — leave off if unsure.' }}</p>
+                                <p>{{ $isAr ? '• «تعديل يدوياً» لتغيير صلاحية معيّنة فقط.' : '• “Edit manually” to change a specific permission only.' }}</p>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+            {{-- Prev / Next buttons --}}
+            <div class="d-flex justify-content-between mt-2 mb-1">
+                <button type="button" class="btn-tab-next" data-next="1"
+                        style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:1.5px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.6);font-size:13px;font-weight:700;cursor:pointer;">
+                    <i data-feather="arrow-right" style="width:14px;height:14px;"></i>
+                    {{ __('Previous') }}
+                </button>
+                <button type="button" class="btn-tab-next" data-next="3"
+                        style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:none;background:linear-gradient(135deg,#5C7038,#3C4B29);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(92,112,56,.3);">
+                    {{ __('Next') }}
+                    <i data-feather="arrow-left" style="width:14px;height:14px;"></i>
+                </button>
+            </div>
+        </div>
+
+        {{-- ══ TAB 3 — Services & Compensation ══ --}}
+        <div class="emp-tab-pane{{ $initTab===3 ? ' active' : '' }}" id="tab-pane-3">
 
             {{-- Compensation --}}
             @include('company.employees.partials.compensation-form', [
@@ -593,21 +782,21 @@
 
             {{-- Prev / Next buttons --}}
             <div class="d-flex justify-content-between mt-2 mb-1">
-                <button type="button" class="btn-tab-next" data-next="1"
+                <button type="button" class="btn-tab-next" data-next="2"
                         style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:1.5px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.6);font-size:13px;font-weight:700;cursor:pointer;">
                     <i data-feather="arrow-right" style="width:14px;height:14px;"></i>
                     {{ __('Previous') }}
                 </button>
-                <button type="button" class="btn-tab-next" data-next="3"
-                        style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(102,126,234,.3);">
+                <button type="button" class="btn-tab-next" data-next="4"
+                        style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:none;background:linear-gradient(135deg,#5C7038,#3C4B29);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(92,112,56,.3);">
                     {{ __('Next') }}
                     <i data-feather="arrow-left" style="width:14px;height:14px;"></i>
                 </button>
             </div>
         </div>
 
-        {{-- ══ TAB 3 — Schedule ══ --}}
-        <div class="emp-tab-pane{{ $initTab===3 ? ' active' : '' }}" id="tab-pane-3">
+        {{-- ══ TAB 4 — Schedule ══ --}}
+        <div class="emp-tab-pane{{ $initTab===4 ? ' active' : '' }}" id="tab-pane-4">
             <div class="row g-4">
                 <div class="col-lg-7">
                     <div class="card border-0 sec-card bk-a2">
@@ -684,7 +873,7 @@
                         <div class="card-body p-0">
                             <div class="sec-header">
                                 <div class="sec-icon" style="background:rgba(99,102,241,.15);">
-                                    <i data-feather="share-2" style="width:15px;height:15px;color:#6366f1;"></i>
+                                    <i data-feather="share-2" style="width:15px;height:15px;color:#5C7038;"></i>
                                 </div>
                                 <div>
                                     <div class="sec-title">{{ __('Social Media Links') }}</div>
@@ -694,7 +883,7 @@
                             @include('partials.social-links-form', [
                                 'savedLinks'       => collect(),
                                 'inputPrefix'      => 'social_links',
-                                'accentColor'      => '#6366f1',
+                                'accentColor'      => '#5C7038',
                                 'allowedPlatforms' => ['whatsapp', 'facebook', 'instagram'],
                             ])
                         </div>
@@ -703,29 +892,29 @@
             </div>
             {{-- Prev / Next buttons --}}
             <div class="d-flex justify-content-between mt-2 mb-1">
-                <button type="button" class="btn-tab-next" data-next="2"
+                <button type="button" class="btn-tab-next" data-next="3"
                         style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:1.5px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.6);font-size:13px;font-weight:700;cursor:pointer;">
                     <i data-feather="arrow-right" style="width:14px;height:14px;"></i>
                     {{ __('Previous') }}
                 </button>
-                <button type="button" class="btn-tab-next" data-next="4"
-                        style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:none;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(102,126,234,.3);">
+                <button type="button" class="btn-tab-next" data-next="5"
+                        style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:none;background:linear-gradient(135deg,#5C7038,#3C4B29);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(92,112,56,.3);">
                     {{ __('Next') }}
                     <i data-feather="arrow-left" style="width:14px;height:14px;"></i>
                 </button>
             </div>
         </div>
 
-        {{-- ══ TAB 4 — HR Details ══ --}}
-        <div class="emp-tab-pane{{ $initTab===4 ? ' active' : '' }}" id="tab-pane-4">
+        {{-- ══ TAB 5 — HR Details ══ --}}
+        <div class="emp-tab-pane{{ $initTab===5 ? ' active' : '' }}" id="tab-pane-5">
             <div class="row g-4">
                 <div class="col-lg-6">
                     {{-- Contract --}}
                     <div class="card border-0 sec-card bk-a2">
                         <div class="card-body p-0">
                             <div class="sec-header">
-                                <div class="sec-icon" style="background:rgba(102,126,234,.15);">
-                                    <i data-feather="briefcase" style="width:15px;height:15px;color:#a5b4fd;"></i>
+                                <div class="sec-icon" style="background:rgba(92,112,56,.15);">
+                                    <i data-feather="briefcase" style="width:15px;height:15px;color:#A6BC7E;"></i>
                                 </div>
                                 <div>
                                     <div class="sec-title">{{ __('Contract & Employment') }}</div>
@@ -862,7 +1051,7 @@
             </div>
             {{-- Prev button --}}
             <div class="d-flex justify-content-start mt-2 mb-1">
-                <button type="button" class="btn-tab-next" data-next="3"
+                <button type="button" class="btn-tab-next" data-next="4"
                         style="display:flex;align-items:center;gap:7px;padding:10px 24px;border-radius:12px;border:1.5px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.6);font-size:13px;font-weight:700;cursor:pointer;">
                     <i data-feather="arrow-right" style="width:14px;height:14px;"></i>
                     {{ __('Previous') }}
@@ -890,7 +1079,7 @@ function showSaveOverlay() {
     var overlay = document.createElement('div');
     overlay.id = 'save-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
-    overlay.innerHTML = '<div style="text-align:center;color:#fff;"><div class="spinner-border mb-3" style="width:40px;height:40px;border-width:3px;color:#667eea;"></div><div style="font-size:14px;font-weight:600;">{{ __("Saving...") }}</div><div style="font-size:12px;opacity:.5;margin-top:4px;">{{ __("Please wait") }}</div></div>';
+    overlay.innerHTML = '<div style="text-align:center;color:#fff;"><div class="spinner-border mb-3" style="width:40px;height:40px;border-width:3px;color:#5C7038;"></div><div style="font-size:14px;font-weight:600;">{{ __("Saving...") }}</div><div style="font-size:12px;opacity:.5;margin-top:4px;">{{ __("Please wait") }}</div></div>';
     document.body.appendChild(overlay);
 }
 
@@ -901,7 +1090,6 @@ document.getElementById('emp-create-form').addEventListener('submit', function (
         { name: 'name_ar', msg: '{{ app()->getLocale()==="ar" ? "الاسم بالعربية مطلوب" : "Name (Arabic) is required" }}' },
         { name: 'email',   msg: '{{ app()->getLocale()==="ar" ? "البريد الإلكتروني مطلوب" : "Email is required" }}' },
         { name: 'phone_number', msg: '{{ app()->getLocale()==="ar" ? "رقم الهاتف مطلوب" : "Phone is required" }}' },
-        { name: 'role_id', msg: '{{ app()->getLocale()==="ar" ? "الدور مطلوب" : "Role is required" }}' },
         { name: 'password',msg: '{{ app()->getLocale()==="ar" ? "كلمة المرور مطلوبة" : "Password is required" }}' },
     ];
 
@@ -927,14 +1115,35 @@ document.getElementById('emp-create-form').addEventListener('submit', function (
         hasError = true;
     });
 
+    // Role is a radio-card group — validate the checked state
+    const roleCards = document.getElementById('ap-role-cards');
+    document.getElementById('ap-role-err')?.remove();
+    roleCards?.classList.remove('is-invalid');
+    if (!document.querySelector('input[name="role_id"]:checked')) {
+        hasError = true;
+        if (roleCards) {
+            roleCards.classList.add('is-invalid');
+            const rErr = document.createElement('div');
+            rErr.id = 'ap-role-err';
+            rErr.className = 'js-val-err';
+            rErr.style.cssText = 'color:#f5576c;font-size:12px;margin-top:8px;';
+            rErr.textContent = '{{ app()->getLocale()==="ar" ? "اختر وظيفة (دور) للموظف" : "Pick a job role for the employee" }}';
+            roleCards.after(rErr);
+        }
+    }
+
     if (hasError) {
         e.preventDefault();
         window.__empSubmitting = false;
         document.getElementById('save-overlay')?.remove();
-        document.querySelector('[data-tab="1"]').click();
+        // Jump to the tab that holds the first invalid field (fields now live across tabs)
+        const firstInvalid = document.querySelector('.emp-tab-pane .is-invalid');
+        const pane = firstInvalid ? firstInvalid.closest('.emp-tab-pane') : null;
+        const tabNum = pane ? pane.id.replace('tab-pane-', '') : '1';
+        (document.querySelector('[data-tab="' + tabNum + '"]') || document.querySelector('[data-tab="1"]')).click();
         setTimeout(() => {
-            document.querySelector('.f-input.is-invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+            firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 120);
     } else {
         window.__empSubmitting = true;
         showSaveOverlay();
@@ -1200,6 +1409,36 @@ document.querySelectorAll('.js-toggle-pw').forEach(btn => {
         feather.replace();
     });
 });
+
+// ── Open the advanced permissions panel from the summary sidebar ──
+function openAdvancedPerms() {
+    const d = document.getElementById('ap-adv');
+    if (!d) return;
+    d.open = true;
+    d.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Role cards → mirror <select id="role-select"> so the summary logic reacts ──
+(function () {
+    const mirror = document.getElementById('role-select');
+    if (!mirror) return;
+    const cards = document.querySelectorAll('#ap-role-cards .ap-role-card');
+    const syncFrom = (radio) => {
+        if (!radio || !radio.checked) return;
+        cards.forEach(c => c.classList.toggle('is-selected', c.contains(radio)));
+        mirror.value = radio.value;
+        mirror.dispatchEvent(new Event('change'));
+        document.getElementById('ap-role-cards')?.classList.remove('is-invalid');
+        document.getElementById('ap-role-err')?.remove();
+    };
+    document.querySelectorAll('#ap-role-cards input[name="role_id"]').forEach(r => {
+        r.addEventListener('change', () => syncFrom(r));
+    });
+    // Reflect any pre-selected role (validation bounce-back) into the summary
+    syncFrom(document.querySelector('#ap-role-cards input[name="role_id"]:checked'));
+    // Force one render so the (now-parsed) sidebar summary shows its initial state
+    mirror.dispatchEvent(new Event('change'));
+})();
 </script>
 @endpush
 @endsection

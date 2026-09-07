@@ -3,7 +3,7 @@
 @push('company-styles')
 <style>
 .pay-hero {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5C7038 0%, #3C4B29 100%);
     border-radius: 20px; padding: 28px 32px; margin-bottom: 24px;
     color: #fff; position: relative; overflow: hidden;
 }
@@ -47,10 +47,10 @@
 .ded-badge.absence   { background: rgba(239,68,68,.12);  color: #ef4444; }
 .ded-badge.tardiness { background: rgba(245,158,11,.12); color: #f59e0b; }
 .ded-badge.advance   { background: rgba(6,182,212,.12); color: #06b6d4; }
-.ded-badge.other     { background: rgba(99,102,241,.12); color: #818cf8; }
+.ded-badge.other     { background: rgba(99,102,241,.12); color: #A6BC7E; }
 .net-box {
     border-radius: 16px; padding: 20px 24px;
-    background: linear-gradient(135deg,rgba(67,233,123,.08),rgba(102,126,234,.08));
+    background: linear-gradient(135deg,rgba(67,233,123,.08),rgba(92,112,56,.08));
     border: 1.5px solid rgba(67,233,123,.2);
 }
 .month-nav { display: flex; align-items: center; gap: 8px; }
@@ -180,7 +180,7 @@
     <div class="col-12 col-md-6 col-lg-3">
         <div class="pay-stat-card card border-0 h-100">
             <div class="card-body p-3">
-                <div class="pay-stat-icon" style="background:rgba(102,126,234,.12);">💰</div>
+                <div class="pay-stat-icon" style="background:rgba(92,112,56,.12);">💰</div>
                 <div class="pay-stat-value">{{ number_format($baseSalary, 0) }}</div>
                 <div class="pay-stat-label">{{ __('Base salary') }} ({{ $currSymbol }})</div>
             </div>
@@ -235,11 +235,11 @@
 
 {{-- Compensation type info ───────────────────────────────────────────────── --}}
 @if($compensation)
-<div class="card border-0 mb-4" style="border-radius:14px;background:rgba(102,126,234,.06);border:1.5px solid rgba(102,126,234,.12) !important;">
+<div class="card border-0 mb-4" style="border-radius:14px;background:rgba(92,112,56,.06);border:1.5px solid rgba(92,112,56,.12) !important;">
     <div class="card-body py-3 px-4 d-flex flex-wrap gap-3 align-items-center">
         <span style="font-size:12px;font-weight:700;opacity:.5;text-transform:uppercase;letter-spacing:.5px;">{{ __('Compensation setup') }}</span>
         @if(in_array($compensation->type, ['salary','mixed']))
-        <span class="badge" style="background:rgba(102,126,234,.15);color:#667eea;font-weight:600;font-size:11px;">
+        <span class="badge" style="background:rgba(92,112,56,.15);color:#5C7038;font-weight:600;font-size:11px;">
             💰 {{ __('Fixed salary') }}: {{ number_format($compensation->base_amount,0) }} {{ $currSymbol }} / {{ __($compensation->pay_period) }}
         </span>
         @endif
@@ -524,7 +524,7 @@
         <div class="px-4 py-3 d-flex justify-content-between align-items-center" style="border-bottom:1px solid rgba(255,255,255,.06);">
             <div class="d-flex align-items-center gap-2">
                 <span class="tx-11 fw-bold text-muted text-uppercase" style="letter-spacing:.8px;">💰 {{ __('Salary Disbursement') }}</span>
-                <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;background:rgba(102,126,234,.12);color:#667eea;">
+                <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;background:rgba(92,112,56,.12);color:#5C7038;">
                     {{ $payPeriod === 'weekly' ? __('Weekly') : ($payPeriod === 'daily' ? __('Daily') : __('Monthly')) }}
                 </span>
             </div>

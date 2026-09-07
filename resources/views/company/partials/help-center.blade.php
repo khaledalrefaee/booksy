@@ -4,7 +4,7 @@
         ['key' => 'service',       'icon' => 'scissors', 'title' => __('Add your first service'),        'text' => __('Set the price and duration for what you offer.'),      'route' => 'company.branches.index'],
         ['key' => 'employee',      'icon' => 'users',    'title' => __('Add your team'),                  'text' => __('Link staff to services so clients can pick them.'),     'route' => 'company.branches.index'],
         ['key' => 'working_hours', 'icon' => 'clock',    'title' => __('Set working hours'),              'text' => __('Tell us when each branch is open for bookings.'),       'route' => 'company.branches.index'],
-        ['key' => 'appointment',   'icon' => 'calendar', 'title' => __('Create your first appointment'),  'text' => __('Everything ready — book a client from anywhere.'),      'route' => 'company.appointments.create'],
+        ['key' => 'appointment',   'icon' => 'calendar', 'title' => __('Create your first appointment'),  'text' => __('Everything ready — book a client from anywhere.'),      'route' => 'company.appointments.index'],
     ];
     $doneCount = count(array_filter($steps));
     $totalCount = count($helpSteps);

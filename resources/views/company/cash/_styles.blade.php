@@ -12,7 +12,7 @@
 .cash-hero::before {
     content:''; position:absolute; top:-80px; left:-80px;
     width:260px; height:260px; border-radius:50%;
-    background:rgba(102,126,234,.12); pointer-events:none;
+    background:rgba(92,112,56,.12); pointer-events:none;
 }
 .cash-hero::after {
     content:''; position:absolute; bottom:-60px; right:-40px;
@@ -56,7 +56,7 @@
     background:transparent;
 }
 .period-tab:hover  { border-color:rgba(255,255,255,.3); color:#fff; }
-.period-tab.active { background:#667eea; border-color:#667eea; color:#fff; }
+.period-tab.active { background:#5C7038; border-color:#5C7038; color:#fff; }
 
 /* ─── Transaction rows ──────────────────────────────────────────────────── */
 .tx-date-head {
@@ -85,10 +85,10 @@
     padding:4px 6px; border-radius:6px;
 }
 .tx-del { color:#ef4444; }
-.tx-edit { color:#667eea; }
+.tx-edit { color:#5C7038; }
 .tx-row:hover .tx-del, .tx-row:hover .tx-edit { opacity:.6; }
 .tx-del:hover { opacity:1 !important; background:rgba(239,68,68,.1); }
-.tx-edit:hover { opacity:1 !important; background:rgba(102,126,234,.1); }
+.tx-edit:hover { opacity:1 !important; background:rgba(92,112,56,.1); }
 
 /* ─── Category breakdown ───────────────────────────────────────────────── */
 .income-section  { border-inline-start:3px solid #22c55e; padding-inline-start:10px; margin-bottom:12px; }
@@ -97,7 +97,7 @@
 /* ─── Branch badge (global view) ───────────────────────────────────────── */
 .tx-branch-badge {
     font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px;
-    background:rgba(102,126,234,.15); color:#a78bfa; white-space:nowrap;
+    background:rgba(92,112,56,.15); color:#a78bfa; white-space:nowrap;
     flex-shrink:0;
 }
 
@@ -109,7 +109,7 @@
     white-space: nowrap;
 }
 .branch-pill:hover  { border-color:rgba(255,255,255,.35); color:#fff; }
-.branch-pill.active { background:rgba(102,126,234,.35); border-color:#667eea; color:#fff; }
+.branch-pill.active { background:rgba(92,112,56,.35); border-color:#5C7038; color:#fff; }
 
 /* ─── Modal shared ─────────────────────────────────────────────────────── */
 .tx-modal .modal-content {
@@ -181,5 +181,5 @@
 
 /* ─── Hover links ──────────────────────────────────────────────────────── */
 .tx-row:hover .tx-branch-link { opacity:.5 !important; }
-.tx-branch-link:hover { opacity:1 !important; background:rgba(102,126,234,.1); }
+.tx-branch-link:hover { opacity:1 !important; background:rgba(92,112,56,.1); }
 </style>

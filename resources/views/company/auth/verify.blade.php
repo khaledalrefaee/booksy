@@ -49,9 +49,6 @@
         </form>
     </div>
 
-    <div class="mt-2 text-center">
-        <a href="{{ route('company.dashboard') }}" class="small text-muted text-decoration-none">{{ __('Skip for now') }}</a>
-    </div>
 @endsection
 
 @push('scripts')

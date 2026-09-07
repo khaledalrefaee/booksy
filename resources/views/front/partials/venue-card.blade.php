@@ -2,6 +2,12 @@
     /** Reusable venue card. Expects: $c (card object from FrontController), $currency, $isAr. */
     $isAr     = $isAr     ?? (app()->getLocale() === 'ar');
     $currency = $currency ?? ($isAr ? 'ل.س' : 'SYP');
+    // Price currency follows the card's own resolved currency code, rendered with
+    // the configured symbol (Arabic) or the code (English) — never mislabelled.
+    $priceCur = $c->currency ?? config('booksy.default_currency', 'SYP');
+    $priceCurLabel = $isAr
+        ? (config("booksy.currencies.$priceCur.symbol") ?? $priceCur)
+        : $priceCur;
     $badgeMap = [
         'hot' => ['icon' => 'flame',    'ar' => 'الأكثر حجزاً',  'en' => 'Most booked'],
         'top' => ['icon' => 'award',    'ar' => 'الأعلى تقييماً','en' => 'Top rated'],
@@ -40,6 +46,10 @@
     data-created="{{ $c->created_ts }}"
     @if(!is_null($c->lat) && !is_null($c->lng)) data-lat="{{ $c->lat }}" data-lng="{{ $c->lng }}" @endif>
 
+  {{-- Stretched link: the whole card opens the venue. Interactive controls
+       (fav, book) sit above it via z-index so they keep their own behaviour. --}}
+  <a class="bkf-vp-cover" href="{{ $c->url }}" aria-label="{{ $c->name }}"></a>
+
   <div class="bkf-vp-media">
     @if($c->image)
       <img src="{{ $c->image }}" alt="{{ $c->name }}" loading="lazy">
@@ -59,6 +69,13 @@
     <div class="bkf-vp-logo">
       @if($c->logo)<img src="{{ $c->logo }}" alt="">@else<span class="fb">{{ mb_substr($c->company ?? 'B', 0, 1) }}</span>@endif
     </div>
+
+    {{-- Live open/closed dot — only shown when today's hours are known. --}}
+    @if(!is_null($c->is_open ?? null))
+      <span class="bkf-vp-status {{ $c->is_open ? 'on' : 'off' }}">
+        <span class="dot"></span>{{ $c->is_open ? ($isAr ? 'مفتوح الآن' : 'Open') : ($isAr ? 'مغلق الآن' : 'Closed') }}
+      </span>
+    @endif
   </div>
 
   <div class="bkf-vp-body">
@@ -83,10 +100,22 @@
     </div>
     @endif
 
+    {{-- Special-offer flag lives here (not over the photo, which is already busy):
+         a red, attention-grabbing bar with a live countdown when it ends ≤24h. --}}
+    @if($c->has_offer ?? false)
+      <div class="bkf-vp-offer {{ ($c->offer_ends_ts ?? null) ? 'has-cd' : '' }}"
+           @if($c->offer_ends_ts ?? null) data-offer-ends="{{ $c->offer_ends_ts }}" @endif>
+        <span class="bkf-vp-offer-lbl"><x-icon name="tag" :size="13"/>{{ $isAr ? 'عرض خاص' : 'Special offer' }}</span>
+        @if($c->offer_ends_ts ?? null)
+          <span class="bkf-vp-offer-cd"><x-icon name="clock" :size="12"/><span class="cd bkf-tnum" aria-hidden="true"></span></span>
+        @endif
+      </div>
+    @endif
+
     <div class="bkf-vp-foot">
       <div>
         @if($c->min_price)
-          <div class="bkf-vp-price">{{ $isAr ? 'يبدأ من' : 'From' }}<b class="bkf-tnum">{{ number_format($c->min_price, 0) }} {{ $currency }}</b></div>
+          <div class="bkf-vp-price">{{ $isAr ? 'يبدأ من' : 'From' }}<b class="bkf-tnum">{{ number_format($c->min_price, 0) }} {{ $priceCurLabel }}</b></div>
         @else
           <div class="bkf-vp-price"><b style="color:var(--bk-text)">{{ $isAr ? 'أسعار متنوعة' : 'Varied pricing' }}</b></div>
         @endif
@@ -99,8 +128,7 @@
         </span>
       </div>
       <div class="bkf-vp-actions">
-        <a href="{{ $c->url }}#book" class="bkf-btn bkf-btn-primary bkf-btn-sm bkf-vp-book">{{ $isAr ? 'احجز الآن' : 'Book' }}</a>
-        <a href="{{ $c->url }}" class="bkf-btn bkf-btn-ghost bkf-btn-sm bkf-vp-details">{{ $isAr ? 'التفاصيل' : 'Details' }}</a>
+        <a href="{{ $c->url }}#book" class="bkf-btn bkf-btn-primary bkf-btn-sm bkf-vp-book">{{ $isAr ? 'احجز الآن' : 'Book now' }}</a>
       </div>
     </div>
   </div>

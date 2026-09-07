@@ -38,10 +38,10 @@
 .team-nav-tab:hover { color: rgba(255,255,255,.85); background: rgba(255,255,255,.05); }
 .bk-theme-light .team-nav-tab:hover { color: rgba(0,0,0,.8); background: rgba(0,0,0,.04); }
 .team-nav-tab.active {
-    background: rgba(102,126,234,.18); color: #a5b4fd;
-    box-shadow: 0 2px 8px rgba(102,126,234,.15);
+    background: rgba(92,112,56,.18); color: #A6BC7E;
+    box-shadow: 0 2px 8px rgba(92,112,56,.15);
 }
-.bk-theme-light .team-nav-tab.active { background: #fff; color: #667eea; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.bk-theme-light .team-nav-tab.active { background: #fff; color: #5C7038; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
 .team-nav-tab svg { width: 13px; height: 13px; }
 </style>
 <nav class="team-nav" aria-label="{{ __('Team') }}">

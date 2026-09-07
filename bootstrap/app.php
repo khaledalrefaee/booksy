@@ -4,7 +4,10 @@ use Illuminate\Foundation\Application;
 use App\Http\Middleware\AuthenticateCompany;
 use App\Http\Middleware\AuthenticateCustomer;
 use App\Http\Middleware\AuthenticateOwner;
+use App\Http\Middleware\AuthenticateStaff;
+use App\Http\Middleware\EnsureStaffPasswordChanged;
 use App\Http\Middleware\EnsureCompanyFeature;
+use App\Http\Middleware\EnsureCompanyVerified;
 use App\Http\Middleware\EnsureOwnerPermission;
 use App\Http\Middleware\RedirectIfCompanyAuthenticated;
 use App\Http\Middleware\RedirectIfOwnerAuthenticated;
@@ -40,10 +43,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'owner.auth'    => AuthenticateOwner::class,
             'owner.guest'   => RedirectIfOwnerAuthenticated::class,
             'owner.can'     => EnsureOwnerPermission::class,
-            'company.auth'  => AuthenticateCompany::class,
+            'company.auth'     => AuthenticateCompany::class,
+            'company.verified' => EnsureCompanyVerified::class,
             'company.guest' => RedirectIfCompanyAuthenticated::class,
             'feature'       => EnsureCompanyFeature::class,
             'customer.auth' => AuthenticateCustomer::class,
+            'staff.auth'       => AuthenticateStaff::class,
+            'staff.mustchange' => EnsureStaffPasswordChanged::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

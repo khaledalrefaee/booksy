@@ -488,7 +488,7 @@ class CustomerAccountController extends Controller
         $isAr = app()->getLocale() === 'ar';
 
         $branches = $this->customer()->favoriteBranches()
-            ->with(['company.category', 'images', 'governorate', 'area',
+            ->with(['company.category', 'images', 'governorate', 'area', 'workingHours',
                     'services' => fn ($q) => $q->where('is_active', true)])
             ->withCount(['reviews', 'appointments'])
             ->withAvg('reviews', 'rating')

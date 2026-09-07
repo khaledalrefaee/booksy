@@ -58,8 +58,8 @@
 .att-btn:disabled { opacity:.4; cursor:not-allowed; }
 .att-btn-checkin  { background:rgba(34,197,94,.15); color:#22c55e; }
 .att-btn-checkin:hover:not(:disabled) { background:rgba(34,197,94,.25); }
-.att-btn-checkout { background:rgba(102,126,234,.15); color:#667eea; }
-.att-btn-checkout:hover:not(:disabled) { background:rgba(102,126,234,.25); }
+.att-btn-checkout { background:rgba(92,112,56,.15); color:#5C7038; }
+.att-btn-checkout:hover:not(:disabled) { background:rgba(92,112,56,.25); }
 .att-btn-absent   { background:rgba(239,68,68,.1); color:#ef4444; }
 .att-btn-absent:hover:not(:disabled) { background:rgba(239,68,68,.2); }
 
@@ -85,7 +85,7 @@
 
 @include('company.partials.team-nav')
 
-@php $avatarColors = ['#5C7038','#667eea','#22c55e','#ef4444','#f59e0b','#a78bfa','#fb923c','#06b6d4']; @endphp
+@php $avatarColors = ['#5C7038','#5C7038','#22c55e','#ef4444','#f59e0b','#a78bfa','#fb923c','#06b6d4']; @endphp
 
 {{-- Hero --}}
 <div class="att-hero">
@@ -138,7 +138,7 @@
             </div>
             @endif
             <div class="att-chip">
-                <div class="att-chip-num" style="color:#667eea;">{{ $stats['pct'] }}%</div>
+                <div class="att-chip-num" style="color:#5C7038;">{{ $stats['pct'] }}%</div>
                 <div class="att-chip-lbl">{{ __('Attendance %') }}</div>
             </div>
         </div>
@@ -254,7 +254,7 @@
                 {{-- Check-out time --}}
                 <div class="text-center" style="min-width:60px;">
                     @if($record && $record->check_out)
-                        <div class="att-time" style="color:#667eea;">{{ $record->check_out->format('h:i A') }}</div>
+                        <div class="att-time" style="color:#5C7038;">{{ $record->check_out->format('h:i A') }}</div>
                         <div style="font-size:9px;opacity:.4;">{{ __('Check Out') }}</div>
                         @if($record->overtime_minutes > 0)
                             <div style="font-size:9px;color:#22c55e;font-weight:700;">⚡ +{{ $record->overtime_minutes }} {{ __('min') }} {{ __('overtime') }}</div>

@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Mail;
 
 class CompanyVerificationService
 {
+    /** How long a verification code stays valid, in minutes. */
+    private const CODE_TTL_MINUTES = 4;
+
     public function __construct(private WhatsappService $whatsapp)
     {
     }
@@ -25,7 +28,7 @@ class CompanyVerificationService
         OtpCode::query()->create([
             'phone'      => $company->phone,
             'code'       => $code,
-            'expires_at' => now()->addMinutes(15),
+            'expires_at' => now()->addMinutes(self::CODE_TTL_MINUTES),
         ]);
 
         $this->deliver($company, $code);
@@ -37,17 +40,15 @@ class CompanyVerificationService
         $brand = 'GlowRez';
 
         // Email is the PRIMARY, most reliable channel — always attempted first.
-        // (best-effort; silently no-ops until SMTP is configured.)
+        // Branded HTML template; best-effort, logs and moves on if SMTP fails.
         if ($company->email) {
-            $subject = $isAr ? "رمز تأكيد الحساب — {$brand}" : "Account verification code — {$brand}";
-            $body = $isAr
-                ? "مرحباً {$company->owner_name},\n\nرمز تأكيد حسابك في {$brand} هو: {$code}\n\nالرمز صالح لمدة 15 دقيقة."
-                : "Hello {$company->owner_name},\n\nYour {$brand} account verification code is: {$code}\n\nThe code is valid for 15 minutes.";
-
             try {
-                Mail::raw($body, function ($m) use ($company, $subject) {
-                    $m->to($company->email)->subject($subject);
-                });
+                Mail::to($company->email)->send(new \App\Mail\VerificationCodeMail(
+                    $company->owner_name,
+                    $code,
+                    self::CODE_TTL_MINUTES,
+                    $isAr,
+                ));
             } catch (\Throwable $e) {
                 Log::warning("Account verification email failed: {$e->getMessage()}");
             }
@@ -72,16 +73,18 @@ class CompanyVerificationService
     /** Rich, formatted WhatsApp body (markdown + emoji are fine here). */
     private function whatsappMessage(string $code, bool $isAr, string $brand): string
     {
+        $mins = self::CODE_TTL_MINUTES;
+
         return $isAr
             ? "🔐 *{$brand}*\n\n"
                 . "رمز تأكيد حسابك:\n\n"
                 . "*{$code}*\n\n"
-                . "⏱️ صالح لمدة 15 دقيقة\n"
+                . "⏱️ صالح لمدة {$mins} دقائق\n"
                 . "🔒 لا تُشارك هذا الرمز مع أي أحد"
             : "🔐 *{$brand}*\n\n"
                 . "Your account verification code:\n\n"
                 . "*{$code}*\n\n"
-                . "⏱️ Valid for 15 minutes\n"
+                . "⏱️ Valid for {$mins} minutes\n"
                 . "🔒 Never share this code with anyone";
     }
 
@@ -91,8 +94,10 @@ class CompanyVerificationService
      */
     private function smsMessage(string $code, bool $isAr, string $brand): string
     {
+        $mins = self::CODE_TTL_MINUTES;
+
         return $isAr
-            ? "{$brand}: رمز تأكيد حسابك هو {$code} (صالح 15 دقيقة). لا تشاركه مع أحد."
-            : "{$brand}: Your verification code is {$code} (valid 15 min). Do not share it.";
+            ? "{$brand}: رمز تأكيد حسابك هو {$code} (صالح {$mins} دقائق). لا تشاركه مع أحد."
+            : "{$brand}: Your verification code is {$code} (valid {$mins} min). Do not share it.";
     }
 }

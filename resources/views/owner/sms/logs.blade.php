@@ -69,6 +69,7 @@
                         <th>{{ __('Type') }}</th>
                         <th>{{ __('Status') }}</th>
                         <th class="num">{{ __('Segments') }}</th>
+                        <th>{{ __('Provider (Rasel)') }}</th>
                         <th>{{ __('When') }}</th>
                     </tr></thead>
                     <tbody>
@@ -86,11 +87,23 @@
                             <td><span class="sx-type {{ $tm['cls'] }}"><i data-feather="{{ $tm['icon'] }}"></i>{{ $tm['label'] ?? ucfirst($m->message_type) }}</span></td>
                             <td>
                                 <span class="sx-pill sx-pill-{{ $m->status }}">{{ $statusLabels[$m->status] ?? ucfirst($m->status) }}</span>
-                                @if($m->failure_reason)
+                                @if($m->error_code)
+                                    <div class="sx-sub sx-mono" style="max-width:22ch;" title="{{ $m->failure_reason }}">{{ $m->error_code }}</div>
+                                @elseif($m->failure_reason)
                                     <div class="sx-sub" style="max-width:22ch;" title="{{ $m->failure_reason }}">{{ $reasonLabels[$m->failure_reason] ?? \Illuminate\Support\Str::limit($m->failure_reason, 32) }}</div>
                                 @endif
                             </td>
                             <td class="num sx-mono">{{ $m->segments }}@if($m->credits_used) · {{ $m->credits_used }} {{ __('cr') }}@endif</td>
+                            <td>
+                                @if($m->hasProviderInfo())
+                                    @if($m->resolved_provider)<div class="sx-sub">{{ strtoupper(str_replace('sms_','',$m->resolved_provider)) }}@if($m->sender_source) · {{ $m->sender_source }}@endif</div>@endif
+                                    @if($m->provider_message_id)<div class="sx-sub sx-mono" style="max-width:20ch;overflow:hidden;text-overflow:ellipsis;" title="{{ $m->provider_message_id }}">{{ __('msg') }}: {{ \Illuminate\Support\Str::limit($m->provider_message_id, 12) }}</div>@endif
+                                    @if($m->request_id)<div class="sx-sub sx-mono" style="max-width:20ch;overflow:hidden;text-overflow:ellipsis;" title="{{ $m->request_id }}">{{ __('req') }}: {{ \Illuminate\Support\Str::limit($m->request_id, 12) }}</div>@endif
+                                    @if($m->estimated_cost !== null)<div class="sx-sub sx-mono">~{{ number_format((float) $m->estimated_cost, 4) }} {{ $m->cost_currency }}</div>@endif
+                                @else
+                                    <span class="sx-sub">—</span>
+                                @endif
+                            </td>
                             <td class="sx-sub">{{ ($m->sent_at ?? $m->created_at)?->translatedFormat('d M · g:i A') }}</td>
                         </tr>
                     @endforeach

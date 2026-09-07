@@ -49,6 +49,29 @@ class LoginController extends Controller
             return redirect()->intended(route('company.dashboard'));
         }
 
+        // Same form, second actor: a staff member (employee) signing in. Their
+        // effective access is resolved later via the permission system.
+        if (Auth::guard('staff')->attempt($credentials, $remember)) {
+            /** @var \App\Models\Employee $employee */
+            $employee = Auth::guard('staff')->user();
+
+            if (! $employee->is_active) {
+                Auth::guard('staff')->logout();
+
+                return back()
+                    ->withInput($request->only('email'))
+                    ->withErrors(['email' => __('Your account is inactive. Contact your manager.')]);
+            }
+
+            $request->session()->regenerate();
+            LoginActivityService::record(
+                $request, true, $employee->company_id, $credentials['email']
+            );
+
+            // The password-change gate redirects to the change screen on first login.
+            return redirect()->route('staff.home');
+        }
+
         // Failed attempt — log for the owner activity feed (company may be unknown).
         $companyId = \App\Models\Company::where('email', $credentials['email'])->value('id');
         LoginActivityService::record($request, false, $companyId, $credentials['email']);

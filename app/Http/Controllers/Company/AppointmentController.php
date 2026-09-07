@@ -65,20 +65,12 @@ class AppointmentController extends Controller
         return view('company.appointments.index', compact('appointments', 'branches'));
     }
 
-    public function create(Request $request): View
+    // The standalone new-booking page was removed — bookings are created inline
+    // from the appointments board (quick-add drawer). Any lingering link or
+    // bookmark to /appointments/create bounces straight to the board.
+    public function create(Request $request): RedirectResponse
     {
-        $company  = $this->company();
-        $branches = $company->branches()->with('services.serviceCategory', 'employees.role')->orderBy('sort_order')->get();
-
-        $selectedBranchId = $request->input('branch_id');
-
-        // Auto-select when the company has a single branch, so the customer /
-        // service fields appear immediately instead of forcing an extra click.
-        if (! $selectedBranchId && $branches->count() === 1) {
-            $selectedBranchId = $branches->first()->id;
-        }
-
-        return view('company.appointments.create', compact('company', 'branches', 'selectedBranchId'));
+        return redirect()->route('company.appointments.index');
     }
 
     public function store(Request $request): RedirectResponse

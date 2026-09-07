@@ -75,6 +75,14 @@
                             <td><span class="sx-type {{ $tm['cls'] }}"><i data-feather="{{ $tm['icon'] }}"></i>{{ $tm['label'] }}</span></td>
                             <td>
                                 <span class="sx-pill sx-pill-{{ $m->status }}">{{ $statusLabels[$m->status] ?? ucfirst($m->status) }}</span>
+                                @if($m->error_code)
+                                    <div class="sx-sub sx-mono" style="max-width:22ch;" title="{{ $m->failure_reason }}">{{ $m->error_code }}</div>
+                                @elseif($m->status === 'skipped' && $m->failure_reason === 'insufficient_credits')
+                                    <div class="sx-sub">{{ __('No credits') }}</div>
+                                @endif
+                                @if($m->resolved_provider)
+                                    <div class="sx-sub">{{ __('via') }} {{ strtoupper(str_replace('sms_','',$m->resolved_provider)) }}</div>
+                                @endif
                             </td>
                             <td class="num sx-mono">{{ $m->credits_used ?: $m->segments }}</td>
                             <td class="sx-sub">{{ ($m->sent_at ?? $m->created_at)?->translatedFormat('d M · g:i A') }}</td>

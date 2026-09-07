@@ -52,6 +52,11 @@ return [
             'driver' => 'session',
             'provider' => 'companies',
         ],
+        // Scoped staff actor for the company panel (permissions via PermissionResolver).
+        'staff' => [
+            'driver' => 'session',
+            'provider' => 'employees',
+        ],
     ],
 
     /*
@@ -83,6 +88,10 @@ return [
         'companies' => [
             'driver' => 'eloquent',
             'model' => Company::class,
+        ],
+        'employees' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Employee::class,
         ],
     ],
 

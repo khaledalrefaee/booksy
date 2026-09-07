@@ -209,6 +209,12 @@
       margin-bottom:8px; display:block; }
 .wb-sec { padding:16px 0; border-top:1px solid var(--wb-line); }
 .wb-sec:first-of-type { border-top:0; padding-top:4px; }
+/* Toggle rows (Active / Online / Requires approval): full-width, clickable, with a helper line */
+.wb-switch { cursor:pointer; margin:0; padding:10px 12px; border:1px solid var(--wb-line); border-radius:12px;
+      background:var(--wb-soft); transition:background .14s, border-color .14s; }
+.wb-switch:hover { background:var(--wb-hover); }
+.wb-switch .form-text { font-size:11.5px; }
+.wb-switch .form-check-input { cursor:pointer; }
 
 /* package builder */
 .wb-pkgitem { display:flex; align-items:center; gap:9px; padding:8px 10px; border:1px solid var(--wb-line);
