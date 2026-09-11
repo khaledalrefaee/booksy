@@ -112,6 +112,10 @@
                    class="bk-pl {{ request()->routeIs('owner.announcements.*') ? 'active' : '' }}">
                     <i data-feather="bell"></i><span>{{ __('Announcements') }}</span>
                 </a>
+                <a href="{{ route('owner.emails.index') }}"
+                   class="bk-pl {{ request()->routeIs('owner.emails.*') ? 'active' : '' }}">
+                    <i data-feather="mail"></i><span>{{ __('Emails') }}</span>
+                </a>
                 @endcan
             </div>
 

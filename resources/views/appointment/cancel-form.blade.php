@@ -64,7 +64,7 @@
 </head>
 <body>
     <div class="card">
-        <img class="logo" src="{{ asset('images/logo-light.png') }}" alt="GlowRez">
+        <img class="logo" src="{{ asset('images/glowrez-logo-light_1.webp') }}" alt="GlowRez">
         <h1>{{ $isAr ? 'إلغاء الموعد؟' : 'Cancel your appointment?' }}</h1>
         <p class="sub">{{ $isAr ? 'يؤسفنا ذلك. أخبرنا بالسبب حتى نتحسّن.' : 'Sorry to see you go. Let us know why so we can improve.' }}</p>
 

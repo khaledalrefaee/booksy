@@ -20,8 +20,8 @@
   <img src="{{ $ver('logo-mark.png') }}" width="319" height="205"
        {{ $attributes->class('bkf-logo '.$size) }} alt="GlowRez">
 @else
-  <img src="{{ $ver('logo-light.png') }}" width="794" height="254"
+  <img src="{{ $ver('glowrez-logo-light_1.webp') }}" width="794" height="254"
        {{ $attributes->class('bkf-logo '.$size.' bkf-logo--light') }} alt="GlowRez غلوريز">
-  <img src="{{ $ver('logo-dark.png') }}" width="444" height="162" aria-hidden="true"
+  <img src="{{ $ver('glowrez-logo-dark_1.webp') }}" width="444" height="162" aria-hidden="true"
        {{ $attributes->class('bkf-logo '.$size.' bkf-logo--dark') }} alt="">
 @endif

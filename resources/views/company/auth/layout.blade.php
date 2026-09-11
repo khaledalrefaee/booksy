@@ -121,7 +121,7 @@
                                 <div class="bk-auth-hero">
                                     <div>
                                         <div class="bk-hero-logo">
-                                            <img src="{{ asset('images/logo-dark.png') }}" alt="GlowRez" style="height:46px;width:auto">
+                                            <img src="{{ asset('images/glowrez-logo-dark_1.webp') }}" alt="GlowRez" style="height:46px;width:auto">
                                             <small>Business</small>
                                         </div>
                                         <div style="margin-top:2rem">

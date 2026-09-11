@@ -148,6 +148,14 @@ Route::get('/locale/{locale}', function (string $locale) {
     return redirect()->back();
 })->name('locale.switch');
 
+// Local-only preview for the custom error pages (safe: 404s outside the local env).
+if (app()->environment('local')) {
+    Route::get('/_errors/{code}', function (string $code) {
+        abort_unless(in_array($code, ['403', '404', '419', '429', '500', '503'], true), 404);
+        return response()->view("errors.{$code}", [], (int) $code);
+    })->name('errors.preview');
+}
+
 require __DIR__.'/owner.php';
 require __DIR__.'/company.php';
 require __DIR__.'/staff.php';

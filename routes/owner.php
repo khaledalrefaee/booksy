@@ -167,6 +167,14 @@ Route::prefix('owner')->name('owner.')->group(function () {
             ->middleware('owner.can:notifications.send')
             ->name('announcements.store');
 
+        // Broadcast emails (Resend, branded template)
+        Route::get('emails', [\App\Http\Controllers\Owner\EmailController::class, 'index'])
+            ->middleware('owner.can:notifications.send')
+            ->name('emails.index');
+        Route::post('emails', [\App\Http\Controllers\Owner\EmailController::class, 'store'])
+            ->middleware('owner.can:notifications.send')
+            ->name('emails.store');
+
         // Subscription coupons
         Route::resource('coupons', \App\Http\Controllers\Owner\CouponController::class)
             ->only(['index', 'store', 'update', 'destroy'])

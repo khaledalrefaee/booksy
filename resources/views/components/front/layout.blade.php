@@ -53,7 +53,7 @@
                 'name'          => 'GlowRez',
                 'alternateName' => ['غلوريز', 'غلو ريز', 'Glow Rez', 'قلوريز'],
                 'url'           => url('/'),
-                'logo'          => asset('images/logo-light.png'),
+                'logo'          => asset('images/glowrez-logo-light_1.webp'),
                 'image'         => asset('images/og-cover.jpg'),
                 'description'   => $metaDesc,
             ],

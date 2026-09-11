@@ -57,7 +57,7 @@
 </head>
 <body>
     <div class="card">
-        <img class="logo" src="{{ asset('images/logo-light.png') }}" alt="GlowRez">
+        <img class="logo" src="{{ asset('images/glowrez-logo-light_1.webp') }}" alt="GlowRez">
         <div class="badge">{{ $icon }}</div>
         <h1>{{ $title }}</h1>
         <p class="msg">{{ $message }}</p>

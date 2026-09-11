@@ -156,7 +156,7 @@
                                 <div class="bk-reg-hero">
                                     <div>
                                         <div class="bk-hero-logo" style="display:flex;align-items:center;gap:.6rem">
-                                            <img src="{{ asset('images/logo-dark.png') }}" alt="GlowRez غلوريز" style="height:50px;width:auto">
+                                            <img src="{{ asset('images/glowrez-logo-dark_1.webp') }}" alt="GlowRez غلوريز" style="height:50px;width:auto">
                                             <small>Business</small>
                                         </div>
                                         <h2>{{ __('Grow your business with GlowRez') }}</h2>

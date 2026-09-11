@@ -125,4 +125,32 @@ return [
 
     'contact_to' => env('CONTACT_INBOX', env('contact_to')),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Owner broadcast senders
+    |--------------------------------------------------------------------------
+    | The "From" identities the platform owner may pick when composing a
+    | broadcast email in /owner/emails. Every address MUST be on a domain
+    | already verified in Resend (glowrez.com) — Resend authorises the whole
+    | domain, so any mailbox under it can send. To receive replies to a given
+    | address, add a matching Cloudflare Email Routing rule (or a catch-all).
+    |
+    | Add or remove entries freely; the compose screen renders this list and
+    | the controller only accepts an address that appears here (no spoofing).
+    */
+    'owner_senders' => [
+        ['address' => 'info@glowrez.com',    'name' => 'GlowRez'],
+        ['address' => 'khaled@glowrez.com',  'name' => 'Khaled — GlowRez'],
+        ['address' => 'support@glowrez.com', 'name' => 'GlowRez Support'],
+    ],
+
+    /*
+    | Reply-To for owner broadcasts. MUST stay on the sending domain
+    | (glowrez.com): a domain "From" with a free-webmail Reply-To (gmail, etc.)
+    | is a classic phishing signature and gets the mail filed as spam. Point a
+    | same-domain address here and let Cloudflare Email Routing forward it to the
+    | real inbox. Defaults to the From address; set MAIL_OWNER_REPLY_TO to change.
+    */
+    'owner_reply_to' => env('MAIL_OWNER_REPLY_TO', env('MAIL_FROM_ADDRESS')),
+
 ];

@@ -47,7 +47,7 @@
                             <div class="col-md-8 ps-md-0">
                                 <div class="auth-form-wrapper px-4 py-5">
                                     <a href="#" class="noble-ui-logo d-inline-block mb-2" style="text-decoration:none">
-                                        <img src="{{ asset('images/logo-dark.png') }}" alt="GlowRez" style="height:46px;width:auto">
+                                        <img src="{{ asset('images/glowrez-logo-dark_1.webp') }}" alt="GlowRez" style="height:46px;width:auto">
                                     </a>
                                     <h5 class="text-muted fw-normal mb-4">{{ __('Welcome back! Sign in to continue.') }}</h5>
 

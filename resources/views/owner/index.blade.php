@@ -32,7 +32,7 @@
 <div class="bk-hero bk-a1">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
         <div>
-            <h2 class="bk-hero-title">{{ __('Platform') }} <span>{{ __('Dashboard') }}</span></h2>
+            <h2 class="bk-hero-title text-light">{{ __('Platform') }} <span>{{ __('Dashboard') }}</span></h2>
             <p class="bk-hero-sub">
                 <i data-feather="activity" style="width:13px;height:13px;display:inline;margin-right:5px;"></i>
                 {{ __('Manage all companies, branches, and bookings from one place.') }}

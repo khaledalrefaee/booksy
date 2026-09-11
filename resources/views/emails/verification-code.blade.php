@@ -17,7 +17,7 @@
           {{-- ─── Header: logo on light ─── --}}
           <tr>
             <td align="center" style="background:#ffffff;padding:30px 24px 22px;">
-              <img src="{{ asset('images/logo-light.png') }}" alt="GlowRez" width="170" style="display:block;max-width:170px;height:auto;margin:0 auto;">
+              <img src="{{ asset('images/glowrez-logo-light_1.webp') }}" alt="GlowRez" width="170" style="display:block;max-width:170px;height:auto;margin:0 auto;">
             </td>
           </tr>
 
