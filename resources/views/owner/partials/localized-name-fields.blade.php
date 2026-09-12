@@ -10,39 +10,59 @@
     $inputClass = ($size ?? 'lg') === 'lg' ? 'form-control form-control-lg' : 'form-control rounded-3';
     $invalidEn = $showErrors && ($errorContext ? $errors->has($errorContext.'.name_en') : $errors->has('name_en'));
     $invalidAr = $showErrors && ($errorContext ? $errors->has($errorContext.'.name_ar') : $errors->has('name_ar'));
+
+    // Describe each language field once, then render them in an order that matches
+    // the current UI language. Under RTL, Bootstrap flips the grid columns, so the
+    // DOM-first field lands on the RIGHT (the reading start). Leading with the
+    // current locale's field keeps the Arabic input on the right for an Arabic UI
+    // (and English on the left for English) — otherwise the fields read reversed
+    // and users type each name into the wrong box.
+    $fields = [
+        'en' => [
+            'name'    => $nameEnField,
+            'id'      => $nameEnId,
+            'value'   => $nameEnValue,
+            'label'   => __('Name (English)'),
+            'holder'  => __('Enter name (English)'),
+            'invalid' => $invalidEn,
+            'errKey'  => 'name_en',
+            'dir'     => null,
+            'lang'    => null,
+        ],
+        'ar' => [
+            'name'    => $nameArField,
+            'id'      => $nameArId,
+            'value'   => $nameArValue,
+            'label'   => __('Name (Arabic)'),
+            'holder'  => __('Enter Name (Arabic)'),
+            'invalid' => $invalidAr,
+            'errKey'  => 'name_ar',
+            'dir'     => 'rtl',
+            'lang'    => 'ar',
+        ],
+    ];
+    $order = app()->getLocale() === 'ar' ? ['ar', 'en'] : ['en', 'ar'];
 @endphp
 <div class="row g-3 {{ $wrapperClass ?? '' }}">
-    <div class="col-md-6">
-        <label class="form-label fw-semibold" for="{{ $nameEnId }}">
-            <span class="text-danger">*</span> {{ __('Name (English)') }}
-        </label>
-        <input type="text" name="{{ $nameEnField }}" id="{{ $nameEnId }}" maxlength="255" required
-            value="{{ $nameEnValue }}"
-            placeholder="{{ __('Enter name (English)') }}"
-            class="{{ $inputClass }} @if($invalidEn) is-invalid @endif">
-        @if ($showErrors)
-            @if ($errorContext)
-                @error($errorContext.'.name_en')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-            @else
-                @error('name_en')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+    @foreach ($order as $key)
+        @php($f = $fields[$key])
+        <div class="col-md-6">
+            <label class="form-label fw-semibold" for="{{ $f['id'] }}">
+                <span class="text-danger">*</span> {{ $f['label'] }}
+            </label>
+            <input type="text" name="{{ $f['name'] }}" id="{{ $f['id'] }}" maxlength="255" required
+                value="{{ $f['value'] }}"
+                @if ($f['dir']) dir="{{ $f['dir'] }}" @endif
+                @if ($f['lang']) lang="{{ $f['lang'] }}" @endif
+                placeholder="{{ $f['holder'] }}"
+                class="{{ $inputClass }} @if($f['invalid']) is-invalid @endif">
+            @if ($showErrors)
+                @if ($errorContext)
+                    @error($errorContext.'.'.$f['errKey'])<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                @else
+                    @error($f['errKey'])<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                @endif
             @endif
-        @endif
-    </div>
-    <div class="col-md-6">
-        <label class="form-label fw-semibold" for="{{ $nameArId }}">
-            <span class="text-danger">*</span> {{ __('Name (Arabic)') }}
-        </label>
-        <input type="text" name="{{ $nameArField }}" id="{{ $nameArId }}" maxlength="255" required
-            value="{{ $nameArValue }}"
-            dir="rtl" lang="ar"
-            placeholder="{{ __('Enter Name (Arabic)') }}"
-            class="{{ $inputClass }} @if($invalidAr) is-invalid @endif">
-        @if ($showErrors)
-            @if ($errorContext)
-                @error($errorContext.'.name_ar')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-            @else
-                @error('name_ar')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-            @endif
-        @endif
-    </div>
+        </div>
+    @endforeach
 </div>

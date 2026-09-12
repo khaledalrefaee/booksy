@@ -15,6 +15,7 @@
       data-bk-theme="{{ $ownerTheme }}"
       class="bk-theme-{{ $ownerTheme }}">
 <head>
+	<meta name="csrf-token" content="{{ csrf_token() }}">
 	@include('owner.partials.css')
 	@stack('owner-styles')
 	{{-- Shared partials (e.g. social-links-form) push their CSS here; render it so
@@ -46,6 +47,7 @@
 	<!-- core:js -->
     @include('owner.partials.js')
 	@stack('scripts')
+	@include('partials.keepalive', ['logoutUrl' => route('owner.logout')])
 	<!-- End custom js for this page -->
 
 </body>

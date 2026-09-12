@@ -569,6 +569,21 @@ function loadListView() {
    QUICK STATUS
 ════════════════════════════════ */
 var CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+/* Keep CSRF fresh on a long-open page. The Session Guardian
+   (partials/keepalive) refreshes <meta name="csrf-token"> after reconnecting or
+   waking from sleep; mirror it into CSRF so status changes, reschedules and
+   checkout keep working through a full shift on a weak connection. */
+(function () {
+    function syncCsrf() {
+        var t = (window.BKGuardian && window.BKGuardian.csrf && window.BKGuardian.csrf()) ||
+                (document.querySelector('meta[name="csrf-token"]') || {}).content;
+        if (t) CSRF = t;
+    }
+    setInterval(syncCsrf, 30000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) syncCsrf(); });
+    window.addEventListener('focus', syncCsrf);
+    window.addEventListener('online', syncCsrf);
+})();
 var STATUS_ROUTE_BASE = BK.routes.appointmentsUpdateStatus;
 
 function _quickStatus(id, newStatus, btn) {

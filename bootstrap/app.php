@@ -53,5 +53,29 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // A CSRF token goes stale when a page — most often a login form — is left
+        // open longer than the session lifetime. Rather than showing the raw 419
+        // "Page expired" screen, send the visitor back to the form they just
+        // submitted (which re-renders with a fresh token), keep what they typed
+        // (never the password) and tell them plainly what happened.
         //
+        // Note: Laravel maps TokenMismatchException to an HttpException(419) before
+        // render callbacks run, so we match on the 419 status, not the original
+        // exception class. Returning null for any other status leaves the branded
+        // 403/404/500/… error pages untouched.
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, \Illuminate\Http\Request $request) {
+            if ($e->getStatusCode() !== 419) {
+                return null;
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => __('Your session expired. Please refresh the page and try again.'),
+                ], 419);
+            }
+
+            return redirect()->back()
+                ->withInput($request->except(['password', 'password_confirmation', '_token']))
+                ->withErrors(['session' => __('Your session expired due to inactivity. Please try again.')]);
+        });
     })->create();

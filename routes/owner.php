@@ -149,6 +149,8 @@ Route::prefix('owner')->name('owner.')->group(function () {
         Route::patch('employee-leaves/{employeeLeave}/status', [EmployeeLeaveController::class, 'updateStatus'])->name('employee-leaves.update-status');
         Route::delete('employee-leaves/{employeeLeave}', [EmployeeLeaveController::class, 'destroy'])->name('employee-leaves.destroy');
 
+        Route::get('appointments/export', [AppointmentController::class, 'export'])->name('appointments.export');
+        Route::get('appointments/{appointment}/detail', [AppointmentController::class, 'detail'])->name('appointments.detail');
         Route::resource('appointments', AppointmentController::class)->only(['index', 'show']);
 
         // Reviews moderation

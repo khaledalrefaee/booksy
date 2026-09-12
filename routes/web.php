@@ -11,6 +11,11 @@ use Illuminate\Support\Facades\Auth;
 Route::get('/', [FrontController::class, 'home'])->name('front.index');
 Route::get('/api/map-branches', [FrontController::class, 'mapBranches'])->name('front.map.branches');
 
+/* Returns the current session's CSRF token so long-open pages (login forms)
+ * can refresh it before submitting and never hit a 419. Touching the session
+ * here also keeps it alive while the tab stays open. */
+Route::get('/csrf-token', fn () => response()->json(['token' => csrf_token()]))->name('csrf.token');
+
 /* ── SEO: XML sitemap + robots (dynamic so URLs match any host) ── */
 Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
 Route::get('/robots.txt', function () {

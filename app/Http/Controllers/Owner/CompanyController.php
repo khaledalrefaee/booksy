@@ -283,6 +283,7 @@ class CompanyController extends Controller
         $data = [
             'name_en' => $validated['name_en'],
             'name_ar' => $validated['name_ar'],
+            'owner_name' => $validated['owner_name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'category_id' => $validated['category_id'],
@@ -312,6 +313,7 @@ class CompanyController extends Controller
 
         $company->name_en = $validated['name_en'];
         $company->name_ar = $validated['name_ar'];
+        $company->owner_name = $validated['owner_name'] ?? null;
         $company->email = $validated['email'];
         $company->phone = $validated['phone'] ?? null;
         $company->category_id = $validated['category_id'];

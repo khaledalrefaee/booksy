@@ -34,6 +34,19 @@
                         ])
 
                         <div class="col-md-6">
+                            <label class="form-label fw-semibold" for="modal-edit-company-owner-name">
+                                {{ __('Owner / Manager name') }}
+                            </label>
+                            <input type="text" name="owner_name" id="modal-edit-company-owner-name" maxlength="255"
+                                value="{{ old('_modal') === 'edit' ? old('owner_name') : '' }}"
+                                placeholder="{{ __('Full name') }}" autocomplete="name"
+                                class="form-control form-control-lg @if (old('_modal') === 'edit' && $errors->has('owner_name')) is-invalid @endif">
+                            @if (old('_modal') === 'edit')
+                                @error('owner_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            @endif
+                        </div>
+
+                        <div class="col-md-6">
                             <label class="form-label fw-semibold" for="modal-edit-company-email">
                                 <span class="text-danger">*</span> {{ __('Email') }}
                             </label>

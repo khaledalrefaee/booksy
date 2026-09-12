@@ -20,6 +20,7 @@ class StoreCompanyRequest extends FormRequest
         return [
             'name_en' => ['required', 'string', 'max:255'],
             'name_ar' => ['required', 'string', 'max:255'],
+            'owner_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:companies,email'],
             'phone' => ['required', 'string', 'max:30'],
             'category_id' => ['required', 'integer', 'exists:categories,id'],

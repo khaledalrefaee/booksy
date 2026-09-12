@@ -59,6 +59,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (nameArField) {
                 nameArField.value = btn.getAttribute('data-company-name-ar') || '';
             }
+            var ownerNameField = document.getElementById('modal-edit-company-owner-name');
+            if (ownerNameField) {
+                ownerNameField.value = btn.getAttribute('data-company-owner-name') || '';
+            }
             var emailField = document.getElementById('modal-edit-company-email');
             if (emailField) {
                 emailField.value = btn.getAttribute('data-company-email') || '';

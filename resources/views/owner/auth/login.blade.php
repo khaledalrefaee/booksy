@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ __('Sign in') }} — GlowRez</title>
 
     <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
@@ -143,6 +144,37 @@
             feather.replace();
         });
     });
+
+    /* ── Keep the CSRF token fresh so a long-idle login never returns 419 ──
+       Re-fetches the token every few minutes (which also keeps the session
+       alive), and guarantees a fresh token at the moment of submit. If the
+       network call fails, the form still submits and the server-side handler
+       falls back to a friendly "session expired, try again" redirect. */
+    (function () {
+        const form = document.querySelector('form[action*="login"]');
+        if (!form) return;
+        const field = form.querySelector('input[name="_token"]');
+        const meta  = document.querySelector('meta[name="csrf-token"]');
+        const url   = "{{ route('csrf.token') }}";
+
+        function refresh() {
+            return fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' })
+                .then(r => r.ok ? r.json() : null)
+                .then(d => { if (d && d.token) { if (field) field.value = d.token; if (meta) meta.content = d.token; } })
+                .catch(() => {});
+        }
+
+        // Refresh while the page sits open (also resets the session timer).
+        setInterval(refresh, 5 * 60 * 1000);
+
+        // Guarantee a valid token at submit time.
+        let ready = false;
+        form.addEventListener('submit', function (e) {
+            if (ready) return;               // second pass — let it submit for real
+            e.preventDefault();
+            refresh().finally(() => { ready = true; form.submit(); });
+        });
+    })();
 </script>
 </body>
 </html>

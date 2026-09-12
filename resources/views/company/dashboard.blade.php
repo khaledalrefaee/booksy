@@ -42,5 +42,6 @@
     @stack('company-after-template')
     @include('company.partials.reverb-notifications')
     @include('company.partials.crud-toasts')
+    @include('partials.keepalive', ['logoutUrl' => route('company.logout')])
 </body>
 </html>

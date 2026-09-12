@@ -21,6 +21,7 @@ class UpdateCompanyRequest extends FormRequest
         return [
             'name_en' => ['required', 'string', 'max:255'],
             'name_ar' => ['required', 'string', 'max:255'],
+            'owner_name' => ['nullable', 'string', 'max:255'],
             'email' => [
                 'required',
                 'email',

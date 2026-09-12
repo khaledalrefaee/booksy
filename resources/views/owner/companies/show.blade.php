@@ -34,6 +34,7 @@
                     @endif
                 </h1>
                 <div class="bk-ws-meta">
+                    <span><b>{{ __('Owner / Manager name') }}:</b> {{ $company->owner_name ?: '—' }}</span>
                     <span><b>{{ __('Email') }}:</b> {{ $company->email }}</span>
                     <span><b>{{ __('Phone') }}:</b> {{ $company->phone ?: '—' }}</span>
                     <span><b>{{ __('Category') }}:</b> {{ $company->category?->localizedName() ?? '—' }}</span>

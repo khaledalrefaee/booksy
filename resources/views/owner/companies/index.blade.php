@@ -287,6 +287,7 @@
                                         data-company-id="{{ $company->id }}"
                                         data-company-name-en="{{ $company->name_en ?? '' }}"
                                         data-company-name-ar="{{ $company->name_ar ?? '' }}"
+                                        data-company-owner-name="{{ $company->owner_name ?? '' }}"
                                         data-company-email="{{ $company->email }}"
                                         data-company-phone="{{ $company->phone ?? '' }}"
                                         data-company-category-id="{{ $company->category_id }}"
