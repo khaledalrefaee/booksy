@@ -15,7 +15,9 @@
     <p class="text-muted mb-4">
         @if($identifier)
             {{ __('We sent a 4-digit code to') }} <strong dir="ltr">{{ $identifier }}</strong>
-            @if($channel === 'whatsapp') <span class="text-success">({{ __('WhatsApp') }})</span> @else ({{ __('Email') }}) @endif
+            @if(($delivery ?? $channel) === 'sms') <span class="text-success">({{ __('SMS') }})</span>
+            @elseif(($delivery ?? $channel) === 'whatsapp') <span class="text-success">({{ __('WhatsApp') }})</span>
+            @else ({{ __('Email') }}) @endif
         @else
             {{ __('Enter the 4-digit code we sent you.') }}
         @endif

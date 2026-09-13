@@ -115,7 +115,7 @@
         <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('icons/favicon-32.png') }}">
         <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('icons/favicon-16.png') }}">
     @else
-        <link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}">
+        <link rel="shortcut icon" href="{{ asset('icons/favicon-32.png') }}">
     @endif
     {{-- Front theme is stored in localStorage; mirror it before first paint (server only sees the cookie). --}}
     @if($isFront)

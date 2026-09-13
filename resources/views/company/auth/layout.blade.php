@@ -15,7 +15,7 @@
     @else
         <link rel="stylesheet" href="{{ asset($theme === 'light' ? 'backend/assets/css/demo1/style.css' : 'backend/assets/css/demo2/style.css') }}">
     @endif
-    <link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}?v={{ @filemtime(public_path('backend/assets/images/favicon.png')) ?: '1' }}" />
+    <link rel="shortcut icon" href="{{ asset('icons/favicon-32.png') }}?v={{ @filemtime(public_path('icons/favicon-32.png')) ?: '1' }}" />
     <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-custom.css') }}?v={{ @filemtime(public_path('backend/assets/css/booksy-custom.css')) ?: '1' }}">
     @if(app()->getLocale() === 'ar')
         <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-arabic.css') }}">
@@ -99,6 +99,55 @@
         .bk-auth .iti__country.iti__highlight{ background:var(--bk-accent-wash); }
         .bk-auth .iti__dial-code{ color:var(--bk-text-muted); }
         .bk-auth .iti__search-input{ background:var(--bk-surface); color:var(--bk-text); border-color:var(--bk-border); }
+
+        /* New Syrian flag (green–white–black, 3 red stars) — override old sprite */
+        .bk-auth .iti__flag.iti__sy{
+            --iti-flag-offset:0;
+            background-image:url("{{ asset('backend/assets/vendors/intl-tel-input/img/flag-sy-new.svg') }}") !important;
+            background-position:center !important;
+            background-size:16px 12px !important;
+        }
+
+        /* ===== Craft polish: browser surfaces + motion ===== */
+        .bk-auth ::selection{ background:var(--bk-accent-wash); color:var(--bk-text); }
+        .bk-auth-hero ::selection{ background:rgba(215,184,115,.35); color:#fff; }
+        .bk-auth input, .bk-auth textarea, .bk-auth .form-select{ caret-color:var(--bk-accent); }
+
+        /* Consistent, themed focus rings */
+        .bk-auth .form-control:focus,
+        .bk-auth .form-select:focus,
+        .bk-auth .form-check-input:focus{
+            border-color:var(--bk-accent);
+            box-shadow:0 0 0 3px var(--bk-accent-wash);
+        }
+        .bk-auth a:focus-visible,
+        .bk-auth .btn:not(.btn-primary):focus-visible{
+            outline:2px solid var(--bk-accent); outline-offset:2px; box-shadow:none;
+        }
+        /* Input-group icon adopts accent while the field is focused */
+        .bk-auth .input-group:focus-within .input-group-text{ color:var(--bk-accent); border-color:var(--bk-accent); }
+
+        /* Primary button: subtle lift + press */
+        .bk-auth .btn-primary{ transition:transform .12s ease, background .15s ease, box-shadow .15s ease; }
+        .bk-auth .btn-primary:hover{ transform:translateY(-1px); box-shadow:var(--bk-shadow-lg); }
+        .bk-auth .btn-primary:active{ transform:translateY(0); box-shadow:var(--bk-shadow-sm); }
+        .bk-auth .btn-primary:focus-visible{ box-shadow:0 0 0 3px var(--bk-accent-wash), var(--bk-shadow-lg); }
+
+        /* Language links: quiet underline reveal */
+        .bk-auth-lang a{ transition:color .15s ease; }
+        .bk-auth-lang a:hover{ color:var(--bk-accent); }
+
+        /* Custom scrollbar (subtle, on-brand) */
+        .bk-auth *{ scrollbar-width:thin; scrollbar-color:var(--bk-border-strong) transparent; }
+        .bk-auth *::-webkit-scrollbar{ width:10px; height:10px; }
+        .bk-auth *::-webkit-scrollbar-thumb{ background:var(--bk-border-strong); border-radius:8px; border:2px solid transparent; background-clip:content-box; }
+        .bk-auth *::-webkit-scrollbar-thumb:hover{ background:var(--bk-text-muted); background-clip:content-box; }
+
+        /* One authored entrance moment */
+        @media (prefers-reduced-motion: no-preference){
+            .bk-auth .card{ animation:bk-auth-in .55s cubic-bezier(.16,1,.3,1) both; }
+        }
+        @keyframes bk-auth-in{ from{ opacity:0; transform:translateY(16px) scale(.985); } to{ opacity:1; transform:none; } }
 
         @media (max-width: 767.98px){
             .bk-auth .card > .row{ min-height:0; }

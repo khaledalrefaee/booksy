@@ -3,7 +3,7 @@
 
 @section('hero-icon')<i data-feather="lock"></i>@endsection
 @section('hero-title'){{ __('Forgot your password?') }}@endsection
-@section('hero-sub'){{ __('No worries — we\'ll send you a verification code to get you back in, by WhatsApp or email.') }}@endsection
+@section('hero-sub'){{ __('No worries — we\'ll send you a verification code to get you back in, by phone or email.') }}@endsection
 
 @section('content')
     <a href="{{ route('company.login') }}" class="noble-ui-logo d-md-none d-inline-flex align-items-center mb-3" style="gap:.5rem;text-decoration:none">
@@ -29,7 +29,7 @@
         <div class="bk-seg" role="tablist">
             <label>
                 <input type="radio" name="channel" value="whatsapp" checked>
-                <span class="bk-seg-btn"><i data-feather="message-circle"></i>{{ __('WhatsApp') }}</span>
+                <span class="bk-seg-btn"><i data-feather="smartphone"></i>{{ __('Phone number') }}</span>
             </label>
             <label>
                 <input type="radio" name="channel" value="email">

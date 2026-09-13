@@ -1,0 +1,185 @@
+{
+  "info": {
+    "name": "GlowRez — Customer Mobile API",
+    "description": "تسجيل دخول العميل عبر رقم الجوال + كود تحقق، ملف شخصي (اسم + تاريخ ميلاد → يُحسب العمر)، ورفع صورة.\n\nكل الردود بشكل موحّد:\n{ \"status\": true|false, \"message\": \"...\", \"data\": {...}, \"errors\": {...} }\n\nالتوجيه: رقم سوري (963) → SMS عبر Rasel، أي بلد آخر → واتساب.\nاللغة: أرسل lang=ar أو lang=en (أو هيدر Accept-Language).\n\nالاستخدام:\n1. عدّل المتغيّر base_url (تبويب Variables) ورقم phone.\n2. شغّل \"1. Send Code\" — يُلتقط dev_code تلقائياً (بيئة local).\n3. شغّل \"2. Verify Code\" — يُلتقط token تلقائياً.\n4. شغّل باقي الطلبات — تستعمل token تلقائياً.\n\nملاحظة: phone يُشارَك بين Send و Verify عبر متغيّر {{phone}}، فلا تختلف الأرقام بينهما.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000", "type": "string" },
+    { "key": "lang", "value": "ar", "type": "string" },
+    { "key": "phone", "value": "963991234567", "type": "string" },
+    { "key": "dev_code", "value": "", "type": "string" },
+    { "key": "token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Send Code — إرسال الكود",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const res = pm.response.json();",
+              "const data = res.data || {};",
+              "pm.test('status true', () => pm.expect(res.status).to.be.true);",
+              "if (data.dev_code) { pm.collectionVariables.set('dev_code', data.dev_code); }",
+              "if (data.phone)    { pm.collectionVariables.set('phone', data.phone); }",
+              "console.log('dev_code:', data.dev_code, 'channel:', data.channel);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Accept-Language", "value": "{{lang}}" }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "phone", "value": "{{phone}}", "type": "text" },
+            { "key": "lang", "value": "{{lang}}", "type": "text" }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/customer/send-code",
+          "host": ["{{base_url}}"],
+          "path": ["api", "customer", "send-code"]
+        },
+        "description": "يرسل كود تحقق من 4 أرقام. data يحوي channel (sms/whatsapp) و expires_in. في بيئة local يرجّع dev_code."
+      }
+    },
+    {
+      "name": "2. Verify Code — التحقق وإصدار Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const res = pm.response.json();",
+              "const data = res.data || {};",
+              "pm.test('status true', () => pm.expect(res.status).to.be.true);",
+              "if (data.token) { pm.collectionVariables.set('token', data.token); console.log('token saved'); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Accept-Language", "value": "{{lang}}" }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "phone", "value": "{{phone}}", "type": "text" },
+            { "key": "code", "value": "{{dev_code}}", "type": "text" }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/customer/verify-code",
+          "host": ["{{base_url}}"],
+          "path": ["api", "customer", "verify-code"]
+        },
+        "description": "يتحقق من الكود ويرجّع data.token + data.needs_profile + data.customer. phone نفسه المستخدم في Send Code (متغيّر {{phone}})."
+      }
+    },
+    {
+      "name": "3. Me — بيانات العميل",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Accept-Language", "value": "{{lang}}" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/customer/me",
+          "host": ["{{base_url}}"],
+          "path": ["api", "customer", "me"]
+        },
+        "description": "بيانات العميل. data.customer يحوي age محسوباً من date_of_birth، و has_avatar، و needs_profile."
+      }
+    },
+    {
+      "name": "4. Update Profile — الاسم وتاريخ الميلاد",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Accept-Language", "value": "{{lang}}" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "name", "value": "خالد الرفاعي", "type": "text" },
+            { "key": "date_of_birth", "value": "2000-05-01", "type": "text" }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/customer/profile",
+          "host": ["{{base_url}}"],
+          "path": ["api", "customer", "profile"]
+        },
+        "description": "يحفظ الاسم (مطلوب) وتاريخ الميلاد (اختياري، صيغة YYYY-MM-DD). العمر يُحسب تلقائياً من تاريخ الميلاد ولا يُطلب من المستخدم."
+      }
+    },
+    {
+      "name": "5. Upload Avatar — رفع الصورة",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Accept-Language", "value": "{{lang}}" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "avatar", "type": "file", "src": [] }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/customer/avatar",
+          "host": ["{{base_url}}"],
+          "path": ["api", "customer", "avatar"]
+        },
+        "description": "رفع/تبديل صورة الملف الشخصي (jpeg/jpg/png/webp، حتى 5MB). اختياري عند التسجيل — يمكن رفعها لاحقاً من البروفايل. اختر ملفاً في حقل avatar (نوعه File)."
+      }
+    },
+    {
+      "name": "6. Logout — تسجيل الخروج",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('token', '');",
+              "console.log('token cleared');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Accept-Language", "value": "{{lang}}" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/customer/logout",
+          "host": ["{{base_url}}"],
+          "path": ["api", "customer", "logout"]
+        },
+        "description": "يلغي الـ token الحالي (تسجيل خروج الجهاز)."
+      }
+    }
+  ]
+}

@@ -23,7 +23,8 @@
         $activeSection = 'billing';
     } elseif (request()->routeIs('owner.sms.*')) {
         $activeSection = 'sms';
-    } elseif (request()->routeIs('owner.reports.*') || request()->routeIs('owner.audit-log.*')) {
+    } elseif (request()->routeIs('owner.reports.*') || request()->routeIs('owner.audit-log.*')
+        || request()->routeIs('owner.field-sales.*')) {
         $activeSection = 'insights';
     } elseif (request()->routeIs('owner.companies.*') || request()->routeIs('owner.branches.*')
         || request()->routeIs('owner.services.*') || request()->routeIs('owner.employees.*')
@@ -31,7 +32,8 @@
         || request()->routeIs('owner.invoices.*')) {
         $activeSection = 'tenants';
     } elseif (request()->routeIs('owner.categories.*') || request()->routeIs('owner.service-categories.*')
-        || request()->routeIs('owner.locations.*') || request()->routeIs('owner.profile')) {
+        || request()->routeIs('owner.locations.*') || request()->routeIs('owner.profile')
+        || request()->routeIs('owner.team.*')) {
         $activeSection = 'settings';
     } else {
         $activeSection = 'home';
@@ -43,7 +45,7 @@
         'billing' => ['icon' => 'credit-card', 'label' => __('Billing')],
         'sms'     => ['icon' => 'message-square', 'label' => __('SMS')],
     ];
-    if ($can('reports.view') || $can('audit-log.view')) {
+    if ($can('reports.view') || $can('audit-log.view') || $can('field-visits.view.all')) {
         $railSections['insights'] = ['icon' => 'bar-chart-2', 'label' => __('Insights')];
     }
     $railSections['settings'] = ['icon' => 'settings', 'label' => __('Settings')];
@@ -214,6 +216,12 @@
             {{-- Insights --}}
             <div class="bk-panel-sec {{ $activeSection === 'insights' ? 'active' : '' }}" data-bk-panel="insights">
                 <div class="bk-panel-title">{{ __('Insights') }}</div>
+                @can('owner-can', 'field-visits.view.all')
+                <a href="{{ route('owner.field-sales.index') }}"
+                   class="bk-pl {{ request()->routeIs('owner.field-sales.*') ? 'active' : '' }}">
+                    <i data-feather="map-pin"></i><span>{{ __('Field sales') }}</span>
+                </a>
+                @endcan
                 @can('owner-can', 'reports.view')
                 <a href="{{ route('owner.reports.growth') }}"
                    class="bk-pl {{ request()->routeIs('owner.reports.growth') ? 'active' : '' }}">
@@ -235,6 +243,12 @@
             {{-- Settings --}}
             <div class="bk-panel-sec {{ $activeSection === 'settings' ? 'active' : '' }}" data-bk-panel="settings">
                 <div class="bk-panel-title">{{ __('Settings') }}</div>
+                @can('owner-can', 'employees.manage')
+                <a href="{{ route('owner.team.index') }}"
+                   class="bk-pl {{ request()->routeIs('owner.team.*') ? 'active' : '' }}">
+                    <i data-feather="users"></i><span>{{ __('Team') }}</span>
+                </a>
+                @endcan
                 <a href="{{ route('owner.categories.index') }}"
                    class="bk-pl {{ request()->routeIs('owner.categories.*') ? 'active' : '' }}">
                     <i data-feather="layers"></i><span>{{ __('Company categories') }}</span>

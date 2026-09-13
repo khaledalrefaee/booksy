@@ -16,7 +16,7 @@
     @else
         <link rel="stylesheet" href="{{ asset($theme === 'light' ? 'backend/assets/css/demo1/style.css' : 'backend/assets/css/demo2/style.css') }}">
     @endif
-    <link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.png') }}?v={{ @filemtime(public_path('backend/assets/images/favicon.png')) ?: '1' }}" />
+    <link rel="shortcut icon" href="{{ asset('icons/favicon-32.png') }}?v={{ @filemtime(public_path('icons/favicon-32.png')) ?: '1' }}" />
     <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-custom.css') }}?v={{ @filemtime(public_path('backend/assets/css/booksy-custom.css')) ?: '1' }}">
     @if(app()->getLocale() === 'ar')
         <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-arabic.css') }}">
@@ -74,6 +74,11 @@
         .bk-reg .form-hint{ font-size:.76rem; color:var(--bk-text-muted); margin-top:.3rem; }
         .bk-reg .btn-primary{ background:var(--bk-accent-fill); border-color:var(--bk-accent-fill); color:var(--bk-accent-ink); font-weight:600; }
         .bk-reg .btn-primary:hover{ background:var(--bk-accent-hover); border-color:var(--bk-accent-hover); }
+
+        /* Submit loading state */
+        .bk-reg .btn-primary .bk-btn-spinner{ display:none; }
+        .bk-reg .btn-primary.is-loading{ pointer-events:none; opacity:.85; }
+        .bk-reg .btn-primary.is-loading .bk-btn-spinner{ display:inline-block; vertical-align:-.15em; }
 
         /* Password strength meter */
         .bk-pw-meter{ margin-top:.5rem; }
@@ -135,6 +140,41 @@
         html[dir="rtl"] .bk-reg #phone{ direction:ltr; text-align:right; }
         html[dir="rtl"] .bk-reg .iti__selected-dial-code{ direction:ltr; }
         html[dir="rtl"] .bk-reg .iti__dial-code{ direction:ltr; unicode-bidi:embed; }
+
+        /* ===== Craft polish: browser surfaces + motion ===== */
+        .bk-reg ::selection{ background:var(--bk-accent-wash); color:var(--bk-text); }
+        .bk-reg-hero ::selection{ background:rgba(215,184,115,.35); color:#fff; }
+        .bk-reg input, .bk-reg textarea, .bk-reg .form-select{ caret-color:var(--bk-accent); }
+
+        .bk-reg .form-control:focus,
+        .bk-reg .form-select:focus,
+        .bk-reg .form-check-input:focus{
+            border-color:var(--bk-accent);
+            box-shadow:0 0 0 3px var(--bk-accent-wash);
+        }
+        .bk-reg a:focus-visible,
+        .bk-reg .btn:not(.btn-primary):focus-visible{
+            outline:2px solid var(--bk-accent); outline-offset:2px; box-shadow:none;
+        }
+        .bk-reg .input-group:focus-within .input-group-text{ color:var(--bk-accent); border-color:var(--bk-accent); }
+
+        .bk-reg .btn-primary{ transition:transform .12s ease, background .15s ease, box-shadow .15s ease; }
+        .bk-reg .btn-primary:hover:not(.is-loading){ transform:translateY(-1px); box-shadow:var(--bk-shadow-lg); }
+        .bk-reg .btn-primary:active:not(.is-loading){ transform:translateY(0); box-shadow:var(--bk-shadow-sm); }
+        .bk-reg .btn-primary:focus-visible{ box-shadow:0 0 0 3px var(--bk-accent-wash), var(--bk-shadow-lg); }
+
+        .bk-reg-lang a{ transition:color .15s ease; }
+        .bk-reg-lang a:hover{ color:var(--bk-accent); }
+
+        .bk-reg *{ scrollbar-width:thin; scrollbar-color:var(--bk-border-strong) transparent; }
+        .bk-reg *::-webkit-scrollbar{ width:10px; height:10px; }
+        .bk-reg *::-webkit-scrollbar-thumb{ background:var(--bk-border-strong); border-radius:8px; border:2px solid transparent; background-clip:content-box; }
+        .bk-reg *::-webkit-scrollbar-thumb:hover{ background:var(--bk-text-muted); background-clip:content-box; }
+
+        @media (prefers-reduced-motion: no-preference){
+            .bk-reg .card{ animation:bk-reg-in .55s cubic-bezier(.16,1,.3,1) both; }
+        }
+        @keyframes bk-reg-in{ from{ opacity:0; transform:translateY(16px) scale(.985); } to{ opacity:1; transform:none; } }
 
         @media (max-width: 767.98px){
             .bk-reg .card > .row{ min-height:0; }
@@ -308,7 +348,10 @@
                                         </div>
 
                                         <div class="d-grid">
-                                            <button type="submit" class="btn btn-primary btn-lg rounded-3">{{ __('Create account') }}</button>
+                                            <button type="submit" id="registerSubmit" class="btn btn-primary btn-lg rounded-3">
+                                                <span class="bk-btn-spinner spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                <span class="bk-btn-text">{{ __('Create account') }}</span>
+                                            </button>
                                         </div>
                                         <div class="mt-3 text-center">
                                             <span class="text-muted small">{{ __('Already have an account?') }}</span>
@@ -443,6 +486,25 @@
             }
             // Write the full E.164 number to the submitted field.
             hidden.value = iti.getNumber();
+        });
+    })();
+
+    // Show a loading state on the submit button once the form is actually sent.
+    // Runs after the phone handler above, so a blocked (invalid) submit won't trigger it.
+    (function () {
+        const form = document.getElementById('registerForm');
+        const btn  = document.getElementById('registerSubmit');
+        if (!form || !btn) return;
+
+        form.addEventListener('submit', function (e) {
+            if (e.defaultPrevented) return;          // phone/validation blocked it
+            if (!form.checkValidity()) {              // required fields still empty
+                form.reportValidity();
+                e.preventDefault();
+                return;
+            }
+            btn.classList.add('is-loading');
+            btn.disabled = true;
         });
     })();
 

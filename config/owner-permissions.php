@@ -1,48 +1,180 @@
 <?php
 
 /*
- * Owner-panel roles and their permissions.
+ * Owner-panel roles, their default permissions, and the full permission
+ * catalog used to build the per-employee access UI.
  *
+ * Access is resolved as:  (role default set)  ∪  (owner.permissions overrides)
+ * so it is permission-based and expandable — never hard-coded per page.
  * '*' grants everything. Permission keys follow "module.action".
- * New pages must check a key from here via Gate 'owner-can' even if,
- * for now, every admin is a super_admin — the check points are what matter.
  *
- * Catalog of keys enforced in routes/owner.php and owner views:
- *
- *   companies.manage        create / edit / delete companies, change status & subscription
- *   companies.impersonate   log in as a company
- *   plans.manage            create / edit / delete subscription plans
- *   billing.view            subscriptions + subscription payments pages
- *   billing.record-payment  record / edit subscription payments
- *   billing.void-payment    void subscription payments
- *   coupons.manage          subscription coupons CRUD
- *   reviews.moderate        hide / unhide customer reviews
- *   notifications.send      broadcast announcements to companies
- *   reports.view            growth + revenue reports
- *   audit-log.view          read the owner audit log
- *   operations.view         cross-tenant customers & invoices directories
- *   locations.manage        countries / governorates / areas CRUD
- *
- *   ── Company Workspace (per-company management hub) ──
- *   company-workspace.view  open a company's workspace + view any tab
- *   appointments.manage     change appointment status / reschedule / cancel from workspace
- *   catalog.manage          edit services & pricing from workspace
- *   attendance.manage       attendance actions from workspace
- *   finance.manage          cash / invoices / expenses actions from workspace
- *   payroll.manage          payroll / deductions / advances actions from workspace
- *   inventory.manage        stock / transfers actions from workspace
+ * To add a capability: add its key under `catalog`, then reference it in a
+ * route via ->middleware('owner.can:key') or in a view via
+ * @can('owner-can', 'key'). Assign it to roles below and/or per employee.
  */
 
 return [
 
+    /*
+    |--------------------------------------------------------------------------
+    | Role → default permissions
+    |--------------------------------------------------------------------------
+    | These are the starting point for each role. Individual employees can be
+    | granted extra keys on top (owners.permissions). super_admin = everything.
+    */
     'roles' => [
 
         'super_admin' => ['*'],
 
-        // Future roles — fill in when the first non-owner admin is hired.
-        // 'operations' => ['companies.manage', 'operations.view', 'locations.manage'],
-        // 'support'    => ['operations.view', 'audit-log.view'],
-        // 'accountant' => ['billing.view', 'billing.record-payment', 'reports.view'],
+        'admin' => [
+            'owner-dashboard.view',
+            'employees.manage',
+            'companies.manage',
+            'companies.impersonate',
+            'company-workspace.view',
+            'appointments.manage',
+            'catalog.manage',
+            'attendance.manage',
+            'finance.manage',
+            'payroll.manage',
+            'inventory.manage',
+            'plans.manage',
+            'billing.view',
+            'billing.record-payment',
+            'billing.void-payment',
+            'coupons.manage',
+            'reviews.moderate',
+            'notifications.send',
+            'reports.view',
+            'audit-log.view',
+            'operations.view',
+            'locations.manage',
+            'field-visits.view.all',
+            'field-visits.review',
+        ],
+
+        'sales_manager' => [
+            'owner-dashboard.view',
+            'field-visits.create',
+            'field-visits.view.own',
+            'field-visits.view.all',
+            'field-visits.review',
+            'employees.manage',
+            'reports.view',
+            'operations.view',
+        ],
+
+        // Field reps live in the /employee area only — no owner-dashboard.view.
+        'field_sales' => [
+            'field-visits.create',
+            'field-visits.view.own',
+        ],
+
+        'marketing' => [
+            'owner-dashboard.view',
+            'notifications.send',
+            'reviews.moderate',
+            'reports.view',
+        ],
+
+        'support' => [
+            'owner-dashboard.view',
+            'operations.view',
+            'company-workspace.view',
+            'audit-log.view',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Role metadata (for the employees UI: label, plain description, icon)
+    |--------------------------------------------------------------------------
+    | Labels/descriptions are translation keys — run through __() in views.
+    */
+    'role_meta' => [
+        'super_admin'   => ['label' => 'Super admin',   'desc' => 'Full, unrestricted access to everything.',                 'icon' => 'shield'],
+        'admin'         => ['label' => 'Admin',          'desc' => 'Manages the platform, companies, billing and the team.',   'icon' => 'sliders'],
+        'sales_manager' => ['label' => 'Sales manager',  'desc' => 'Leads the sales team, reviews field visits and reports.',  'icon' => 'trending-up'],
+        'field_sales'   => ['label' => 'Field sales',    'desc' => 'Visits venues in the field and logs each visit.',         'icon' => 'map-pin'],
+        'marketing'     => ['label' => 'Marketing',      'desc' => 'Runs announcements, campaigns and reviews.',               'icon' => 'send'],
+        'support'       => ['label' => 'Support',        'desc' => 'Helps companies and looks up operations data.',            'icon' => 'life-buoy'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Permission catalog (grouped) — drives the access checkboxes UI
+    |--------------------------------------------------------------------------
+    | Each label is a translation key. Add new keys here to expand the system.
+    */
+    'catalog' => [
+
+        'access' => [
+            'label' => 'Access',
+            'permissions' => [
+                'owner-dashboard.view' => 'Open the Owner dashboard',
+            ],
+        ],
+
+        'team' => [
+            'label' => 'Team',
+            'permissions' => [
+                'employees.manage' => 'Manage employees & permissions',
+            ],
+        ],
+
+        'field_sales' => [
+            'label' => 'Field sales',
+            'permissions' => [
+                'field-visits.create'   => 'Log field visits',
+                'field-visits.view.own' => 'See own field visits',
+                'field-visits.view.all' => 'See all reps’ visits & reports',
+                'field-visits.review'   => 'Review & approve flagged visits',
+            ],
+        ],
+
+        'companies' => [
+            'label' => 'Companies',
+            'permissions' => [
+                'companies.manage'       => 'Create / edit / suspend companies',
+                'companies.impersonate'  => 'Log in as a company',
+                'company-workspace.view' => 'Open a company workspace',
+                'appointments.manage'    => 'Manage appointments in workspace',
+                'catalog.manage'         => 'Edit services & pricing in workspace',
+                'attendance.manage'      => 'Attendance actions in workspace',
+                'finance.manage'         => 'Finance actions in workspace',
+                'payroll.manage'         => 'Payroll actions in workspace',
+                'inventory.manage'       => 'Inventory actions in workspace',
+                'operations.view'        => 'Cross-tenant customers & invoices',
+            ],
+        ],
+
+        'billing' => [
+            'label' => 'Billing',
+            'permissions' => [
+                'plans.manage'          => 'Manage subscription plans',
+                'billing.view'          => 'View subscriptions & payments',
+                'billing.record-payment' => 'Record / edit payments',
+                'billing.void-payment'  => 'Void payments',
+                'coupons.manage'        => 'Manage coupons',
+            ],
+        ],
+
+        'growth' => [
+            'label' => 'Growth & content',
+            'permissions' => [
+                'reviews.moderate'   => 'Moderate reviews',
+                'notifications.send' => 'Send announcements & emails',
+                'reports.view'       => 'View growth & revenue reports',
+            ],
+        ],
+
+        'platform' => [
+            'label' => 'Platform',
+            'permissions' => [
+                'audit-log.view'  => 'Read the audit log',
+                'locations.manage' => 'Manage countries / areas',
+            ],
+        ],
     ],
 
 ];

@@ -162,5 +162,6 @@ if (app()->environment('local')) {
 }
 
 require __DIR__.'/owner.php';
+require __DIR__.'/employee.php';
 require __DIR__.'/company.php';
 require __DIR__.'/staff.php';

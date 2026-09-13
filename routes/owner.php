@@ -25,16 +25,32 @@ Route::prefix('owner')->name('owner.')->group(function () {
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-    // Protected routes
+    // ── Authenticated, any staff (no dashboard permission needed) ──
+    // First-login forced password change lives here so it is reachable even
+    // while the change is still pending; theme + profile stay open to every
+    // staff member (a field rep with no owner-dashboard access still has a
+    // profile).
     Route::middleware('owner.auth')->group(function () {
-        Route::get('/theme/{mode}', function (string $mode) {
-            $theme = $mode === 'light' ? 'light' : 'dark';
+        Route::get('/password', [\App\Http\Controllers\Owner\Auth\PasswordController::class, 'edit'])->name('password.change');
+        Route::put('/password', [\App\Http\Controllers\Owner\Auth\PasswordController::class, 'update'])
+            ->middleware('throttle:10,10')->name('password.update');
 
-            return redirect()
-                ->back()
-                ->cookie('owner_theme', $theme, 60 * 24 * 365);
-        })->whereIn('mode', ['light', 'dark'])->name('theme');
+        Route::middleware('owner.mustchange')->group(function () {
+            Route::get('/theme/{mode}', function (string $mode) {
+                $theme = $mode === 'light' ? 'light' : 'dark';
 
+                return redirect()
+                    ->back()
+                    ->cookie('owner_theme', $theme, 60 * 24 * 365);
+            })->whereIn('mode', ['light', 'dark'])->name('theme');
+
+            Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+            Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        });
+    });
+
+    // ── Full admin panel — requires owner-dashboard.view ──
+    Route::middleware(['owner.auth', 'owner.mustchange', 'owner.dashboard'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
         // Owner notifications (new-business bell)
@@ -45,8 +61,30 @@ Route::prefix('owner')->name('owner.')->group(function () {
         // Global search
         Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 
-        Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
-        Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        // ── Owner internal team (GlowRez staff) ──
+        // Namespaced under "team" (not "employees") so it never collides with the
+        // shallow branches.employees resource, which owns owner.employees.* names.
+        Route::middleware('owner.can:employees.manage')->group(function () {
+            Route::resource('team', \App\Http\Controllers\Owner\OwnerEmployeeController::class)
+                ->except(['show'])
+                ->parameters(['team' => 'employee']);
+            Route::patch('team/{employee}/toggle-active', [\App\Http\Controllers\Owner\OwnerEmployeeController::class, 'toggleActive'])
+                ->name('team.toggle-active');
+            Route::post('team/{employee}/reset-password', [\App\Http\Controllers\Owner\OwnerEmployeeController::class, 'resetPassword'])
+                ->name('team.reset-password');
+        });
+
+        // ── Field sales (team reporting + review queue) ──
+        Route::prefix('field-sales')->name('field-sales.')
+            ->controller(\App\Http\Controllers\Owner\FieldSalesController::class)
+            ->group(function () {
+                Route::get('/', 'index')->middleware('owner.can:field-visits.view.all')->name('index');
+                Route::get('map', 'map')->middleware('owner.can:field-visits.view.all')->name('map');
+                Route::get('review', 'review')->middleware('owner.can:field-visits.review')->name('review');
+                Route::get('visits/{visit}', 'show')->middleware('owner.can:field-visits.view.all')->name('show');
+                Route::patch('visits/{visit}/review', 'storeReview')->middleware('owner.can:field-visits.review')->name('visits.review');
+                Route::get('export', 'export')->middleware('owner.can:field-visits.view.all')->name('export');
+            });
 
         Route::resource('categories', CategoryController::class);
         Route::resource('service-categories', ServiceCategoryController::class)->except(['create', 'edit', 'show']);

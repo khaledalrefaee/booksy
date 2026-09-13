@@ -25,9 +25,27 @@ class LoginController extends Controller
         $remember = $request->boolean('remember');
 
         if (Auth::guard('owner')->attempt($credentials, $remember)) {
-            $request->session()->regenerate();
+            $owner = Auth::guard('owner')->user();
 
-            return redirect()->intended(route('owner.dashboard'));
+            // Disabled staff never get a session.
+            if ($owner->is_active === false) {
+                Auth::guard('owner')->logout();
+
+                return back()
+                    ->withInput($request->only('email'))
+                    ->withErrors(['email' => __('Your account has been disabled.')]);
+            }
+
+            $request->session()->regenerate();
+            $owner->forceFill(['last_login_at' => now()])->saveQuietly();
+
+            // First-login accounts must set their own password before anything.
+            if ($owner->must_change_password) {
+                return redirect()->route('owner.password.change');
+            }
+
+            // Route by capability: admins to the panel, field reps to /employee.
+            return redirect()->intended(route($owner->homeRoute()));
         }
 
         return back()

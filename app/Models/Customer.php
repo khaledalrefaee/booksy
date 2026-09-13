@@ -36,6 +36,11 @@ class Customer extends Model
         'date_of_birth', 'source', 'loyalty_points',
     ];
 
+    /** The mobile API token hash is never serialized to a response. */
+    protected $hidden = [
+        'api_token', 'remember_token',
+    ];
+
     protected function casts(): array
     {
         return [

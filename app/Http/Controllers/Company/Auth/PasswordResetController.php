@@ -34,9 +34,12 @@ class PasswordResetController extends Controller
         if ($channel === 'email') {
             $identifier = $data['email'];
             $company    = Company::query()->where('email', $identifier)->first();
+            $delivery   = 'email';
         } else {
             $identifier = preg_replace('/\s+/', '', $data['phone']);
             $company    = Company::query()->where('phone', $identifier)->first();
+            // Actual transport: Syrian numbers → local SMS, everyone else → WhatsApp.
+            $delivery   = $whatsapp->channelFor($company->phone ?? $identifier);
         }
 
         // Always advance to the reset step — never reveal whether the account
@@ -68,6 +71,7 @@ class PasswordResetController extends Controller
         session([
             'pw_reset_channel'    => $channel,
             'pw_reset_identifier' => $identifier,
+            'pw_reset_delivery'   => $delivery,
         ]);
 
         return redirect()->route('company.password.reset');
@@ -83,6 +87,7 @@ class PasswordResetController extends Controller
         return view('company.auth.reset', [
             'identifier' => session('pw_reset_identifier'),
             'channel'    => session('pw_reset_channel'),
+            'delivery'   => session('pw_reset_delivery', session('pw_reset_channel')),
         ]);
     }
 
@@ -114,7 +119,7 @@ class PasswordResetController extends Controller
         // The Company model casts `password` as `hashed`, so it is hashed on save.
         $company->update(['password' => $data['password']]);
 
-        $request->session()->forget(['pw_reset_phone', 'pw_reset_channel', 'pw_reset_identifier']);
+        $request->session()->forget(['pw_reset_phone', 'pw_reset_channel', 'pw_reset_identifier', 'pw_reset_delivery']);
 
         return redirect()->route('company.login')
             ->with('status', __('Your password has been reset. You can now sign in.'));

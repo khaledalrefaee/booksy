@@ -8,7 +8,7 @@
 @section('content')
     <h4 class="fw-bold mb-1">{{ __('Verify your account') }}</h4>
     <p class="text-muted mb-4">
-        {{ __('We sent a 4-digit code to your WhatsApp') }}
+        {{ __('We sent a 4-digit code to your phone') }}
         @if($phone)<strong dir="ltr">{{ $phone }}</strong>@endif
         {{ __('and email') }}
         @if($email)<strong dir="ltr">{{ $email }}</strong>@endif.
