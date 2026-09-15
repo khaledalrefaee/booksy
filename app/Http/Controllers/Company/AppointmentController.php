@@ -1932,8 +1932,15 @@ class AppointmentController extends Controller
                 $q->where('branch_id', $branch->id)
                   ->orWhere(fn ($w) => $w->whereNull('branch_id')->where('company_id', $company->id));
             })
+            ->with('services:id')
             ->orderBy('name_en')->get()
-            ->map(fn ($e) => ['id' => $e->id, 'name' => $e->localizedName()]);
+            /* service_ids lets the UI narrow "preferred staff" to those who
+               actually provide the picked services. */
+            ->map(fn ($e) => [
+                'id'          => $e->id,
+                'name'        => $e->localizedName(),
+                'service_ids' => $e->services->pluck('id')->values(),
+            ]);
 
         return response()->json(compact('services', 'employees'));
     }

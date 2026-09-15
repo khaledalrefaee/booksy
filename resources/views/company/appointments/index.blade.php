@@ -186,6 +186,10 @@
             <button type="button" class="bk-ov-x" id="bk-wl-close" aria-label="{{ __('Close') }}">✕</button>
         </div>
 
+        {{-- Everything under the fixed header scrolls as one column, so a fully
+             expanded add form can never push the save button past the bottom edge. --}}
+        <div class="bk-drawer-body">
+
         {{--
             Add flow, progressive: one field to start. The old form put six
             equal-weight inputs on screen at once, which made adding a walk-in
@@ -243,10 +247,16 @@
                         </select>
                     </div>
                     <div class="wl-field">
-                        <label class="wl-label" for="wl-service">{{ $isRtl ? 'الخدمة' : 'Service' }}</label>
-                        <select id="wl-service">
-                            <option value="">{{ $isRtl ? 'أي خدمة' : 'Any service' }}</option>
-                        </select>
+                        <label class="wl-label" for="wl-service-search">{{ $isRtl ? 'الخدمات' : 'Services' }}</label>
+                        <div class="wl-combo" id="wl-service-combo">
+                            <svg class="wl-combo-ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="wl-service-search" class="wl-combo-input" autocomplete="off"
+                                   role="combobox" aria-expanded="false" aria-controls="wl-service-menu" aria-autocomplete="list"
+                                   placeholder="{{ $isRtl ? 'ابحث أو أضف خدمة…' : 'Search or add a service…' }}">
+                            <div class="wl-combo-menu d-none" id="wl-service-menu" role="listbox"
+                                 aria-label="{{ $isRtl ? 'الخدمات' : 'Services' }}"></div>
+                        </div>
+                        <div class="wl-chips d-none" id="wl-service-chips"></div>
                     </div>
                 </div>
 
@@ -285,6 +295,8 @@
         <div class="bk-wl-list" id="bk-wl-list">
             <div class="bk-ov-empty">{{ $isRtl ? 'لا يوجد أحد بالانتظار' : 'Nobody is waiting' }}</div>
         </div>
+
+        </div>{{-- /.bk-drawer-body --}}
     </aside>
 
     {{-- ── Filters bar ── --}}

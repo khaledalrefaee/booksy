@@ -143,6 +143,16 @@
     color: rgba(255,255,255,.5); margin-bottom: 5px; display: block;
 }
 .bk-theme-light .f-label { color: rgba(0,0,0,.5); }
+.f-optional {
+    text-transform: none; letter-spacing: 0; font-weight: 600;
+    font-size: 10.5px; color: rgba(255,255,255,.32);
+}
+.bk-theme-light .f-optional { color: rgba(0,0,0,.4); }
+.f-hint {
+    font-size: 11px; line-height: 1.4; margin-top: 5px;
+    color: rgba(255,255,255,.38);
+}
+.bk-theme-light .f-hint { color: rgba(0,0,0,.45); }
 .f-input {
     width: 100%;
     background: rgba(255,255,255,.05); border: 1.5px solid rgba(255,255,255,.1);
@@ -422,11 +432,12 @@
                                         @error('name_ar')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="f-label">{{ __('Email') }} <span class="text-danger">*</span></label>
+                                        <label class="f-label">{{ __('Email') }} <span class="f-optional">{{ __('(optional)') }}</span></label>
                                         <input type="email" name="email"
                                                class="f-input form-control @error('email') is-invalid @enderror"
                                                value="{{ old('email') }}" placeholder="employee@example.com">
                                         @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                        <div class="f-hint">{{ __('Leave empty to let the employee sign in with their phone number.') }}</div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="f-label">{{ __('Phone') }} <span class="text-danger">*</span></label>
@@ -1088,7 +1099,6 @@ document.getElementById('emp-create-form').addEventListener('submit', function (
     const required = [
         { name: 'name_en', msg: '{{ app()->getLocale()==="ar" ? "الاسم بالإنجليزية مطلوب" : "Name (English) is required" }}' },
         { name: 'name_ar', msg: '{{ app()->getLocale()==="ar" ? "الاسم بالعربية مطلوب" : "Name (Arabic) is required" }}' },
-        { name: 'email',   msg: '{{ app()->getLocale()==="ar" ? "البريد الإلكتروني مطلوب" : "Email is required" }}' },
         { name: 'phone_number', msg: '{{ app()->getLocale()==="ar" ? "رقم الهاتف مطلوب" : "Phone is required" }}' },
         { name: 'password',msg: '{{ app()->getLocale()==="ar" ? "كلمة المرور مطلوبة" : "Password is required" }}' },
     ];

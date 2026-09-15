@@ -134,7 +134,7 @@ document.getElementById('blk-save').addEventListener('click', function () {
     jfetch(BLK_STORE, { method: 'POST', body: body }).then(function (res) {
         btn.disabled = false;
         if (!res.ok) {
-            var msg = res.data.message || (IS_RTL ? 'تعذّر الحفظ' : 'Could not save');
+            var msg = (res.data && res.data.message) || (IS_RTL ? 'تعذّر الحفظ' : 'Could not save');
             err.textContent = msg;
             err.classList.remove('d-none');
             return;
@@ -142,6 +142,14 @@ document.getElementById('blk-save').addEventListener('click', function () {
         document.getElementById('blk-reason').value = '';
         loadBlockList();
         refreshViews();
+        blkOv.classList.add('d-none');   /* auto-close on success */
+        if (window.bkToast) window.bkToast(IS_RTL ? 'تم حجب الوقت' : 'Time blocked', 'success');
+    }).catch(function () {
+        /* a rejected fetch (network) or a non-JSON error page would otherwise
+           leave the button stuck disabled with no feedback at all */
+        btn.disabled = false;
+        err.textContent = IS_RTL ? 'تعذّر الحفظ — تحقّق من الاتصال وحاول مجدداً' : 'Could not save — check your connection and retry';
+        err.classList.remove('d-none');
     });
 });
 
@@ -153,12 +161,31 @@ document.getElementById('blk-list').addEventListener('click', function (e) {
 });
 
 function unblock(id, title, done) {
-    var q = IS_RTL ? 'إلغاء حجب هذا الوقت؟' : 'Unblock this time?';
-    if (title) q += '\n' + title;
-    if (!confirm(q)) return;
-    jfetch(BLK_DEL.replace('__ID__', id), { method: 'DELETE' }).then(function (res) {
-        if (res.ok) { if (done) done(); refreshViews(); }
-    });
+    var doDelete = function () {
+        jfetch(BLK_DEL.replace('__ID__', id), { method: 'DELETE' }).then(function (res) {
+            if (res.ok) {
+                if (done) done();
+                refreshViews();
+                if (window.bkToast) window.bkToast(IS_RTL ? 'تم إلغاء الحجب' : 'Time unblocked', 'success');
+            } else if (window.bkToast) {
+                window.bkToast((res.data && res.data.message) || (IS_RTL ? 'تعذّر إلغاء الحجب' : 'Could not unblock'), 'error');
+            }
+        }).catch(function () {
+            if (window.bkToast) window.bkToast(IS_RTL ? 'تعذّر إلغاء الحجب' : 'Could not unblock', 'error');
+        });
+    };
+    /* Confirm through the app's SweetAlert dialog — NEVER native confirm(), which
+       froze the whole page in the embedded browser. If SweetAlert isn't present
+       we delete directly rather than fall back to the blocking dialog. */
+    if (window.bkConfirm && window.Swal) {
+        window.bkConfirm({
+            title:       IS_RTL ? 'إلغاء حجب هذا الوقت؟' : 'Unblock this time?',
+            text:        title || '',
+            confirmText: IS_RTL ? 'نعم، إلغاء الحجب' : 'Yes, unblock',
+        }).then(function (r) { if (r && r.isConfirmed) doDelete(); });
+    } else {
+        doDelete();
+    }
 }
 /* calendar eventClick hook */
 window.bkUnblock = function (id, title) { unblock(id, title); };
@@ -195,17 +222,120 @@ function setWlCount(n) {
     document.getElementById('bk-wl-chip').classList.toggle('has-waiting', n > 0);
 }
 
+var wlAllServices  = [];   /* this branch's services, for the searchable picker */
+var wlAllEmployees = [];   /* this branch's staff, with the services each provides */
+
+/* Loads the branch's services + staff. Services feed the search combo; staff feed
+   the "preferred staff" list, narrowed to whoever provides the picked services. */
 function loadWlServices() {
-    var sel = document.getElementById('wl-service');
     jfetch(BRANCH_DATA + '?branch_id=' + document.getElementById('wl-branch').value).then(function (res) {
-        var opts = '<option value="">' + (IS_RTL ? 'أي خدمة' : 'Any service') + '</option>';
-        (res.data.services || []).forEach(function (s) {
-            opts += '<option value="' + s.id + '">' + esc(s.name) + '</option>';
-        });
-        sel.innerHTML = opts;
+        wlAllServices  = res.data.services  || [];
+        wlAllEmployees = res.data.employees || [];
+        wlRenderServiceMenu();
+        wlRenderEmployees();
     });
 }
-document.getElementById('wl-branch').addEventListener('change', loadWlServices);
+/* Switching branch invalidates the picked services + staff (both are per-branch). */
+document.getElementById('wl-branch').addEventListener('change', function () {
+    wlServices = [];
+    wlRenderServiceChips();
+    document.getElementById('wl-service-search').value = '';
+    loadWlServices();
+});
+
+/* ── Services: a searchable combo whose picks become chips ── */
+var wlSvcSearch = document.getElementById('wl-service-search');
+var wlSvcMenu   = document.getElementById('wl-service-menu');
+
+function wlRenderServiceChips() {
+    var box = document.getElementById('wl-service-chips');
+    if (!box) return;
+    box.classList.toggle('d-none', !wlServices.length);
+    box.innerHTML = wlServices.map(function (s) {
+        return '<span class="wl-chip">' + esc(s.name)
+            + '<button type="button" class="wl-chip-x" data-rm-svc="' + esc(String(s.id)) + '" '
+            + 'aria-label="' + esc(BK.t.remove) + '">'
+            + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+            + '</button></span>';
+    }).join('');
+}
+
+function wlRenderServiceMenu() {
+    if (!wlSvcMenu) return;
+    var q = (wlSvcSearch.value || '').trim().toLowerCase();
+    var picked = wlServices.map(function (s) { return String(s.id); });
+    var list = wlAllServices.filter(function (s) {
+        if (picked.indexOf(String(s.id)) >= 0) return false;          /* hide already-picked */
+        return !q || (s.name || '').toLowerCase().indexOf(q) >= 0;
+    });
+    if (!list.length) {
+        wlSvcMenu.innerHTML = '<div class="wl-combo-empty">' + (IS_RTL ? 'لا توجد خدمات' : 'No services') + '</div>';
+        return;
+    }
+    wlSvcMenu.innerHTML = list.map(function (s) {
+        return '<button type="button" class="wl-combo-opt" role="option" '
+            + 'data-id="' + esc(String(s.id)) + '" data-name="' + esc(s.name) + '">'
+            + '<span class="wl-combo-name">' + esc(s.name) + '</span>'
+            + (s.duration ? '<span class="wl-combo-dur">' + s.duration + ' ' + esc(BK.t.min) + '</span>' : '')
+            + '</button>';
+    }).join('');
+}
+function wlOpenServiceMenu()  { wlRenderServiceMenu(); wlSvcMenu.classList.remove('d-none'); wlSvcSearch.setAttribute('aria-expanded', 'true'); }
+function wlCloseServiceMenu() { wlSvcMenu.classList.add('d-none'); wlSvcSearch.setAttribute('aria-expanded', 'false'); }
+
+function wlPickService(id, name) {
+    if (!wlServices.some(function (s) { return String(s.id) === String(id); })) {
+        wlServices.push({ id: id, name: name });
+        wlRenderServiceChips();
+        wlRenderEmployees();
+    }
+    wlSvcSearch.value = '';
+    wlRenderServiceMenu();
+    wlSvcSearch.focus();
+}
+
+wlSvcSearch.addEventListener('focus', wlOpenServiceMenu);
+wlSvcSearch.addEventListener('input', wlOpenServiceMenu);
+wlSvcSearch.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { wlCloseServiceMenu(); this.blur(); }
+    else if (e.key === 'Enter') {
+        e.preventDefault();
+        var first = wlSvcMenu.querySelector('.wl-combo-opt');
+        if (first) wlPickService(first.dataset.id, first.dataset.name);
+    }
+});
+wlSvcMenu.addEventListener('click', function (e) {
+    var opt = e.target.closest('.wl-combo-opt');
+    if (opt) wlPickService(opt.dataset.id, opt.dataset.name);
+});
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('#wl-service-combo')) wlCloseServiceMenu();
+});
+document.getElementById('wl-service-chips').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-rm-svc]');
+    if (!b) return;
+    wlServices = wlServices.filter(function (s) { return String(s.id) !== String(b.dataset.rmSvc); });
+    wlRenderServiceChips();
+    wlRenderServiceMenu();  /* the removed service returns to the list */
+    wlRenderEmployees();
+});
+
+/* ── Preferred staff: only those who provide at least one picked service ── */
+function wlRenderEmployees() {
+    var sel = document.getElementById('wl-employee');
+    if (!sel) return;
+    var prev   = sel.value;
+    var picked = wlServices.map(function (s) { return String(s.id); });
+    var list = wlAllEmployees.filter(function (e) {
+        if (!picked.length) return true;   /* no service chosen yet — show everyone */
+        var ids = (e.service_ids || []).map(String);
+        return ids.some(function (id) { return picked.indexOf(id) >= 0; });
+    });
+    var opts = '<option value="">' + (IS_RTL ? 'أي موظف' : 'Anyone') + '</option>';
+    list.forEach(function (e) { opts += '<option value="' + e.id + '">' + esc(e.name) + '</option>'; });
+    sel.innerHTML = opts;
+    if (prev && list.some(function (e) { return String(e.id) === String(prev); })) sel.value = prev;
+}
 
 /* ── tier badge ───────────────────────────────────────────────────────────
    Icon + text, never colour alone: a colour-blind user must still be able to
@@ -245,6 +375,13 @@ function loadWaitlist() {
         box.innerHTML = rows.map(function (w) {
             var prio = (BK.priorities || []).filter(function (p) { return p.value === w.priority; })[0];
 
+            var hasSvcs = w.services && w.services.length;
+            /* single legacy service (no chips) + duration + preferred staff, in one muted line */
+            var wlMeta = [];
+            if (!hasSvcs) wlMeta.push(w.service || BK.t.wl_any_service);
+            if (w.minutes) wlMeta.push(w.minutes + ' ' + BK.t.min);
+            if (w.employee) wlMeta.push(w.employee);
+
             return '<article class="wl-item" data-id="' + w.id + '" data-prio="' + w.priority + '"'
                 + (prio ? ' style="--prio:' + prio.color + '"' : '') + '>'
 
@@ -253,10 +390,13 @@ function loadWaitlist() {
                 +     '<b class="wl-item-name">' + esc(w.name) + '</b>'
                 +     wlTierBadge(w.tier)
                 +   '</div>'
+                +   (hasSvcs
+                      ? '<div class="wl-item-svcs">' + w.services.map(function (s) {
+                            return '<span class="wl-svc-chip">' + esc(s.name) + '</span>';
+                        }).join('') + '</div>'
+                      : '')
                 +   '<div class="wl-item-meta">'
-                +     esc(w.service || BK.t.wl_any_service)
-                +     (w.minutes ? ' · ' + w.minutes + ' ' + esc(BK.t.min) : '')
-                +     (w.employee ? ' · ' + esc(w.employee) : '')
+                +     esc(wlMeta.join(' · '))
                 +   '</div>'
                 +   '<div class="wl-item-sub">'
                 +     '<span class="wl-waited">' + esc(wlWaited(w.waited)) + '</span>'
@@ -266,9 +406,13 @@ function loadWaitlist() {
                 + '</div>'
 
                 + '<div class="wl-item-actions">'
-                +   '<a class="wl-book" href="' + CREATE_URL + '?branch_id=' + w.branchId
-                +     (w.serviceId ? '&service_id=' + w.serviceId : '')
-                +     '&waitlist_id=' + w.id + '">' + esc(BK.t.wl_book_now) + '</a>'
+                +   '<button type="button" class="wl-book" data-process'
+                +     ' data-branch="' + w.branchId + '"'
+                +     ' data-cust-id="' + (w.customerId || '') + '"'
+                +     ' data-cust-name="' + esc(w.name) + '"'
+                +     ' data-cust-phone="' + esc(w.phone || '') + '"'
+                +     ' data-services="' + esc((w.serviceIds || []).join(',')) + '">'
+                +     esc(BK.t.wl_book_now) + '</button>'
                 +   '<button type="button" class="wl-icon-btn" data-status="cancelled" '
                 +     'aria-label="' + esc(BK.t.remove) + '" title="' + esc(BK.t.remove) + '">'
                 +     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">'
@@ -280,6 +424,38 @@ function loadWaitlist() {
 }
 
 document.getElementById('bk-wl-list').addEventListener('click', function (e) {
+    /* Process a waiting client: open the booking drawer in place, prefilled with
+       their customer + services. Booking it resolves the entry (see qaResolveWaitlistBooked). */
+    var proc = e.target.closest('[data-process]');
+    if (proc) {
+        var entryId = proc.closest('.wl-item').dataset.id;
+        var custId  = proc.dataset.custId;
+        var ids     = (proc.dataset.services || '').split(',').filter(Boolean);
+        closeWaitlist();
+        /* Open the booking drawer on THIS entry's branch — not the active filter —
+           so the prefilled services (which belong to that branch) resolve.
+           qaOpen and its helpers live behind appointments.js's IIFE and are
+           published on window. */
+        if (typeof window.qaOpen !== 'function') { location.href = CREATE_URL + '?branch_id=' + encodeURIComponent(proc.dataset.branch); return; }
+        var d = (typeof window.bkQuickAddDefaultDate === 'function') ? window.bkQuickAddDefaultDate() : new Date();
+        window.qaOpen({
+            empId:    null,
+            empName:  '',
+            branchId: proc.dataset.branch,
+            minutes:  d.getHours() * 60 + d.getMinutes(),
+            dateStr:  (typeof window.sfDateStr === 'function') ? window.sfDateStr(d) : d.toISOString().slice(0, 10),
+        }, {
+            waitlistId: entryId,
+            prefill: {
+                customer: custId
+                    ? { id: custId, name: proc.dataset.custName, phone: proc.dataset.custPhone }
+                    : { name: proc.dataset.custName, phone: proc.dataset.custPhone, isNew: true },
+                serviceIds: ids,
+            },
+        });
+        return;
+    }
+
     var btn = e.target.closest('[data-status]');
     if (!btn) return;
     var item = btn.closest('.wl-item');
@@ -311,6 +487,7 @@ var wlErr     = document.getElementById('wl-err');
 /* null = nothing chosen; {id:null, name} = a new person being quick-added */
 var wlChoice   = null;
 var wlPriority = 2;
+var wlServices = [];   /* [{id, name}] — every service this waiting client wants */
 var wlSearchT  = null;
 var wlSearchCtl = null;
 
@@ -330,6 +507,12 @@ function wlReset() {
     ['wl-phone', 'wl-minutes', 'wl-notes'].forEach(function (id) {
         document.getElementById(id).value = '';
     });
+    wlServices = [];
+    wlRenderServiceChips();
+    document.getElementById('wl-service-search').value = '';
+    wlCloseServiceMenu();
+    wlRenderServiceMenu();
+    wlRenderEmployees();
     wlPriority = 2;
     wlRenderPriority();
 }
@@ -474,7 +657,8 @@ document.getElementById('wl-save').addEventListener('click', function () {
     if (wlChoice.id) body.append('customer_id', wlChoice.id);
     body.append('customer_name',  wlChoice.name);
     body.append('customer_phone', wlChoice.phone || document.getElementById('wl-phone').value);
-    body.append('service_id',     document.getElementById('wl-service').value);
+    wlServices.forEach(function (s) { body.append('service_ids[]', s.id); });
+    if (wlServices.length) body.append('service_id', wlServices[0].id); /* legacy column */
     body.append('preferred_employee_id', document.getElementById('wl-employee').value);
     body.append('priority',       wlPriority);
     body.append('estimated_minutes', document.getElementById('wl-minutes').value);

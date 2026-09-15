@@ -205,7 +205,7 @@ class EmployeeController extends Controller
         $data = $request->validate([
             'name_en'              => ['required', 'string', 'max:255'],
             'name_ar'              => ['required', 'string', 'max:255'],
-            'email'                => ['required', 'email', 'unique:employees,email'],
+            'email'                => ['nullable', 'email', 'unique:employees,email'],
             'dial_code'            => ['required', 'string', 'max:5'],
             'phone_number'         => ['required', 'string', 'max:15'],
             'role_id'              => ['required', 'exists:roles,id'],
@@ -408,7 +408,7 @@ class EmployeeController extends Controller
         $data = $request->validate([
             'name_en'               => ['required', 'string', 'max:255'],
             'name_ar'               => ['required', 'string', 'max:255'],
-            'email'                 => ['required', 'email', "unique:employees,email,{$employee->id}"],
+            'email'                 => ['nullable', 'email', "unique:employees,email,{$employee->id}"],
             'dial_code'             => ['required', 'string', 'max:5'],
             'phone_number'          => ['required', 'string', 'max:15'],
             'role_id'               => ['required', 'exists:roles,id'],

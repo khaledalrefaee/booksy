@@ -1950,9 +1950,20 @@ var qaBooking  = false;
 ─────────────────────────────────────────────────────────────── */
 var qaGuests      = [{ customer: null, cart: [] }];
 var qaActiveGuest = 0;
+/* Once a party is started it stays open even back down to one guest, so
+   adding reads as a row joining an existing list and removing reads as a
+   single row leaving — never the whole tray blinking in or out. */
+var qaGroupOpen   = false;
+var qaNewGuestIdx = -1;   /* row to play the entrance motion on, this render only */
+/* When the drawer was opened to process a waiting client: the entry to mark
+   booked once the appointment saves, and the services to preload into the cart
+   as soon as this branch's service list arrives. */
+var qaWaitlistId    = null;
+var qaPendingPrefill = null;
 
 function qaGuest()      { return qaGuests[qaActiveGuest]; }
 function qaIsGroup()    { return qaGuests.length > 1; }
+function qaTrayOpen()   { return qaGroupOpen || qaGuests.length > 1; }
 
 /* point qaCart/qaCustomer at guest i and repaint everything that depends on them */
 function qaUseGuest(i) {
@@ -1963,6 +1974,7 @@ function qaUseGuest(i) {
     qaRenderGuests();
     qaRenderCart();
     qaRenderMeta();
+    qaRenderClientCollapsed();
     if (typeof qaRenderClients === 'function') qaRenderClients();
 }
 
@@ -1971,12 +1983,36 @@ function qaSetCustomer(c) {
     qaCustomer = c;
     if (qaGuests[qaActiveGuest]) qaGuests[qaActiveGuest].customer = c;
     qaRenderGuests();
+    qaRenderClientCollapsed();
     qaTouch(); /* autosave */
+}
+
+/* The collapsed client card is static "Add client" copy until someone is chosen;
+   mirror the active guest's customer into it so a prefilled or picked client is
+   visible without expanding the panel. Defaults are captured from the markup. */
+var QA_CLIENT_DEFAULTS = (function () {
+    var t = document.querySelector('#qa-client-collapsed .qa-cl-title');
+    var d = document.querySelector('#qa-client-collapsed .qa-cl-desc');
+    return { title: t ? t.textContent : '', desc: d ? d.textContent : '' };
+})();
+function qaRenderClientCollapsed() {
+    var t = document.querySelector('#qa-client-collapsed .qa-cl-title');
+    var d = document.querySelector('#qa-client-collapsed .qa-cl-desc');
+    if (!t || !d) return;
+    if (qaCustomer && qaCustomer.name) {
+        t.textContent = qaCustomer.name;
+        d.textContent = qaCustomer.phone || QA_CLIENT_DEFAULTS.desc;
+    } else {
+        t.textContent = QA_CLIENT_DEFAULTS.title;
+        d.textContent = QA_CLIENT_DEFAULTS.desc;
+    }
 }
 
 function qaResetGuests() {
     qaGuests      = [{ customer: null, cart: [] }];
     qaActiveGuest = 0;
+    qaGroupOpen   = false;
+    qaNewGuestIdx = -1;
     qaCart        = qaGuests[0].cart;
     qaCustomer    = null;
 }
@@ -2036,7 +2072,22 @@ function qaOpen(ctx, opts) {
     /* opened straight from "+ Add → Group appointment" — start as a party of two */
     if (opts && opts.group && qaGuests.length < 2) qaGuests.push({ customer: null, cart: [] });
 
+    /* a restored draft or a group open lands already in party mode, so the tray
+       stays put if the user later trims back down to a single guest */
+    if (qaGuests.length > 1) qaGroupOpen = true;
+
+    /* Processing a waiting client: carry the entry id (to resolve it after the
+       booking saves) and its services (applied once the branch's list loads). */
+    qaWaitlistId     = (opts && opts.waitlistId) || null;
+    qaPendingPrefill = (opts && opts.prefill && opts.prefill.serviceIds)
+        ? opts.prefill.serviceIds.slice()
+        : null;
+
     qaUseGuest(0);
+
+    if (opts && opts.prefill && opts.prefill.customer) {
+        qaSetCustomer(opts.prefill.customer);
+    }
     document.getElementById('qa-svc-search').value    = '';
     document.getElementById('qa-client-search').value = '';
     document.getElementById('qa-client-collapsed').classList.remove('d-none');
@@ -2141,10 +2192,35 @@ function qaRenderMeta() {
 }
 
 /* ── Services ── */
+
+/* Preload a waiting client's services into the cart, once the branch's service
+   list is available. Runs at most once per open, then clears itself. */
+function qaApplyPendingPrefill() {
+    if (!qaPendingPrefill || !qaPendingPrefill.length) { qaPendingPrefill = null; return; }
+    qaPendingPrefill.forEach(function (id) {
+        var svc = qaServices.find(function (s) { return String(s.id) === String(id); });
+        if (!svc) return;
+        qaCart.push({
+            id:        svc.id,
+            name:      svc.name,
+            price:     parseFloat(svc.price) || 0,
+            origPrice: parseFloat(svc.price) || 0,
+            duration:  parseInt(svc.duration, 10) || 30,
+            currency:  svc.currency || '',
+            empId:     qaCtx.empId || 0,
+            empName:   qaCtx.empName || '',
+        });
+    });
+    qaPendingPrefill = null;
+    qaRenderCart();
+    qaRenderGuests();
+}
+
 function qaLoadServices(branchId) {
     if (qaSvcCache[branchId]) {
         qaServices = qaSvcCache[branchId];
         qaRenderServices();
+        qaApplyPendingPrefill();
         return;
     }
     fetch(BRANCH_DATA_URL + '?branch_id=' + branchId, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
@@ -2153,6 +2229,7 @@ function qaLoadServices(branchId) {
             qaSvcCache[branchId] = data.services || [];
             qaServices = qaSvcCache[branchId];
             qaRenderServices();
+            qaApplyPendingPrefill();
         })
         .catch(function(){
             document.getElementById('qa-svc-list').innerHTML = '<div class="qa-empty">⚠ ' + QA_TXT.bookFail + '</div>';
@@ -2237,13 +2314,17 @@ function qaRenderGuests() {
     var dup  = document.getElementById('qa-dup-guest');
     if (!wrap || !list) return;
 
-    wrap.classList.toggle('d-none', !qaIsGroup());
+    wrap.classList.toggle('d-none', !qaTrayOpen());
     if (dup) dup.classList.toggle('d-none', !qaCart.length);
 
     var cnt = document.getElementById('qa-guests-count');
     if (cnt) cnt.textContent = QA_TXT.guestsN.replace(':n', qaGuests.length);
 
-    if (!qaIsGroup()) { list.innerHTML = ''; return; }
+    if (!qaTrayOpen()) { list.innerHTML = ''; return; }
+
+    /* the base booking is guest 1 and can't be removed on its own — only
+       extra guests carry the ✕, so dropping back to one leaves it standing */
+    var removable = qaGuests.length > 1;
 
     list.innerHTML = qaGuests.map(function(g, i){
         var t    = qaGuestTotals(g);
@@ -2251,16 +2332,20 @@ function qaRenderGuests() {
         var sub  = g.cart.length
             ? g.cart.length + ' · ' + qaFmtDur(t.mins)
             : QA_TXT.noSvcYet;
-        return '<div class="qa-guest-row' + (i === qaActiveGuest ? ' active' : '') + (g.cart.length ? '' : ' empty') + '"'
+        return '<div class="qa-guest-row' + (i === qaActiveGuest ? ' active' : '') + (g.cart.length ? '' : ' empty') + (i === qaNewGuestIdx ? ' is-new' : '') + '"'
             +  ' role="tab" aria-selected="' + (i === qaActiveGuest) + '" data-g="' + i + '" tabindex="0">'
             +    '<div class="qa-guest-av">' + _esc(_initials(name)) + '</div>'
             +    '<div class="qa-guest-txt">'
             +      '<div class="qa-guest-name">' + _esc(name) + '</div>'
             +      '<div class="qa-guest-sub">' + _esc(sub) + '</div>'
             +    '</div>'
-            +    '<button type="button" class="qa-guest-x" data-rm="' + i + '" aria-label="' + QA_TXT.removeGuest + '">✕</button>'
+            +    (removable
+                ? '<button type="button" class="qa-guest-x" data-rm="' + i + '" aria-label="' + QA_TXT.removeGuest + '">✕</button>'
+                : '')
             + '</div>';
     }).join('');
+
+    qaNewGuestIdx = -1;   /* entrance motion is a one-shot; later re-renders stay still */
 }
 
 document.getElementById('qa-guest-list').addEventListener('click', function(e){
@@ -2284,18 +2369,22 @@ document.getElementById('qa-guest-list').addEventListener('keydown', function(e)
 
 document.getElementById('qa-add-guest').addEventListener('click', function(){
     if (qaGuests.length >= 12) { bkToast(QA_TXT.maxGuests, 'error'); return; }
+    qaGroupOpen = true;
     qaGuests.push({ customer: null, cart: [] });
+    qaNewGuestIdx = qaGuests.length - 1;
     qaUseGuest(qaGuests.length - 1);
 });
 
 /* "Same again" — the common case: a family all booking the same thing */
 document.getElementById('qa-dup-guest').addEventListener('click', function(){
     if (qaGuests.length >= 12) { bkToast(QA_TXT.maxGuests, 'error'); return; }
+    qaGroupOpen = true;
     var src = qaGuest();
     qaGuests.push({
         customer: null,
         cart: src.cart.map(function(s){ return Object.assign({}, s); }), /* copy, don't share refs */
     });
+    qaNewGuestIdx = qaGuests.length - 1;
     qaUseGuest(qaGuests.length - 1);
 });
 
@@ -2605,6 +2694,22 @@ function qaSaveSettle() {
     qaRenderCart(); /* restores the button's real label + disabled state */
 }
 
+/* This booking came from the waiting list — take that person off it now that
+   they have a real appointment, so the queue never keeps a booked client. */
+function qaResolveWaitlistBooked() {
+    if (!qaWaitlistId) return;
+    var id = qaWaitlistId;
+    qaWaitlistId = null;
+    var body = new URLSearchParams({ _method: 'PATCH', _token: CSRF, status: 'booked' });
+    fetch(BK.routes.waitlistResolve.replace('__ID__', id), {
+        method:  'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
+        body:    body.toString(),
+    }).then(function () {
+        if (typeof loadWaitlist === 'function') loadWaitlist();
+    }).catch(function () { /* the appointment is booked regardless; the entry just lingers */ });
+}
+
 /* Save → book everything in one appointment */
 document.getElementById('qa-save').addEventListener('click', function(){
     if (qaBooking || !qaCtx) return;
@@ -2659,6 +2764,7 @@ document.getElementById('qa-save').addEventListener('click', function(){
            may stand between a saved appointment and a closed drawer. */
         qaClose();
         qaDraftDiscard();
+        qaResolveWaitlistBooked();
         bkToast(BK.t.appointment_booked_successfully, 'success');
 
         /* optimistic: drop the new appointment onto the grid, no reload.
@@ -2732,6 +2838,7 @@ function qaSaveGroup(btn) {
     bkSubmit(job, function (json) {
         qaClose();
         qaDraftDiscard();
+        qaResolveWaitlistBooked();
 
         /* Say so when a guest had to follow their party-mate rather than start
            with them — moving someone's time silently would be a nasty surprise. */
@@ -3845,6 +3952,11 @@ function bkQuickAdd(date, empId, empName, colBranchId, opts) {
 }
 function _pad2(n) { return String(n).padStart(2, '0'); }
 window.bkQuickAdd = bkQuickAdd;
+/* panels.js (waitlist "Process") opens the booking drawer directly on the
+   entry's branch — expose the pieces it needs across the file's IIFE boundary. */
+window.qaOpen = qaOpen;
+window.bkQuickAddDefaultDate = bkQuickAddDefaultDate;
+window.sfDateStr = sfDateStr;
 
 /* Staff (Fresha-style) view is the default */
 switchView('staff');

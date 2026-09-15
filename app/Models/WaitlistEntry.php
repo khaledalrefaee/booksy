@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\WaitlistPriority;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class WaitlistEntry extends Model
 {
@@ -68,6 +69,20 @@ class WaitlistEntry extends Model
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class);
+    }
+
+    /** Every service this client wants this visit. `service_id` above is the first of them. */
+    public function services(): BelongsToMany
+    {
+        return $this->belongsToMany(Service::class, 'waitlist_entry_service');
+    }
+
+    /** Total minutes across the chosen services, falling back to a manual estimate. */
+    public function totalMinutes(): ?int
+    {
+        $sum = $this->services->sum('duration_minutes');
+
+        return $sum > 0 ? (int) $sum : $this->estimated_minutes;
     }
 
     public function preferredEmployee(): BelongsTo

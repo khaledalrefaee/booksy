@@ -1,4 +1,10 @@
 {
+    "Urgent": "عاجل",
+    "Normal": "عادي",
+    "Flexible": "مرن",
+    "Waiting in the salon right now": "ينتظر في الصالون الآن",
+    "Wants a slot today": "يريد موعداً اليوم",
+    "Any day this week is fine": "أي يوم هذا الأسبوع مناسب",
     "Done.": "تمت العملية بنجاح.",
     "The given data was invalid.": "البيانات المُدخلة غير صحيحة.",
     "You are not allowed to do this.": "لا تملك صلاحية القيام بهذا الإجراء.",

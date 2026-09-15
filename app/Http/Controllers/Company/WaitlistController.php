@@ -41,6 +41,7 @@ class WaitlistController extends Controller
             ->with([
                 'branch:id,name_en,name_ar',
                 'service:id,name_en,name_ar,duration_minutes',
+                'services:id,name_en,name_ar,duration_minutes',
                 'preferredEmployee:id,name_en,name_ar',
                 'customer' => fn ($c) => $c->select('id', 'name', 'phone', 'tag')
                     ->withCount(['appointments as visits_count' => fn ($a) => $a
@@ -57,19 +58,31 @@ class WaitlistController extends Controller
             ->map(function (WaitlistEntry $w) {
                 $tier = $w->customer?->tier() ?? CustomerTier::New;
 
+                /* Prefer the multi-service set; fall back to the single legacy
+                   service so entries created before this feature still render. */
+                $services = $w->services->isNotEmpty()
+                    ? $w->services
+                    : collect(array_filter([$w->service]));
+
                 return [
-                    'id'        => $w->id,
-                    'name'      => $w->displayName(),
-                    'phone'     => $w->customer_phone ?? $w->customer?->phone,
-                    'branch'    => $w->branch?->localizedName(),
-                    'branchId'  => $w->branch_id,
-                    'service'   => $w->service?->localizedName(),
-                    'serviceId' => $w->service_id,
+                    'id'         => $w->id,
+                    'name'       => $w->displayName(),
+                    'phone'      => $w->customer_phone ?? $w->customer?->phone,
+                    'customerId' => $w->customer_id,
+                    'branch'     => $w->branch?->localizedName(),
+                    'branchId'   => $w->branch_id,
+                    'service'    => $services->first()?->localizedName(),
+                    'serviceId'  => $services->first()?->id,
+                    'services'   => $services->map(fn ($s) => [
+                        'id'   => $s->id,
+                        'name' => $s->localizedName(),
+                    ])->values(),
+                    'serviceIds' => $services->pluck('id')->values(),
                     'employee'  => $w->preferredEmployee?->localizedName(),
                     'preferred' => $w->preferred_start?->format('Y-m-d H:i'),
                     'notes'     => $w->notes,
                     'priority'  => $w->priority->value,
-                    'minutes'   => $w->estimated_minutes ?? $w->service?->duration_minutes,
+                    'minutes'   => $w->estimated_minutes ?? ($services->sum('duration_minutes') ?: null),
                     'waited'    => $w->waitedMinutes(),
                     'waitingSince' => $w->created_at->diffForHumans(),
                     'tier'      => [
@@ -96,6 +109,8 @@ class WaitlistController extends Controller
             'customer_name'     => ['required_without:customer_id', 'nullable', 'string', 'max:255'],
             'customer_phone'    => ['nullable', 'string', 'max:30'],
             'service_id'        => ['nullable', 'integer', 'exists:services,id'],
+            'service_ids'       => ['nullable', 'array'],
+            'service_ids.*'     => ['integer', 'exists:services,id'],
             'preferred_employee_id' => ['nullable', 'integer'],
             'priority'          => ['nullable', Rule::enum(WaitlistPriority::class)],
             'estimated_minutes' => ['nullable', 'integer', 'min:5', 'max:600'],
@@ -128,13 +143,28 @@ class WaitlistController extends Controller
            that never expires is a queue nobody trusts. */
         $preferred = isset($data['preferred_start']) ? Carbon::parse($data['preferred_start']) : null;
 
+        /* Resolve the wanted services: the multi-select set wins, otherwise the
+           single legacy field. Keep only services that actually belong to this
+           branch — never trust posted ids — and preserve the pick order. */
+        $wanted = collect($data['service_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->values();
+        if ($wanted->isEmpty() && ! empty($data['service_id'])) {
+            $wanted = collect([(int) $data['service_id']]);
+        }
+        $serviceIds = $wanted->isNotEmpty()
+            ? \App\Models\Service::whereIn('id', $wanted->all())
+                ->where('branch_id', (int) $data['branch_id'])
+                ->pluck('id')
+                ->sortBy(fn ($id) => $wanted->search($id))
+                ->values()
+            : collect();
+
         $entry = WaitlistEntry::create([
             'company_id'            => $company->id,
             'branch_id'             => (int) $data['branch_id'],
             'customer_id'           => $customer?->id,
             'customer_name'         => $data['customer_name'] ?? $customer?->name,
             'customer_phone'        => $data['customer_phone'] ?? $customer?->phone,
-            'service_id'            => $data['service_id'] ?? null,
+            'service_id'            => $serviceIds->first(),
             'preferred_employee_id' => $data['preferred_employee_id'] ?? null,
             'status'                => 'waiting',
             'priority'              => $data['priority'] ?? WaitlistPriority::default(),
@@ -143,6 +173,10 @@ class WaitlistController extends Controller
             'expires_at'            => ($preferred ?? now())->copy()->endOfDay(),
             'notes'                 => $data['notes'] ?? null,
         ]);
+
+        if ($serviceIds->isNotEmpty()) {
+            $entry->services()->sync($serviceIds->all());
+        }
 
         Auditor::log("Added {$entry->displayName()} to the waitlist", $entry);
 
