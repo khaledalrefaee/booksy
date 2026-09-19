@@ -42,6 +42,10 @@
                 <i data-feather="upload"></i>
                 {{ __('Import Excel') }}
             </button>
+            <a href="{{ route('owner.companies.import-data.form') }}" class="cm-btn cm-btn-ghost">
+                <i data-feather="upload-cloud"></i>
+                {{ __('Import from JSON') }}
+            </a>
             <a href="{{ route('owner.companies.export', request()->except('page')) }}"
                class="cm-btn cm-btn-excel" id="cm-export-btn" data-label="{{ __('Export Excel') }}">
                 <i data-feather="download"></i>
@@ -80,6 +84,11 @@
             <span class="cm-stat-label">{{ __('New this month') }}</span>
             <span class="cm-stat-value">{{ number_format($stats['new_month']) }}</span>
         </div>
+        <a class="cm-stat" style="--accent:var(--bk-danger);text-decoration:none;{{ ($trashed ?? '') === 'only' ? 'outline:2px solid var(--bk-danger);' : '' }}"
+           href="{{ ($trashed ?? '') === 'only' ? route('owner.companies.index') : route('owner.companies.index', ['trashed' => 'only']) }}">
+            <span class="cm-stat-label">{{ ($trashed ?? '') === 'only' ? __('Back to active') : __('Closed accounts') }}</span>
+            <span class="cm-stat-value">{{ number_format($stats['closed'] ?? 0) }}</span>
+        </a>
     </section>
 
     {{-- ═══════════ TOOLBAR + FILTERS ═══════════ --}}
@@ -253,20 +262,33 @@
 
                             {{-- Status (inline change form — preserved behavior) --}}
                             <td>
-                                <form method="post" action="{{ route('owner.companies.update-status', $company) }}" class="company-status-form">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="reason" value="">
-                                    <select name="status"
-                                            class="cm-status-select {{ $meta['cls'] }}"
-                                            data-company-name="{{ $company->localizedName() }}"
-                                            data-original-status="{{ $company->status }}"
-                                            onchange="bkStatusChanged(this)">
-                                        <option value="pending"   @selected($company->status === 'pending')>{{ __('Pending') }}</option>
-                                        <option value="active"    @selected($company->status === 'active')>{{ __('Active') }}</option>
-                                        <option value="suspended" @selected($company->status === 'suspended')>{{ __('Suspended') }}</option>
-                                    </select>
-                                </form>
+                                @if ($company->trashed())
+                                    <span class="cm-st-pending" style="display:inline-block;padding:.25rem .6rem;border-radius:999px;background:var(--bk-danger,#dc3545);color:#fff;font-size:.72rem;">
+                                        <i data-feather="power" style="width:12px;height:12px;"></i>
+                                        {{ __('Closed') }} · {{ $company->deleted_at?->format('Y-m-d') }}
+                                    </span>
+                                @else
+                                    <form method="post" action="{{ route('owner.companies.update-status', $company) }}" class="company-status-form">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="reason" value="">
+                                        <select name="status"
+                                                class="cm-status-select {{ $meta['cls'] }}"
+                                                data-company-name="{{ $company->localizedName() }}"
+                                                data-original-status="{{ $company->status }}"
+                                                onchange="bkStatusChanged(this)">
+                                            <option value="pending"   @selected($company->status === 'pending')>{{ __('Pending') }}</option>
+                                            <option value="active"    @selected($company->status === 'active')>{{ __('Active') }}</option>
+                                            <option value="suspended" @selected($company->status === 'suspended')>{{ __('Suspended') }}</option>
+                                        </select>
+                                    </form>
+                                    @if($company->submitted_for_review_at && $company->status === 'pending')
+                                        <span class="cm-review-flag" title="{{ __('The company finished setup and requested review') }}">
+                                            <i data-feather="inbox"></i>
+                                            {{ __('Ready for review') }}
+                                        </span>
+                                    @endif
+                                @endif
                             </td>
 
                             {{-- Created --}}
@@ -282,6 +304,22 @@
                                        class="cm-act" title="{{ __('View') }}" aria-label="{{ __('View') }}">
                                         <i data-feather="eye"></i>
                                     </a>
+                                    @if ($company->trashed())
+                                        <form method="post" action="{{ route('owner.companies.restore', $company) }}"
+                                              data-confirm="{{ __('Restore this account and all its data?') }}" style="display:inline;">
+                                            @csrf
+                                            <button type="submit" class="cm-act" title="{{ __('Restore') }}" aria-label="{{ __('Restore') }}"
+                                                    style="color:var(--bk-success,#198754);">
+                                                <i data-feather="rotate-ccw"></i>
+                                            </button>
+                                        </form>
+                                        <button type="button" class="cm-act cm-act-danger" title="{{ __('Delete permanently') }}" aria-label="{{ __('Delete permanently') }}"
+                                            data-bs-toggle="modal" data-bs-target="#modal-campania-delete"
+                                            data-delete-url="{{ route('owner.companies.destroy', $company) }}"
+                                            data-company-display="{{ $company->localizedName() }}">
+                                            <i data-feather="trash-2"></i>
+                                        </button>
+                                    @else
                                     <button type="button" class="cm-act" title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}"
                                         data-bs-toggle="modal" data-bs-target="#modal-campania-edit"
                                         data-company-id="{{ $company->id }}"
@@ -301,6 +339,7 @@
                                         data-company-display="{{ $company->localizedName() }}">
                                         <i data-feather="trash-2"></i>
                                     </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -530,6 +569,15 @@ html[dir="rtl"] .cm-status-select { padding:7px 14px 7px 30px; background-positi
 .cm-st-active    { color:var(--bk-success); background-color:var(--bk-success-bg); border-color:color-mix(in srgb, var(--bk-success) 30%, transparent); }
 .cm-st-pending   { color:var(--bk-warning); background-color:var(--bk-warning-bg); border-color:color-mix(in srgb, var(--bk-warning) 30%, transparent); }
 .cm-st-suspended { color:var(--bk-danger);  background-color:var(--bk-danger-bg);  border-color:color-mix(in srgb, var(--bk-danger) 30%, transparent); }
+.cm-review-flag{
+    display:inline-flex; align-items:center; gap:5px; margin-top:.4rem;
+    padding:.2rem .55rem; border-radius:999px;
+    font-size:.68rem; font-weight:700;
+    color:var(--bk-gold-strong);
+    background-color:color-mix(in srgb, var(--bk-gold) 14%, transparent);
+    border:1px solid color-mix(in srgb, var(--bk-gold) 34%, transparent);
+}
+.cm-review-flag i{ width:12px; height:12px; }
 .cm-status-select option { background:var(--bk-surface); color:var(--bk-text); }
 
 /* Actions */

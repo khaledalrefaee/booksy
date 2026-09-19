@@ -392,10 +392,7 @@
                                 @endif
                             </div>
                         </div>
-                        <a href="{{ route('company.employees.edit', $emp) }}"
-                           style="flex-shrink:0;padding:6px 12px;border-radius:9px;font-size:12px;font-weight:600;background:rgba(79,172,254,.12);color:#4facfe;text-decoration:none;">
-                            <i data-feather="edit-2" style="width:11px;height:11px;"></i>
-                        </a>
+                        <x-bk-action :href="route('company.employees.edit', $emp)" variant="primary" icon="edit-2" icon-only>{{ __('Edit') }}</x-bk-action>
                     </div>
                     @empty
                     <div class="text-center py-5" style="color:rgba(255,255,255,.3);">

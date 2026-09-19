@@ -51,31 +51,8 @@
 .badge-access-full { background: rgba(255,193,7,.16); color: #ffc107; }
 .bk-theme-light .badge-access-full { background: rgba(255,193,7,.14); color: #9a7a08; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-.emp-actions {
-    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
-    opacity: .85; transition: opacity .2s;
-}
-.emp-scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.emp-scroll-wrap::-webkit-scrollbar { height: 4px; }
-.emp-scroll-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
-.bk-theme-light .emp-scroll-wrap::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); }
-.btn-act {
-    border: none; border-radius: 9px;
-    font-size: 12px; font-weight: 600; padding: 5px 12px;
-    cursor: pointer; transition: opacity .18s, transform .15s;
-    display: inline-flex; align-items: center; gap: 4px;
-    text-decoration: none;
-}
-.btn-act:hover { opacity: .85; transform: scale(.97); }
-.btn-act-leave { background: linear-gradient(135deg,#f093fb,#f5576c); color:#fff !important; }
-.btn-act-edit  { background: linear-gradient(135deg,#4facfe,#00f2fe); color:#fff !important; }
-.btn-act-del {
-    background: transparent; color: rgba(255,255,255,.4) !important;
-    border: 1.5px solid rgba(255,255,255,.15);
-}
-.btn-act-del:hover { border-color: #f5576c; color: #f5576c !important; }
-.bk-theme-light .btn-act-del { color: rgba(0,0,0,.4) !important; border-color: rgba(0,0,0,.15); }
-.bk-theme-light .btn-act-del:hover { border-color: #dc3545; color: #dc3545 !important; }
+/* Row action buttons now use the shared bk-action component (.bk-act / .bk-actions
+   in booksy-custom.css) — the old .btn-act / .emp-actions rules were removed. */
 .bk-empty-emp {
     display: flex; flex-direction: column; align-items: center;
     padding: 60px 20px; gap: 12px; text-align: center;
@@ -296,6 +273,7 @@
                 $palette = ['#5C7038','#f093fb','#4facfe','#43e97b','#fa709a','#a18cd1','#fda085'];
                 $bg = $palette[$emp->id % count($palette)];
                 $initial = strtoupper(mb_substr($emp->name_en ?? $emp->name_ar ?? '?', 0, 1));
+                $empName = app()->getLocale()==='ar' ? ($emp->name_ar ?: $emp->name_en) : ($emp->name_en ?: $emp->name_ar);
             @endphp
             <div class="emp-row js-emp-row"
                  data-search="{{ mb_strtolower(($emp->name_ar ?? '') . ' ' . ($emp->name_en ?? '') . ' ' . ($emp->email ?? '') . ' ' . ($emp->phone ?? '') . ' ' . ($emp->role ? ($emp->role->label_ar ?? '') . ' ' . ($emp->role->label_en ?? '') : '')) }}"
@@ -391,22 +369,13 @@
                     @endif
                 </div>
 
-                <div class="emp-actions">
-                    <a href="{{ route('company.employees.show', $emp) }}" class="btn-act" style="background:rgba(92,112,56,.18);color:#A6BC7E;">
-                        <i data-feather="eye" style="width:11px;height:11px;"></i>{{ __('Show') }}
-                    </a>
-                    <a href="{{ route('company.employee-leaves.create', $emp) }}" class="btn-act btn-act-leave">
-                        <i data-feather="calendar" style="width:11px;height:11px;"></i>{{ __('Leave') }}
-                    </a>
-                    <a href="{{ route('company.employees.deductions.index', $emp) }}" class="btn-act" style="background:rgba(245,87,108,.12);color:#f5576c;">
-                        <i data-feather="minus-circle" style="width:11px;height:11px;"></i>{{ __('Deductions') }}
-                    </a>
-                    <a href="{{ route('company.employees.edit', $emp) }}" class="btn-act btn-act-edit">
-                        <i data-feather="edit-2" style="width:11px;height:11px;"></i>{{ __('Edit') }}
-                    </a>
-                    <button type="button" class="btn-act btn-act-del" onclick="openDeleteModal({{ $emp->id }}, '{{ addslashes(app()->getLocale()==='ar' ? ($emp->name_ar ?: $emp->name_en) : ($emp->name_en ?: $emp->name_ar)) }}')">
-                        <i data-feather="trash-2" style="width:11px;height:11px;"></i>
-                    </button>
+                <div class="bk-actions">
+                    <x-bk-action :href="route('company.employees.show', $emp)" icon="eye">{{ __('Show') }}</x-bk-action>
+                    <x-bk-action :href="route('company.employee-leaves.create', $emp)" icon="calendar">{{ __('Leave') }}</x-bk-action>
+                    <x-bk-action :href="route('company.employees.deductions.index', $emp)" icon="minus-circle">{{ __('Deductions') }}</x-bk-action>
+                    <x-bk-action :href="route('company.employees.edit', $emp)" icon="edit-2" variant="primary">{{ __('Edit') }}</x-bk-action>
+                    <x-bk-action variant="danger" icon="trash-2" icon-only
+                        onclick="openDeleteModal({{ $emp->id }}, '{{ addslashes($empName) }}')">{{ __('Delete') }}</x-bk-action>
                 </div>
             </div>
             @empty
@@ -472,9 +441,11 @@ var DELETE_BASE = '{{ route("company.employees.destroy", "__ID__") }}';
 var currentFilter = 'all';
 
 function openDeleteModal(id, name) {
-    document.getElementById('deleteEmpForm').action = DELETE_BASE.replace('__ID__', id);
-    document.getElementById('deleteEmpName').textContent = name;
-    new bootstrap.Modal(document.getElementById('deleteEmpModal')).show();
+    bkConfirmDelete(
+        DELETE_BASE.replace('__ID__', id),
+        name,
+        @json(__('This will permanently delete this employee and all their data.'))
+    );
 }
 
 function setFilter(filter) {

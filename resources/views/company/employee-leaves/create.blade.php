@@ -229,6 +229,8 @@
                                     <label class="f-label">{{ __('Start Date') }} <span class="text-danger">*</span></label>
                                     <input type="date" name="start_date" id="start_date"
                                            class="f-input form-control @error('start_date') is-invalid @enderror"
+                                           min="{{ \App\Http\Controllers\Company\EmployeeLeaveController::minLeaveDate()->toDateString() }}"
+                                           max="{{ \App\Http\Controllers\Company\EmployeeLeaveController::maxLeaveDate()->toDateString() }}"
                                            value="{{ old('start_date') }}">
                                     @error('start_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
@@ -236,6 +238,8 @@
                                     <label class="f-label">{{ __('End Date') }} <span class="text-danger">*</span></label>
                                     <input type="date" name="end_date" id="end_date"
                                            class="f-input form-control @error('end_date') is-invalid @enderror"
+                                           min="{{ \App\Http\Controllers\Company\EmployeeLeaveController::minLeaveDate()->toDateString() }}"
+                                           max="{{ \App\Http\Controllers\Company\EmployeeLeaveController::maxLeaveDate()->toDateString() }}"
                                            value="{{ old('end_date') }}">
                                     @error('end_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>

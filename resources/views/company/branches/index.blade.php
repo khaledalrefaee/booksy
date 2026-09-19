@@ -49,7 +49,7 @@
                                         @endif
                                     @endforeach
                                     <div class="dropdown-divider"></div>
-                                    <form method="POST" action="{{ route('company.branches.destroy', $branch) }}" onsubmit="return confirm('{{ __('Delete this branch?') }}')">
+                                    <form method="POST" action="{{ route('company.branches.destroy', $branch) }}" data-confirm="{{ __('Delete this branch?') }}">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="dropdown-item text-danger">
                                             <i data-feather="trash-2" class="icon-sm me-1"></i> {{ __('Delete') }}

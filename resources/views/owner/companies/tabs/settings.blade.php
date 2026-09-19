@@ -89,7 +89,7 @@
                 <dt>{{ __('Deposit required') }}</dt><dd>{{ $companyPolicy->deposit_enabled ? __('Yes') : __('No') }}</dd>
             </dl>
             <div class="mt-3">
-                <form method="post" action="{{ $ws->fullEditorAction() }}" onsubmit="return confirm('{{ __('Log in as this company? Every action will be recorded in the audit log.') }}')">
+                <form method="post" action="{{ $ws->fullEditorAction() }}" data-confirm="{{ __('Log in as this company? Every action will be recorded in the audit log.') }}">
                     @csrf<button type="submit" class="bk-btn bk-btn--gold"><i data-feather="external-link"></i> {{ __('Edit in full editor') }}</button>
                 </form>
             </div>

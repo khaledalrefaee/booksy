@@ -137,7 +137,7 @@
                             <td class="bm-end">
                                 <div class="bm-actions">
                                     <a href="{{ route('owner.services.edit', $service) }}" class="bm-act bm-act-primary" title="{{ __('Edit') }}"><i data-feather="edit-2"></i></a>
-                                    <form action="{{ route('owner.services.destroy', $service) }}" method="post" class="d-inline" onsubmit="return confirm('{{ __('Delete this service?') }}');">
+                                    <form action="{{ route('owner.services.destroy', $service) }}" method="post" class="d-inline" data-confirm="{{ __('Delete this service?') }}">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="bm-act bm-act-danger" title="{{ __('Delete') }}"><i data-feather="trash-2"></i></button>

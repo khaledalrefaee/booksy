@@ -16,13 +16,17 @@
       class="bk-theme-{{ $ownerTheme }}">
 <head>
 	<meta name="csrf-token" content="{{ csrf_token() }}">
+	@include('partials.clarity')
 	@include('owner.partials.css')
 	@stack('owner-styles')
 	{{-- Shared partials (e.g. social-links-form) push their CSS here; render it so
 	     those components look identical on the owner dashboard. --}}
 	@stack('company-styles')
 </head>
-<body>
+{{-- data-clarity-mask: owner console shows companies' customer names, phones,
+     emails, salaries & financial data — mask all rendered text in Clarity
+     recordings. Heatmaps & click analytics still work; UI is unaffected. --}}
+<body data-clarity-mask="true">
 	<div class="main-wrapper">
 
 		<!-- partial:partials/_sidebar.html -->
@@ -46,6 +50,12 @@
 
 	<!-- core:js -->
     @include('owner.partials.js')
+
+	{{-- Unified GlowRez toast engine + SweetAlert2 (powers bkConfirm / data-confirm) --}}
+	<link rel="stylesheet" href="{{ asset('vendor/sweetalert2/sweetalert2.min.css') }}">
+	<script src="{{ asset('vendor/sweetalert2/sweetalert2.min.js') }}"></script>
+	@include('partials.glow-toast')
+
 	@stack('scripts')
 	@include('partials.keepalive', ['logoutUrl' => route('owner.logout')])
 	<!-- End custom js for this page -->

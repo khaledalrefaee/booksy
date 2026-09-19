@@ -80,23 +80,32 @@
         } catch (e) {}
     }
 
+    function centerCard() {
+        // Zero-size spotlight in the middle → its shadow dims the whole screen
+        spot.style.display = 'block';
+        spot.style.top = '50vh'; spot.style.left = '50vw';
+        spot.style.width = '0px'; spot.style.height = '0px';
+        card.style.top = '50%';
+        card.style.left = '50%';
+        card.style.transform = 'translate(-50%,-50%)';
+    }
+
     function position() {
         var step = STEPS[i];
-        card.style.maxWidth = '340px';
+        card.style.maxWidth = 'min(340px, calc(100vw - 32px))';
 
-        if (step.center) {
-            // Zero-size spotlight in the middle → its shadow dims the whole screen
-            spot.style.display = 'block';
-            spot.style.top = '50vh'; spot.style.left = '50vw';
-            spot.style.width = '0px'; spot.style.height = '0px';
-            card.style.top = '50%';
-            card.style.left = '50%';
-            card.style.transform = 'translate(-50%,-50%)';
-            return;
-        }
-        var el = document.querySelector(step.el);
-        if (!el) { next(); return; }
-        var r = el.getBoundingClientRect();
+        if (step.center) { centerCard(); return; }
+
+        var el = step.el ? document.querySelector(step.el) : null;
+        var r  = el ? el.getBoundingClientRect() : null;
+        // On mobile the sidebar targets are hidden OR pushed off-canvas (they
+        // keep a size but sit outside the viewport). Skipping would cascade
+        // through every step and close the tour; anchoring to an off-screen
+        // element would fling the card off-screen. Either way, centre the card.
+        var visible = r && r.width > 0 && r.height > 0 &&
+                      r.right > 0 && r.bottom > 0 &&
+                      r.left < window.innerWidth && r.top < window.innerHeight;
+        if (!visible) { centerCard(); return; }
         var pad = 6;
 
         spot.style.display = 'block';
@@ -120,7 +129,7 @@
 
     function render() {
         var step = STEPS[i];
-        if (step.section && window.bkShowSection) window.bkShowSection(step.section);
+        if (step.section && window.bkShowSection && window.matchMedia('(min-width: 992px)').matches) window.bkShowSection(step.section);
         elTitle.textContent = step.title;
         elText.textContent  = step.text;
         elStep.textContent  = (i + 1) + ' / ' + STEPS.length;

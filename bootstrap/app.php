@@ -61,6 +61,14 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Email the team a summary of every unhandled 500 (page URL + trace).
+        // Laravel already filters out the "expected" exceptions (404/419/auth/
+        // validation/…) before report callbacks run; ExceptionMailer adds its
+        // own env gate, 4xx guard and de-duplication, and can never throw.
+        $exceptions->report(function (\Throwable $e): void {
+            \App\Support\ExceptionMailer::report($e);
+        });
+
         // A CSRF token goes stale when a page — most often a login form — is left
         // open longer than the session lifetime. Rather than showing the raw 419
         // "Page expired" screen, send the visitor back to the form they just

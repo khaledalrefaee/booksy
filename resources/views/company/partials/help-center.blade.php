@@ -11,6 +11,18 @@
     $pct = $bkOnboarding['percent'] ?? 0;
 @endphp
 
+<style>
+/* Robust against short viewports: the body scrolls, header/footer stay put,
+   and on phones it becomes a bottom sheet so the top can never clip off-screen. */
+#bkHelpModal .modal-content{ max-height:calc(100dvh - 1rem); }
+@media (max-width: 575.98px){
+  #bkHelpModal .modal-dialog{ margin:0; max-width:100%; min-height:100%; align-items:flex-end; }
+  #bkHelpModal .modal-content{ max-height:90dvh; border-radius:20px 20px 0 0 !important; }
+  #bkHelpModal .modal-header{ position:relative; }
+  #bkHelpModal .modal-header::before{ content:''; position:absolute; top:8px; inset-inline-start:50%; transform:translateX(-50%); width:38px; height:4px; border-radius:2px; background:var(--bk-border-strong); opacity:.6; }
+}
+</style>
+
 <div class="modal fade" id="bkHelpModal" tabindex="-1" aria-labelledby="bkHelpModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content" style="border-radius:16px;overflow:hidden;">

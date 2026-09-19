@@ -5,6 +5,7 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>GlowRez Business</title>
 <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
+<link href="{{ asset('fonts/glowrez-type.css') }}?v={{ @filemtime(public_path('fonts/glowrez-type.css')) ?: '1' }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('backend/assets/vendors/core/core.css') }}">
 <link rel="stylesheet" href="{{ asset('backend/assets/vendors/flatpickr/flatpickr.min.css') }}">
 <link rel="stylesheet" href="{{ asset('backend/assets/fonts/feather-font/css/iconfont.css') }}">

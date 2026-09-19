@@ -4,15 +4,17 @@
 <link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}">
 <style>
 .att-hero {
-    background:linear-gradient(135deg,#0f3460 0%,#16213e 50%,#1a1a2e 100%);
+    background:linear-gradient(135deg,#3C4B29 0%,#4B5D34 48%,#5C7038 100%);
     border-radius:22px; padding:28px 30px 22px; margin-bottom:20px;
     position:relative; overflow:hidden; color:#fff;
+    box-shadow:0 10px 30px rgba(59,75,41,.28);
 }
 .att-hero::before {
-    content:''; position:absolute; top:-60px; right:-60px;
-    width:200px; height:200px; border-radius:50%;
-    background:rgba(34,197,94,.08); pointer-events:none;
+    content:''; position:absolute; top:-70px; right:-40px;
+    width:220px; height:220px; border-radius:50%;
+    background:radial-gradient(circle,rgba(199,161,90,.22) 0%,rgba(199,161,90,0) 70%); pointer-events:none;
 }
+[dir="rtl"] .att-hero::before { right:auto; left:-40px; }
 .att-chip {
     background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08);
     border-radius:14px; padding:14px 18px; text-align:center; min-width:100px;
@@ -56,10 +58,10 @@
     border-radius:20px; border:none; cursor:pointer; transition:all .12s;
 }
 .att-btn:disabled { opacity:.4; cursor:not-allowed; }
-.att-btn-checkin  { background:rgba(34,197,94,.15); color:#22c55e; }
-.att-btn-checkin:hover:not(:disabled) { background:rgba(34,197,94,.25); }
-.att-btn-checkout { background:rgba(92,112,56,.15); color:#5C7038; }
-.att-btn-checkout:hover:not(:disabled) { background:rgba(92,112,56,.25); }
+.att-btn-checkin  { background:var(--bk-accent-fill); color:var(--bk-accent-ink); box-shadow:0 3px 10px color-mix(in srgb,var(--bk-accent) 30%,transparent); }
+.att-btn-checkin:hover:not(:disabled) { background:var(--bk-accent-hover); color:var(--bk-accent-ink); }
+.att-btn-checkout { background:color-mix(in srgb,var(--bk-gold) 18%,transparent); color:var(--bk-gold-strong); }
+.att-btn-checkout:hover:not(:disabled) { background:color-mix(in srgb,var(--bk-gold) 30%,transparent); }
 .att-btn-absent   { background:rgba(239,68,68,.1); color:#ef4444; }
 .att-btn-absent:hover:not(:disabled) { background:rgba(239,68,68,.2); }
 
@@ -138,7 +140,7 @@
             </div>
             @endif
             <div class="att-chip">
-                <div class="att-chip-num" style="color:#5C7038;">{{ $stats['pct'] }}%</div>
+                <div class="att-chip-num" style="color:#E4C588;">{{ $stats['pct'] }}%</div>
                 <div class="att-chip-lbl">{{ __('Attendance %') }}</div>
             </div>
         </div>
@@ -383,13 +385,13 @@
 {{-- Map Modal --}}
 <div class="modal fade" id="mapModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width:500px;">
-        <div class="modal-content" style="border-radius:18px;background:var(--card-bg, #1a1f2e);overflow:hidden;">
+        <div class="modal-content" style="border-radius:18px;background:var(--bk-surface);color:var(--bk-text);border:1px solid var(--bk-border);overflow:hidden;">
             <div class="modal-header border-0 pb-0 px-4 pt-3">
                 <h6 class="modal-title fw-bold" id="mapTitle">📍 {{ __('Check-in Location') }}</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-3">
-                <div id="mapContainer" style="width:100%;height:300px;border-radius:14px;overflow:hidden;background:#1e293b;"></div>
+                <div id="mapContainer" style="width:100%;height:300px;border-radius:14px;overflow:hidden;background:var(--bk-surface-2);"></div>
                 <div class="d-flex justify-content-between mt-2 px-1">
                     <span class="tx-11 text-muted" id="mapDistance"></span>
                     <span class="tx-11 text-muted" id="mapCoords"></span>
@@ -402,7 +404,7 @@
 {{-- Confirm Deduction Modal --}}
 <div class="modal fade" id="deductModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
-        <div class="modal-content" style="border-radius:16px;background:var(--card-bg, #1a1f2e);">
+        <div class="modal-content" style="border-radius:16px;background:var(--bk-surface);color:var(--bk-text);border:1px solid var(--bk-border);">
             <form method="POST" id="deductForm">
                 @csrf
                 <div class="modal-body text-center p-4">
@@ -425,7 +427,7 @@
                     </div>
 
                     <div class="d-flex gap-2 justify-content-center">
-                        <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="button" class="btn btn-sm rounded-pill px-4" style="background:var(--bk-surface-2);color:var(--bk-text-soft);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
                         <button type="submit" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold">💸 {{ __('Confirm deduction') }}</button>
                     </div>
                 </div>
@@ -437,7 +439,7 @@
 {{-- Correct Record Modal --}}
 <div class="modal fade" id="fixModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width:380px;">
-        <div class="modal-content" style="border-radius:16px;background:var(--card-bg, #1a1f2e);">
+        <div class="modal-content" style="border-radius:16px;background:var(--bk-surface);color:var(--bk-text);border:1px solid var(--bk-border);">
             <form method="POST" id="fixForm">
                 @csrf @method('PUT')
                 <div class="modal-header border-0 pb-0 px-4 pt-3">
@@ -464,8 +466,8 @@
                         ℹ️ {{ __('Lateness, overtime and early-leave are recalculated automatically from the shift schedule.') }}
                     </div>
                     <div class="d-flex gap-2 justify-content-end">
-                        <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                        <button type="submit" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold">{{ __('Save') }}</button>
+                        <button type="button" class="btn btn-sm rounded-pill px-4" style="background:var(--bk-surface-2);color:var(--bk-text-soft);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="submit" class="btn btn-sm rounded-pill px-4 fw-bold" style="background:var(--bk-accent-fill);color:var(--bk-accent-ink);border:none;">{{ __('Save') }}</button>
                     </div>
                 </div>
             </form>
@@ -476,7 +478,7 @@
 {{-- Absent Modal --}}
 <div class="modal fade" id="absentModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content" style="border-radius:16px;background:var(--card-bg, #1a1f2e);">
+        <div class="modal-content" style="border-radius:16px;background:var(--bk-surface);color:var(--bk-text);border:1px solid var(--bk-border);">
             <form method="POST" action="{{ route('company.attendance.mark-absent') }}" id="absentForm">
                 @csrf
                 <input type="hidden" name="employee_id" id="absent-emp-id">
@@ -489,11 +491,43 @@
                         <input type="text" name="notes" class="form-control form-control-sm" placeholder="{{ __('e.g. sick leave, no show...') }}">
                     </div>
                     <div class="d-flex gap-2 justify-content-center">
-                        <button type="button" class="btn btn-sm rounded-pill px-4" style="background:rgba(255,255,255,.07);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="button" class="btn btn-sm rounded-pill px-4" style="background:var(--bk-surface-2);color:var(--bk-text-soft);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
                         <button type="submit" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold">{{ __('Mark Absent') }}</button>
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+{{-- Location permission / GPS error modal --}}
+<div class="modal fade" id="geoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content" style="border-radius:18px;background:var(--bk-surface);color:var(--bk-text);border:1px solid var(--bk-border);overflow:hidden;">
+            <div class="modal-body text-center p-4">
+                <div id="geoIconWrap" style="width:64px;height:64px;border-radius:20px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:30px;background:var(--bk-warning-bg);">
+                    <span id="geoIcon">📍</span>
+                </div>
+                <h6 class="fw-bold mb-2" id="geoTitle"></h6>
+                <p class="text-muted tx-13 mb-3" id="geoMsg" style="line-height:1.7;"></p>
+
+                <div id="geoSteps" class="text-start p-3 rounded-3 mb-3" style="background:var(--bk-accent-wash);border:1px solid color-mix(in srgb,var(--bk-accent) 20%,transparent);display:none;">
+                    <div class="fw-bold tx-12 mb-2" style="color:var(--bk-accent);">🔓 {{ __('How to enable location') }}</div>
+                    <ol class="tx-12 mb-0 text-muted" style="padding-inline-start:18px;line-height:2;">
+                        <li>{{ __('Click the lock or site-info icon next to the address bar.') }}</li>
+                        <li>{{ __('Find "Location" and switch it to Allow.') }}</li>
+                        <li>{{ __('Then press "Try again" below.') }}</li>
+                    </ol>
+                </div>
+
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-sm rounded-pill px-4" style="background:var(--bk-surface-2);color:var(--bk-text-soft);font-weight:600;" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="button" id="geoRetryBtn" class="btn btn-sm rounded-pill px-4 fw-bold d-inline-flex align-items-center gap-1"
+                            style="background:var(--bk-accent-fill);color:var(--bk-accent-ink);border:none;" onclick="bkGeoRetryNow()">
+                        <i data-feather="refresh-cw" style="width:13px;height:13px;"></i> {{ __('Try again') }}
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -546,50 +580,108 @@ function openAbsentModal(empId, empName) {
     new bootstrap.Modal(document.getElementById('absentModal')).show();
 }
 
-function gpsCheckin(empId) {
-    var btn = event.target;
-    btn.disabled = true;
-    btn.textContent = '{{ __("Getting GPS...") }}';
+// ── Location handling ─────────────────────────────────────────────
+// One place to request the browser location. Any failure (permission
+// denied, position unavailable, timeout, unsupported) opens a branded
+// modal with clear guidance and a working "Try again" button, instead
+// of a raw "User denied Geolocation" alert.
+var bkGeoRetry = null;
+
+var BK_GEO = {
+    denied:      { icon:'🚫', steps:true,  title:'{{ __('Location access is blocked') }}',
+                   msg:'{{ __('Your browser is blocking location access, so check-in cannot be completed. Attendance needs your location to confirm you are at the branch.') }}' },
+    unavailable: { icon:'📡', steps:false, title:'{{ __('Location unavailable') }}',
+                   msg:'{{ __('We could not determine your location right now. Make sure location / GPS is turned on, then try again.') }}' },
+    timeout:     { icon:'⏳', steps:false, title:'{{ __('Location timed out') }}',
+                   msg:'{{ __('Getting your location took too long. Check your GPS signal or connection and try again.') }}' },
+    unsupported: { icon:'🧭', steps:false, title:'{{ __('Location not supported') }}',
+                   msg:'{{ __('This browser does not support location services, so GPS check-in is unavailable. Try a modern browser such as Chrome.') }}' }
+};
+
+function bkOpenGeoModal(kind) {
+    var cfg = BK_GEO[kind] || BK_GEO.unavailable;
+    document.getElementById('geoIcon').textContent   = cfg.icon;
+    document.getElementById('geoTitle').textContent  = cfg.title;
+    document.getElementById('geoMsg').textContent    = cfg.msg;
+    document.getElementById('geoSteps').style.display   = cfg.steps ? 'block' : 'none';
+    document.getElementById('geoRetryBtn').style.display = (kind === 'unsupported') ? 'none' : 'inline-flex';
+    var el = document.getElementById('geoModal');
+    (bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el)).show();
+}
+
+function bkGeoErrKind(err) {
+    if (!err) return 'unavailable';
+    if (err.code === 1) return 'denied';       // PERMISSION_DENIED
+    if (err.code === 3) return 'timeout';       // TIMEOUT
+    return 'unavailable';                        // POSITION_UNAVAILABLE / other
+}
+
+// done(lat, lng) on success; onReset() to restore the trigger button on failure.
+function bkRequestLocation(done, onReset) {
+    bkGeoRetry = function () { bkRequestLocation(done, onReset); };
 
     if (!navigator.geolocation) {
-        alert('{{ __("GPS not supported") }}');
-        btn.disabled = false;
-        btn.textContent = '📍 {{ __("Check In") }}';
+        if (onReset) onReset();
+        bkOpenGeoModal('unsupported');
         return;
     }
 
     navigator.geolocation.getCurrentPosition(
-        function(pos) {
-            document.getElementById('lat-' + empId).value = pos.coords.latitude;
-            document.getElementById('lng-' + empId).value = pos.coords.longitude;
-            document.getElementById('checkin-form-' + empId).submit();
+        function (pos) {
+            var el = document.getElementById('geoModal');
+            var inst = bootstrap.Modal.getInstance(el);
+            if (inst) inst.hide();
+            done(pos.coords.latitude, pos.coords.longitude);
         },
-        function(err) {
-            alert('{{ __("GPS error") }}: ' + err.message);
-            btn.disabled = false;
-            btn.textContent = '📍 {{ __("Check In") }}';
+        function (err) {
+            if (onReset) onReset();
+            bkOpenGeoModal(bkGeoErrKind(err));
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
 }
 
-function gpsCheckout(recordId) {
-    var btn = event.target;
-    btn.disabled = true;
-    btn.textContent = '{{ __("Getting GPS...") }}';
+function bkGeoRetryNow() {
+    var el = document.getElementById('geoModal');
+    var inst = bootstrap.Modal.getInstance(el);
+    if (inst) inst.hide();
+    if (typeof bkGeoRetry === 'function') bkGeoRetry();
+}
 
-    navigator.geolocation.getCurrentPosition(
-        function(pos) {
-            document.getElementById('co-lat-' + recordId).value = pos.coords.latitude;
-            document.getElementById('co-lng-' + recordId).value = pos.coords.longitude;
+function bkSetLoading(btn, text) {
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = text;
+}
+function bkResetBtn(btn, text) {
+    if (!btn) return;
+    btn.disabled = false;
+    btn.textContent = text;
+}
+
+function gpsCheckin(empId) {
+    var btn = document.querySelector('#checkin-form-' + empId + ' button');
+    bkSetLoading(btn, '{{ __("Getting GPS...") }}');
+    bkRequestLocation(
+        function (lat, lng) {
+            document.getElementById('lat-' + empId).value = lat;
+            document.getElementById('lng-' + empId).value = lng;
+            document.getElementById('checkin-form-' + empId).submit();
+        },
+        function () { bkResetBtn(btn, '📍 {{ __("Check In") }}'); }
+    );
+}
+
+function gpsCheckout(recordId) {
+    var btn = document.querySelector('#checkout-form-' + recordId + ' button');
+    bkSetLoading(btn, '{{ __("Getting GPS...") }}');
+    bkRequestLocation(
+        function (lat, lng) {
+            document.getElementById('co-lat-' + recordId).value = lat;
+            document.getElementById('co-lng-' + recordId).value = lng;
             document.getElementById('checkout-form-' + recordId).submit();
         },
-        function(err) {
-            alert('{{ __("GPS error") }}: ' + err.message);
-            btn.disabled = false;
-            btn.textContent = '🚪 {{ __("Check Out") }}';
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        function () { bkResetBtn(btn, '🚪 {{ __("Check Out") }}'); }
     );
 }
 

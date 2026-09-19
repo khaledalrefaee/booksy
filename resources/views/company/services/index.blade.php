@@ -464,5 +464,5 @@ window.WB_BOOT = {
 };
 </script>
 <script src="{{ asset('backend/assets/vendors/sortable.min.js') }}"></script>
-<script src="{{ asset('backend/assets/vendors/services-workbench.js') }}?v=4"></script>
+<script src="{{ asset('backend/assets/vendors/services-workbench.js') }}?v=5"></script>
 @endpush

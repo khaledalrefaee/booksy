@@ -68,7 +68,7 @@
                                                     <i data-feather="edit-2" style="width:13px;"></i>
                                                 </button>
                                                 <form method="POST" action="{{ route('company.service-categories.destroy', $cat) }}" class="d-inline"
-                                                    onsubmit="return confirm('{{ __('Delete this category?') }}')">
+                                                    data-confirm="{{ __('Delete this category?') }}">
                                                     @csrf @method('DELETE')
                                                     <button type="submit" class="btn btn-sm btn-outline-danger" {{ $cat->services_count > 0 ? 'disabled' : '' }}>
                                                         <i data-feather="trash-2" style="width:13px;"></i>

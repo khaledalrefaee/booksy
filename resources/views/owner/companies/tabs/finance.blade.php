@@ -21,7 +21,7 @@
             <div class="bk-kpi" data-accent="gold"><div class="bk-kpi-label"><i data-feather="trending-up"></i> {{ __('Net') }}</div><div class="bk-kpi-num">{{ $ws->money($income - $expense) }}</div></div>
         </div>
         <div class="bk-card"><div class="bk-card-head"><h3 class="bk-card-title"><i data-feather="credit-card"></i> {{ __('Recent cash entries') }}</h3>
-            <form method="post" action="{{ $ws->fullEditorAction() }}" onsubmit="return confirm('{{ __('Log in as this company? Every action will be recorded in the audit log.') }}')">
+            <form method="post" action="{{ $ws->fullEditorAction() }}" data-confirm="{{ __('Log in as this company? Every action will be recorded in the audit log.') }}">
                 @csrf<button class="bk-btn bk-btn--gold bk-btn--sm"><i data-feather="edit"></i> {{ __('Manage cash') }}</button></form>
         </div>
         <div class="bk-card-body p0">

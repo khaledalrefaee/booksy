@@ -72,7 +72,7 @@
 
 <div class="mt-4">
     <form method="post" action="{{ $ws->fullEditorAction() }}"
-          onsubmit="return confirm('{{ __('Log in as this company? Every action will be recorded in the audit log.') }}')">
+          data-confirm="{{ __('Log in as this company? Every action will be recorded in the audit log.') }}">
         @csrf
         <button type="submit" class="bk-btn bk-btn--gold"><i data-feather="external-link"></i> {{ __('Open full editor') }}</button>
     </form>

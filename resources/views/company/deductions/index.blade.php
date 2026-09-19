@@ -151,8 +151,8 @@
                                     <span class="text-muted">—</span>
                                 @endif
                             </td>
-                            <td class="text-muted small" style="max-width:160px;">
-                                <span class="text-truncate d-block" title="{{ $ded->notes }}">{{ $ded->notes ?: '—' }}</span>
+                            <td class="text-muted small" style="max-width:220px;">
+                                <span class="d-block" style="white-space:normal;word-break:break-word;" title="{{ $ded->notes }}">{{ $ded->notes ?: '—' }}</span>
                             </td>
                             <td class="pe-4 text-end">
                                 <button type="button" class="btn btn-sm btn-outline-danger rounded-pill"

@@ -45,7 +45,7 @@
             <div class="bk-ws-head-actions">
                 @can('owner-can', 'companies.impersonate')
                 <form method="post" action="{{ route('owner.companies.impersonate', $company) }}" class="mb-0"
-                      onsubmit="return confirm('{{ __('Log in as this company? Every action will be recorded in the audit log.') }}')">
+                      data-confirm="{{ __('Log in as this company? Every action will be recorded in the audit log.') }}">
                     @csrf
                     <button type="submit" class="bk-btn bk-btn--gold">
                         <i data-feather="log-in"></i> {{ __('Login as company') }}

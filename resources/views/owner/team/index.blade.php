@@ -118,7 +118,7 @@
                                     <button type="button" class="bm-act dropdown-toggle" data-bs-toggle="dropdown" data-bs-boundary="viewport" title="{{ __('More') }}"><i data-feather="more-horizontal"></i></button>
                                     <ul class="dropdown-menu dropdown-menu-end bm-menu">
                                         <li>
-                                            <form method="POST" action="{{ route('owner.team.reset-password', $m) }}" onsubmit="return confirm('{{ __('Generate a new temporary password?') }}');">
+                                            <form method="POST" action="{{ route('owner.team.reset-password', $m) }}" data-confirm="{{ __('Generate a new temporary password?') }}">
                                                 @csrf
                                                 <button type="submit" class="dropdown-item"><i data-feather="key"></i>{{ __('Reset password') }}</button>
                                             </form>
@@ -134,7 +134,7 @@
                                         </li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
-                                            <form method="POST" action="{{ route('owner.team.destroy', $m) }}" onsubmit="return confirm('{{ __('Delete this member? This cannot be undone.') }}');">
+                                            <form method="POST" action="{{ route('owner.team.destroy', $m) }}" data-confirm="{{ __('Delete this member? This cannot be undone.') }}">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="dropdown-item text-danger"><i data-feather="trash-2"></i>{{ __('Delete member') }}</button>
                                             </form>

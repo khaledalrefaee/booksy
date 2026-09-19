@@ -15,7 +15,7 @@
         </div>
         <div class="bm-head-actions">
             <form method="POST" action="{{ route('owner.team.reset-password', $employee) }}"
-                  onsubmit="return confirm('{{ __('Generate a new temporary password for this member?') }}');">
+                  data-confirm="{{ __('Generate a new temporary password for this member?') }}">
                 @csrf
                 <button type="submit" class="bm-btn bm-btn-gold"><i data-feather="key"></i>{{ __('Reset password') }}</button>
             </form>

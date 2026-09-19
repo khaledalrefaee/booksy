@@ -12,7 +12,7 @@
     $isAr = app()->getLocale() === 'ar';
 @endphp
 
-<div class="page-content">
+<div class="page-content bk-dash">
 
 {{-- ════ SUBSCRIPTION EXPIRY BANNER ════ --}}
 @php
@@ -39,35 +39,7 @@
     </div>
 @endif
 
-{{-- ════ PENDING APPROVAL STATUS ════ --}}
-@if($company->status === 'pending')
-<div class="card border-0 shadow-sm rounded-4 mb-4" style="border-inline-start:4px solid var(--bk-warning) !important;">
-    <div class="card-body d-flex flex-column flex-md-row align-items-md-center gap-3">
-        <div class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-4"
-             style="width:56px;height:56px;background:var(--bk-warning-bg);color:var(--bk-warning);">
-            <i data-feather="clock" style="width:26px;height:26px;"></i>
-        </div>
-        <div class="flex-grow-1">
-            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                <h5 class="fw-bold mb-0">{{ __('Your account was created successfully') }}</h5>
-                <span class="badge rounded-pill" style="background:var(--bk-warning-bg);color:var(--bk-warning);font-weight:700;font-size:.66rem;padding:4px 10px;">
-                    <i data-feather="loader" style="width:11px;height:11px;vertical-align:-1px;"></i>
-                    {{ __('Pending approval') }}
-                </span>
-            </div>
-            <p class="text-muted tx-13 mb-2">
-                {{ __('We are reviewing your account and will approve it shortly. Once approved, your business will be visible and ready to accept clients.') }}
-            </p>
-            <div class="d-flex flex-wrap gap-3 tx-12 text-muted">
-                <span><i data-feather="calendar" style="width:13px;height:13px;vertical-align:-2px;"></i> {{ __('Created on') }}: <strong>{{ $company->created_at?->translatedFormat('d M Y') }}</strong></span>
-                <span><i data-feather="activity" style="width:13px;height:13px;vertical-align:-2px;"></i> {{ __('Request status') }}: <strong style="color:var(--bk-warning);">{{ __('Under review') }}</strong></span>
-            </div>
-        </div>
-    </div>
-</div>
-@endif
-
-{{-- ════ ONBOARDING SETUP CHECKLIST ════ --}}
+{{-- ════ SETUP RAIL — unified approval status + onboarding ════ --}}
 @php
     $obSteps      = $onboarding['steps'] ?? [];
     $obPct        = $onboarding['percent'] ?? 100;
@@ -87,76 +59,143 @@
         ['key' => 'service',       'icon' => 'scissors', 'title' => __('Add your first service'),   'required' => true,
             'url' => $obHo ? route('company.branches.services.create', $obHo) : route('company.branches.index')],
     ];
+    $obSubmitted = $onboarding['submittedForReview'] ?? false;
+    // The rail is the path to going live, so it stays until the owner approves
+    // the account (status → active). Collapsing (client-side) tucks it away
+    // without losing the "submit for review" action.
+    $showRail    = ! $obPublished;
+    $obDone      = collect($obList)->filter(fn ($s) => (bool) ($obSteps[$s['key']] ?? false))->count();
+    $obTotal     = count($obList);
 @endphp
-@if(! $obDismissed && ! $obPublished)
-<div class="card border-0 shadow-sm rounded-4 mb-4" style="border-inline-start:4px solid var(--bk-accent) !important;">
-    <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
-            <div>
-                <h5 class="fw-bold mb-1">🚀 {{ __('Welcome to GlowRez Business!') }}</h5>
-                <p class="text-muted tx-13 mb-0">{{ __('Complete the required steps, then publish your business to appear on GlowRez.') }}</p>
-            </div>
-            <form method="POST" action="{{ route('company.onboarding.dismiss') }}" class="m-0">
-                @csrf
-                <button type="submit" class="btn btn-sm btn-link text-muted p-0" title="{{ __('Dismiss') }}" aria-label="{{ __('Dismiss') }}">
-                    <i data-feather="x" style="width:16px;height:16px;"></i>
-                </button>
-            </form>
-        </div>
-
-        <div class="d-flex align-items-center gap-2 mb-3">
-            <div class="progress flex-grow-1" style="height:8px;background:var(--bk-border);border-radius:6px;">
-                <div class="progress-bar" role="progressbar" style="width:{{ $obPct }}%;background:var(--bk-accent);"
-                     aria-valuenow="{{ $obPct }}" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-            <span class="tx-13 fw-bold flex-shrink-0" style="color:var(--bk-accent);">{{ $obPct }}%</span>
-        </div>
-
-        <div class="row g-2">
-            @foreach($obList as $s)
-                @php $done = $obSteps[$s['key']] ?? false; @endphp
-                <div class="col-sm-6 col-lg-3">
-                    <a href="{{ $s['url'] }}"
-                       class="d-flex align-items-center gap-2 p-2 rounded-3 text-decoration-none h-100"
-                       style="border:1px solid var(--bk-border);{{ $done ? 'background:var(--bk-success-bg);' : '' }}">
-                        <span class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-circle"
-                              style="width:30px;height:30px;background:{{ $done ? 'var(--bk-success)' : 'var(--bk-accent-wash)' }};color:{{ $done ? '#fff' : 'var(--bk-accent)' }};">
-                            <i data-feather="{{ $done ? 'check' : $s['icon'] }}" style="width:14px;height:14px;"></i>
-                        </span>
-                        <span class="d-flex flex-column">
-                            <span class="tx-12 fw-semibold" style="color:var(--bk-text);{{ $done ? 'text-decoration:line-through;opacity:.7;' : '' }}">{{ $s['title'] }}</span>
-                            <span class="tx-10 {{ $s['required'] ? 'text-danger' : 'text-muted' }}">{{ $s['required'] ? __('Required') : __('Optional') }}</span>
-                        </span>
-                    </a>
+@if($showRail)
+<section id="bkSetup" class="bk-setup" aria-label="{{ __('Business setup') }}">
+    <header class="bk-setup-head">
+        <div class="bk-setup-lead">
+            <span class="bk-setup-ic" aria-hidden="true">
+                <i data-feather="{{ $obSubmitted ? 'clock' : 'flag' }}"></i>
+            </span>
+            <div class="bk-setup-heading">
+                <h2 class="bk-setup-title">
+                    {{ $obSubmitted ? __('Your business is under review') : __('Complete your business setup') }}
+                </h2>
+                <div class="bk-setup-meta">
+                    @if($obSubmitted)
+                        <span class="bk-setup-chip"><span class="dot" aria-hidden="true"></span>{{ __('Under review') }}</span>
+                    @endif
+                    <span class="bk-setup-count"><b>{{ $obDone }}</b> / {{ $obTotal }} {{ __('steps') }}</span>
                 </div>
-            @endforeach
+            </div>
         </div>
 
-        <div class="d-flex align-items-center flex-wrap gap-2 mt-3">
-            @if($obCanPublish)
-                <form method="POST" action="{{ route('company.onboarding.publish') }}" class="m-0">
-                    @csrf
-                    <button type="submit" class="btn btn-sm rounded-pill px-4 fw-semibold text-white" style="background:var(--bk-accent);">
-                        <i data-feather="globe" style="width:14px;height:14px;vertical-align:-2px;"></i>
-                        {{ __('Publish my business') }}
-                    </button>
-                </form>
-                <span class="tx-12 text-muted">{{ __('You can add your logo & team anytime later.') }}</span>
-            @else
-                <button type="button" class="btn btn-sm rounded-pill px-4 fw-semibold" disabled
-                        style="background:var(--bk-border);color:var(--bk-text-muted);cursor:not-allowed;">
-                    <i data-feather="lock" style="width:14px;height:14px;vertical-align:-2px;"></i>
-                    {{ __('Publish my business') }}
-                </button>
-                <span class="tx-12 text-muted">{{ __('Finish the required steps above to go live.') }}</span>
-            @endif
-            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 ms-auto" data-bs-toggle="modal" data-bs-target="#bkHelpModal">
-                <i data-feather="help-circle" style="width:13px;height:13px;vertical-align:-2px;"></i>
-                {{ __('Need help?') }}
+        <div class="bk-setup-controls">
+            <div class="bk-setup-meter" role="progressbar" aria-valuenow="{{ $obPct }}" aria-valuemin="0" aria-valuemax="100"
+                 aria-label="{{ $obPct }}%">
+                <span style="width:{{ $obPct }}%;"></span>
+            </div>
+            <button type="button" class="bk-setup-toggle" aria-expanded="true" aria-controls="bkSetupBody">
+                <span>{{ __('Steps') }}</span>
+                <i data-feather="chevron-up"></i>
             </button>
         </div>
+    </header>
+
+    <div id="bkSetupBody" class="bk-setup-body">
+        <div class="bk-setup-body-inner">
+            <div class="bk-setup-body-pad">
+                @if($obSubmitted)
+                <p class="bk-setup-note">
+                    {{ __('We are reviewing your account and will approve it shortly. Once approved, your business will be visible and ready to accept clients.') }}
+                    <br>
+                    <i data-feather="calendar" style="width:13px;height:13px;vertical-align:-2px;"></i>
+                    {{ __('Created on') }} <b>{{ $company->created_at?->translatedFormat('d M Y') }}</b>
+                </p>
+                @endif
+
+                <ol class="bk-setup-steps">
+                    @foreach($obList as $s)
+                        @php $done = (bool) ($obSteps[$s['key']] ?? false); @endphp
+                        <li>
+                            <a href="{{ $s['url'] }}" class="bk-setup-step {{ $done ? 'is-done' : '' }}">
+                                <span class="bk-setup-node" aria-hidden="true">
+                                    <i data-feather="{{ $done ? 'check' : $s['icon'] }}"></i>
+                                </span>
+                                <span class="bk-setup-step-body">
+                                    <span class="bk-setup-step-label">{{ $s['title'] }}</span>
+                                    <span class="bk-setup-step-status {{ $done ? 'st-done' : ($s['required'] ? 'st-required' : 'st-optional') }}">
+                                        @if(!$done)<span class="d" aria-hidden="true"></span>@endif
+                                        {{ $done ? __('Done') : ($s['required'] ? __('Required') : __('Optional')) }}
+                                    </span>
+                                </span>
+                                <span class="bk-setup-step-arrow" aria-hidden="true">
+                                    <i data-feather="chevron-{{ $isAr ? 'left' : 'right' }}"></i>
+                                </span>
+                            </a>
+                        </li>
+                    @endforeach
+                </ol>
+
+                <div class="bk-setup-foot">
+                    @if($obSubmitted)
+                        <span class="bk-setup-submitted">
+                            <i data-feather="check-circle"></i>
+                            {{ __('Submitted for review') }}
+                        </span>
+                        <span class="bk-setup-hint">{{ __('We will notify you once your business is approved.') }}</span>
+                    @elseif($obCanPublish)
+                        <form method="POST" action="{{ route('company.onboarding.submit-review') }}" class="m-0">
+                            @csrf
+                            <button type="submit" class="bk-setup-publish is-ready">
+                                <i data-feather="send"></i>
+                                {{ __('Submit for review') }}
+                            </button>
+                        </form>
+                        <span class="bk-setup-hint">{{ __('Our team will review and approve your business.') }}</span>
+                    @else
+                        <button type="button" class="bk-setup-publish" disabled>
+                            <i data-feather="lock"></i>
+                            {{ __('Submit for review') }}
+                        </button>
+                        <span class="bk-setup-hint">{{ __('Finish the required steps above to submit.') }}</span>
+                    @endif
+                    <button type="button" class="bk-setup-help" data-bs-toggle="modal" data-bs-target="#bkHelpModal">
+                        <i data-feather="help-circle"></i>
+                        {{ __('Need help?') }}
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+</section>
+
+<script>
+(function(){
+    var el = document.getElementById('bkSetup');
+    if (!el) return;
+    var KEY = 'bk_setup_collapsed';
+    var toggle = el.querySelector('.bk-setup-toggle');
+    var collapsed = false;
+    try { collapsed = localStorage.getItem(KEY) === '1'; } catch(e){}
+    if (collapsed) el.setAttribute('data-collapsed', '');
+    if (toggle) toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+
+    /* enable height transition only after the initial state is painted */
+    requestAnimationFrame(function(){ el.classList.add('bk-setup--ready'); });
+
+    if (toggle) {
+        toggle.addEventListener('click', function(){
+            var isCollapsed = el.toggleAttribute('data-collapsed');
+            toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+            try { localStorage.setItem(KEY, isCollapsed ? '1' : '0'); } catch(e){}
+        });
+    }
+
+    /* fill the meter from zero on load (GPU-friendly scaleX) */
+    var fill = el.querySelector('.bk-setup-meter span');
+    if (fill) {
+        setTimeout(function(){ fill.style.transform = 'scaleX(1)'; }, 300);
+    }
+})();
+</script>
 @endif
 
 {{-- ════ HERO HEADER ════ --}}
@@ -342,16 +381,16 @@
                 <div class="row g-2 mt-2">
                     <div class="col-6">
                         <div class="rounded-3 p-2 text-center"
-                             style="background:rgba(244,166,66,.08);border:1px solid rgba(244,166,66,.15);">
-                            <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;color:#f4a642;letter-spacing:1px;">{{ __('Pending') }}</div>
-                            <div style="font-size:1.4rem;font-weight:900;color:#f4a642;font-family:'Poppins',sans-serif;">{{ $pendingAppt }}</div>
+                             style="background:color-mix(in srgb,var(--bk-warning) 8%,transparent);border:1px solid color-mix(in srgb,var(--bk-warning) 18%,transparent);">
+                            <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;color:var(--bk-warning);letter-spacing:1px;">{{ __('Pending') }}</div>
+                            <div style="font-size:1.4rem;font-weight:900;color:var(--bk-warning);font-family:'Poppins',sans-serif;font-variant-numeric:tabular-nums;">{{ $pendingAppt }}</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="rounded-3 p-2 text-center"
-                             style="background:rgba(43,207,126,.07);border:1px solid rgba(43,207,126,.15);">
-                            <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;color:#2bcf7e;letter-spacing:1px;">{{ __('Waitlist') }}</div>
-                            <div style="font-size:1.4rem;font-weight:900;color:#2bcf7e;font-family:'Poppins',sans-serif;">{{ $waitlistWaiting }}</div>
+                             style="background:color-mix(in srgb,var(--bk-success) 8%,transparent);border:1px solid color-mix(in srgb,var(--bk-success) 18%,transparent);">
+                            <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;color:var(--bk-success);letter-spacing:1px;">{{ __('Waitlist') }}</div>
+                            <div style="font-size:1.4rem;font-weight:900;color:var(--bk-success);font-family:'Poppins',sans-serif;font-variant-numeric:tabular-nums;">{{ $waitlistWaiting }}</div>
                         </div>
                     </div>
                 </div>
@@ -562,10 +601,22 @@ function applyChartSeries(s, range){
         axisTicks : { color: c.grid }
     };
 
+    // Guard the y-axis for all-zero data: an empty series otherwise makes
+    // ApexCharts compute an "Infinity" max on first paint.
+    var peak = 0;
+    for (var i = 0; i < s.data.length; i++) { var n = +s.data[i] || 0; if (n > peak) peak = n; }
+    var yaxisOpts = {
+        min: 0,
+        max: peak > 0 ? undefined : 4,
+        forceNiceScale: peak > 0,
+        labels: { formatter: function(v){ return isFinite(v) ? Math.round(v) : 0; }, style:{ colors:c.muted } }
+    };
+
     if (activityChart) {
         activityChart.updateOptions({
             series : [{ name: s.name, data: s.data }],
             xaxis  : xaxisOpts,
+            yaxis  : yaxisOpts,
             noData : { text: labels.noData || 'No data yet.' }
         }, true, true);
         return;
@@ -578,7 +629,7 @@ function applyChartSeries(s, range){
         colors:[gold],
         series:[{ name: s.name, data: s.data }],
         xaxis: xaxisOpts,
-        yaxis:{ min:0, forceNiceScale:true, labels:{ formatter:function(v){ return Math.round(v); }, style:{colors:c.muted} } },
+        yaxis: yaxisOpts,
         grid :{ borderColor:c.grid, xaxis:{ lines:{show:false} } },
         noData:{ text: labels.noData || 'No data yet.', style:{color:c.muted} },
         tooltip:{ theme: isDark?'dark':'light' },

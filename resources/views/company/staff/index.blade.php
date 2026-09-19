@@ -47,7 +47,7 @@
                 <i data-feather="search" class="position-absolute text-muted"
                    style="width:13px;height:13px;top:50%;transform:translateY(-50%);inset-inline-start:11px;pointer-events:none;"></i>
                 <input type="text" id="staff-search" class="form-control form-control-sm rounded-pill"
-                       style="padding-inline-start:32px;" placeholder="{{ __('Search…') }}" autocomplete="off">
+                       style="padding-inline-start:32px;" placeholder="{{ __('Search staff or services…') }}" autocomplete="off">
             </div>
 
             {{-- Summary badges --}}
@@ -156,12 +156,13 @@
                     </div>
 
                     {{-- Actions --}}
-                    <div class="d-flex gap-2 flex-shrink-0">
-                        <a href="{{ route('company.employees.edit', $emp) }}"
-                           class="btn btn-sm rounded-pill px-3"
-                           style="font-size:.72rem;font-weight:600;background:rgba(79,172,254,.12);color:#4facfe;border:none;">
-                            <i data-feather="edit-2" style="width:11px;height:11px;margin-inline-end:4px;"></i>{{ __('Edit') }}
-                        </a>
+                    <div class="bk-actions">
+                        <x-bk-action :href="route('company.employees.show', $emp)" icon="eye">{{ __('Show') }}</x-bk-action>
+                        <x-bk-action :href="route('company.employee-leaves.create', $emp)" icon="calendar">{{ __('Leave') }}</x-bk-action>
+                        <x-bk-action :href="route('company.employees.deductions.index', $emp)" icon="minus-circle">{{ __('Deductions') }}</x-bk-action>
+                        <x-bk-action :href="route('company.employees.edit', $emp)" icon="edit-2" variant="primary">{{ __('Edit') }}</x-bk-action>
+                        <x-bk-action variant="danger" icon="trash-2" icon-only
+                            onclick="staffDeleteEmp({{ $emp->id }}, '{{ addslashes($isAr ? ($emp->name_ar ?: $emp->name_en) : ($emp->name_en ?: $emp->name_ar)) }}')">{{ __('Delete') }}</x-bk-action>
                     </div>
                 </div>
                 @empty
@@ -314,6 +315,27 @@
     <img id="bk-lightbox-img" src="" alt=""
          style="max-width:92vw;max-height:90vh;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.6);object-fit:contain;">
 </div>
+
+{{-- Delete employee confirmation --}}
+<div class="modal fade" id="staffDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content rounded-4">
+            <div class="modal-body text-center p-4">
+                <div style="font-size:40px;margin-bottom:12px;">🗑️</div>
+                <h6 class="fw-bold mb-2">{{ __('Delete employee?') }}</h6>
+                <p class="text-muted small mb-1" id="staffDeleteName"></p>
+                <p class="text-muted small mb-3">{{ __('This will permanently delete this employee and all their data.') }}</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <form method="POST" id="staffDeleteForm">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold">{{ __('Delete') }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 </div>{{-- page-content --}}
 
 <style>
@@ -369,14 +391,47 @@ function setTab(tab) {
     document.querySelector('[name="tab"]').value = tab;
 }
 
-// Live search
-document.getElementById('staff-search').addEventListener('input', function() {
-    var q = this.value.toLowerCase();
+// Delete employee (shared modal)
+var STAFF_DELETE_BASE = '{{ route("company.employees.destroy", "__ID__") }}';
+function staffDeleteEmp(id, name) {
+    document.getElementById('staffDeleteForm').action = STAFF_DELETE_BASE.replace('__ID__', id);
+    document.getElementById('staffDeleteName').textContent = name;
+    new bootstrap.Modal(document.getElementById('staffDeleteModal')).show();
+}
+
+// Live search — Arabic-aware normalization so name matching is robust
+// (unifies alef/yaa/taa-marbuta forms, strips tashkeel/tatweel, collapses spaces)
+function normalizeSearch(s) {
+    return (s || '')
+        .toLowerCase()
+        .replace(/[ً-ٰٟـ]/g, '') // tashkeel + tatweel
+        .replace(/[آأإٱ]/g, 'ا') // آأإٱ → ا
+        .replace(/ى/g, 'ي') // ى → ي
+        .replace(/ة/g, 'ه') // ة → ه
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+var staffSearchInput = document.getElementById('staff-search');
+if (staffSearchInput) {
+    // Precompute the normalized haystack once per row
     document.querySelectorAll('.staff-row').forEach(function(row) {
-        var text = (row.dataset.search || '').toLowerCase();
-        row.style.display = (!q || text.includes(q)) ? '' : 'none';
+        row.dataset.searchNorm = normalizeSearch(row.dataset.search);
     });
-});
+    staffSearchInput.addEventListener('input', function() {
+        var q = normalizeSearch(this.value);
+        document.querySelectorAll('.staff-row').forEach(function(row) {
+            var text = row.dataset.searchNorm || '';
+            // .staff-row carries Bootstrap's .d-flex (display:flex !important),
+            // so a plain inline display:none is ignored — use !important to win.
+            if (!q || text.includes(q)) {
+                row.style.removeProperty('display');
+            } else {
+                row.style.setProperty('display', 'none', 'important');
+            }
+        });
+    });
+}
 
 // Lightbox
 function openLightbox(src) {

@@ -36,7 +36,7 @@
 
 <div class="d-flex gap-2 mt-3">
     <a href="{{ route('owner.appointments.show', $appointment) }}" class="bk-btn bk-btn--ghost bk-btn--sm"><i data-feather="external-link"></i> {{ __('Full page') }}</a>
-    <form method="post" action="{{ $ws->fullEditorAction() }}" onsubmit="return confirm('{{ __('Log in as this company? Every action will be recorded in the audit log.') }}')">
+    <form method="post" action="{{ $ws->fullEditorAction() }}" data-confirm="{{ __('Log in as this company? Every action will be recorded in the audit log.') }}">
         @csrf<button type="submit" class="bk-btn bk-btn--gold bk-btn--sm"><i data-feather="edit"></i> {{ __('Open full editor') }}</button>
     </form>
 </div>

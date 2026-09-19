@@ -67,7 +67,7 @@
                     @if(!$debt->isPaid() && $debt->status !== 'waived')
                         <div class="mt-3">
                             <form method="POST" action="{{ route('company.debts.waive', $debt) }}"
-                                onsubmit="return confirm('{{ __('Waive this debt?') }}')" class="d-inline">
+                                data-confirm="{{ __('Waive this debt?') }}" class="d-inline">
                                 @csrf @method('PUT')
                                 <button class="btn btn-sm btn-outline-secondary">{{ __('Waive Debt') }}</button>
                             </form>

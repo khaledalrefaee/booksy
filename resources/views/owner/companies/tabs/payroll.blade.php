@@ -13,7 +13,7 @@
     <div data-ws-panel="pay">
         <div class="bk-card"><div class="bk-card-head">
             <h3 class="bk-card-title"><i data-feather="dollar-sign"></i> {{ __('Payroll') }} · {{ $periodLabel }}</h3>
-            <form method="post" action="{{ $ws->fullEditorAction() }}" onsubmit="return confirm('{{ __('Log in as this company? Every action will be recorded in the audit log.') }}')">
+            <form method="post" action="{{ $ws->fullEditorAction() }}" data-confirm="{{ __('Log in as this company? Every action will be recorded in the audit log.') }}">
                 @csrf<button class="bk-btn bk-btn--gold bk-btn--sm"><i data-feather="edit"></i> {{ __('Run payroll') }}</button>
             </form>
         </div>

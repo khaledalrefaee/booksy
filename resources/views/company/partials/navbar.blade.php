@@ -14,6 +14,21 @@
 .navbar .navbar-nav { gap: 0 !important; margin-inline-start: 0 !important; }
 .navbar .navbar-nav .nav-link { padding-inline: 6px !important; }
 
+/* ── Mobile app-bar: hamburger pinned to the start, utility icons grouped at
+   the end, clean empty centre. NobleUI's navbar wraps and pads the content,
+   which strands the search icon mid-bar — disable the wrap and that padding
+   on phones so flex-end can group the icons cohesively. */
+@media (max-width: 767.98px){
+    .navbar{ flex-wrap:nowrap !important; }
+    .navbar .navbar-content{ flex:1 1 auto !important; align-items:center !important; justify-content:flex-end !important; padding-left:0 !important; padding-right:0 !important; column-gap:0 !important; }
+    /* The mobile search is a bare <a> — make it a centred flex box so its icon
+       lines up with the flex-centred bell/help/profile instead of riding high. */
+    .navbar .navbar-content > a.d-md-none{ display:flex !important; align-items:center; justify-content:center; height:40px; padding:0 9px !important; }
+    .navbar .navbar-nav{ align-items:center !important; }
+    .navbar .navbar-nav .nav-link{ padding-inline:9px !important; display:flex; align-items:center; }
+    .navbar .sidebar-toggler{ border:0 !important; }
+}
+
 /* ── Global search (pill, tokenised, accent focus ring) ── */
 .bk-search{ position:relative; align-self:center; width:240px; max-width:260px; }
 .bk-search-ic{
@@ -285,6 +300,12 @@
                             <a href="{{ route('company.profile.show') }}"
                                class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
                                 <i class="icon-sm feather icon-user"></i> {{ __('Profile') }}
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('company.data-export.index') }}"
+                               class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
+                                <i class="icon-sm feather icon-download"></i> {{ __('My data') }}
                             </a>
                         </li>
                         <li><hr class="dropdown-divider my-1"></li>

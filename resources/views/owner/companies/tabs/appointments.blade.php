@@ -85,7 +85,7 @@
                     <td class="bk-tbl-actions">
                         @can('owner-can', 'appointments.manage')
                         <form action="{{ $ws->url('appointments').'/blocked/'.$b->id }}" method="post" data-ws-action class="d-inline"
-                              onsubmit="return confirm('{{ __('Remove this blocked time?') }}')">
+                              data-confirm="{{ __('Remove this blocked time?') }}">
                             @csrf @method('DELETE')
                             <button class="bk-btn bk-btn--sm bk-btn--danger bk-btn--icon"><i data-feather="trash-2"></i></button>
                         </form>

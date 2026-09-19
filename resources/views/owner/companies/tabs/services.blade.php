@@ -8,7 +8,7 @@
                 <input type="text" placeholder="{{ __('Search services…') }}"
                        oninput="var t=this.value.toLowerCase();document.querySelectorAll('#bk-svc-rows tr').forEach(function(r){r.style.display=r.dataset.s.includes(t)?'':'none';});">
             </div>
-            <form method="post" action="{{ $ws->fullEditorAction() }}" onsubmit="return confirm('{{ __('Log in as this company? Every action will be recorded in the audit log.') }}')">
+            <form method="post" action="{{ $ws->fullEditorAction() }}" data-confirm="{{ __('Log in as this company? Every action will be recorded in the audit log.') }}">
                 @csrf<button class="bk-btn bk-btn--gold bk-btn--sm"><i data-feather="edit"></i> {{ __('Workbench') }}</button>
             </form>
         </div>

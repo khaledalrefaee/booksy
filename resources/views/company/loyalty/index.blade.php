@@ -110,7 +110,7 @@
                                 {{ number_format($r->points_cost) }} {{ __('pts') }}
                             </span>
                             <form method="POST" action="{{ route('company.loyalty.rewards.destroy', $r) }}" class="m-0 flex-shrink-0"
-                                  onsubmit="return confirm('{{ __('Remove this reward?') }}');">
+                                  data-confirm="{{ __('Remove this reward?') }}">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle p-0 d-inline-flex align-items-center justify-content-center"

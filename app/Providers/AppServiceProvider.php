@@ -49,7 +49,18 @@ class AppServiceProvider extends ServiceProvider
             return $owner?->hasPermission($permission) ?? false;
         });
 
-        Route::bind('company', fn (string $value) => Company::query()->findOrFail($value));
+        // يحترم ->withTrashed() على الراوت: الراوتات العادية تستثني الشركات المغلقة
+        // (Soft-deleted)، أما راوتات الاستعادة/الحذف النهائي (المعلّمة withTrashed)
+        // فتقدر تصل للمغلقة أيضاً.
+        Route::bind('company', function (string $value, $route) {
+            $query = Company::query();
+
+            if ($route instanceof \Illuminate\Routing\Route && $route->allowsTrashedBindings()) {
+                $query->withTrashed();
+            }
+
+            return $query->findOrFail($value);
+        });
 
           // URL::forceScheme('https');
     }

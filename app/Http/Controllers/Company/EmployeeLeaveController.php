@@ -28,6 +28,54 @@ class EmployeeLeaveController extends Controller
         abort_unless($leave->company_id === $this->company()->id, 403);
     }
 
+    /**
+     * Earliest date a leave may fall on — one year before today.
+     * Blocks nonsensical far-past entries (e.g. year 2000) while still
+     * allowing recently-past leaves to be recorded after the fact.
+     */
+    public static function minLeaveDate(): \Carbon\Carbon
+    {
+        return \Carbon\Carbon::today()->subYear()->startOfDay();
+    }
+
+    /** Latest date a leave may fall on — two years ahead, for planned leaves. */
+    public static function maxLeaveDate(): \Carbon\Carbon
+    {
+        return \Carbon\Carbon::today()->addYears(2)->endOfDay();
+    }
+
+    /** Shared validation rules for creating/updating a leave request. */
+    private function leaveRules(bool $isHourly): array
+    {
+        $min = self::minLeaveDate()->toDateString();
+        $max = self::maxLeaveDate()->toDateString();
+
+        return [
+            'start_date' => ['required', 'date', 'after_or_equal:' . $min, 'before_or_equal:' . $max],
+            'end_date'   => [$isHourly ? 'nullable' : 'required', 'date', 'gte:start_date', 'before_or_equal:' . $max],
+            'type'       => ['required', 'in:' . implode(',', array_keys(EmployeeLeave::LEAVE_TYPES))],
+            'is_hourly'  => ['nullable', 'boolean'],
+            'start_hour' => [$isHourly ? 'required' : 'nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
+            'end_hour'   => [$isHourly ? 'required' : 'nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
+            'reason'     => ['nullable', 'string', 'max:500'],
+            'deduction_amount'   => ['nullable', 'numeric', 'min:0'],
+            'deduction_currency' => ['nullable', 'in:' . implode(',', array_keys(config('booksy.currencies', [])))],
+        ];
+    }
+
+    /** Clear, localized messages for the leave date-range rules. */
+    private function leaveMessages(): array
+    {
+        $min = self::minLeaveDate()->format('Y-m-d');
+        $max = self::maxLeaveDate()->format('Y-m-d');
+
+        return [
+            'start_date.after_or_equal'  => __('The date must be on or after :date.', ['date' => $min]),
+            'start_date.before_or_equal' => __('The date must be on or before :date.', ['date' => $max]),
+            'end_date.before_or_equal'   => __('The date must be on or before :date.', ['date' => $max]),
+        ];
+    }
+
     public function index(Request $request): View
     {
         $company = $this->company();
@@ -139,17 +187,10 @@ class EmployeeLeaveController extends Controller
 
         $isHourly = $request->boolean('is_hourly');
 
-        $data = $request->validate([
-            'start_date' => ['required', 'date'],
-            'end_date'   => [$isHourly ? 'nullable' : 'required', 'date', 'gte:start_date'],
-            'type'       => ['required', 'in:' . implode(',', array_keys(EmployeeLeave::LEAVE_TYPES))],
-            'is_hourly'  => ['nullable', 'boolean'],
-            'start_hour' => [$isHourly ? 'required' : 'nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
-            'end_hour'   => [$isHourly ? 'required' : 'nullable', 'regex:/^\d{1,2}:\d{2}(:\d{2})?$/'],
-            'reason'     => ['nullable', 'string', 'max:500'],
-            'deduction_amount'   => ['nullable', 'numeric', 'min:0'],
-            'deduction_currency' => ['nullable', 'in:' . implode(',', array_keys(config('booksy.currencies', [])))],
-        ]);
+        $data = $request->validate(
+            $this->leaveRules($isHourly),
+            $this->leaveMessages()
+        );
 
         if ($isHourly && substr($data['end_hour'], 0, 5) <= substr($data['start_hour'], 0, 5)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
@@ -178,6 +219,53 @@ class EmployeeLeaveController extends Controller
         return redirect()
             ->route('company.employee-leaves.index')
             ->with('success', __('Leave request submitted.'));
+    }
+
+    /**
+     * Edit an existing leave request (dates, type, hourly window, reason,
+     * optional deduction). The linked salary deduction is rebuilt to match.
+     */
+    public function update(Request $request, EmployeeLeave $employeeLeave): RedirectResponse
+    {
+        $this->authoriseLeave($employeeLeave);
+
+        $isHourly = $request->boolean('is_hourly');
+
+        $data = $request->validate(
+            $this->leaveRules($isHourly),
+            $this->leaveMessages()
+        );
+
+        if ($isHourly && substr($data['end_hour'], 0, 5) <= substr($data['start_hour'], 0, 5)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'end_hour' => __('End time must be after start time.'),
+            ]);
+        }
+
+        $deductionAmount = (float) ($data['deduction_amount'] ?? 0);
+
+        $employeeLeave->update([
+            'start_date' => $data['start_date'],
+            'end_date'   => $isHourly ? $data['start_date'] : $data['end_date'],
+            'type'       => $data['type'],
+            'is_hourly'  => $isHourly,
+            'start_hour' => $isHourly ? substr($data['start_hour'], 0, 5) : null,
+            'end_hour'   => $isHourly ? substr($data['end_hour'], 0, 5) : null,
+            'reason'     => $data['reason'] ?? null,
+            'deduction_amount'   => $deductionAmount > 0 ? $deductionAmount : null,
+            'deduction_currency' => $deductionAmount > 0
+                ? ($data['deduction_currency'] ?? config('booksy.default_currency', 'SYP'))
+                : null,
+        ]);
+
+        // Rebuild the linked salary deduction so it matches the edited leave.
+        $employeeLeave->deduction?->delete();
+        $employeeLeave->update(['deduction_id' => null]);
+        $this->syncLeaveDeduction($employeeLeave->refresh());
+
+        return redirect()
+            ->route('company.employee-leaves.index')
+            ->with('success', __('Leave request updated.'));
     }
 
     public function updateStatus(Request $request, EmployeeLeave $employeeLeave): RedirectResponse

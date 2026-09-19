@@ -14,6 +14,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,shrink-to-fit=no">
 <title>{{ $name }} – GlowRez</title>
 
+@include('partials.clarity')
+
 <link href="{{ asset('fonts/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('frontend/vendor/bootstrap/css/bootstrap'.($isAr?'.rtl':'').'.min.css') }}">
 <link rel="stylesheet" href="{{ asset('frontend/vendor/fontawesome-free/css/all.min.css') }}">

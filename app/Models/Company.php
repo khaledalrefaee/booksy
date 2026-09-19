@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -16,6 +17,7 @@ class Company extends Authenticatable
     use Notifiable;
     use HasFactory;
     use HasLocalizedNames;
+    use SoftDeletes;   // deleted_at = إغلاق الحساب الاختياري (قابل للاستعادة من الأونر)
 
     protected $fillable = [
         'name_en',
@@ -31,6 +33,8 @@ class Company extends Authenticatable
         'status',
         'suspended_at',
         'suspension_reason',
+        'submitted_for_review_at',
+        'closure_reason',
         'plan_id',
         'plan_expires_at',
         'feature_overrides',
@@ -48,6 +52,7 @@ class Company extends Authenticatable
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
             'suspended_at' => 'datetime',
+            'submitted_for_review_at' => 'datetime',
             'password' => 'hashed',
             'plan_expires_at' => 'date',
             'feature_overrides' => 'array',
@@ -242,6 +247,12 @@ class Company extends Authenticatable
         return $this->status === 'pending';
     }
 
+    /** Setup finished and the company asked to be reviewed, but not yet approved. */
+    public function isAwaitingReview(): bool
+    {
+        return $this->submitted_for_review_at !== null && $this->status === 'pending';
+    }
+
     /** Access revoked by the platform: login is blocked and sessions are killed. */
     public function isSuspended(): bool
     {
@@ -268,24 +279,37 @@ class Company extends Authenticatable
     }
 
     /**
-     * Flip the business live once the required setup is done: company → active
-     * and the head-office branch → active (so it clears the marketplace gate).
-     * Returns false when required steps are still missing.
+     * The company asks the platform to review & publish it. This never makes the
+     * account live — approval stays the owner's decision (status → active). It
+     * only records readiness so the owner can spot it. Returns false when a
+     * required step is still missing.
      */
-    public function publish(): bool
+    public function submitForReview(): bool
     {
         if (! \App\Services\OnboardingService::canPublish($this)) {
             return false;
         }
 
+        if ($this->submitted_for_review_at === null) {
+            $this->update(['submitted_for_review_at' => now()]);
+        }
+
+        return true;
+    }
+
+    /**
+     * Owner approval path: take the business live. Flips company → active and
+     * clears the head-office marketplace gate (branch → active) in one step, so
+     * approving a pending account is all it takes to appear publicly.
+     */
+    public function markActive(): void
+    {
         $this->update(['status' => 'active']);
 
         $headOffice = $this->headOffice();
         if ($headOffice && $headOffice->isInactive()) {
             $headOffice->update(['status' => 'active']);
         }
-
-        return true;
     }
 
     public function onboarding(): HasOne

@@ -57,7 +57,7 @@
                         <td class="bk-tbl-actions">
                             @can('owner-can', 'finance.manage')
                             <form action="{{ $ws->url('customers').'/debts/'.$d->id.'/waive' }}" method="post" data-ws-action class="d-inline"
-                                  onsubmit="return confirm('{{ __('Waive this debt?') }}')">
+                                  data-confirm="{{ __('Waive this debt?') }}">
                                 @csrf @method('PATCH')
                                 <button class="bk-btn bk-btn--sm bk-btn--ghost">{{ __('Waive') }}</button>
                             </form>

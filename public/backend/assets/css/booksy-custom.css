@@ -70,6 +70,11 @@ html { scroll-behavior: smooth; }
 
     /* Line heights */
     --lh-tight:1.2; --lh-snug:1.35; --lh-normal:1.5; --lh-relaxed:1.6;
+
+    /* Editorial display face — Fraunces (Latin) + Tajawal (Arabic).
+       Used for mastheads, section titles and headline numerals so the
+       dashboard reads as a boutique product, not an admin template. */
+    --bk-serif: 'Fraunces', 'Playfair Display', 'Tajawal', Georgia, 'Times New Roman', serif;
 }
 /* Page titles scale down a touch on small screens (keeps RTL + responsive intact) */
 @media (max-width: 575.98px) {
@@ -203,11 +208,26 @@ html { scroll-behavior: smooth; }
 }
 .bk-theme-light .form-control::placeholder, .bk-theme-dark .form-control::placeholder { color:var(--bk-text-muted) !important; }
 
+/* Time/date fields always read left-to-right (HH:MM AM), even on RTL pages —
+   otherwise Arabic mirrors them to "00 : 09" and the hour/minute look swapped.
+   In RTL we still push the value to the right edge so it sits where the eye lands. */
+input[type="time"], input[type="date"], input[type="datetime-local"],
+input[type="month"], input[type="week"] { direction:ltr; }
+[dir="rtl"] input[type="time"], [dir="rtl"] input[type="date"],
+[dir="rtl"] input[type="datetime-local"], [dir="rtl"] input[type="month"],
+[dir="rtl"] input[type="week"] { text-align:right; }
+
 /* Scrollbar */
 ::-webkit-scrollbar { width:6px; height:6px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:color-mix(in srgb,var(--bk-accent) 40%,transparent); border-radius:3px; }
 ::-webkit-scrollbar-thumb:hover { background:color-mix(in srgb,var(--bk-accent) 60%,transparent); }
+
+/* Text selection & caret — theme the browser defaults from the palette
+   (gold highlight on olive; the cheapest "designed, not assembled" signal) */
+::selection      { background:color-mix(in srgb,var(--bk-gold) 32%,transparent); color:var(--bk-text); }
+::-moz-selection { background:color-mix(in srgb,var(--bk-gold) 32%,transparent); color:var(--bk-text); }
+.form-control, .form-select, input, textarea { caret-color:var(--bk-accent); }
 
 /* ════════════════════════
    SETTINGS SIDEBAR z-index fix
@@ -328,25 +348,6 @@ html { scroll-behavior: smooth; }
     box-shadow:var(--bk-shadow-lg);
     border-color:color-mix(in srgb,var(--bk-accent-local) 30%,var(--bk-border));
 }
-.bk-stat::before {
-    content:'';position:absolute;
-    left:0;top:0;bottom:0;width:4px;
-    background:var(--bk-accent-local);
-    border-radius:0 3px 3px 0;
-    transition:width .2s ease;
-}
-.bk-stat:hover::before { width:5px; }
-[dir="rtl"] .bk-stat::before{left:auto;right:0;border-radius:3px 0 0 3px;}
-
-/* Subtle glow on accent area */
-.bk-stat::after {
-    content:'';position:absolute;
-    top:-40px;left:-10px;width:120px;height:120px;
-    border-radius:50%;
-    background:radial-gradient(circle, color-mix(in srgb,var(--bk-accent-local) 10%,transparent) 0%, transparent 70%);
-    pointer-events:none;
-}
-
 /* Left: icon + label */
 .bk-stat-left { display:flex;align-items:center;gap:15px;min-width:0;flex:1; }
 .bk-stat-icon {
@@ -386,7 +387,8 @@ html { scroll-behavior: smooth; }
 .bk-stat-num {
     font-size:2.4rem;font-weight:900;
     font-family:'Poppins','Roboto',sans-serif;
-    letter-spacing:-2px;line-height:1;
+    letter-spacing:-.03em;line-height:1;
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
     white-space:nowrap;flex-shrink:0;
     color:var(--bk-accent-local);
     animation:bk-countIn .55s cubic-bezier(.22,1,.36,1) both;
@@ -582,6 +584,230 @@ html { scroll-behavior: smooth; }
 .bk-empty p{font-size:.85rem;color:var(--bk-text-muted);margin:0;}
 
 /* ════════════════════════
+   SETUP RAIL — unified onboarding + approval status
+   A single restrained panel that folds the "pending approval" note and the
+   setup checklist into one collapsible rail, so the dashboard opens clean.
+════════════════════════ */
+.bk-setup{
+    position:relative;
+    background:var(--bk-surface);
+    border:1px solid var(--bk-border);
+    border-radius:20px;
+    margin-bottom:28px;
+    box-shadow:var(--bk-shadow), inset 0 0 0 1px color-mix(in srgb,var(--bk-gold) 12%,transparent);
+    overflow:hidden;
+}
+/* A drawn gold hairline along the top edge — a brand rule, not a glow. */
+.bk-setup::before{
+    content:'';position:absolute;inset-inline:0;top:0;height:2px;pointer-events:none;
+    background:linear-gradient(90deg,var(--bk-accent),var(--bk-gold) 55%,transparent);
+    opacity:.85;
+}
+
+.bk-setup-head{ display:flex;align-items:center;gap:16px;padding:18px 22px; }
+.bk-setup-lead{ display:flex;align-items:center;gap:14px;min-width:0;flex:1 1 auto; }
+.bk-setup-ic{
+    flex-shrink:0;width:44px;height:44px;border-radius:13px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--bk-accent-wash);color:var(--bk-accent);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bk-accent) 18%,transparent);
+}
+.bk-setup-ic i{ width:20px;height:20px; }
+.bk-setup-heading{ min-width:0; }
+.bk-setup-title{
+    font-family:var(--bk-serif);
+    font-size:1.18rem;font-weight:600;letter-spacing:-.01em;
+    color:var(--bk-text);margin:0;line-height:1.25;
+}
+.bk-setup-meta{ display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:4px; }
+.bk-setup-count{ font-size:.78rem;color:var(--bk-text-muted);font-weight:600; }
+.bk-setup-count b{ color:var(--bk-accent);font-weight:800;font-variant-numeric:tabular-nums; }
+
+.bk-setup-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:3px 11px;border-radius:999px;
+    font-size:.66rem;font-weight:800;letter-spacing:.7px;text-transform:uppercase;
+    color:var(--bk-warning);
+    background:color-mix(in srgb,var(--bk-warning) 13%,transparent);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bk-warning) 26%,transparent);
+}
+.bk-setup-chip .dot{
+    width:7px;height:7px;border-radius:50%;background:var(--bk-warning);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--bk-warning) 22%,transparent);
+    animation:bk-pulse 2s ease infinite;
+}
+
+.bk-setup-controls{ display:flex;align-items:center;gap:10px;flex-shrink:0; }
+.bk-setup-meter{
+    width:120px;height:6px;border-radius:999px;
+    background:var(--bk-surface-2);overflow:hidden;
+    box-shadow:inset 0 0 0 1px var(--bk-border);
+}
+.bk-setup-meter span{
+    display:block;height:100%;border-radius:999px;
+    background:linear-gradient(90deg,var(--bk-accent),var(--bk-gold));
+    transform:scaleX(0);transform-origin:inline-start;
+    transition:transform 1s cubic-bezier(.22,1,.36,1);
+}
+
+.bk-setup-toggle{
+    display:inline-flex;align-items:center;gap:6px;
+    border:1px solid var(--bk-border);background:var(--bk-surface);
+    color:var(--bk-text-soft);font-size:.78rem;font-weight:600;
+    padding:7px 14px;border-radius:999px;cursor:pointer;
+    transition:background .2s,border-color .2s,color .2s;
+}
+.bk-setup-toggle:hover{
+    background:var(--bk-accent-wash);color:var(--bk-accent);
+    border-color:color-mix(in srgb,var(--bk-accent) 34%,var(--bk-border));
+}
+.bk-setup-toggle i{ width:15px;height:15px;transition:transform .3s cubic-bezier(.22,1,.36,1); }
+.bk-setup[data-collapsed] .bk-setup-toggle i{ transform:rotate(180deg); }
+
+.bk-setup-dismiss{
+    border:none;background:transparent;color:var(--bk-text-muted);
+    padding:7px;border-radius:9px;cursor:pointer;line-height:0;
+    transition:background .2s,color .2s;
+}
+.bk-setup-dismiss i{ width:16px;height:16px; }
+.bk-setup-dismiss:hover{ background:var(--bk-surface-2);color:var(--bk-text); }
+
+/* expandable body — animated via grid-template-rows 1fr↔0fr */
+.bk-setup-body{ display:grid;grid-template-rows:1fr; }
+.bk-setup--ready .bk-setup-body{ transition:grid-template-rows .4s cubic-bezier(.22,1,.36,1); }
+.bk-setup[data-collapsed] .bk-setup-body{ grid-template-rows:0fr; }
+.bk-setup-body-inner{ overflow:hidden;min-height:0; }
+.bk-setup-body-pad{ padding:2px 22px 20px; }
+
+.bk-setup-note{
+    font-size:.82rem;line-height:1.7;color:var(--bk-text-muted);
+    margin:0 0 16px;padding-top:14px;max-width:70ch;
+    border-top:1px solid var(--bk-border);
+}
+.bk-setup-note b{ color:var(--bk-text-soft);font-weight:700; }
+
+/* checklist — vertical rows read as a proper list, RTL-safe by default */
+.bk-setup-steps{ list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px; }
+.bk-setup-step{
+    display:flex;align-items:center;gap:13px;
+    padding:11px 15px;border-radius:14px;
+    border:1px solid var(--bk-border);background:var(--bk-surface);
+    text-decoration:none;
+    transition:border-color .2s,background .2s;
+}
+.bk-setup-step:hover{
+    border-color:color-mix(in srgb,var(--bk-accent) 34%,var(--bk-border));
+    background:var(--bk-accent-wash);
+}
+.bk-setup-node{
+    flex-shrink:0;width:34px;height:34px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--bk-accent-wash);color:var(--bk-accent);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bk-accent) 16%,transparent);
+    transition:transform .2s cubic-bezier(.22,1,.36,1);
+}
+.bk-setup-node i{ width:16px;height:16px; }
+.bk-setup-step:hover .bk-setup-node{ transform:scale(1.06); }
+.bk-setup-step-body{ display:flex;flex-direction:column;min-width:0;flex:1;gap:3px; }
+.bk-setup-step-label{ font-size:.88rem;font-weight:600;color:var(--bk-text);line-height:1.3; }
+.bk-setup-step-status{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:.64rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+}
+.bk-setup-step-status .d{ width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.85; }
+.st-required{ color:var(--bk-warning); }
+.st-optional{ color:var(--bk-text-muted); }
+.st-done{ color:var(--bk-success); }
+.bk-setup-step-arrow{ flex-shrink:0;color:var(--bk-text-muted);line-height:0;transition:color .2s,transform .2s; }
+.bk-setup-step-arrow i{ width:17px;height:17px; }
+.bk-setup-step:hover .bk-setup-step-arrow{ color:var(--bk-accent);transform:scale(1.2); }
+
+/* done state */
+.bk-setup-step.is-done{
+    background:var(--bk-success-bg);
+    border-color:color-mix(in srgb,var(--bk-success) 26%,var(--bk-border));
+}
+.bk-setup-step.is-done .bk-setup-node{ background:var(--bk-success);color:#fff;box-shadow:none; }
+.bk-setup-step.is-done .bk-setup-step-label{
+    color:var(--bk-text-soft);opacity:.72;
+    text-decoration:line-through;
+    text-decoration-color:color-mix(in srgb,var(--bk-success) 50%,transparent);
+}
+.bk-setup-step.is-done:hover{ background:var(--bk-success-bg); }
+.bk-setup-step.is-done:hover .bk-setup-node{ transform:none; }
+.bk-setup-step.is-done .bk-setup-step-arrow{ display:none; }
+
+/* footer — publish + help */
+.bk-setup-foot{
+    display:flex;align-items:center;flex-wrap:wrap;gap:12px;
+    margin-top:16px;padding-top:16px;border-top:1px solid var(--bk-border);
+}
+.bk-setup-publish{
+    display:inline-flex;align-items:center;gap:7px;
+    border:none;border-radius:999px;padding:9px 21px;
+    font-size:.83rem;font-weight:700;cursor:pointer;
+    background:var(--bk-accent-fill);color:var(--bk-accent-ink);
+    box-shadow:0 3px 12px color-mix(in srgb,var(--bk-accent) 26%,transparent);
+    transition:background .2s,transform .15s,box-shadow .2s;
+}
+.bk-setup-publish i{ width:15px;height:15px; }
+.bk-setup-publish:hover{
+    background:var(--bk-accent-hover);transform:translateY(-1px);
+    box-shadow:0 6px 18px color-mix(in srgb,var(--bk-accent) 36%,transparent);
+}
+.bk-setup-publish.is-ready{
+    box-shadow:0 3px 12px color-mix(in srgb,var(--bk-accent) 26%,transparent),
+               0 0 0 1px color-mix(in srgb,var(--bk-gold) 55%,transparent);
+}
+.bk-setup-publish:disabled,.bk-setup-publish[disabled]{
+    background:var(--bk-surface-2);color:var(--bk-text-muted);cursor:not-allowed;
+    box-shadow:inset 0 0 0 1px var(--bk-border);transform:none;
+}
+/* confirmation shown after the company submits for review */
+.bk-setup-submitted{
+    display:inline-flex;align-items:center;gap:7px;
+    border-radius:999px;padding:9px 18px;
+    font-size:.83rem;font-weight:700;
+    color:var(--bk-success);
+    background:var(--bk-success-bg);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bk-success) 30%,transparent);
+}
+.bk-setup-submitted i{ width:16px;height:16px; }
+.bk-setup-hint{ font-size:.76rem;color:var(--bk-text-muted); }
+.bk-setup-help{
+    margin-inline-start:auto;
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:.76rem;font-weight:600;color:var(--bk-text-soft);
+    background:transparent;border:none;cursor:pointer;text-decoration:none;
+    transition:color .2s;
+}
+.bk-setup-help i{ width:14px;height:14px; }
+.bk-setup-help:hover{ color:var(--bk-accent); }
+
+/* themed focus rings for keyboard users */
+.bk-setup-toggle:focus-visible,
+.bk-setup-step:focus-visible,
+.bk-setup-publish:focus-visible,
+.bk-setup-dismiss:focus-visible,
+.bk-setup-help:focus-visible{ outline:2px solid var(--bk-gold);outline-offset:2px; }
+
+@media (max-width:640px){
+    .bk-setup-head{ flex-wrap:wrap;gap:12px; }
+    .bk-setup-meter{ display:none; }
+    .bk-setup-controls{ width:100%;justify-content:space-between; }
+    .bk-setup-title{ font-size:1.06rem; }
+}
+@media (prefers-reduced-motion:reduce){
+    .bk-setup--ready .bk-setup-body,
+    .bk-setup-meter span,
+    .bk-setup-toggle i,
+    .bk-setup-node,
+    .bk-setup-step-arrow,
+    .bk-setup-publish{ transition:none; }
+    .bk-setup-chip .dot{ animation:none; }
+}
+
+/* ════════════════════════
    CARDS
 ════════════════════════ */
 .card {
@@ -715,39 +941,41 @@ html { scroll-behavior: smooth; }
    DASHBOARD HERO HEADER — Atelier petrol panel
 ══════════════════════════════════════════════ */
 .bk-hero {
-    background: linear-gradient(135deg, var(--bk-accent-fill) 0%, var(--bk-accent-hover) 100%);
+    background: linear-gradient(115deg, var(--bk-accent-hover) 0%, var(--bk-accent-fill) 58%, var(--bk-accent-hover) 100%);
     border-radius: 20px;
-    padding: 28px 32px;
+    padding: 30px 34px;
     margin-bottom: 28px;
     position: relative;
     overflow: hidden;
     border: 1px solid color-mix(in srgb,var(--bk-accent) 40%,transparent);
+    /* Fine gold hairline inside the rim — brand craft, not a glow */
+    box-shadow: inset 0 0 0 1px color-mix(in srgb,var(--bk-gold) 20%,transparent);
 }
-.bk-hero::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: radial-gradient(ellipse at 0% 50%, rgba(255,255,255,.12) 0%, transparent 60%),
-                radial-gradient(ellipse at 100% 0%, rgba(255,255,255,.06) 0%, transparent 50%);
-    pointer-events: none;
-}
+/* One editorial detail: a thin concentric gold arc in the far corner.
+   A drawn brand mark reads as intentional where a white radial glow reads as template. */
 .bk-hero::after {
     content: '';
     position: absolute;
-    top: -60px; right: -60px;
-    width: 200px; height: 200px;
+    top: -120px; inset-inline-end: -80px;
+    width: 260px; height: 260px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255,.08) 0%, transparent 70%);
+    border: 1.5px solid color-mix(in srgb,var(--bk-gold) 34%,transparent);
+    box-shadow: 0 0 0 26px color-mix(in srgb,var(--bk-gold) 8%,transparent);
+    opacity: .7;
     pointer-events: none;
 }
-[dir="rtl"] .bk-hero::after { right:auto; left:-60px; }
 .bk-hero-title {
     font-size: var(--fs-page); font-weight: var(--fw-black);
     font-family: 'Poppins', sans-serif;
     color: #fff;
     margin: 0 0 6px;
     line-height: 1.2;
+    letter-spacing: -.01em;
 }
-.bk-hero-title span { color: #fff; opacity:.92; }
+/* The hero is a dark olive panel in BOTH themes, so the gold accent stays a
+   fixed light gold (theme gold-strong turns to dark bronze in light mode and
+   would drop below 3:1 on the panel). #E4C588 clears AA on the olive both ways. */
+.bk-hero-title span { color: #E4C588; }
 .bk-hero-sub {
     font-size: var(--fs-helper);
     color: rgba(255,255,255,.75);
@@ -1427,7 +1655,7 @@ select option {
 .bk-input, .bk-select, .bk-textarea { width:100%; padding:9px 12px; border-radius:10px; border:1px solid var(--bk-border); background:var(--bk-surface); color:var(--bk-text); font-size:.85rem; }
 .bk-input:focus, .bk-select:focus, .bk-textarea:focus { outline:none; border-color:var(--bk-accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--bk-accent) 18%,transparent); }
 
-/* ── Responsive ── */
+/* ── Form controls inside workspace/drawers — responsive ── */
 @media (max-width:768px) {
     .bk-ws-head { padding:16px; }
     .bk-ws-name { font-size:1.1rem; }
@@ -1436,3 +1664,98 @@ select option {
     .bk-dl { grid-template-columns:1fr; gap:2px 0; }
     .bk-dl dd { text-align:start; margin-bottom:8px; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   EDITORIAL BOUTIQUE LAYER — company dashboard (.bk-dash)
+   Serif display voice (Fraunces + Tajawal), an open masthead
+   instead of a gradient panel, headline numerals, hairline
+   separators and generous rhythm. Scoped to the dashboard so
+   the rest of the company panel is untouched.
+═══════════════════════════════════════════════════════════ */
+.bk-dash { padding-block: 32px 56px !important; }
+
+/* Rhythm — let the sections breathe */
+.bk-dash > .row { margin-bottom: 2.6rem !important; }
+.bk-dash > .card { margin-bottom: 2.6rem !important; }
+
+/* ── Masthead kept as the original olive gradient panel (user preference);
+   the editorial open-masthead override was reverted. ── */
+
+/* ── Section headers: serif, no tick mark ── */
+.bk-dash .bk-sh-title{
+    font-family: var(--bk-serif) !important;
+    font-weight: 600 !important;
+    font-size: 1.32rem !important;
+    letter-spacing: -.01em !important;
+    color: var(--bk-text) !important;
+}
+.bk-dash .bk-sh-title::before{ display: none !important; }
+.bk-dash .bk-sh-link{ font-size: .8rem !important; }
+
+/* ── Stat cards keep their warm card form (icon chip + colour + counter);
+   the editorial voice lives in the masthead, headings and section titles,
+   not by stripping the figures bare. Only the numerals borrow the serif. ── */
+.bk-dash .bk-stat-num{ font-family: var(--bk-serif) !important; font-weight: 600 !important; }
+
+/* ── Cards: lighter, editorial — hairline border, soft ground, roomy ── */
+.bk-dash .card{
+    border: 1px solid var(--bk-border) !important;
+    box-shadow: none !important;
+    border-radius: 14px !important;
+}
+.bk-dash .card .card-body{ padding: 24px 26px !important; }
+
+/* ── Card headings (welcome / pending) pick up the serif voice ── */
+.bk-dash .card-body > h5,
+.bk-dash .card-body h5.fw-bold{
+    font-family: var(--bk-serif) !important;
+    font-weight: 600 !important;
+    letter-spacing: -.01em !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Unified row / action buttons  (component: <x-bk-action>)
+   One olive+gold system for every list-row action across the dashboard,
+   so the same action reads identically on every page (icon + label).
+   Three semantic tiers: neutral secondary · one accent primary · destructive.
+   ══════════════════════════════════════════════════════════════════════ */
+.bk-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex-shrink:0; }
+
+.bk-act{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    font-size:12.5px; font-weight:600; line-height:1; white-space:nowrap;
+    padding:7px 13px; border-radius:9px; border:1px solid transparent;
+    background:var(--bk-surface-2); color:var(--bk-text-soft);
+    border-color:var(--bk-border);
+    cursor:pointer; text-decoration:none; user-select:none;
+    transition:background .16s ease, color .16s ease, border-color .16s ease, transform .12s ease;
+}
+.bk-act > i, .bk-act > svg{ width:14px; height:14px; stroke-width:2.2; flex:0 0 auto; }
+.bk-act:hover{ background:var(--bk-accent-wash); color:var(--bk-accent); border-color:transparent; }
+.bk-act:active{ transform:scale(.97); }
+.bk-act:focus-visible{ outline:2px solid var(--bk-accent); outline-offset:2px; }
+.bk-act[disabled], .bk-act.disabled{ opacity:.5; pointer-events:none; }
+
+/* Primary — the row's main action (Edit / open). Filled accent. */
+.bk-act--primary{ background:var(--bk-accent-fill); color:var(--bk-accent-ink); border-color:transparent; }
+.bk-act--primary:hover{ background:var(--bk-accent-hover); color:var(--bk-accent-ink); }
+
+/* Destructive — Delete / remove. Quiet until hover, then red. */
+.bk-act--danger{ background:transparent; color:var(--bk-text-muted); border-color:var(--bk-border); }
+.bk-act--danger:hover{ background:rgba(220,53,69,.12); color:#e5484d; border-color:rgba(220,53,69,.35); }
+
+/* Success — activate / confirm (used on some list pages). */
+.bk-act--success{ background:rgba(43,207,126,.13); color:#2bcf7e; border-color:transparent; }
+.bk-act--success:hover{ background:rgba(43,207,126,.22); color:#2bcf7e; }
+
+/* Warning — time-off / caution (used on some list pages). */
+.bk-act--warning{ background:rgba(214,158,46,.16); color:#d69e2e; border-color:transparent; }
+.bk-act--warning:hover{ background:rgba(214,158,46,.26); color:#d69e2e; }
+.bk-theme-dark .bk-act--warning{ color:#e0ae44; }
+
+/* Icon-only — same footprint, square. Label kept for title/aria. */
+.bk-act--icon{ padding:7px; width:34px; height:34px; }
+.bk-act--icon > span{ display:none; }
+
+/* Inline icon for dropdown-menu items (replaces emoji prefixes) — RTL-safe. */
+.bk-mi{ width:14px; height:14px; margin-inline-end:8px; vertical-align:-2px; opacity:.7; flex:0 0 auto; }

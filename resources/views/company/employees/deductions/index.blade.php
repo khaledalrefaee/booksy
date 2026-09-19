@@ -198,18 +198,18 @@
                                 @endif
                             </td>
                             <td class="text-muted small">
-                                {{ $ded->recordedBy?->localizedName() ?? '—' }}
+                                @php $salon = Auth::guard('company')->user(); @endphp
+                                {{ $ded->recordedBy?->localizedName()
+                                    ?? ($salon ? (app()->getLocale() === 'ar' ? ($salon->name_ar ?: $salon->name_en) : ($salon->name_en ?: $salon->name_ar)) : '—') }}
                             </td>
-                            <td class="text-muted small" style="max-width:180px;">
-                                <span class="text-truncate d-block" title="{{ $ded->notes }}">
+                            <td class="text-muted small" style="max-width:220px;">
+                                <span class="d-block" style="white-space:normal;word-break:break-word;" title="{{ $ded->notes }}">
                                     {{ $ded->notes ?: '—' }}
                                 </span>
                             </td>
                             <td class="pe-4 text-end">
-                                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill"
-                                        onclick="bkConfirmDelete('{{ route('company.deductions.destroy', $ded) }}', '{{ $ded->deduction_date->format('d/m/Y') }} — {{ number_format($ded->amount ?? 0, 0) }}', '{{ __('Delete this record?') }}')">
-                                    {{ __('Delete') }}
-                                </button>
+                                <x-bk-action type="button" variant="danger" icon="trash-2" icon-only
+                                        onclick="bkConfirmDelete('{{ route('company.deductions.destroy', $ded) }}', '{{ $ded->deduction_date->format('d/m/Y') }} — {{ number_format($ded->amount ?? 0, 0) }}', '{{ __('Delete this record?') }}')">{{ __('Delete') }}</x-bk-action>
                             </td>
                         </tr>
                         @endforeach

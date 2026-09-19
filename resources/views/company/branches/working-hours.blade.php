@@ -1,4 +1,19 @@
 @extends('company.dashboard')
+
+@push('company-styles')
+<style>
+/* Save button reflects unsaved-changes state so a successful save is unmistakable */
+#save-hours-btn .sh-clean,
+#save-hours-btn .sh-dirty,
+#save-hours-btn .sh-saving { display:none; align-items:center; }
+#save-hours-btn[data-state="clean"]  { background:var(--bk-success-bg,rgba(43,207,126,.12)); color:#2bcf7e; border:1px solid rgba(43,207,126,.35); cursor:default; }
+#save-hours-btn[data-state="clean"]  .sh-clean  { display:inline-flex; }
+#save-hours-btn[data-state="dirty"]  .sh-dirty  { display:inline-flex; }
+#save-hours-btn[data-state="saving"] .sh-saving { display:inline-flex; }
+.sh-hint { display:none; }
+</style>
+@endpush
+
 @section('content')
 <div class="page-content">
     <div class="d-flex justify-content-between align-items-center flex-wrap grid-margin">
@@ -167,10 +182,22 @@
                             @endforeach
                         </div>
 
-                        <div class="d-flex justify-content-end mt-4 pt-3 border-top">
-                            <button type="submit" class="btn btn-primary rounded-pill px-4">
-                                <i data-feather="check" class="me-1" style="width:16px;height:16px;"></i>
-                                {{ __('Save working hours') }}
+                        <div class="d-flex justify-content-end align-items-center gap-3 mt-4 pt-3 border-top">
+                            <span class="text-muted small sh-hint">{{ __('You have unsaved changes') }}</span>
+                            <button type="submit" id="save-hours-btn" class="btn btn-primary rounded-pill px-4"
+                                    data-state="{{ $errors->any() ? 'dirty' : 'clean' }}">
+                                <span class="sh-clean">
+                                    <i data-feather="check-circle" class="me-1" style="width:16px;height:16px;"></i>
+                                    {{ __('All changes saved') }}
+                                </span>
+                                <span class="sh-dirty">
+                                    <i data-feather="save" class="me-1" style="width:16px;height:16px;"></i>
+                                    {{ __('Save working hours') }}
+                                </span>
+                                <span class="sh-saving">
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    {{ __('Saving…') }}
+                                </span>
                             </button>
                         </div>
                     </form>
@@ -275,6 +302,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (hidden) hidden.value = '1';
         if (typeof feather !== 'undefined') feather.replace();
         updateBar(day);
+        if (window.markHoursDirty) window.markHoursDirty();
     }
 
     function hideShift2(day) {
@@ -286,6 +314,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (hidden) hidden.value = '';
         if (toggle && toggle.checked) addBtn.classList.remove('d-none');
         updateBar(day);
+        if (window.markHoursDirty) window.markHoursDirty();
     }
 
     // ── Copy from day above ────────────────────────────────────────
@@ -315,6 +344,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var ss1c = src.querySelector('.js-s1-close');
             if (ss1o && s1op) { s1op.disabled = false; s1op.value = ss1o.value; }
             if (ss1c && s1cl) { s1cl.disabled = false; s1cl.value = ss1c.value; }
+            if (window.markHoursDirty) window.markHoursDirty();
 
             // shift 2
             var srcS2 = document.getElementById('shift2-row-' + prev);
@@ -352,6 +382,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (s1c) { s1c.disabled = false; s1c.value = close; }
             updateBar(day);
         });
+        if (window.markHoursDirty) window.markHoursDirty();
     }
 
     document.getElementById('btn-apply-weekdays').addEventListener('click', function () {
@@ -361,11 +392,35 @@ document.addEventListener('DOMContentLoaded', function () {
         applyPreset(dayKeys);
     });
 
-    // ── Enable disabled inputs before submit ───────────────────────
-    var form = document.getElementById('hours-form');
+    // ── Unsaved-changes state on the Save button ───────────────────
+    var form    = document.getElementById('hours-form');
+    var saveBtn = document.getElementById('save-hours-btn');
+    var saveHint = document.querySelector('.sh-hint');
+
+    function setSaveState(state) {
+        if (!saveBtn) return;
+        saveBtn.setAttribute('data-state', state);
+        saveBtn.classList.toggle('btn-primary', state === 'dirty');
+        saveBtn.disabled = (state !== 'dirty');   // clean/saving can't be submitted
+        if (saveHint) saveHint.style.display = (state === 'dirty') ? 'inline' : 'none';
+    }
+
+    window.markHoursDirty = function () {
+        if (saveBtn && saveBtn.getAttribute('data-state') !== 'saving') setSaveState('dirty');
+    };
+
+    // Initial state: dirty only when the last submit failed validation.
+    setSaveState(saveBtn && saveBtn.getAttribute('data-state') === 'dirty' ? 'dirty' : 'clean');
+
+    // Any user edit inside the form (typing a time, flipping a day switch) → dirty.
     if (form) {
+        form.addEventListener('input',  window.markHoursDirty);
+        form.addEventListener('change', window.markHoursDirty);
+
+        // Enable disabled inputs before submit, then show the saving state.
         form.addEventListener('submit', function () {
             form.querySelectorAll('input[type="time"]').forEach(function (el) { el.disabled = false; });
+            setSaveState('saving');
         });
     }
 });

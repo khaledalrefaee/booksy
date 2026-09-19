@@ -219,7 +219,7 @@
                                             <li><hr class="dropdown-divider"></li>
                                             <li>
                                                 <form action="{{ route('owner.branches.destroy', $branch) }}" method="post"
-                                                      onsubmit="return confirm('{{ __('Delete this branch? This cannot be undone.') }}');">
+                                                      data-confirm="{{ __('Delete this branch? This cannot be undone.') }}">
                                                     @csrf @method('DELETE')
                                                     <button type="submit" class="dropdown-item text-danger">
                                                         <i data-feather="trash-2"></i>{{ __('Delete branch') }}
@@ -303,7 +303,7 @@
                                     <li><a class="dropdown-item" href="{{ route('owner.branches.working-hours.create', $branch) }}"><i data-feather="clock"></i>{{ __('Working hours') }}</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <form action="{{ route('owner.branches.destroy', $branch) }}" method="post" onsubmit="return confirm('{{ __('Delete this branch? This cannot be undone.') }}');">
+                                        <form action="{{ route('owner.branches.destroy', $branch) }}" method="post" data-confirm="{{ __('Delete this branch? This cannot be undone.') }}">
                                             @csrf @method('DELETE')
                                             <button type="submit" class="dropdown-item text-danger"><i data-feather="trash-2"></i>{{ __('Delete branch') }}</button>
                                         </form>

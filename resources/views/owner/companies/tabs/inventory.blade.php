@@ -14,7 +14,7 @@
     {{-- Products --}}
     <div data-ws-panel="products">
         <div class="bk-card"><div class="bk-card-head"><h3 class="bk-card-title"><i data-feather="package"></i> {{ __('Products') }}</h3>
-            <form method="post" action="{{ $ws->fullEditorAction() }}" onsubmit="return confirm('{{ __('Log in as this company? Every action will be recorded in the audit log.') }}')">
+            <form method="post" action="{{ $ws->fullEditorAction() }}" data-confirm="{{ __('Log in as this company? Every action will be recorded in the audit log.') }}">
                 @csrf<button class="bk-btn bk-btn--gold bk-btn--sm"><i data-feather="edit"></i> {{ __('Manage stock') }}</button></form>
         </div>
         <div class="bk-card-body p0">

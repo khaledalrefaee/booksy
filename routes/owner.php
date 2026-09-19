@@ -111,10 +111,26 @@ Route::prefix('owner')->name('owner.')->group(function () {
         Route::post('companies/import', [CompanyController::class, 'import'])
             ->middleware('owner.can:companies.manage')
             ->name('companies.import');
-        Route::resource('companies', CompanyController::class)->only(['index', 'show']);
+        // استيراد ملف بيانات شركة (JSON) → إنشاء شركة جديدة منه.
+        Route::get('companies/import-data',  [CompanyController::class, 'importDataForm'])
+            ->middleware('owner.can:companies.manage')
+            ->name('companies.import-data.form');
+        Route::post('companies/import-data', [CompanyController::class, 'importData'])
+            ->middleware('owner.can:companies.manage')
+            ->name('companies.import-data');
+        Route::resource('companies', CompanyController::class)->only(['index', 'show'])->withTrashed(['show']);
         Route::resource('companies', CompanyController::class)
-            ->only(['store', 'update', 'destroy'])
+            ->only(['store', 'update'])
             ->middleware('owner.can:companies.manage');
+
+        // Restore + permanent delete of closed (soft-deleted) accounts.
+        // withTrashed() so the {company} binding resolves soft-deleted rows too.
+        Route::middleware('owner.can:companies.manage')->group(function () {
+            Route::post('companies/{company}/restore', [CompanyController::class, 'restore'])
+                ->withTrashed()->name('companies.restore');
+            Route::delete('companies/{company}', [CompanyController::class, 'destroy'])
+                ->withTrashed()->name('companies.destroy');
+        });
 
         // ── Company Workspace (per-company management hub) ──
         // Each tab/module owns its own file in routes/owner/ws/ so parallel work

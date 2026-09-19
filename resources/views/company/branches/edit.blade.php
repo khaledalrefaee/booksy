@@ -373,24 +373,30 @@ updateLoyaltyPreview();
     inactive.addEventListener('change', function () {
         if (!inactive.checked) return;
 
-        if (!confirm(@json(__('Deactivating hides your business from customers and signs you out. Continue?')))) {
+        function revertStatus() {
             var revert = document.querySelector('input[name="status"][value="{{ $branch->status }}"]')
                       || document.querySelector('input[name="status"][value="active"]');
             if (revert) { revert.checked = true; highlightStatus(); }
-            return;
         }
 
-        inactive.disabled = true;
-        var token = document.querySelector('input[name="_token"]').value;
-        var loginUrl = @json(route('company.login'));
+        function proceed() {
+            inactive.disabled = true;
+            var token = document.querySelector('input[name="_token"]').value;
+            var loginUrl = @json(route('company.login'));
 
-        fetch(@json(route('company.branches.deactivate', $branch)), {
-            method: 'POST',
-            headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (d) { window.location.href = (d && d.redirect) ? d.redirect : loginUrl; })
-        .catch(function () { window.location.href = loginUrl; });
+            fetch(@json(route('company.branches.deactivate', $branch)), {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { window.location.href = (d && d.redirect) ? d.redirect : loginUrl; })
+            .catch(function () { window.location.href = loginUrl; });
+        }
+
+        var msg = @json(__('Deactivating hides your business from customers and signs you out. Continue?'));
+        (window.bkConfirm ? window.bkConfirm({ text: msg, icon: 'warning' })
+                          : Promise.resolve({ isConfirmed: window.confirm(msg) }))
+            .then(function (r) { if (r && r.isConfirmed) proceed(); else revertStatus(); });
     });
 })();
 </script>

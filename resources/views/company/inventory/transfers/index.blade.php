@@ -89,7 +89,7 @@
                                     <button class="btn btn-sm btn-success">✅ {{ __('Receive') }}</button>
                                 </form>
                                 <form method="POST" action="{{ route('company.inventory.transfers.cancel', $t) }}" class="d-inline"
-                                    onsubmit="return confirm('{{ __('Cancel this transfer? Stock will be returned.') }}')">
+                                    data-confirm="{{ __('Cancel this transfer? Stock will be returned.') }}">
                                     @csrf @method('PUT')
                                     <button class="btn btn-sm btn-outline-danger">{{ __('Cancel') }}</button>
                                 </form>

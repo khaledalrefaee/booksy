@@ -55,9 +55,11 @@
 
                     {{-- Source badge --}}
                     @if($customer->source)
+                    @php $srcMeta = \App\Models\Customer::SOURCES[$customer->source] ?? null; @endphp
                     <div class="mb-2">
-                        <span style="font-size:11px;font-weight:700;background:rgba(92,112,56,.12);color:#5C7038;padding:2px 10px;border-radius:12px;">
-                            {{ __(ucfirst($customer->source)) }}
+                        <span class="d-inline-flex align-items-center gap-1" style="font-size:11px;font-weight:700;background:rgba(92,112,56,.12);color:#5C7038;padding:3px 10px;border-radius:12px;">
+                            @include('company.partials.source-icon', ['source' => $customer->source, 'size' => 13])
+                            {{ __($srcMeta['label_key'] ?? ucfirst($customer->source)) }}
                         </span>
                     </div>
                     @endif
@@ -800,9 +802,11 @@ window.openEditCustomer = function(c) {
 };
 
 window.openDeleteCustomer = function(id, name) {
-    document.getElementById('deleteCustomerForm').action = DELETE_BASE.replace('__ID__', id);
-    document.getElementById('deleteCustomerName').textContent = name;
-    new bootstrap.Modal(document.getElementById('deleteCustomerModal')).show();
+    bkConfirmDelete(
+        DELETE_BASE.replace('__ID__', id),
+        name,
+        @json(__('This customer and all their data will be permanently deleted.'))
+    );
 };
 </script>
 @endpush

@@ -92,7 +92,7 @@ class OnboardingService
      * Everything a view needs: derived step completion + persisted UI state.
      * @return array{steps: array<string,bool>, percent: int, tourDone: bool,
      *   dismissed: bool, canPublish: bool, blockers: array<int,string>,
-     *   published: bool, headOfficeId: int|null}
+     *   published: bool, submittedForReview: bool, headOfficeId: int|null}
      */
     public static function summary(Company $company): array
     {
@@ -107,6 +107,7 @@ class OnboardingService
             'canPublish'   => self::canPublish($company),
             'blockers'     => self::publishBlockers($company),
             'published'    => $company->status === 'active',
+            'submittedForReview' => $company->submitted_for_review_at !== null,
             'headOfficeId' => $headOffice?->id,
         ];
     }

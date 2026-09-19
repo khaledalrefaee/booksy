@@ -59,6 +59,13 @@
         var c = categories.find(function (x) { return String(x.id) === String(id); });
         return c ? c.name : (TX.uncategorized || 'Uncategorized');
     }
+    // A service counts as uncategorized when it has no category OR its category
+    // is unknown to this branch (e.g. an orphaned / cross-company id). Without
+    // this, such a service passes filtering but matches no group and vanishes.
+    function isUncategorized(s) {
+        return s.category_id == null
+            || !categories.some(function (c) { return String(c.id) === String(s.category_id); });
+    }
     function durLabel(min) {
         min = +min || 0; var h = Math.floor(min / 60), mm = min % 60, s = '';
         if (h > 0) s += h + TX.h + ' ';
@@ -96,7 +103,7 @@
     function filtered() {
         var q = state.q.trim().toLowerCase();
         return services.filter(function (s) {
-            if (state.cat === 'none') { if (s.category_id != null) return false; }
+            if (state.cat === 'none') { if (!isUncategorized(s)) return false; }
             else if (state.cat !== '') { if (String(s.category_id) !== state.cat) return false; }
             if (state.type && s.service_type !== state.type) return false;
             if (state.status === 'active' && !s.is_active) return false;
@@ -120,7 +127,7 @@
                     .sort(function (a, b) { return (a.sort_order - b.sort_order) || (a.id - b.id); });
                 if (items.length) groups.push({ key: String(c.id), id: c.id, name: c.name, items: items });
             });
-        var un = list.filter(function (s) { return s.category_id == null; })
+        var un = list.filter(isUncategorized)
             .sort(function (a, b) { return (a.sort_order - b.sort_order) || (a.id - b.id); });
         if (un.length) groups.push({ key: 'none', id: null, name: TX.uncategorized || 'Uncategorized', items: un });
         return groups;
@@ -130,7 +137,7 @@
     function renderRail() {
         var el = $('#wb-rail-list'); if (!el) return;
         var counts = {}; var uncat = 0;
-        services.forEach(function (s) { if (s.category_id == null) uncat++; else counts[s.category_id] = (counts[s.category_id] || 0) + 1; });
+        services.forEach(function (s) { if (isUncategorized(s)) uncat++; else counts[s.category_id] = (counts[s.category_id] || 0) + 1; });
         var html = '';
         html += '<div class="wb-cat ' + (state.cat === '' ? 'active' : '') + '" data-cat=""><span class="dot" style="background:#8a94a6"></span><span class="nm">' + esc(T('all')) + '</span><span class="ct">' + services.length + '</span></div>';
         var sorted = categories.slice().sort(function (a, b) { return (a.sort - b.sort) || a.name.localeCompare(b.name); });

@@ -101,6 +101,8 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 
+@include('partials.clarity')
+
 {{-- ══════════════  PRIMARY SEO  ══════════════ --}}
 <title>{{ $title }}</title>
 <meta name="description" content="{{ $metaDesc }}">

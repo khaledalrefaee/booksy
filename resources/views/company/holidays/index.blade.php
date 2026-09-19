@@ -118,11 +118,9 @@
                     <span class="hol-badge" style="background:rgba(100,116,139,.12);color:#94a3b8;">{{ __('Passed') }}</span>
                     @endif
                     <form method="POST" action="{{ route('company.holidays.destroy', $holiday) }}"
-                          onsubmit="return confirm('{{ __('Delete this holiday?') }}')">
+                          data-confirm="{{ __('Delete this holiday?') }}">
                         @csrf @method('DELETE')
-                        <button type="submit" class="btn btn-sm rounded-pill" style="background:rgba(239,68,68,.08);color:#ef4444;font-size:11px;border:none;">
-                            <i data-feather="trash-2" style="width:12px;height:12px;"></i>
-                        </button>
+                        <x-bk-action type="submit" variant="danger" icon="trash-2" icon-only>{{ __('Delete') }}</x-bk-action>
                     </form>
                 </div>
                 @empty

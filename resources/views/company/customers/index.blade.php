@@ -1,4 +1,51 @@
 @extends('company.dashboard')
+
+@push('company-styles')
+<style>
+/* ── Unified iconography helpers ── */
+.bk-ci { width:11px; height:11px; flex-shrink:0; }
+.bk-fi { width:14px; height:14px; margin-inline-end:6px; vertical-align:-2px; }
+.bk-chip-filter { display:inline-flex; align-items:center; }
+
+/* Small brand/status chip beside a customer name */
+.bk-mini-chip {
+    display:inline-flex; align-items:center; gap:3px;
+    font-size:9px; font-weight:700; line-height:1;
+    padding:3px 7px; border-radius:8px; white-space:nowrap;
+}
+
+/* ── Icon-aware source picker ── */
+.bk-srcsel { position:relative; }
+.bk-srcsel-btn {
+    width:100%; cursor:pointer; overflow:hidden;
+    background-image:none;               /* drop the native <select> caret */
+    padding-inline-end:2.2rem;
+}
+.bk-srcsel-btn::after {
+    content:""; position:absolute; inset-inline-end:.9rem; top:50%;
+    width:.5rem; height:.5rem; margin-top:-.35rem;
+    border-inline-end:1.6px solid currentColor; border-bottom:1.6px solid currentColor;
+    transform:rotate(45deg); opacity:.45; pointer-events:none;
+}
+.bk-srcsel-current { min-width:0; }
+.bk-srcsel-current > .text-truncate { max-width:100%; }
+.bk-srcsel-ic { width:16px; height:16px; }
+.bk-srcsel-ic svg, .bk-srcsel-ic .feather { width:16px; height:16px; }
+.bk-srcsel-menu {
+    max-height:280px; overflow-y:auto; padding:6px;
+    border-radius:14px; border:1px solid var(--bk-border);
+}
+.bk-srcsel-item {
+    border-radius:10px; padding:8px 10px; font-size:13px;
+    transition:background .15s ease;
+}
+.bk-srcsel-item:active { color:inherit; }
+.bk-srcsel-item:hover, .bk-srcsel-item:focus {
+    background:var(--bk-accent-wash); color:var(--bk-text);
+}
+</style>
+@endpush
+
 @section('content')
 <div class="page-content">
 
@@ -101,7 +148,7 @@
                         <option value="">{{ __('All tags') }}</option>
                         @foreach(\App\Models\Customer::TAGS as $tKey => $tMeta)
                         <option value="{{ $tKey }}" {{ request('tag') === $tKey ? 'selected' : '' }}>
-                            {{ $tMeta['icon'] }} {{ __($tMeta['label_key']) }}
+                            {{ __($tMeta['label_key']) }}
                         </option>
                         @endforeach
                         <option value="" disabled>──</option>
@@ -109,14 +156,7 @@
                     </select>
                 </div>
                 <div class="col-6 col-sm-2">
-                    <select name="source" class="form-select">
-                        <option value="">{{ __('All sources') }}</option>
-                        @foreach(\App\Models\Customer::SOURCES as $sKey => $sMeta)
-                        <option value="{{ $sKey }}" {{ request('source') === $sKey ? 'selected' : '' }}>
-                            {{ $sMeta['icon'] }} {{ __($sMeta['label_key']) }}
-                        </option>
-                        @endforeach
-                    </select>
+                    @include('company.partials.source-select', ['name' => 'source', 'id' => 'filterSource', 'current' => request('source', ''), 'includeAll' => true])
                 </div>
                 <div class="col-12 col-sm-1 d-flex gap-1 flex-wrap">
                     <button class="btn btn-primary rounded-pill flex-fill">{{ __('Filter') }}</button>
@@ -124,20 +164,20 @@
             </div>
             <div class="d-flex gap-2 flex-wrap mt-2">
                 <a href="{{ route('company.customers.index', array_merge(request()->only('search','branch_id','tag','source'), ['birthday_month'=>'1'])) }}"
-                   class="btn btn-sm rounded-pill px-3 {{ request('birthday_month') === '1' ? 'btn-warning' : 'btn-outline-secondary' }}">
-                    🎂 {{ __('Birthdays this month') }}
+                   class="btn btn-sm rounded-pill px-3 bk-chip-filter {{ request('birthday_month') === '1' ? 'btn-warning' : 'btn-outline-secondary' }}">
+                    <i data-feather="gift" class="bk-fi"></i>{{ __('Birthdays this month') }}
                 </a>
                 <a href="{{ route('company.customers.index', array_merge(request()->only('search','branch_id','tag','source'), ['inactive'=>'1'])) }}"
-                   class="btn btn-sm rounded-pill px-3 {{ request('inactive') === '1' ? 'btn-secondary' : 'btn-outline-secondary' }}">
-                    💤 {{ __('Inactive customers') }}
+                   class="btn btn-sm rounded-pill px-3 bk-chip-filter {{ request('inactive') === '1' ? 'btn-secondary' : 'btn-outline-secondary' }}">
+                    <i data-feather="moon" class="bk-fi"></i>{{ __('Inactive customers') }}
                 </a>
                 <a href="{{ route('company.customers.index', array_merge(request()->only('search','branch_id','tag','source'), ['has_debt'=>'1'])) }}"
-                   class="btn btn-sm rounded-pill px-3 {{ request('has_debt') === '1' ? 'btn-danger' : 'btn-outline-secondary' }}">
-                    💳 {{ __('Has debt') }}
+                   class="btn btn-sm rounded-pill px-3 bk-chip-filter {{ request('has_debt') === '1' ? 'btn-danger' : 'btn-outline-secondary' }}">
+                    <i data-feather="credit-card" class="bk-fi"></i>{{ __('Has debt') }}
                 </a>
                 <a href="{{ route('company.customers.index', ['banned' => '1']) }}"
-                   class="btn btn-sm rounded-pill px-3 {{ request('banned') === '1' ? 'btn-danger' : 'btn-outline-danger' }}">
-                    🚫 {{ __('Banned') }}
+                   class="btn btn-sm rounded-pill px-3 bk-chip-filter {{ request('banned') === '1' ? 'btn-danger' : 'btn-outline-danger' }}">
+                    <i data-feather="slash" class="bk-fi"></i>{{ __('Banned') }}
                 </a>
                 @if(request()->hasAny(['search','branch_id','tag','banned','source','birthday_month','inactive','has_debt']))
                     <a href="{{ route('company.customers.index') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3" title="{{ __('Clear') }}">
@@ -164,8 +204,13 @@
                 </div>
             </div>
 
+            @php $tagGlyphs = ['vip' => 'star', 'regular' => 'user', 'new' => 'sunrise', 'loyal' => 'award']; @endphp
             @forelse($customers as $c)
-            @php $tagMeta = \App\Models\Customer::TAGS[$c->tag] ?? null; @endphp
+            @php
+                $tagMeta   = \App\Models\Customer::TAGS[$c->tag] ?? null;
+                $tagGlyph  = $tagGlyphs[$c->tag] ?? 'tag';
+                $srcMeta   = \App\Models\Customer::SOURCES[$c->source] ?? null;
+            @endphp
             <div class="px-4 py-3 bk-table-row {{ $c->is_banned ? 'opacity-50' : '' }}" style="border-bottom:1px solid rgba(255,255,255,.04);{{ $c->is_banned ? 'border-inline-start:3px solid #ef4444;' : '' }}">
                 <div class="row gx-3 align-items-center">
                     <div class="col-12 col-md-4 mb-2 mb-md-0">
@@ -175,28 +220,34 @@
                                      style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
                             @else
                                 <div style="width:36px;height:36px;border-radius:50%;background:{{ $c->is_banned ? 'rgba(239,68,68,.15)' : 'rgba(75,93,52,.15)' }};color:{{ $c->is_banned ? '#ef4444' : '#5C7038' }};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;">
-                                    {{ $c->is_banned ? '🚫' : mb_substr($c->name, 0, 1) }}
+                                    @if($c->is_banned)<i data-feather="slash" style="width:16px;height:16px;"></i>@else{{ mb_substr($c->name, 0, 1) }}@endif
                                 </div>
                             @endif
-                            <div>
-                                <div class="fw-semibold tx-13">
-                                    {{ $c->name }}
+                            <div style="min-width:0;">
+                                <div class="fw-semibold tx-13 d-flex align-items-center flex-wrap gap-1">
+                                    <span>{{ $c->name }}</span>
                                     @if($tagMeta)
-                                    <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:{{ $tagMeta['color'] }}18;color:{{ $tagMeta['color'] }};margin-inline-start:4px;">
-                                        {{ $tagMeta['icon'] }} {{ __($tagMeta['label_key']) }}
+                                    <span class="bk-mini-chip" style="background:{{ $tagMeta['color'] }}18;color:{{ $tagMeta['color'] }};">
+                                        <i data-feather="{{ $tagGlyph }}" class="bk-ci"></i>{{ __($tagMeta['label_key']) }}
                                     </span>
                                     @endif
                                     @if($c->is_banned)
-                                    <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:rgba(239,68,68,.15);color:#ef4444;margin-inline-start:4px;">
-                                        🚫 {{ __('Banned') }}
+                                    <span class="bk-mini-chip" style="background:rgba(239,68,68,.15);color:#ef4444;">
+                                        <i data-feather="slash" class="bk-ci"></i>{{ __('Banned') }}
                                     </span>
                                     @endif
                                 </div>
+                                @if($srcMeta)
+                                    <div class="d-flex align-items-center gap-1 text-muted tx-11 mt-1">
+                                        @include('company.partials.source-icon', ['source' => $c->source, 'size' => 13])
+                                        <span>{{ __($srcMeta['label_key']) }}</span>
+                                    </div>
+                                @endif
                                 @if($c->age)
                                     <div class="text-muted tx-11">{{ $c->age }} {{ __('years') }}</div>
                                 @endif
                                 @if($c->notes)
-                                    <div class="text-muted tx-11">📝 {{ Str::limit($c->notes, 30) }}</div>
+                                    <div class="text-muted tx-11 d-flex align-items-center gap-1"><i data-feather="file-text" class="bk-ci"></i>{{ Str::limit($c->notes, 30) }}</div>
                                 @endif
                             </div>
                         </a>
@@ -228,22 +279,22 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end" style="min-width:180px;">
                                 @if($c->phone)
-                                <li><button class="dropdown-item tx-13" onclick="openWaModal('{{ $c->phone }}', '{{ e($c->name) }}')">💬 {{ __('WhatsApp') }}</button></li>
+                                <li><button class="dropdown-item tx-13" onclick="openWaModal('{{ $c->phone }}', '{{ e($c->name) }}')"><i data-feather="message-circle" class="bk-mi"></i>{{ __('WhatsApp') }}</button></li>
                                 @endif
-                                <li><button class="dropdown-item tx-13" onclick="openTagModal({{ $c->id }}, '{{ $c->tag }}')">🏷️ {{ __('Tag') }}</button></li>
-                                <li><button class="dropdown-item tx-13" onclick="openEditCustomer({{ json_encode(['id'=>$c->id,'name'=>$c->name,'phone'=>$c->phone,'age'=>$c->age,'notes'=>$c->notes,'date_of_birth'=>$c->date_of_birth?->format('Y-m-d'),'source'=>$c->source,'branch_ids'=>$c->linkedBranches->pluck('id')]) }})">✏️ {{ __('Edit') }}</button></li>
+                                <li><button class="dropdown-item tx-13" onclick="openTagModal({{ $c->id }}, '{{ $c->tag }}')"><i data-feather="tag" class="bk-mi"></i>{{ __('Tag') }}</button></li>
+                                <li><button class="dropdown-item tx-13" onclick="openEditCustomer({{ json_encode(['id'=>$c->id,'name'=>$c->name,'phone'=>$c->phone,'age'=>$c->age,'notes'=>$c->notes,'date_of_birth'=>$c->date_of_birth?->format('Y-m-d'),'source'=>$c->source,'branch_ids'=>$c->linkedBranches->pluck('id')]) }})"><i data-feather="edit-2" class="bk-mi"></i>{{ __('Edit') }}</button></li>
                                 <li><hr class="dropdown-divider"></li>
                                 @if($c->is_banned)
                                 <li>
                                     <form method="POST" action="{{ route('company.customers.toggle-ban', $c) }}">
                                         @csrf @method('PUT')
-                                        <button type="submit" class="dropdown-item tx-13">✅ {{ __('Unban') }}</button>
+                                        <button type="submit" class="dropdown-item tx-13"><i data-feather="check-circle" class="bk-mi"></i>{{ __('Unban') }}</button>
                                     </form>
                                 </li>
                                 @else
-                                <li><button class="dropdown-item tx-13" onclick="openBanModal({{ $c->id }}, '{{ e($c->name) }}')">🚫 {{ __('Ban') }}</button></li>
+                                <li><button class="dropdown-item tx-13" onclick="openBanModal({{ $c->id }}, '{{ e($c->name) }}')"><i data-feather="slash" class="bk-mi"></i>{{ __('Ban') }}</button></li>
                                 @endif
-                                <li><button class="dropdown-item tx-13 text-danger" onclick="openDeleteCustomer({{ $c->id }}, '{{ e($c->name) }}')">🗑️ {{ __('Delete') }}</button></li>
+                                <li><button class="dropdown-item tx-13 text-danger" onclick="openDeleteCustomer({{ $c->id }}, '{{ e($c->name) }}')"><i data-feather="trash-2" class="bk-mi"></i>{{ __('Delete') }}</button></li>
                             </ul>
                         </div>
                     </div>
@@ -313,11 +364,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold tx-13">{{ __('Source') }}</label>
-                            <select name="source" class="form-select">
-                                @foreach(\App\Models\Customer::SOURCES as $sKey => $sMeta)
-                                <option value="{{ $sKey }}" {{ $sKey === 'walk_in' ? 'selected' : '' }}>{{ $sMeta['icon'] }} {{ __($sMeta['label_key']) }}</option>
-                                @endforeach
-                            </select>
+                            @include('company.partials.source-select', ['name' => 'source', 'id' => 'addSource', 'current' => 'walk_in'])
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold tx-13">{{ __('Linked branches') }}</label>
@@ -393,12 +440,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold tx-13">{{ __('Source') }}</label>
-                            <select name="source" id="editSource" class="form-select">
-                                <option value="">—</option>
-                                @foreach(\App\Models\Customer::SOURCES as $sKey => $sMeta)
-                                <option value="{{ $sKey }}">{{ $sMeta['icon'] }} {{ __($sMeta['label_key']) }}</option>
-                                @endforeach
-                            </select>
+                            @include('company.partials.source-select', ['name' => 'source', 'id' => 'editSource', 'current' => ''])
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold tx-13">{{ __('Linked branches') }}</label>
@@ -434,7 +476,9 @@
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content rounded-4">
                 <div class="modal-body text-center p-4">
-                    <div style="font-size:40px;margin-bottom:12px;">🗑️</div>
+                    <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width:56px;height:56px;border-radius:16px;background:rgba(239,68,68,.12);color:#ef4444;">
+                        <i data-feather="trash-2" style="width:26px;height:26px;"></i>
+                    </div>
                     <h6 class="fw-bold mb-2">{{ __('Delete customer?') }}</h6>
                     <p class="text-muted small mb-1" id="deleteCustomerName"></p>
                     <p class="text-muted small mb-3">{{ __('This will permanently delete this customer and all their data.') }}</p>
@@ -459,22 +503,23 @@
                 <form method="POST" id="tagForm" onsubmit="disableSubmit(this)">
                     @csrf @method('PUT')
                     <div class="modal-header border-0 pb-0">
-                        <h5 class="modal-title fw-bold">🏷️ {{ __('Set Tag') }}</h5>
+                        <h5 class="modal-title fw-bold d-flex align-items-center gap-2"><i data-feather="tag" style="width:18px;height:18px;color:var(--bk-accent);"></i>{{ __('Set Tag') }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body pt-3">
+                        @php $tagGlyphsModal = ['vip' => 'star', 'regular' => 'user', 'new' => 'sunrise', 'loyal' => 'award']; @endphp
                         <div class="d-flex flex-column gap-2">
                             <label style="cursor:pointer;">
                                 <input type="radio" name="tag" value="" class="d-none tag-radio">
-                                <div class="pm-card" style="--pm-color:#64748b;padding:8px 14px;">
-                                    👤 {{ __('No tag') }}
+                                <div class="pm-card d-flex align-items-center gap-2" style="--pm-color:#64748b;padding:8px 14px;">
+                                    <i data-feather="user-x" style="width:15px;height:15px;"></i>{{ __('No tag') }}
                                 </div>
                             </label>
                             @foreach(\App\Models\Customer::TAGS as $tKey => $tMeta)
                             <label style="cursor:pointer;">
                                 <input type="radio" name="tag" value="{{ $tKey }}" class="d-none tag-radio">
-                                <div class="pm-card" style="--pm-color:{{ $tMeta['color'] }};padding:8px 14px;">
-                                    {{ $tMeta['icon'] }} {{ __($tMeta['label_key']) }}
+                                <div class="pm-card d-flex align-items-center gap-2" style="--pm-color:{{ $tMeta['color'] }};padding:8px 14px;">
+                                    <i data-feather="{{ $tagGlyphsModal[$tKey] ?? 'tag' }}" style="width:15px;height:15px;"></i>{{ __($tMeta['label_key']) }}
                                 </div>
                             </label>
                             @endforeach
@@ -496,7 +541,7 @@
                 <form method="POST" id="banForm" onsubmit="disableSubmit(this)">
                     @csrf @method('PUT')
                     <div class="modal-header border-0 pb-0">
-                        <h5 class="modal-title fw-bold">🚫 {{ __('Ban Customer') }}</h5>
+                        <h5 class="modal-title fw-bold d-flex align-items-center gap-2"><i data-feather="slash" style="width:18px;height:18px;color:#ef4444;"></i>{{ __('Ban Customer') }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body pt-3">
@@ -512,8 +557,8 @@
                     </div>
                     <div class="modal-footer border-0 pt-0">
                         <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                        <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">
-                            🚫 {{ __('Ban') }}
+                        <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold d-inline-flex align-items-center gap-2">
+                            <i data-feather="slash" style="width:15px;height:15px;"></i>{{ __('Ban') }}
                         </button>
                     </div>
                 </form>
@@ -526,22 +571,22 @@
         <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
             <div class="modal-content rounded-4">
                 <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold">💬 {{ __('Send WhatsApp') }}</h5>
+                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2"><i data-feather="message-circle" style="width:18px;height:18px;color:#25D366;"></i>{{ __('Send WhatsApp') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body pt-3">
                     <div class="d-flex flex-column gap-2 mb-3">
-                        <button type="button" class="btn btn-sm text-start rounded-3 px-3 py-2" style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.15);"
+                        <button type="button" class="btn btn-sm text-start rounded-3 px-3 py-2 d-flex align-items-center gap-2" style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.15);"
                                 onclick="sendWA('welcome')">
-                            👋 {{ __('Welcome message') }}
+                            <i data-feather="smile" style="width:15px;height:15px;"></i>{{ __('Welcome message') }}
                         </button>
-                        <button type="button" class="btn btn-sm text-start rounded-3 px-3 py-2" style="background:rgba(92,112,56,.08);border:1px solid rgba(92,112,56,.15);"
+                        <button type="button" class="btn btn-sm text-start rounded-3 px-3 py-2 d-flex align-items-center gap-2" style="background:rgba(92,112,56,.08);border:1px solid rgba(92,112,56,.15);"
                                 onclick="sendWA('reminder')">
-                            ⏰ {{ __('Appointment reminder') }}
+                            <i data-feather="clock" style="width:15px;height:15px;"></i>{{ __('Appointment reminder') }}
                         </button>
-                        <button type="button" class="btn btn-sm text-start rounded-3 px-3 py-2" style="background:rgba(75,93,52,.08);border:1px solid rgba(75,93,52,.15);"
+                        <button type="button" class="btn btn-sm text-start rounded-3 px-3 py-2 d-flex align-items-center gap-2" style="background:rgba(75,93,52,.08);border:1px solid rgba(75,93,52,.15);"
                                 onclick="sendWA('offer')">
-                            🎁 {{ __('Special offer') }}
+                            <i data-feather="gift" style="width:15px;height:15px;"></i>{{ __('Special offer') }}
                         </button>
                     </div>
                     <div class="mb-1">
@@ -551,9 +596,9 @@
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
-                    <button type="button" class="btn rounded-pill px-4 fw-bold" style="background:#25D366;color:#fff;border:none;"
+                    <button type="button" class="btn rounded-pill px-4 fw-bold d-inline-flex align-items-center gap-2" style="background:#25D366;color:#fff;border:none;"
                             onclick="sendWA('custom')">
-                        💬 {{ __('Send') }}
+                        <i data-feather="send" style="width:15px;height:15px;"></i>{{ __('Send') }}
                     </button>
                 </div>
             </div>
@@ -623,6 +668,36 @@ window.disableSubmit = function(form) {
     form.querySelectorAll('button[type="submit"]').forEach(function(b) { b.disabled = true; b.style.opacity = '.5'; });
 };
 
+// ── Icon-aware source picker (brand logos + monotone glyphs) ──
+function applySourceChoice(root, item) {
+    var input   = root.querySelector('input[type="hidden"]');
+    var current = root.querySelector('.bk-srcsel-current');
+    if (!input || !current || !item) return;
+    input.value = item.getAttribute('data-val') || '';
+    // Clone the chosen row's icon + label into the button (icons are already SVG here).
+    current.innerHTML = '';
+    Array.prototype.forEach.call(item.children, function(child) {
+        current.appendChild(child.cloneNode(true));
+    });
+    current.classList.remove('is-placeholder');
+}
+
+// Programmatic set by widget id + value (used when opening the edit modal).
+window.setSourceSelect = function(rootId, value) {
+    var root = document.getElementById(rootId);
+    if (!root) return;
+    var item = root.querySelector('.bk-srcsel-item[data-val="' + (value || '') + '"]');
+    if (!item) item = root.querySelector('.bk-srcsel-item[data-val=""]') || root.querySelector('.bk-srcsel-item');
+    applySourceChoice(root, item);
+};
+
+document.addEventListener('click', function(e) {
+    var item = e.target.closest('.bk-srcsel-item');
+    if (!item) return;
+    var root = item.closest('[data-src-select]');
+    if (root) applySourceChoice(root, item);
+});
+
 var dialCodesData = @json(config('booksy.dial_codes'));
 
 window.updatePhoneValidation = function(selectEl) {
@@ -684,7 +759,7 @@ window.openEditCustomer = function(c) {
     document.getElementById('editAge').value = c.age || '';
     document.getElementById('editNotes').value = c.notes || '';
     document.getElementById('editDOB').value = c.date_of_birth || '';
-    document.getElementById('editSource').value = c.source || '';
+    window.setSourceSelect('editSource', c.source || '');
 
     // Set branch checkboxes
     var branchIds = c.branch_ids || [];
@@ -717,9 +792,11 @@ window.openEditCustomer = function(c) {
 };
 
 window.openDeleteCustomer = function(id, name) {
-    document.getElementById('deleteCustomerForm').action = DELETE_BASE.replace('__ID__', id);
-    document.getElementById('deleteCustomerName').textContent = name;
-    new bootstrap.Modal(document.getElementById('deleteCustomerModal')).show();
+    bkConfirmDelete(
+        DELETE_BASE.replace('__ID__', id),
+        name,
+        @json(__('This customer and all their data will be permanently deleted.'))
+    );
 };
 
 window.openTagModal = function(id, currentTag) {

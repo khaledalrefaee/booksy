@@ -9,6 +9,7 @@ use App\Http\Requests\Owner\UpdateCompanyStatusRequest;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\Plan;
+use App\Services\CompanyDataImporter;
 use App\Services\Owner\OwnerAudit;
 use App\Support\CategoryUploadedImage;
 use Illuminate\Http\RedirectResponse;
@@ -49,6 +50,7 @@ class CompanyController extends Controller
             'new_month' => (int) Company::query()
                 ->where('created_at', '>=', now()->startOfMonth())
                 ->count(),
+            'closed'    => (int) Company::onlyTrashed()->count(),
         ];
 
         // How many filters are actually applied (drives the "Filters · N" badge).
@@ -56,9 +58,11 @@ class CompanyController extends Controller
             ->filter(fn ($v) => $v !== '' && $v !== null)
             ->count();
 
+        $trashed = $request->input('trashed') === 'only' ? 'only' : '';
+
         return view('owner.companies.index', compact(
             'companies', 'categories', 'plans', 'stats', 'activeFilters',
-            'q', 'sortField', 'sortDir',
+            'q', 'sortField', 'sortDir', 'trashed',
             'filterStatus', 'filterCategoryId', 'filterPlanId', 'filterDate', 'dateFrom', 'dateTo'
         ));
     }
@@ -82,6 +86,11 @@ class CompanyController extends Controller
         $date       = $request->input('date');
 
         $query = Company::query();
+
+        // "الحسابات المغلقة" (soft-deleted). الافتراضي يستثنيها (Global scope).
+        if ($request->input('trashed') === 'only') {
+            $query->onlyTrashed();
+        }
 
         if ($q !== '') {
             $query->where(function ($sub) use ($q) {
@@ -264,6 +273,16 @@ class CompanyController extends Controller
         OwnerAudit::recordChanges('company.status-update', $company, $reason);
         $company->save();
 
+        // Approving an account is what takes it live: also clear the head-office
+        // marketplace gate (branch → active) so a pending business becomes
+        // publicly visible the moment the admin approves it.
+        if ($newStatus === 'active') {
+            $headOffice = $company->headOffice();
+            if ($headOffice && $headOffice->isInactive()) {
+                $headOffice->update(['status' => 'active']);
+            }
+        }
+
         // Notify the owner (email + phone) whenever the admin sets the account to
         // suspended. The panel's own UI blocks a no-op save (from === to), so
         // reaching here with "suspended" is always a deliberate suspend action.
@@ -340,6 +359,10 @@ class CompanyController extends Controller
             ->with('success', __('Company updated successfully.'));
     }
 
+    /**
+     * حذف نهائي — يمسح الشركة وكل بياناتها (cascade) والشعار. لا رجعة فيه.
+     * يعمل على الشركات النشطة والمغلقة (withTrashed على الراوت).
+     */
     public function destroy(Company $company): RedirectResponse
     {
         if ($company->logo) {
@@ -348,10 +371,74 @@ class CompanyController extends Controller
 
         OwnerAudit::record('company.delete', $company, old: ['email' => $company->email, 'status' => $company->status]);
 
-        $company->delete();
+        $company->forceDelete();
 
         return redirect()
             ->route('owner.companies.index')
-            ->with('success', __('Company deleted successfully.'));
+            ->with('success', __('Company permanently deleted.'));
+    }
+
+    /**
+     * صفحة رفع ملف بيانات JSON (المُصدَّر من الشركة) لإنشاء شركة جديدة منه.
+     */
+    public function importDataForm(): View
+    {
+        return view('owner.companies.import-data');
+    }
+
+    /**
+     * استيراد ملف JSON → إنشاء شركة جديدة معبّأة بكل بياناتها (مع ID remapping).
+     */
+    public function importData(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:20480'], // 20MB
+        ]);
+
+        $payload = json_decode(
+            (string) file_get_contents($request->file('file')->getRealPath()),
+            true
+        );
+
+        if (! is_array($payload)) {
+            return back()->withErrors(['file' => __('The file is not a valid JSON export.')]);
+        }
+
+        try {
+            $result = (new CompanyDataImporter)->import($payload);
+        } catch (\Throwable $e) {
+            return back()->withErrors(['file' => $e->getMessage()]);
+        }
+
+        $company = $result['company'];
+        OwnerAudit::record('company.import', $company);
+
+        // ملخّص مختصر: القسم وعدد المستورد.
+        $parts = [];
+        foreach ($result['report'] as $key => $r) {
+            if (is_array($r) && ! empty($r['imported'])) {
+                $label = config("data-export.entities.$key.label", $key);
+                $parts[] = $label . ': ' . $r['imported'];
+            }
+        }
+
+        return redirect()
+            ->route('owner.companies.show', $company)
+            ->with('success', __('Company imported successfully.') . ' — ' . implode(' · ', $parts));
+    }
+
+    /**
+     * استعادة حساب مغلق (Soft-deleted) — تُرجِع الشركة وكل بياناتها كما كانت.
+     */
+    public function restore(Company $company): RedirectResponse
+    {
+        $company->restore();
+        $company->update(['closure_reason' => null]);
+
+        OwnerAudit::record('company.restore', $company);
+
+        return redirect()
+            ->route('owner.companies.index')
+            ->with('success', __('Company restored successfully.'));
     }
 }

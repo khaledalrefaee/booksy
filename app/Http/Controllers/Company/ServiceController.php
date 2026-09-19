@@ -607,7 +607,7 @@ class ServiceController extends Controller
     private function rules(Branch $branch, ?Service $ignore = null): array
     {
         return [
-            'service_category_id' => ['nullable', 'exists:service_categories,id'],
+            'service_category_id' => ['nullable', Rule::exists('service_categories', 'id')->where('company_id', $this->company()->id)],
             'service_type'        => ['nullable', Rule::in(Service::TYPES)],
             'name_en'             => ['required', 'string', 'max:255'],
             'name_ar'             => ['nullable', 'string', 'max:255'],

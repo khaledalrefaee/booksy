@@ -43,7 +43,7 @@
                                 <button type="button" class="sx-btn sx-btn-ghost sx-btn-sm"
                                         onclick='sxPackageModal(@json($p))'><i data-feather="edit-2"></i></button>
                                 <form method="POST" action="{{ route('owner.sms.packages.destroy', $p) }}"
-                                      onsubmit="return confirm('{{ __('Delete this package?') }}')">
+                                      data-confirm="{{ __('Delete this package?') }}">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="sx-btn sx-btn-danger sx-btn-sm"><i data-feather="trash-2"></i></button>
                                 </form>

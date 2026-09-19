@@ -123,7 +123,21 @@ class CustomerController extends Controller
         }
 
         if ($request->input('has_debt') === '1') {
-            $query->where('debt', '>', 0);
+            // `debt` is a computed accessor (cash debts + treatment-plan sessions),
+            // not a column — filter through the relations instead of the DB column.
+            $query->where(function ($q) {
+                $q->whereHas('debts', function ($d) {
+                        $d->whereIn('status', ['unpaid', 'partial'])
+                          ->whereColumn('original_amount', '>', 'paid_amount');
+                    })
+                  ->orWhereHas('treatmentPlans', function ($p) {
+                        $p->where('status', 'active')
+                          ->whereHas('sessions', function ($s) {
+                                $s->where('status', '!=', 'skipped')
+                                  ->whereColumn('amount_due', '>', 'amount_paid');
+                            });
+                    });
+            });
         }
 
         $newThisMonth = Customer::query()

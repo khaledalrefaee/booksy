@@ -105,7 +105,7 @@
                                         <i data-feather="edit-2" style="width:13px;height:13px;"></i>
                                     </button>
                                     <form method="post" action="{{ route('owner.coupons.destroy', $coupon) }}" class="d-inline"
-                                          onsubmit="return confirm('{{ $coupon->used_count > 0 ? __('This coupon was used — it will be deactivated. Continue?') : __('Delete this coupon?') }}')">
+                                          data-confirm="{{ $coupon->used_count > 0 ? __('This coupon was used — it will be deactivated. Continue?') : __('Delete this coupon?') }}">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill" aria-label="{{ __('Delete') }}">

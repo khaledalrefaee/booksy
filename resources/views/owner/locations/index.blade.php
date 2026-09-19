@@ -104,7 +104,7 @@
                                     {{ __('Edit') }}
                                 </button>
                                 <form method="POST" action="{{ route('owner.locations.countries.destroy', $c) }}" class="d-inline"
-                                      onsubmit="return confirm('{{ __('Delete this country? All governorates and areas will be deleted too.') }}')">
+                                      data-confirm="{{ __('Delete this country? All governorates and areas will be deleted too.') }}">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-outline-danger">{{ __('Delete') }}</button>
                                 </form>
@@ -171,7 +171,7 @@
                                     {{ __('Edit') }}
                                 </button>
                                 <form method="POST" action="{{ route('owner.locations.governorates.destroy', $g) }}" class="d-inline"
-                                      onsubmit="return confirm('{{ __('Delete this governorate? All areas will be deleted too.') }}')">
+                                      data-confirm="{{ __('Delete this governorate? All areas will be deleted too.') }}">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-outline-danger">{{ __('Delete') }}</button>
                                 </form>
@@ -245,7 +245,7 @@
                                     {{ __('Edit') }}
                                 </button>
                                 <form method="POST" action="{{ route('owner.locations.areas.destroy', $a) }}" class="d-inline"
-                                      onsubmit="return confirm('{{ __('Delete this area?') }}')">
+                                      data-confirm="{{ __('Delete this area?') }}">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-outline-danger">{{ __('Delete') }}</button>
                                 </form>

@@ -14,6 +14,6 @@
         <dt>{{ __('Base salary') }}</dt><dd>{{ $ws->money($employee->compensation->base_amount ?? 0) }}</dd>
     @endif
 </dl>
-<form method="post" action="{{ $ws->fullEditorAction() }}" onsubmit="return confirm('{{ __('Log in as this company? Every action will be recorded in the audit log.') }}')">
+<form method="post" action="{{ $ws->fullEditorAction() }}" data-confirm="{{ __('Log in as this company? Every action will be recorded in the audit log.') }}">
     @csrf<button class="bk-btn bk-btn--gold"><i data-feather="external-link"></i> {{ __('Manage in full editor') }}</button>
 </form>

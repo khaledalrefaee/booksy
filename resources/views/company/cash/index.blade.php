@@ -1127,8 +1127,7 @@
 
     // ── Delete confirmation ──────────────────────────────────────────────
     window.confirmDelete = function(action) {
-        document.getElementById('deleteTxForm').action = action;
-        new bootstrap.Modal(document.getElementById('deleteTxModal')).show();
+        bkConfirmDelete(action, '', @json(__('This transaction will be permanently deleted.')));
     };
 
     // ── Category picker ────────────────────────────────────────────────────

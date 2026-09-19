@@ -85,7 +85,7 @@
                                     </button>
                                 </form>
                                 <form method="POST" action="{{ route('company.recurring-expenses.destroy', $exp) }}"
-                                    onsubmit="return confirm('{{ __('Delete this recurring expense?') }}')">
+                                    data-confirm="{{ __('Delete this recurring expense?') }}">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-sm btn-outline-danger">🗑️</button>
                                 </form>

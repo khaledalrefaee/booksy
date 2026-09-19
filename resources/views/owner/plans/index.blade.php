@@ -79,7 +79,7 @@
                                                 {{ __('Edit') }}
                                             </button>
                                             <form action="{{ route('owner.plans.destroy', $plan) }}" method="POST" class="d-inline"
-                                                  onsubmit="return confirm('{{ __('Delete this plan?') }}');">
+                                                  data-confirm="{{ __('Delete this plan?') }}">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="btn btn-sm btn-outline-danger"

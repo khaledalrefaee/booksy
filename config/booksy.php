@@ -11,6 +11,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Error-report emails (500s)
+    |--------------------------------------------------------------------------
+    | When an unhandled server error (HTTP 500) happens, email a summary — the
+    | page URL, the exception and a short stack trace — so the team hears about
+    | it without watching the log. Recipients: comma-separated addresses.
+    | Sent only in the listed environments (production by default) so local
+    | development doesn't flood the inbox; add "local" to ERROR_REPORT_ENVS to
+    | test it on your machine. Identical errors are de-duplicated for a few
+    | minutes to avoid a storm from one repeating bug.
+    */
+    'error_reports' => [
+        'enabled'      => (bool) env('ERROR_REPORT_ENABLED', true),
+        'to'           => array_values(array_filter(array_map('trim',
+                            explode(',', (string) env('ERROR_REPORT_EMAIL', 'info@glowrez.com'))))),
+        'environments' => array_values(array_filter(array_map('trim',
+                            explode(',', (string) env('ERROR_REPORT_ENVS', 'production'))))),
+        'throttle_minutes' => (int) env('ERROR_REPORT_THROTTLE', 10),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | No-show grace period
     |--------------------------------------------------------------------------
     | Minutes past an appointment's start time before appointments:flag-no-shows

@@ -75,7 +75,7 @@ Route::prefix('company')->name('company.')->group(function () {
         // Onboarding (guided tour + setup checklist state, persisted cross-device)
         Route::post('/onboarding/tour-complete', [\App\Http\Controllers\Company\OnboardingController::class, 'tourComplete'])->name('onboarding.tour-complete');
         Route::post('/onboarding/dismiss', [\App\Http\Controllers\Company\OnboardingController::class, 'dismiss'])->name('onboarding.dismiss');
-        Route::post('/onboarding/publish', [\App\Http\Controllers\Company\OnboardingController::class, 'publish'])->name('onboarding.publish');
+        Route::post('/onboarding/submit-review', [\App\Http\Controllers\Company\OnboardingController::class, 'submitForReview'])->name('onboarding.submit-review');
 
         // Global search
         Route::get('/search', [SearchController::class, 'index'])->name('search.index');
@@ -215,6 +215,7 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::get('employees/{employee}/leaves/create', [EmployeeLeaveController::class, 'create'])->name('employee-leaves.create');
         Route::post('employees/{employee}/leaves', [EmployeeLeaveController::class, 'store'])->name('employee-leaves.store');
         Route::patch('employee-leaves/{employeeLeave}/status', [EmployeeLeaveController::class, 'updateStatus'])->name('employee-leaves.update-status');
+        Route::put('employee-leaves/{employeeLeave}', [EmployeeLeaveController::class, 'update'])->name('employee-leaves.update');
         Route::delete('employee-leaves/{employeeLeave}', [EmployeeLeaveController::class, 'destroy'])->name('employee-leaves.destroy');
 
         // Public holidays
@@ -245,6 +246,13 @@ Route::prefix('company')->name('company.')->group(function () {
         // Profile
         Route::get('/profile',  [ProfileController::class, 'show'])->name('profile.show');
         Route::put('/profile',  [ProfileController::class, 'update'])->name('profile.update');
+
+        // Data export (تنزيل بياناتي) — Excel + JSON داخل ZIP
+        Route::get('/data-export',          [\App\Http\Controllers\Company\DataExportController::class, 'index'])->name('data-export.index');
+        // التصدير ثقيل — نحدّه: 4 مرات كل 10 دقائق لكل مستخدم.
+        Route::get('/data-export/download', [\App\Http\Controllers\Company\DataExportController::class, 'download'])->middleware('throttle:4,10')->name('data-export.download');
+        // إغلاق الحساب (Soft delete) — يتطلب تأكيد كلمة المرور.
+        Route::post('/account/close',       [\App\Http\Controllers\Company\DataExportController::class, 'close'])->name('account.close');
 
         // Appointments
         Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.update-status');

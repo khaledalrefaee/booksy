@@ -126,11 +126,8 @@
             </div>
 
             @php $futureInstallments = $advance->installments->filter(fn ($d) => $d->deduction_date->gt(now()->endOfMonth()))->count(); @endphp
-            <button type="button" class="btn btn-sm rounded-pill" style="background:rgba(239,68,68,.08);color:#ef4444;border:none;"
-                    title="{{ __('Delete') }}"
-                    onclick="openDeleteAdvanceModal({{ $advance->id }}, '{{ addslashes($emp->name_ar ?: $emp->name_en) }}', '{{ number_format($advance->amount, 0) }} {{ $sym }}', '{{ number_format($remaining, 0) }} {{ $sym }}', {{ $futureInstallments }})">
-                <i data-feather="trash-2" style="width:12px;height:12px;"></i>
-            </button>
+            <x-bk-action type="button" variant="danger" icon="trash-2" icon-only
+                    onclick="openDeleteAdvanceModal({{ $advance->id }}, '{{ addslashes($emp->name_ar ?: $emp->name_en) }}', '{{ number_format($advance->amount, 0) }} {{ $sym }}', '{{ number_format($remaining, 0) }} {{ $sym }}', {{ $futureInstallments }})">{{ __('Delete') }}</x-bk-action>
         </div>
         @empty
         <div class="bk-empty py-5 text-center" style="opacity:.5;">
@@ -205,12 +202,11 @@
 @push('scripts')
 <script>
 function openDeleteAdvanceModal(id, empName, amount, remaining, installments) {
-    document.getElementById('deleteAdvanceForm').action = '{{ url('company/advances') }}/' + id;
-    document.getElementById('del-adv-emp').textContent = empName;
-    document.getElementById('del-adv-amount').textContent = amount;
-    document.getElementById('del-adv-remaining').textContent = remaining;
-    document.getElementById('del-adv-installments').textContent = installments + ' {{ __('installment(s)') }}';
-    new bootstrap.Modal(document.getElementById('deleteAdvanceModal')).show();
+    bkConfirmDelete(
+        '{{ url('company/advances') }}/' + id,
+        empName,
+        @json(__('This advance and its installment records will be permanently deleted.'))
+    );
 }
 
 

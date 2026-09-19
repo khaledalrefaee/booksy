@@ -321,20 +321,26 @@
         grid.addEventListener('click', function(e) {
             var btn = e.target.closest('.gl-del-btn');
             if (!btn) return;
-            if (!confirm(I18N.confirmDelete)) return;
             var id  = btn.dataset.id;
             var url = DELETE_BASE.replace('/0', '/' + id);
             var item = btn.closest('.gl-item');
-            fetch(url, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(function(r){ return r.json(); })
-                .then(function(d){
-                    if (d.ok) {
-                        item.remove();
-                        updateBadges(grid);
-                        updateCount(type);
-                        if (!grid.querySelector('.gl-item')) showEmpty(type);
-                    }
-                });
+
+            function doDelete() {
+                fetch(url, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': CSRF, 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(r){ return r.json(); })
+                    .then(function(d){
+                        if (d.ok) {
+                            item.remove();
+                            updateBadges(grid);
+                            updateCount(type);
+                            if (!grid.querySelector('.gl-item')) showEmpty(type);
+                        }
+                    });
+            }
+
+            (window.bkConfirm ? window.bkConfirm({ text: I18N.confirmDelete, icon: 'warning' })
+                              : Promise.resolve({ isConfirmed: window.confirm(I18N.confirmDelete) }))
+                .then(function(r){ if (r && r.isConfirmed) doDelete(); });
         });
 
         var dragSrc = null;

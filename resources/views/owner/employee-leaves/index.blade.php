@@ -231,7 +231,7 @@
                         </button>
                     </form>
                     <form method="post" action="{{ route('owner.employee-leaves.destroy', $leave) }}"
-                          onsubmit="return confirm('{{ __('Delete this leave request?') }}')">
+                          data-confirm="{{ __('Delete this leave request?') }}">
                         @csrf @method('DELETE')
                         <button type="submit" class="btn-del">
                             <i data-feather="trash-2" style="width:10px;height:10px;"></i>
@@ -241,7 +241,7 @@
                 @else
                 <div class="action-row" style="margin-top:8px;">
                     <form method="post" action="{{ route('owner.employee-leaves.destroy', $leave) }}"
-                          onsubmit="return confirm('{{ __('Delete this leave request?') }}')">
+                          data-confirm="{{ __('Delete this leave request?') }}">
                         @csrf @method('DELETE')
                         <button type="submit" class="btn-del">
                             <i data-feather="trash-2" style="width:10px;height:10px;" class="{{ $locale==='ar' ? 'ms-1' : 'me-1' }}"></i>{{ __('Delete') }}

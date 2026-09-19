@@ -140,7 +140,7 @@
                                                     <i data-feather="edit-2" style="width:13px;"></i>
                                                 </button>
                                                 <form method="POST" action="{{ route('company.resources.destroy', $resource) }}" class="d-inline"
-                                                    onsubmit="return confirm('{{ __('Delete this resource? Linked services will no longer require it.') }}')">
+                                                    data-confirm="{{ __('Delete this resource? Linked services will no longer require it.') }}">
                                                     @csrf @method('DELETE')
                                                     <button type="submit" class="btn btn-sm btn-outline-danger">
                                                         <i data-feather="trash-2" style="width:13px;"></i>
