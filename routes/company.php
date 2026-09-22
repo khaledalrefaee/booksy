@@ -61,12 +61,15 @@ Route::prefix('company')->name('company.')->group(function () {
 
     // Protected routes — company.verified gates the whole panel behind OTP
     // confirmation (the verify.* routes exempt themselves inside the middleware).
-    Route::middleware(['company.auth', 'company.verified'])->group(function () {
+    Route::middleware(['company.auth', 'company.verified', 'company.context'])->group(function () {
 
         // Account verification (code sent after registration via WhatsApp + email)
         Route::get('/verify',         [VerificationController::class, 'showNotice'])->name('verify.notice');
         Route::post('/verify',        [VerificationController::class, 'verify'])->name('verify.attempt');
         Route::post('/verify/resend', [VerificationController::class, 'resend'])->name('verify.resend');
+
+        // Branch context switcher (session-based; validates ownership)
+        Route::get('/context/branch', [\App\Http\Controllers\Company\ContextController::class, 'switch'])->name('context.switch');
 
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -123,6 +126,8 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::post(  'branches/{branch}/gallery',            [BranchController::class, 'galleryUpload'])->name('branches.gallery.upload');
         Route::delete('branches/{branch}/gallery/{image}',   [BranchController::class, 'galleryDelete'])->name('branches.gallery.delete');
         Route::post(  'branches/{branch}/gallery/reorder',   [BranchController::class, 'galleryReorder'])->name('branches.gallery.reorder');
+        Route::post(  'branches/{branch}/gallery/{image}/cover',   [BranchController::class, 'galleryCover'])->name('branches.gallery.cover');
+        Route::post(  'branches/{branch}/gallery/{image}/request-removal', [BranchController::class, 'galleryRequestRemoval'])->name('branches.gallery.request-removal');
 
         // Working hours (per branch)
         Route::get( 'branches/{branch}/working-hours', [WorkingHoursController::class, 'edit'])->name('branches.working-hours.edit');
@@ -258,6 +263,7 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::patch('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.update-status');
         Route::get('appointments/branch-data',    [AppointmentController::class, 'branchData'])->name('appointments.branch-data');
         Route::get('appointments/calendar-events',[AppointmentController::class, 'calendarEvents'])->name('appointments.calendar-events');
+        Route::get('appointments/list-data',      [AppointmentController::class, 'listData'])->name('appointments.list-data');
         Route::get('appointments/staff-events',   [AppointmentController::class, 'staffEvents'])->name('appointments.staff-events');
         Route::get('appointments/stats',          [AppointmentController::class, 'stats'])->name('appointments.stats');
         Route::patch('appointments/{appointment}/tip', [AppointmentController::class, 'updateTip'])->name('appointments.tip');
@@ -295,6 +301,12 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::post('appointments/{appointment}/invoice', [InvoiceController::class, 'storeFromAppointment'])->name('appointments.invoice.store');
 
         }); // end feature:finance (invoices)
+
+        // Marketing — Offers + Social media & booking sources
+        Route::prefix('marketing')->name('marketing.')->controller(\App\Http\Controllers\Company\MarketingController::class)->group(function () {
+            Route::get('offers',          'offers')->name('offers');
+            Route::get('booking-sources', 'bookingSources')->name('booking-sources');
+        });
 
         // Customers
         Route::get( 'customers',              [CustomerController::class, 'index'])->name('customers.index');

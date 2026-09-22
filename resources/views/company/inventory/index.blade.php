@@ -65,7 +65,7 @@
     </div>
 
     {{-- Filters --}}
-    <form method="GET" class="d-flex gap-2 mb-4 flex-wrap align-items-center">
+    <form method="GET" class="d-flex gap-2 mb-4 flex-wrap align-items-center" data-filter-sheet="{{ __('Filters') }}">
         <div style="position:relative; flex:1; min-width:180px; max-width:260px;">
             <span style="position:absolute;top:50%;inset-inline-start:10px;transform:translateY(-50%);pointer-events:none;">🔍</span>
             <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Search products...') }}"
@@ -77,12 +77,14 @@
                 <option value="{{ $cat->id }}" @selected(request('category_id') == $cat->id)>{{ $cat->localizedName() }}</option>
             @endforeach
         </select>
+        @if(! ($branchContext ?? null))
         <select name="branch_id" class="form-select form-select-sm" style="max-width:180px;" onchange="this.form.submit()">
             <option value="">{{ __('All Branches') }}</option>
             @foreach($branches as $b)
                 <option value="{{ $b->id }}" @selected(request('branch_id') == $b->id)>{{ $b->localizedName() }}</option>
             @endforeach
         </select>
+        @endif
         <button class="btn btn-sm btn-primary px-3">{{ __('Filter') }}</button>
         @if(request()->hasAny(['search','category_id','branch_id']))
             <a href="{{ route('company.inventory.index') }}" class="btn btn-sm btn-outline-secondary">✕</a>

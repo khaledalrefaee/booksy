@@ -134,12 +134,11 @@ class EmployeeLeaveController extends Controller
     {
         $company  = $this->company();
         $branches = $company->branches()->orderBy('sort_order')->get();
-        $branchId = $request->get('branch_id', session('team.branch_id'));
+        // Branch comes from the sidebar context (injected as branch_id) or an
+        // explicit filter — never a separate store. Null = All Branches.
+        $branchId = $request->query('branch_id');
         if ($branchId && ! $branches->contains('id', $branchId)) {
             $branchId = null;
-        }
-        if ($request->has('branch_id')) {
-            session(['team.branch_id' => $branchId]);
         }
 
         [$month, $year] = $this->safeMonthYear($request);

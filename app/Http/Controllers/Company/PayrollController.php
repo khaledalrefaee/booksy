@@ -46,16 +46,12 @@ class PayrollController extends Controller
         $company  = $this->company();
         $branches = $company->branches()->orderBy('sort_order')->get();
 
-        // Explicit param wins (empty string = "all branches"); otherwise use the
-        // branch remembered from the other Team pages.
-        if ($request->has('branch_id')) {
-            $branchId = $request->input('branch_id') ?: null;
-            session(['team.branch_id' => $branchId]);
-        } else {
-            $branchId = session('team.branch_id');
-            if ($branchId && ! $branches->contains('id', $branchId)) {
-                $branchId = null;
-            }
+        // Branch comes from the sidebar context (injected as branch_id by
+        // ShareBranchContext) or an explicit filter — never a separate store.
+        // Empty / All Branches => null (aggregate across every branch).
+        $branchId = $request->input('branch_id') ?: null;
+        if ($branchId && ! $branches->contains('id', $branchId)) {
+            $branchId = null;
         }
 
         // Active staff + anyone offboarded during this month (final settlement)

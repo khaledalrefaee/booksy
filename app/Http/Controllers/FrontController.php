@@ -22,7 +22,7 @@ class FrontController extends Controller
         $branches = \App\Models\Branch::query()
             ->with([
                 'company.category',
-                'images',
+                'images' => self::publicImages(),
                 'governorate',
                 'area',
                 'workingHours',
@@ -70,6 +70,21 @@ class FrontController extends Controller
     }
 
     /* ─────────────────  Shared marketplace helpers  ───────────────── */
+
+    /**
+     * Eager-load spec for public branch photos: approved photos only, with the
+     * cover first, then sort order. `reorder()` drops the relationship's default
+     * sort_order ordering so is_cover can lead. Use this everywhere the public
+     * site loads branch images so pending/rejected photos never leak and the
+     * cover always shows first.
+     */
+    public static function publicImages(): \Closure
+    {
+        return fn ($q) => $q->reorder()
+            ->where('status', 'approved')
+            ->orderByDesc('is_cover')
+            ->orderBy('sort_order');
+    }
 
     /** Normalise a Branch into the card object every venue card expects. */
     public static function branchToCard($b, bool $isAr): object
@@ -205,7 +220,7 @@ class FrontController extends Controller
         $city   = trim((string) $request->get('city', ''));
 
         $query = \App\Models\Branch::query()
-            ->with(['company.category','images','governorate','area','workingHours','services' => fn($q) => $q->where('is_active', true)])
+            ->with(['company.category','images' => self::publicImages(),'governorate','area','workingHours','services' => fn($q) => $q->where('is_active', true)])
             ->withCount(['reviews','appointments'])
             ->withAvg('reviews','rating')
             ->marketplace()
@@ -270,7 +285,7 @@ class FrontController extends Controller
 
         $company->load([
             'category',
-            'branches.images',
+            'branches.images' => self::publicImages(),
             'branches.workingHours',
             'branches.services.serviceCategory',
             'branches.employees.serviceCategories',
@@ -296,6 +311,28 @@ class FrontController extends Controller
         ));
     }
 
+    /**
+     * Marketing tracking link entry point: /branch/{slug}/{IN|FB|WA|WEB}.
+     * Records the booking source in the session (scoped to this branch so it
+     * can never mislabel a booking made at a different branch), then forwards
+     * to the branch's normal booking page.
+     */
+    public function branchSource(string $slug, string $source)
+    {
+        $branch = \App\Models\Branch::where('slug', $slug)->firstOrFail();
+
+        $enum = \App\Enums\BookingSource::fromCode($source);
+        if ($enum) {
+            session()->put('bkg_source.' . $branch->id, $enum->value);
+        }
+
+        if ($branch->booking_mode === 'private') {
+            return redirect()->route('front.private-booking', ['slug' => $branch->slug]);
+        }
+
+        return redirect()->route('front.branch', $branch);
+    }
+
     public function branchShow(\App\Models\Branch $branch)
     {
         // Not publicly reachable unless the branch is active, on the marketplace,
@@ -310,7 +347,7 @@ class FrontController extends Controller
         $branch->load([
             'company.category',
             'company.socialLinks',
-            'images',
+            'images' => self::publicImages(),
             'workingHours',
             // Only services the merchant has published AND exposed for online booking
             // reach the public page; contents of packages are loaded for display.
@@ -345,7 +382,7 @@ class FrontController extends Controller
         $branch->load([
             'company.category',
             'company.socialLinks',
-            'images',
+            'images' => self::publicImages(),
             'workingHours',
             'services' => fn($q) => $q->where('is_active', true)->with('serviceCategory'),
             'employees' => fn($q) => $q->where('is_active', true)->with(['role', 'serviceCategories']),
@@ -415,7 +452,7 @@ class FrontController extends Controller
         $isAr = app()->getLocale() === 'ar';
         $branches = \App\Models\Branch::with([
                 'company.category',
-                'images',
+                'images' => self::publicImages(),
                 'reviews',
                 'governorate',
                 'area',

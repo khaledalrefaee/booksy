@@ -19,12 +19,14 @@
     </div>
 
     <form method="GET" class="d-flex gap-2 mb-3 flex-wrap">
+        @if(! ($branchContext ?? null))
         <select name="branch_id" class="form-select form-select-sm" style="max-width:180px;" onchange="this.form.submit()">
             <option value="">{{ __('All Branches') }}</option>
             @foreach($branches as $b)
                 <option value="{{ $b->id }}" @selected(request('branch_id') == $b->id)>{{ $b->localizedName() }}</option>
             @endforeach
         </select>
+        @endif
         <select name="product_id" class="form-select form-select-sm" style="max-width:200px;" onchange="this.form.submit()">
             <option value="">{{ __('All Products') }}</option>
             @foreach($products as $p)

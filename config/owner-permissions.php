@@ -44,6 +44,7 @@ return [
             'billing.void-payment',
             'coupons.manage',
             'reviews.moderate',
+            'photos.review',
             'notifications.send',
             'reports.view',
             'audit-log.view',
@@ -74,6 +75,7 @@ return [
             'owner-dashboard.view',
             'notifications.send',
             'reviews.moderate',
+            'photos.review',
             'reports.view',
         ],
 
@@ -163,6 +165,7 @@ return [
             'label' => 'Growth & content',
             'permissions' => [
                 'reviews.moderate'   => 'Moderate reviews',
+                'photos.review'      => 'Review & approve branch photos',
                 'notifications.send' => 'Send announcements & emails',
                 'reports.view'       => 'View growth & revenue reports',
             ],

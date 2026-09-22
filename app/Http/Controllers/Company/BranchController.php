@@ -355,76 +355,142 @@ class BranchController extends Controller
     public function gallery(Branch $branch): View
     {
         $this->authoriseBranch($branch);
-        $placeImages = $branch->images()->where('type', 'place')->orderBy('sort_order')->get();
-        $workImages  = $branch->images()->where('type', 'work')->orderBy('sort_order')->get();
+
+        // The merchant sees every one of their photos (approved / pending /
+        // rejected) grouped by kind, so the review state is always visible.
+        $images      = $branch->images()->orderBy('sort_order')->get();
+        $placeImages = $images->where('type', BranchImage::TYPE_PLACE)->values();
+        $workImages  = $images->where('type', BranchImage::TYPE_WORK)->values();
+
         return view('company.branches.gallery', compact('branch', 'placeImages', 'workImages'));
     }
 
+    /**
+     * Upload one batch of photos, all of the same kind (place | work). Each file
+     * is inspected with GD: unusable files are rejected outright and never
+     * stored; clear photos are approved immediately; photos with a possible
+     * quality issue are held as `pending` for GlowRez to confirm. The response
+     * reports the outcome of every file so the UI can show it.
+     */
     public function galleryUpload(Request $request, Branch $branch): \Illuminate\Http\JsonResponse
     {
         $this->authoriseBranch($branch);
 
+        $cfg     = config('gallery');
+        $maxKb   = (int) ($cfg['max_bytes'] / 1024);
+        $maxMb   = (int) round($cfg['max_bytes'] / 1048576);
+
         $request->validate([
-            'images'   => ['required', 'array', 'max:20'],
-            'images.*' => ['required', 'image', 'max:20480'], // 20 MB per file
-            'type'     => ['required', 'in:place,work'],
+            'images'   => ['required', 'array', 'max:' . $cfg['max_files']],
+            'images.*' => ['required', 'file', 'max:' . $maxKb],
+            'type'     => ['required', 'in:' . BranchImage::TYPE_PLACE . ',' . BranchImage::TYPE_WORK],
         ]);
 
         $type      = $request->input('type');
-        $nextOrder = $branch->images()->where('type', $type)->max('sort_order') + 1;
-        $saved     = [];
+        $nextOrder = (int) $branch->images()->where('type', $type)->max('sort_order') + 1;
 
         $dir = "branches/{$branch->id}/gallery";
         Storage::disk('public')->makeDirectory($dir);
         $absDir = Storage::disk('public')->path($dir);
 
+        // Hashes already in this branch — used for same-branch duplicate detection.
+        $existingHashes = $branch->images()->whereNotNull('file_hash')->pluck('file_hash')->all();
+        $batchHashes    = [];
+
+        // Per-type cap: rejected photos don't count. Re-read per request so
+        // chunked uploads respect the ceiling across batches.
+        $maxPerType = (int) $cfg['max_per_type'];
+        $remaining  = max(0, $maxPerType - $branch->images()
+            ->where('type', $type)
+            ->where('status', '!=', BranchImage::STATUS_REJECTED)
+            ->count());
+
+        $results = ['approved' => 0, 'pending' => 0, 'rejected' => 0];
+        $items   = [];
+
         foreach ($request->file('images') as $file) {
+            $name = $file->getClientOriginalName();
+            $real = $file->getRealPath();
+
+            // Duplicate within the same branch (or repeated inside this batch).
+            $hash = @hash_file('sha256', $real) ?: null;
+            if ($hash && (in_array($hash, $existingHashes, true) || in_array($hash, $batchHashes, true))) {
+                $results['rejected']++;
+                $items[] = ['ok' => false, 'name' => $name, 'status' => 'rejected', 'reason' => 'duplicate'];
+                continue;
+            }
+
+            // Technical + quality inspection (GD only).
+            $q = \App\Support\ImageQuality::analyze($real);
+            if ($q['verdict'] === \App\Support\ImageQuality::VERDICT_REJECT) {
+                $results['rejected']++;
+                $items[] = ['ok' => false, 'name' => $name, 'status' => 'rejected', 'reason' => $q['reason']];
+                continue;
+            }
+
+            // Enforce the per-type cap (only counts photos that will be stored).
+            if ($remaining <= 0) {
+                $results['rejected']++;
+                $items[] = ['ok' => false, 'name' => $name, 'status' => 'rejected', 'reason' => 'limit'];
+                continue;
+            }
+
+            $isPending = $q['verdict'] === \App\Support\ImageQuality::VERDICT_REVIEW;
+            $status    = $isPending ? BranchImage::STATUS_PENDING : BranchImage::STATUS_APPROVED;
+
+            // Store as WebP.
             $filename = \Str::uuid() . '.webp';
-            $destPath = $absDir . DIRECTORY_SEPARATOR . $filename;
-
-            $this->convertToWebp($file->getRealPath(), $destPath);
-
             $storagePath = $dir . '/' . $filename;
+            $this->convertToWebp($real, $absDir . DIRECTORY_SEPARATOR . $filename, $cfg['webp_quality']);
+
             $img = $branch->images()->create([
                 'path'       => $storagePath,
                 'type'       => $type,
                 'sort_order' => $nextOrder++,
+                'status'     => $status,
+                'source'     => BranchImage::SOURCE_BUSINESS,
+                'width'      => $q['width'],
+                'height'     => $q['height'],
+                'file_hash'  => $hash,
+                'flags'      => $q['flags'] ?: null,
             ]);
-            $saved[] = ['id' => $img->id, 'url' => asset('storage/' . $storagePath)];
+
+            if ($hash) {
+                $batchHashes[] = $hash;
+            }
+            $remaining--;
+            $results[$status]++;
+            $items[] = [
+                'ok'     => true,
+                'id'     => $img->id,
+                'url'    => asset('storage/' . $storagePath),
+                'type'   => $type,
+                'status' => $status,
+                'name'   => $name,
+                'flags'  => $q['flags'],
+            ];
         }
 
-        return response()->json(['images' => $saved]);
+        // Keep a sensible cover: if the branch has no cover yet, promote the
+        // first approved photo so the public page and marketplace stay correct.
+        $this->ensureBranchHasCover($branch);
+
+        return response()->json([
+            'results' => $items,
+            'summary' => $results,
+            'maxMb'   => $maxMb,
+        ]);
+    }
+
+    /** Promote the earliest approved photo to cover when the branch has none. */
+    private function ensureBranchHasCover(Branch $branch): void
+    {
+        $branch->ensureHasCover();
     }
 
     private function convertToWebp(string $sourcePath, string $destPath, int $quality = 82): void
     {
-        $mime = mime_content_type($sourcePath);
-
-        $src = match ($mime) {
-            'image/jpeg', 'image/jpg' => imagecreatefromjpeg($sourcePath),
-            'image/png'               => $this->gdFromPng($sourcePath),
-            'image/gif'               => imagecreatefromgif($sourcePath),
-            'image/webp'              => imagecreatefromwebp($sourcePath),
-            default                   => null,
-        };
-
-        if (! $src) {
-            // Fallback: copy as-is if GD can't handle it
-            copy($sourcePath, $destPath);
-            return;
-        }
-
-        imagewebp($src, $destPath, $quality);
-        imagedestroy($src);
-    }
-
-    private function gdFromPng(string $path): \GdImage
-    {
-        $src = imagecreatefrompng($path);
-        // Preserve transparency
-        imagealphablending($src, false);
-        imagesavealpha($src, true);
-        return $src;
+        \App\Support\WebpImage::convert($sourcePath, $destPath, $quality);
     }
 
     public function galleryDelete(Request $request, Branch $branch, BranchImage $image): \Illuminate\Http\JsonResponse
@@ -432,8 +498,54 @@ class BranchController extends Controller
         $this->authoriseBranch($branch);
         abort_unless($image->branch_id === $branch->id, 403);
 
+        // Approved GlowRez-team photos can't be deleted by the business — they
+        // can only request removal (handled separately).
+        if (! $image->canBusinessManage()) {
+            return response()->json(['ok' => false, 'locked' => true], 403);
+        }
+
+        $wasCover = $image->is_cover;
+
         Storage::disk('public')->delete($image->path);
         $image->delete();
+
+        // If we just removed the cover, hand it to the next approved photo.
+        if ($wasCover) {
+            $this->ensureBranchHasCover($branch);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** Set an approved photo as the branch cover (exactly one cover per branch). */
+    public function galleryCover(Request $request, Branch $branch, BranchImage $image): \Illuminate\Http\JsonResponse
+    {
+        $this->authoriseBranch($branch);
+        abort_unless($image->branch_id === $branch->id, 403);
+
+        if (! $image->isApproved()) {
+            return response()->json(['ok' => false, 'reason' => 'not_approved'], 422);
+        }
+
+        $branch->images()->where('is_cover', true)->update(['is_cover' => false]);
+        $image->update(['is_cover' => true]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * The business can't touch approved team photos directly, but it can flag
+     * one for the GlowRez team to remove or replace. The request is recorded on
+     * the photo so it surfaces in the owner review queue.
+     */
+    public function galleryRequestRemoval(Request $request, Branch $branch, BranchImage $image): \Illuminate\Http\JsonResponse
+    {
+        $this->authoriseBranch($branch);
+        abort_unless($image->branch_id === $branch->id, 403);
+
+        $flags = $image->flags ?? [];
+        $flags['removal_requested_at'] = now()->toISOString();
+        $image->update(['flags' => $flags]);
 
         return response()->json(['ok' => true]);
     }

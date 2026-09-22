@@ -28,13 +28,15 @@ class AttendanceController extends Controller
      */
     private function rememberedBranchId(Request $request, $branches)
     {
-        $branchId = $request->get('branch_id', session('team.branch_id'));
+        // Branch comes from the sidebar context (injected as branch_id by
+        // ShareBranchContext) or an explicit filter — never a separate store.
+        // Attendance always needs one branch, so fall back to the first when
+        // the context is All Branches.
+        $branchId = $request->query('branch_id');
 
         if (! $branches->contains('id', $branchId)) {
             $branchId = $branches->first()?->id;
         }
-
-        session(['team.branch_id' => $branchId]);
 
         return $branchId;
     }

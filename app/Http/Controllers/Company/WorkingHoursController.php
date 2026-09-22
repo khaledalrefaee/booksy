@@ -8,6 +8,7 @@ use App\Models\BranchWorkingHour;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
 class WorkingHoursController extends Controller
@@ -55,10 +56,50 @@ class WorkingHoursController extends Controller
     {
         $this->authoriseBranch($branch);
 
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'hours'                        => ['required', 'array'],
             'hours.*.day_of_week'          => ['required', 'integer', 'between:0,6'],
         ]);
+
+        // Reject illogical time ranges (end must be strictly after start) so bad
+        // hours can never be saved silently — for every open day, and both shifts.
+        $validator->after(function ($validator) use ($request) {
+            foreach ($request->input('hours', []) as $dayKey => $hour) {
+                if (empty($hour['is_open'])) {
+                    continue;
+                }
+
+                $open  = $hour['open_time']  ?? null;
+                $close = $hour['close_time'] ?? null;
+                if ($open && $close && $close <= $open) {
+                    $validator->errors()->add(
+                        "hours.$dayKey.close_time",
+                        __('The end time must be after the start time.')
+                    );
+                }
+
+                if (! empty($hour['shift2_enabled'])) {
+                    $s2open  = $hour['shift2_open_time']  ?? null;
+                    $s2close = $hour['shift2_close_time'] ?? null;
+
+                    if ($s2open && $s2close && $s2close <= $s2open) {
+                        $validator->errors()->add(
+                            "hours.$dayKey.shift2_close_time",
+                            __('The end time must be after the start time.')
+                        );
+                    }
+
+                    if ($close && $s2open && $s2open < $close) {
+                        $validator->errors()->add(
+                            "hours.$dayKey.shift2_open_time",
+                            __('Shift 2 must start after shift 1 ends.')
+                        );
+                    }
+                }
+            }
+        });
+
+        $validator->validate();
 
         foreach ($request->input('hours', []) as $hour) {
             $isOpen = ! empty($hour['is_open']);

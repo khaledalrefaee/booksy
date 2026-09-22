@@ -67,7 +67,8 @@
         </div>
     </div>
 
-    {{-- Branch selector --}}
+    {{-- Branch selector — hidden when the sidebar already scopes to one branch --}}
+    @if(! ($branchContext ?? null))
     <form method="GET" class="mb-4">
         <select name="branch_id" class="form-select form-select-sm" style="max-width:250px;" onchange="this.form.submit()">
             @foreach($branches as $b)
@@ -75,6 +76,7 @@
             @endforeach
         </select>
     </form>
+    @endif
 
     {{-- Stock Cards Grid --}}
     <div class="row g-3">

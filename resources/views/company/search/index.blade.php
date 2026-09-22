@@ -3,25 +3,15 @@
 @section('content')
 <div class="page-content">
 
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-        <div>
-            <h4 class="fw-bold mb-1">🔎 {{ __('Search results') }}</h4>
-            @if($q !== '')
-                <p class="text-muted mb-0">
-                    {{ __('Search results for') }} "<strong>{{ $q }}</strong>" —
-                    {{ $totalCount }} {{ __('results') }}
-                </p>
-            @endif
-        </div>
-        <form method="GET" action="{{ route('company.search.index') }}" class="d-flex" style="min-width:280px;">
-            <div class="input-group">
-                <span class="input-group-text bg-transparent border-end-0">
-                    <i data-feather="search" style="width:14px;height:14px;color:var(--bk-accent);"></i>
-                </span>
-                <input type="text" name="q" value="{{ $q }}" autofocus
-                    class="form-control border-start-0" placeholder="{{ __('Search') }}…">
-            </div>
-        </form>
+    {{-- The global search lives in the header; this page only shows results. --}}
+    <div class="mb-4">
+        <h4 class="fw-bold mb-1">{{ __('Search results') }}</h4>
+        @if($q !== '')
+            <p class="text-muted mb-0">
+                {{ __('Search results for') }} "<strong>{{ $q }}</strong>" —
+                {{ $totalCount }} {{ __('results') }}
+            </p>
+        @endif
     </div>
 
     @if($q === '')

@@ -558,7 +558,7 @@
                                     @if($appt->total_price) {{ number_format((float)$appt->total_price, 0) }} @else — @endif
                                 </div>
                                 <div class="col-3 col-sm-2 text-end">
-                                    <span class="bk-badge bk-badge-{{ $appt->status }}">{{ __(ucfirst($appt->status)) }}</span>
+                                    <span class="bk-badge bk-badge-{{ $appt->status?->value }}">{{ $appt->status?->label() ?? '—' }}</span>
                                 </div>
                             </div>
                         </div>

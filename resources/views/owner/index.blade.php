@@ -56,9 +56,34 @@
 @include('owner.partials.flash')
 
 {{-- ════ ACTION NEEDED ════ --}}
-@php $canBilling = \Illuminate\Support\Facades\Gate::allows('owner-can', 'billing.view'); @endphp
-@if(($alerts['pending_companies'] ?? 0) > 0 || ($canBilling && (($alerts['expiring_soon'] ?? 0) + ($alerts['expired'] ?? 0)) > 0))
+@php
+    $canBilling = \Illuminate\Support\Facades\Gate::allows('owner-can', 'billing.view');
+    $canPhotos  = \Illuminate\Support\Facades\Gate::allows('owner-can', 'photos.review');
+    $photosPending = 0;
+    if ($canPhotos) {
+        try { $photosPending = (int) \App\Models\BranchImage::where('status', 'pending')->count(); }
+        catch (\Throwable $e) { $photosPending = 0; }
+    }
+@endphp
+@if(($alerts['pending_companies'] ?? 0) > 0 || ($photosPending > 0) || ($canBilling && (($alerts['expiring_soon'] ?? 0) + ($alerts['expired'] ?? 0)) > 0))
 <div class="row g-3 mb-4">
+    @if($photosPending > 0)
+    <div class="col-md-4">
+        <a href="{{ route('owner.photo-reviews.index') }}"
+           class="card border-0 shadow-sm rounded-4 h-100 text-decoration-none">
+            <div class="card-body d-flex align-items-center gap-3 py-3">
+                <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:44px;height:44px;background:var(--bk-accent-wash);color:var(--bk-accent);">
+                    <i data-feather="image" style="width:20px;height:20px;"></i>
+                </div>
+                <div>
+                    <div class="fw-bold tx-18">{{ $photosPending }}</div>
+                    <div class="text-muted tx-13">{{ __('Photos awaiting review') }}</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
     @if($alerts['pending_companies'] > 0)
     <div class="col-md-4">
         <a href="{{ route('owner.companies.index', ['status' => 'pending']) }}"

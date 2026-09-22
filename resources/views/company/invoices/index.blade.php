@@ -13,7 +13,7 @@
     @include('company.partials.flash')
 
     {{-- Filter bar --}}
-    <form method="GET" class="card border-0 shadow-sm rounded-4 mb-4">
+    <form method="GET" class="card border-0 shadow-sm rounded-4 mb-4" data-filter-sheet="{{ __('Filters') }}">
         <div class="card-body p-3">
             <div class="row g-2 align-items-end">
                 <div class="col-sm-4">
@@ -34,6 +34,7 @@
                         @endforeach
                     </select>
                 </div>
+                @if(! ($branchContext ?? null))
                 <div class="col-sm-3">
                     <select name="branch_id" class="form-select">
                         <option value="">{{ __('All branches') }}</option>
@@ -44,6 +45,7 @@
                         @endforeach
                     </select>
                 </div>
+                @endif
                 <div class="col-sm-2 d-flex gap-2">
                     <button class="btn btn-primary rounded-pill flex-fill">{{ __('Filter') }}</button>
                     @if(request()->hasAny(['search','status','branch_id']))

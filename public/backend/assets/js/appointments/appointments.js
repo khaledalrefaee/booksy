@@ -113,12 +113,24 @@ var calEl    = document.getElementById('booksy-calendar');
 var calendar = new FullCalendar.Calendar(calEl, {
     locale:       FC_LOCALE,
     direction:    IS_RTL ? 'rtl' : 'ltr',
-    initialView:  'timeGridWeek',
-    height:       'auto',
+    // Default to the DAY view: a busy multi-branch shop can have 600+ bookings
+    // in a week, and rendering that many event blocks at once freezes the tab
+    // (and the whole machine). The day view loads ~1/7th of that; the user can
+    // still switch to week/month from the toolbar.
+    initialView:  'timeGridDay',
+    // A bounded height gives the grid its own internal scroll instead of growing
+    // the whole page to fit every event (height:'auto' made a huge DOM the
+    // browser had to lay out and repaint on every scroll).
+    height:       '78vh',
     firstDay:     IS_RTL ? 0 : 1,
     nowIndicator: true,
     navLinks:     true,
     dayMaxEvents: true,
+    // High-volume days otherwise stack into an unreadable wall of overlapping
+    // blocks and choke rendering. Cap side-by-side stacking in the time-grid;
+    // the rest collapse into a "+N more" popover instead of piling up.
+    eventMaxStack:    4,
+    slotEventOverlap: false,
     scrollTime:   '08:00:00',
     slotMinTime:  '00:00:00',
     slotMaxTime:  '24:00:00',
@@ -179,13 +191,27 @@ var calendar = new FullCalendar.Calendar(calEl, {
             };
         }
 
-        /* month view: one count chip per day */
+        /* month view: one count chip per day + a status-coloured bar so the
+           day reads at a glance (how busy, and the mix of statuses). */
         if (props.type === 'day-count') {
             var n   = props.count || 0;
             var lbl = IS_RTL
                 ? (n === 1 ? 'موعد' : n === 2 ? 'موعدان' : 'مواعيد')
                 : (n === 1 ? 'appointment' : 'appointments');
-            return { html: '<div class="ev-daycount"><b>' + n + '</b> ' + lbl + '</div>' };
+
+            var bs  = props.byStatus || {};
+            var seg = '';
+            Object.keys(bs).forEach(function (st) {
+                var c = EV_COLORS[st] || '#94a3b8';
+                var w = n ? (bs[st] / n * 100) : 0;
+                if (w > 0) {
+                    seg += '<span title="' + _esc((STATUS_LABELS[st] || st) + ': ' + bs[st])
+                         + '" style="height:100%;width:' + w + '%;background:' + c + ';"></span>';
+                }
+            });
+
+            return { html: '<div class="ev-daycount"><b>' + n + '</b> ' + lbl + '</div>'
+                + '<div class="ev-daycount-bar" style="display:flex;height:6px;width:100%;border-radius:3px;overflow:hidden;margin-top:3px;">' + seg + '</div>' };
         }
 
         var parts   = arg.event.title.split(' · ');
@@ -215,7 +241,11 @@ var calendar = new FullCalendar.Calendar(calEl, {
         if (activeBranch) p.set('branch_id', activeBranch);
         /* server-side status filter (pills) + month view gets day counts, not events */
         p.set('statuses', activeStatuses.join(','));
-        var isMonth = calendar && calendar.view && calendar.view.type === 'dayGridMonth';
+        /* Detect the month grid by its span (≈35–42 days) rather than
+           calendar.view.type, which can be stale during a view transition and
+           let the month silently fall back to fetching every individual event. */
+        var spanDays = Math.round((info.end - info.start) / 86400000);
+        var isMonth  = spanDays > 14;
         if (isMonth) p.set('aggregate', '1');
         bkFetch('calendar', EVENTS_URL + '?' + p)
             .then(r => r.json())
@@ -368,9 +398,12 @@ document.addEventListener('click', function (e) {
    LIST VIEW
 ════════════════════════════════ */
 var listLoaded  = false;
-var listAllData = []; /* raw appointment events cache */
+var listAllData = []; /* current server page of appointment events */
 var listSearch  = '';
 var listSort    = 'closest';
+var listPage    = 1;      /* current 1-based page */
+var listMeta    = null;   /* {current_page,last_page,total,from,to,per_page} */
+var LIST_URL    = BK.routes.appointmentsListData;
 
 /* ── Relative time helper ── */
 function _relativeTime(dateStr) {
@@ -410,41 +443,9 @@ function _relativeTime(dateStr) {
 
 function renderListRows() {
     var tbody = document.getElementById('list-tbody');
-    var q = listSearch.trim().toLowerCase();
-
-    var appts = listAllData.filter(function (ev) {
-        var pr = ev.extendedProps || {};
-        var t  = pr.type;
-        if (t === 'closed' || t === 'outside-hours') return false;
-        if (!pr.status) return false;
-        if (!activeStatuses.includes(pr.status)) return false;
-        if (q) {
-            var title = (ev.title || '').toLowerCase();
-            var br    = (pr.branch   || '').toLowerCase();
-            var emp   = (pr.employee || '').toLowerCase();
-            var svc   = (pr.service  || '').toLowerCase();
-            var idStr = String(ev.id || '');
-            if (title.indexOf(q) < 0 && br.indexOf(q) < 0 && emp.indexOf(q) < 0 && svc.indexOf(q) < 0 && idStr.indexOf(q) < 0) return false;
-        }
-        return true;
-    });
-
-    /* ── Sort ── */
-    var now = Date.now();
-    appts.sort(function(a, b) {
-        var tA = a.start ? new Date(a.start).getTime() : 0;
-        var tB = b.start ? new Date(b.start).getTime() : 0;
-        var pA = parseFloat((a.extendedProps || {}).price || 0);
-        var pB = parseFloat((b.extendedProps || {}).price || 0);
-        switch (listSort) {
-            case 'closest':  return Math.abs(tA - now) - Math.abs(tB - now);
-            case 'farthest': return Math.abs(tB - now) - Math.abs(tA - now);
-            case 'newest':   return tB - tA;
-            case 'price-high': return pB - pA;
-            case 'price-low':  return pA - pB;
-            default: return 0;
-        }
-    });
+    /* The server already filtered, searched, sorted and paginated this page —
+       render it as-is. (Client-side filtering here used to choke on 50k rows.) */
+    var appts = listAllData;
 
     if (!appts.length) {
         tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5" style="color:var(--cal-text-muted);">' + BK.t.no_appointments_found + '</td></tr>';
@@ -541,29 +542,74 @@ function renderListRows() {
             }).join('');
 }
 
-function loadListView() {
-    if (listLoaded) { renderListRows(); return; }
+/* Fetch one page from the server with the current filters/search/sort. */
+function listReload(page) {
+    listPage = page || 1;
     var tbody = document.getElementById('list-tbody');
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5" style="color:var(--cal-text-muted);"><div class="spinner-border spinner-border-sm me-2"></div>' + BK.t.loading + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5" style="color:var(--cal-text-muted);"><div class="spinner-border spinner-border-sm me-2"></div>' + BK.t.loading + '</td></tr>';
 
     var p = new URLSearchParams();
-    if (activeBranch) p.set('branch_id', activeBranch);
+    if (activeBranch)        p.set('branch_id', activeBranch);
+    if (listSearch.trim())   p.set('q', listSearch.trim());
+    p.set('statuses', activeStatuses.join(','));
+    p.set('sort', listSort);
+    p.set('page', listPage);
 
-    bkFetch('list', EVENTS_URL + '?' + p)
+    bkFetch('list', LIST_URL + '?' + p)
         .then(function (r) {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json();
         })
-        .then(function (data) {
-            listAllData = data;
+        .then(function (res) {
+            listAllData = res.data || [];
+            listMeta    = res.meta || null;
             listLoaded  = true;
             renderListRows();
+            renderListPager();
         })
         .catch(function (err) {
             if (bkAborted(err)) return;
             tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4" style="color:#ef4444;">⚠ ' + BK.t.error_loading_data + ': ' + err.message + '</td></tr>';
         });
 }
+
+/* switchView entry point — always refetch page 1 so the list reflects filters. */
+function loadListView() { listReload(1); }
+
+function renderListPager() {
+    var pager = document.getElementById('list-pager');
+    if (!pager) return;
+    if (!listMeta || !listMeta.total) { pager.classList.add('d-none'); pager.classList.remove('d-flex'); return; }
+
+    var m = listMeta;
+    pager.classList.remove('d-none');
+    pager.classList.add('d-flex');
+
+    var info = document.getElementById('list-pager-info');
+    var lbl  = document.getElementById('list-page-label');
+    var prev = document.getElementById('list-prev');
+    var next = document.getElementById('list-next');
+
+    if (info) info.textContent = IS_RTL
+        ? (m.from + '–' + m.to + ' من ' + m.total)
+        : (m.from + '–' + m.to + ' of ' + m.total);
+    if (lbl)  lbl.textContent = IS_RTL
+        ? ('صفحة ' + m.current_page + ' / ' + m.last_page)
+        : ('Page ' + m.current_page + ' / ' + m.last_page);
+    if (prev) prev.disabled = m.current_page <= 1;
+    if (next) next.disabled = m.current_page >= m.last_page;
+}
+
+(function () {
+    var prev = document.getElementById('list-prev');
+    var next = document.getElementById('list-next');
+    if (prev) prev.addEventListener('click', function () {
+        if (listMeta && listMeta.current_page > 1) listReload(listMeta.current_page - 1);
+    });
+    if (next) next.addEventListener('click', function () {
+        if (listMeta && listMeta.current_page < listMeta.last_page) listReload(listMeta.current_page + 1);
+    });
+})();
 
 /* ════════════════════════════════
    QUICK STATUS
@@ -635,7 +681,7 @@ document.querySelectorAll('.bk-st-pill').forEach(function (btn) {
             this.classList.remove('off');
         }
         calRefetch();
-        if (!document.getElementById('view-list').classList.contains('d-none')) renderListRows();
+        if (!document.getElementById('view-list').classList.contains('d-none')) listReload(1);
     });
 });
 
@@ -655,9 +701,7 @@ document.getElementById('filter-branch').addEventListener('change', function () 
 
 document.getElementById('filter-sort').addEventListener('change', function () {
     listSort = this.value;
-    if (!document.getElementById('view-list').classList.contains('d-none')) {
-        if (listLoaded) renderListRows(); else loadListView();
-    }
+    if (!document.getElementById('view-list').classList.contains('d-none')) listReload(1);
 });
 
 var _searchTimer = null;
@@ -667,9 +711,10 @@ document.getElementById('bk-search').addEventListener('input', function () {
     _searchTimer = setTimeout(function () {
         /* auto-switch to list view when user types in search */
         if (document.getElementById('view-list').classList.contains('d-none')) {
-            switchView('list');
+            switchView('list');   /* → loadListView() → listReload(1) */
+        } else {
+            listReload(1);
         }
-        if (listLoaded) renderListRows(); else loadListView();
     }, 220);
 });
 

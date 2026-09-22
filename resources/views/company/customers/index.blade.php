@@ -120,7 +120,7 @@
     @include('company.partials.flash')
 
     {{-- Filter bar --}}
-    <form method="GET" class="card border-0 shadow-sm rounded-4 mb-4">
+    <form method="GET" class="card border-0 shadow-sm rounded-4 mb-4" data-filter-sheet="{{ __('Filters') }}">
         <div class="card-body p-3">
             <div class="row g-2 align-items-end">
                 <div class="col-12 col-sm-5">
@@ -133,6 +133,7 @@
                             value="{{ request('search') }}">
                     </div>
                 </div>
+                @if(! ($branchContext ?? null))
                 <div class="col-6 col-sm-2">
                     <select name="branch_id" class="form-select">
                         <option value="">{{ __('All branches') }}</option>
@@ -143,6 +144,7 @@
                         @endforeach
                     </select>
                 </div>
+                @endif
                 <div class="col-6 col-sm-2">
                     <select name="tag" class="form-select">
                         <option value="">{{ __('All tags') }}</option>

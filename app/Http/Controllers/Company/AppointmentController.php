@@ -165,6 +165,7 @@ class AppointmentController extends Controller
                     'total_price'     => $totalPrice,
                     'payment_status'  => $data['payment_status'] ?? 'pending',
                     'notes'           => $personIndex === 0 ? ($data['notes'] ?? null) : null,
+                    'booking_source'  => \App\Enums\BookingSource::Reception->value,
                 ]);
 
                 // Save all services to pivot table
@@ -692,6 +693,7 @@ class AppointmentController extends Controller
                 'status'         => AppointmentStatus::Confirmed,
                 'total_price'    => $totalPrice,
                 'payment_status' => 'pending',
+                'booking_source' => \App\Enums\BookingSource::Reception->value,
             ]);
 
             // Services run back-to-back starting at the picked slot
@@ -878,6 +880,7 @@ class AppointmentController extends Controller
                         'status'           => AppointmentStatus::Confirmed,
                         'total_price'      => $rows->sum('price'),
                         'payment_status'   => 'pending',
+                        'booking_source'   => \App\Enums\BookingSource::Reception->value,
                     ]);
 
                     $cursor = $gStart->copy();
@@ -1329,6 +1332,23 @@ class AppointmentController extends Controller
             })->values();
         } else {
         /* ── day/week views: full events, only the columns the calendar renders ── */
+
+        // The list tab (and any caller) hits this endpoint WITHOUT a date range,
+        // which would otherwise return every appointment in the company's
+        // history as a full event. At 50k+ rows that is ~7s + a multi-megabyte
+        // payload that freezes the browser. Bound the rangeless call to a recent
+        // working window and hard-cap the rows so the response stays sane.
+        $unbounded = ! $request->filled('start') && ! $request->filled('end');
+        if ($unbounded) {
+            // Upcoming-focused window, ordered nearest-first, so the cap keeps
+            // the appointments that actually matter (today + soon) rather than
+            // the furthest-future ones. A tiny past tail keeps just-finished
+            // bookings visible.
+            $query->where('start_time', '>=', now()->subDays(7))
+                  ->orderBy('start_time')
+                  ->limit(2000);
+        }
+
         $query->select([
                 'id', 'branch_id', 'customer_id', 'employee_id', 'service_id', 'resource_id',
                 'start_time', 'end_time', 'status', 'total_price', 'booking_group_id',
@@ -1347,44 +1367,9 @@ class AppointmentController extends Controller
         $updateTpl = route('company.appointments.update-status', '__ID__');
         $defaultCurrency = config('booksy.default_currency', 'SYP');
 
-        $events = $query->get()->toBase()->map(function (Appointment $appt) use ($showTpl, $updateTpl, $defaultCurrency) {
-            $colors  = ['bg' => $appt->status->color(), 'text' => '#ffffff'];
-            $showUrl = str_replace('__ID__', (string) $appt->id, $showTpl);
-            $title   = trim(
-                ($appt->customer?->name ?? __('Customer')) . ' · ' .
-                ($appt->service?->localizedName() ?? '')
-            );
-
-            return [
-                'id'              => $appt->id,
-                'title'           => $title,
-                'start'           => $appt->start_time?->format('Y-m-d\TH:i:s'),
-                'end'             => $appt->end_time?->format('Y-m-d\TH:i:s'),
-                'url'             => $showUrl,
-                'backgroundColor' => $colors['bg'],
-                'borderColor'     => $colors['bg'],
-                'textColor'       => $colors['text'],
-                'extendedProps'   => [
-                    'type'       => 'appointment',
-                    'group'      => (bool) $appt->booking_group_id,
-                    'status'     => $appt->status,
-                    'branch'     => $appt->branch?->localizedName() ?? '—',
-                    'service'    => $appt->service?->localizedName() ?? '—',
-                    'employee'   => $appt->employee?->localizedName() ?? '—',
-                    'resource'   => $appt->resource?->localizedName(),
-                    'employeeId'    => $appt->employee_id,
-                    'employeeImage' => $appt->employee?->image ? asset('storage/' . $appt->employee->image) : null,
-                    'price'         => number_format((float) $appt->total_price, 2),
-                    'currency'      => $appt->service?->currency ?? $defaultCurrency,
-                    'customerPhone' => $appt->customer?->phone,
-                    'updateUrl'     => str_replace('__ID__', (string) $appt->id, $updateTpl),
-                    'showUrl'    => $showUrl,
-                    'changedBy'  => $appt->status_changed_by_name,
-                    'changedAt'  => $appt->status_changed_at?->format('Y-m-d\TH:i:s'),
-                    'prevStatus' => $appt->status_previous,
-                ],
-            ];
-        });
+        $events = $query->get()->toBase()->map(
+            fn (Appointment $appt) => $this->toCalendarEvent($appt, $showTpl, $updateTpl, $defaultCurrency)
+        );
         }
 
         /* ── working hours as background events (closed slots = blocked) ── */
@@ -1477,6 +1462,162 @@ class AppointmentController extends Controller
             ]);
 
         return response()->json($events->merge($bgEvents)->merge($blockedEvents)->values());
+    }
+
+    /**
+     * Shape one appointment into the FullCalendar/list event array. Shared by
+     * calendarEvents() and listData() so the list rows and calendar blocks stay
+     * byte-for-byte identical.
+     */
+    private function toCalendarEvent(Appointment $appt, string $showTpl, string $updateTpl, string $defaultCurrency): array
+    {
+        $showUrl = str_replace('__ID__', (string) $appt->id, $showTpl);
+        $title   = trim(
+            ($appt->customer?->name ?? __('Customer')) . ' · ' .
+            ($appt->service?->localizedName() ?? '')
+        );
+
+        return [
+            'id'              => $appt->id,
+            'title'           => $title,
+            'start'           => $appt->start_time?->format('Y-m-d\TH:i:s'),
+            'end'             => $appt->end_time?->format('Y-m-d\TH:i:s'),
+            'url'             => $showUrl,
+            'backgroundColor' => $appt->status->color(),
+            'borderColor'     => $appt->status->color(),
+            'textColor'       => '#ffffff',
+            'extendedProps'   => [
+                'type'       => 'appointment',
+                'group'      => (bool) $appt->booking_group_id,
+                'status'     => $appt->status,
+                'branch'     => $appt->branch?->localizedName() ?? '—',
+                'service'    => $appt->service?->localizedName() ?? '—',
+                'employee'   => $appt->employee?->localizedName() ?? '—',
+                'resource'   => $appt->resource?->localizedName(),
+                'employeeId'    => $appt->employee_id,
+                'employeeImage' => $appt->employee?->image ? asset('storage/' . $appt->employee->image) : null,
+                'price'         => number_format((float) $appt->total_price, 2),
+                'currency'      => $appt->service?->currency ?? $defaultCurrency,
+                'customerPhone' => $appt->customer?->phone,
+                'updateUrl'     => str_replace('__ID__', (string) $appt->id, $updateTpl),
+                'showUrl'    => $showUrl,
+                'changedBy'  => $appt->status_changed_by_name,
+                'changedAt'  => $appt->status_changed_at?->format('Y-m-d\TH:i:s'),
+                'prevStatus' => $appt->status_previous,
+            ],
+        ];
+    }
+
+    /**
+     * Server-side paginated + searchable data for the appointments LIST tab.
+     *
+     * calendarEvents() is bounded by the visible calendar range; the list is
+     * meant to search the whole history, so it MUST paginate on the server.
+     * The old approach fetched every appointment and filtered in JS, which
+     * collapsed at 50k+ rows (~7s + multi-MB payload).
+     */
+    public function listData(Request $request): JsonResponse
+    {
+        $company  = $this->company();
+        $perPage  = min(100, max(10, (int) $request->input('per_page', 25)));
+        $branchId = $request->input('branch_id');
+        $q        = trim((string) $request->input('q', ''));
+
+        $query = Appointment::query()
+            ->where('appointments.company_id', $company->id)
+            ->whereNotNull('start_time');
+
+        if ($branchId) {
+            $query->where('appointments.branch_id', $branchId);
+        }
+
+        // Status pills arrive as a comma list; present-but-empty = none selected.
+        if ($request->has('statuses')) {
+            $valid = array_column(AppointmentStatus::cases(), 'value');
+            $list  = array_values(array_intersect(explode(',', (string) $request->input('statuses')), $valid));
+            $query->whereIn('appointments.status', $list ?: ['__none__']);
+        }
+
+        // Search. The customer fields are denormalised onto the row, so they
+        // filter in a single-table scan. Service / employee names are resolved
+        // against their own small tables first, then matched by id — far cheaper
+        // than LEFT JOINing two tables onto 50k rows and OR-ing leading-wildcard
+        // LIKEs across all three (that took ~3.7s; this ~1s).
+        if ($q !== '') {
+            $like = '%' . $q . '%';
+
+            $branchIds   = $company->branches()->pluck('id');
+            $serviceIds  = \App\Models\Service::whereIn('branch_id', $branchIds)
+                ->where(fn ($s) => $s->where('name_en', 'like', $like)->orWhere('name_ar', 'like', $like))
+                ->pluck('id');
+            $employeeIds = \App\Models\Employee::where('company_id', $company->id)
+                ->where(fn ($e) => $e->where('name_en', 'like', $like)->orWhere('name_ar', 'like', $like))
+                ->pluck('id');
+
+            $query->where(function ($w) use ($like, $q, $serviceIds, $employeeIds) {
+                $w->where('appointments.customer_name', 'like', $like)
+                  ->orWhere('appointments.customer_phone', 'like', $like)
+                  ->orWhere('appointments.reference', 'like', $like);
+                if ($serviceIds->isNotEmpty()) {
+                    $w->orWhereIn('appointments.service_id', $serviceIds);
+                }
+                if ($employeeIds->isNotEmpty()) {
+                    $w->orWhereIn('appointments.employee_id', $employeeIds);
+                }
+                if (ctype_digit($q)) {
+                    $w->orWhere('appointments.id', (int) $q);
+                }
+            });
+        }
+
+        // Sort — mirrors the list's client-side options.
+        switch ($request->input('sort')) {
+            case 'farthest':
+                $query->orderByRaw('ABS(TIMESTAMPDIFF(SECOND, NOW(), appointments.start_time)) DESC');
+                break;
+            case 'newest':
+                $query->orderByDesc('appointments.start_time');
+                break;
+            case 'price-high':
+                $query->orderByDesc('appointments.total_price');
+                break;
+            case 'price-low':
+                $query->orderBy('appointments.total_price');
+                break;
+            case 'closest':
+            default:
+                $query->orderByRaw('ABS(TIMESTAMPDIFF(SECOND, NOW(), appointments.start_time)) ASC');
+        }
+
+        $query->with([
+            'branch:id,name_en,name_ar',
+            'customer:id,name,phone',
+            'service:id,name_en,name_ar,currency',
+            'employee:id,name_en,name_ar,image',
+            'resource:id,name_en,name_ar',
+        ]);
+
+        $showTpl   = route('company.appointments.show', '__ID__');
+        $updateTpl = route('company.appointments.update-status', '__ID__');
+        $defaultCurrency = config('booksy.default_currency', 'SYP');
+
+        $page = $query->paginate($perPage);
+
+        $data = collect($page->items())->map(
+            fn (Appointment $appt) => $this->toCalendarEvent($appt, $showTpl, $updateTpl, $defaultCurrency)
+        )->values();
+
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'current_page' => $page->currentPage(),
+                'last_page'    => $page->lastPage(),
+                'per_page'     => $page->perPage(),
+                'total'        => $page->total(),
+                'from'         => $page->firstItem(),
+                'to'           => $page->lastItem(),
+            ],
+        ]);
     }
 
     /** Ajax: create a blocked-time window (whole branch when employee_id is empty). */

@@ -49,17 +49,33 @@ class DashboardController extends Controller
 
         // Businesses that likely need help: signed up recently but setup is
         // still incomplete. Derived — bounded to recent signups to stay cheap.
-        $needsHelp = Company::query()
+        // Branches are eager-loaded (only the columns onboarding needs) so the
+        // whole widget costs a handful of batched queries, not ~5 per company.
+        $needsHelpCompanies = Company::query()
             ->where('created_at', '>=', $today->copy()->subDays(30))
+            ->with('branches:id,company_id,is_head_office,governorate_id,latitude,longitude')
             ->latest()
             ->limit(40)
-            ->get()
-            ->map(function (Company $c) {
-                $lastLogin = $c->loginActivities()->where('successful', true)->max('created_at');
+            ->get();
+
+        $percents = OnboardingService::percentForMany($needsHelpCompanies);
+
+        // One grouped query for the last successful login of every company,
+        // instead of a MAX() per row.
+        $lastLogins = CompanyLoginActivity::query()
+            ->whereIn('company_id', $needsHelpCompanies->pluck('id'))
+            ->where('successful', true)
+            ->groupBy('company_id')
+            ->selectRaw('company_id, MAX(created_at) as last_login')
+            ->pluck('last_login', 'company_id');
+
+        $needsHelp = $needsHelpCompanies
+            ->map(function (Company $c) use ($percents, $lastLogins) {
+                $lastLogin = $lastLogins[$c->id] ?? null;
 
                 return [
                     'company'      => $c,
-                    'percent'      => OnboardingService::percent($c),
+                    'percent'      => $percents[$c->id] ?? 0,
                     'last_login'   => $lastLogin ? Carbon::parse($lastLogin) : null,
                     'days_old'     => (int) $c->created_at->diffInDays(now()),
                 ];

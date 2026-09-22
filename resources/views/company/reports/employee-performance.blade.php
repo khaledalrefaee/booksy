@@ -32,19 +32,21 @@
         </div>
     </div>
 
-    <form method="GET" class="d-flex gap-2 mb-4 flex-wrap">
+    <form method="GET" class="d-flex gap-2 mb-4 flex-wrap" data-filter-sheet="{{ __('Filters') }}">
         <select name="month" class="form-select form-select-sm" style="max-width:130px;">
             @for($m = 1; $m <= 12; $m++)
                 <option value="{{ $m }}" @selected($month == $m)>{{ Carbon\Carbon::create(null, $m)->translatedFormat('F') }}</option>
             @endfor
         </select>
         <input type="number" name="year" value="{{ $year }}" class="form-control form-control-sm" style="max-width:90px;">
+        @if(! ($branchContext ?? null))
         <select name="branch_id" class="form-select form-select-sm" style="max-width:180px;">
             <option value="">{{ __('All Branches') }}</option>
             @foreach($branches as $b)
                 <option value="{{ $b->id }}" @selected($branchId == $b->id)>{{ $b->localizedName() }}</option>
             @endforeach
         </select>
+        @endif
         <button class="btn btn-sm btn-primary">{{ __('View') }}</button>
     </form>
 

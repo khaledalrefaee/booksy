@@ -40,7 +40,7 @@
     </div>
 
     {{-- Filters --}}
-    <form method="GET" class="d-flex gap-2 mb-3 flex-wrap">
+    <form method="GET" class="d-flex gap-2 mb-3 flex-wrap" data-filter-sheet="{{ __('Filters') }}">
         <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Search...') }}"
             class="form-control form-control-sm" style="max-width:200px;">
         <select name="status" class="form-select form-select-sm" style="max-width:160px;" onchange="this.form.submit()">
@@ -50,12 +50,14 @@
             <option value="paid" @selected(request('status') == 'paid')>{{ __('paid') }}</option>
             <option value="waived" @selected(request('status') == 'waived')>{{ __('waived') }}</option>
         </select>
+        @if(! ($branchContext ?? null))
         <select name="branch_id" class="form-select form-select-sm" style="max-width:180px;" onchange="this.form.submit()">
             <option value="">{{ __('All Branches') }}</option>
             @foreach($branches as $b)
                 <option value="{{ $b->id }}" @selected(request('branch_id') == $b->id)>{{ $b->localizedName() }}</option>
             @endforeach
         </select>
+        @endif
         <button class="btn btn-sm btn-primary">{{ __('Filter') }}</button>
     </form>
 

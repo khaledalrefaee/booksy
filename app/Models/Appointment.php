@@ -37,6 +37,7 @@ class Appointment extends Model
         'tip_amount',
         'payment_status',
         'notes',
+        'booking_source',
         'rejection_reason',
         'handled_by_employee_id',
         'handled_at',
@@ -60,6 +61,17 @@ class Appointment extends Model
         } while (static::where('reference', $ref)->exists());
 
         return $ref;
+    }
+
+    /**
+     * The booking source as an enum, or null when unknown/legacy.
+     * Not a cast so an unexpected legacy string never throws.
+     */
+    public function bookingSourceEnum(): ?\App\Enums\BookingSource
+    {
+        return $this->booking_source
+            ? \App\Enums\BookingSource::tryFrom($this->booking_source)
+            : null;
     }
 
     protected function casts(): array

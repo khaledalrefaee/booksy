@@ -189,6 +189,7 @@
                     @endforeach
                 </select>
             </div>
+            @if(! ($branchContext ?? null))
             <div style="flex:1;min-width:140px;">
                 <label class="tx-11 fw-bold text-muted d-block mb-1">{{ __('Branch') }}</label>
                 <select name="branch_id" class="form-select form-select-sm" onchange="this.form.submit()">
@@ -198,6 +199,7 @@
                     @endforeach
                 </select>
             </div>
+            @endif
             <div style="flex:1;min-width:140px;">
                 <label class="tx-11 fw-bold text-muted d-block mb-1">{{ __('Month') }}</label>
                 <input type="month" name="month" value="{{ $month }}" class="form-control form-control-sm" onchange="this.form.submit()">
@@ -299,22 +301,28 @@
                         </button>
                     </form>
                     @endif
+                    @php
+                        // Built here (not inline in @json) because Blade's directive
+                        // parser mis-compiles a multi-line array literal with nested
+                        // casts/calls, producing invalid PHP.
+                        $leaveEditData = [
+                            "id"          => $leave->id,
+                            "name"        => $leave->employee->localizedName(),
+                            "type"        => $leave->type,
+                            "is_hourly"   => (bool) $leave->is_hourly,
+                            "start_date"  => $leave->start_date->toDateString(),
+                            "end_date"    => $leave->end_date->toDateString(),
+                            "start_hour"  => $leave->start_hour ? substr($leave->start_hour, 0, 5) : "",
+                            "end_hour"    => $leave->end_hour ? substr($leave->end_hour, 0, 5) : "",
+                            "reason"      => $leave->reason ?? "",
+                            "deduction_amount"   => $leave->deduction_amount ? (float) $leave->deduction_amount : "",
+                            "deduction_currency" => $leave->deduction_currency ?? ($leave->employee->compensation?->currency ?? config("booksy.default_currency", "SYP")),
+                            "status"      => $leave->status,
+                        ];
+                    @endphp
                     <button type="button" class="btn-lv btn-lv-edit"
                             title="{{ __('Edit') }}"
-                            onclick='openLeaveEdit(@json([
-                                "id"          => $leave->id,
-                                "name"        => $leave->employee->localizedName(),
-                                "type"        => $leave->type,
-                                "is_hourly"   => (bool) $leave->is_hourly,
-                                "start_date"  => $leave->start_date->toDateString(),
-                                "end_date"    => $leave->end_date->toDateString(),
-                                "start_hour"  => $leave->start_hour ? substr($leave->start_hour, 0, 5) : "",
-                                "end_hour"    => $leave->end_hour ? substr($leave->end_hour, 0, 5) : "",
-                                "reason"      => $leave->reason ?? "",
-                                "deduction_amount"   => $leave->deduction_amount ? (float) $leave->deduction_amount : "",
-                                "deduction_currency" => $leave->deduction_currency ?? ($leave->employee->compensation?->currency ?? config("booksy.default_currency", "SYP")),
-                                "status"      => $leave->status,
-                            ], JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT)'>
+                            onclick='openLeaveEdit(@json($leaveEditData, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT))'>
                         <i data-feather="edit-2" style="width:11px;height:11px;"></i>
                     </button>
                     <button type="button" class="btn-lv btn-lv-del"

@@ -302,8 +302,10 @@
     {{-- ── Filters bar ── --}}
     <div class="bk-topbar">
 
-        {{-- Branch selector --}}
-        <div class="bk-filter-group">
+        {{-- Branch selector — kept in the DOM (JS binds to it) but hidden when the
+             sidebar already scopes to one branch; it stays pre-selected to that
+             branch via the injected branch_id. --}}
+        <div class="bk-filter-group" @if($branchContext ?? null) style="display:none;" @endif>
             <div class="bk-filter-icon">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             </div>
@@ -451,6 +453,16 @@
                     </td></tr>
                 </tbody>
             </table>
+        </div>
+
+        {{-- Server-side pager for the list (populated by appointments.js) --}}
+        <div id="list-pager" class="d-none align-items-center justify-content-between flex-wrap gap-2 px-1 py-3">
+            <div id="list-pager-info" class="tx-12" style="color:var(--cal-text-muted);"></div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" id="list-prev" class="btn btn-sm btn-outline-secondary">{{ $isRtl ? 'السابق' : 'Prev' }}</button>
+                <span id="list-page-label" class="tx-12" style="color:var(--cal-text-muted);"></span>
+                <button type="button" id="list-next" class="btn btn-sm btn-outline-secondary">{{ $isRtl ? 'التالي' : 'Next' }}</button>
+            </div>
         </div>
     </div>
 
@@ -692,6 +704,7 @@
 
     $bkRoutes = [
         'appointmentsCalendarEvents'   => route('company.appointments.calendar-events'),
+        'appointmentsListData'         => route('company.appointments.list-data'),
         'appointmentsUpdateStatus'     => route('company.appointments.update-status', '__ID__'),
         'appointmentsStaffEvents'      => route('company.appointments.staff-events'),
         'appointmentsReschedule'       => route('company.appointments.reschedule', '__ID__'),

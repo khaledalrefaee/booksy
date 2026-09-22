@@ -33,6 +33,21 @@
 
     @include('company.partials.flash')
 
+    @if($errors->any())
+    <div class="alert border-0 rounded-4 mb-4 d-flex align-items-start gap-3"
+         style="background:rgba(220,53,69,.08);border-inline-start:4px solid #dc3545 !important;">
+        <i data-feather="alert-triangle" style="width:18px;height:18px;color:#dc3545;flex-shrink:0;margin-top:2px;"></i>
+        <div>
+            <p class="fw-bold mb-1" style="color:#dc3545;">{{ __('Please fix the highlighted times before saving.') }}</p>
+            <ul class="mb-0 small text-muted ps-3">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    </div>
+    @endif
+
     @if(session('branch_created'))
     <div class="alert border-0 rounded-4 mb-4 d-flex align-items-start gap-3"
          style="background:linear-gradient(135deg,rgba(43,207,126,.12),rgba(43,207,126,.05));border-inline-start:4px solid #2bcf7e !important;">
@@ -64,10 +79,18 @@
                             <i data-feather="zap" style="width:14px;height:14px;" class="me-1"></i>
                             {{ __('Quick presets') }}:
                         </span>
-                        <div class="d-flex align-items-center gap-1">
-                            <input type="time" id="preset-open"  class="form-control form-control-sm rounded-3" style="width:110px;" value="09:00">
-                            <span class="text-muted small">–</span>
-                            <input type="time" id="preset-close" class="form-control form-control-sm rounded-3" style="width:110px;" value="18:00">
+                        <div class="d-flex align-items-end gap-1">
+                            <div class="d-flex flex-column">
+                                <input type="time" id="preset-open" class="form-control form-control-sm rounded-3" style="width:110px;"
+                                       value="09:00" aria-label="{{ __('Start time') }}" title="{{ __('Start time') }}">
+                                <small class="text-muted" style="font-size:.6rem;line-height:1;margin-top:2px;">{{ __('Start time') }}</small>
+                            </div>
+                            <span class="text-muted small" style="padding-bottom:14px;">–</span>
+                            <div class="d-flex flex-column">
+                                <input type="time" id="preset-close" class="form-control form-control-sm rounded-3" style="width:110px;"
+                                       value="18:00" aria-label="{{ __('End time') }}" title="{{ __('End time') }}">
+                                <small class="text-muted" style="font-size:.6rem;line-height:1;margin-top:2px;">{{ __('End time') }}</small>
+                            </div>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="btn-apply-weekdays">
                             {{ __('Apply to weekdays (Mon–Fri)') }}
@@ -117,14 +140,22 @@
 
                                         <div class="d-flex align-items-center gap-2 shift1-times flex-wrap" id="shift1-times-{{ $dayNum }}">
                                             <span class="badge bg-primary-subtle text-primary rounded-pill px-2">{{ __('Shift 1') }}</span>
-                                            <div class="d-flex align-items-center gap-1">
-                                                <input type="time" name="hours[{{ $dayNum }}][open_time]"
-                                                    class="form-control form-control-sm rounded-3 js-s1-open" style="width:110px;"
-                                                    value="{{ $openTime }}" data-day="{{ $dayNum }}" @disabled(!$isOpen)>
-                                                <span class="text-muted">–</span>
-                                                <input type="time" name="hours[{{ $dayNum }}][close_time]"
-                                                    class="form-control form-control-sm rounded-3 js-s1-close" style="width:110px;"
-                                                    value="{{ $closeTime }}" data-day="{{ $dayNum }}" @disabled(!$isOpen)>
+                                            <div class="d-flex align-items-end gap-1">
+                                                <div class="d-flex flex-column">
+                                                    <input type="time" name="hours[{{ $dayNum }}][open_time]"
+                                                        class="form-control form-control-sm rounded-3 js-s1-open" style="width:110px;"
+                                                        value="{{ $openTime }}" data-day="{{ $dayNum }}"
+                                                        aria-label="{{ __('Start time') }}" title="{{ __('Start time') }}" @disabled(!$isOpen)>
+                                                    <small class="text-muted" style="font-size:.6rem;line-height:1;margin-top:2px;">{{ __('Start time') }}</small>
+                                                </div>
+                                                <span class="text-muted" style="padding-bottom:14px;">–</span>
+                                                <div class="d-flex flex-column">
+                                                    <input type="time" name="hours[{{ $dayNum }}][close_time]"
+                                                        class="form-control form-control-sm rounded-3 js-s1-close" style="width:110px;"
+                                                        value="{{ $closeTime }}" data-day="{{ $dayNum }}"
+                                                        aria-label="{{ __('End time') }}" title="{{ __('End time') }}" @disabled(!$isOpen)>
+                                                    <small class="text-muted" style="font-size:.6rem;line-height:1;margin-top:2px;">{{ __('End time') }}</small>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -151,16 +182,30 @@
                                         id="shift2-row-{{ $dayNum }}">
                                         <input type="hidden" name="hours[{{ $dayNum }}][shift2_enabled]" class="js-shift2-hidden" value="{{ $shift2On ? '1' : '' }}">
                                         <span class="badge bg-warning-subtle text-warning rounded-pill px-2">{{ __('Shift 2') }}</span>
-                                        <div class="d-flex align-items-center gap-1">
-                                            <input type="time" name="hours[{{ $dayNum }}][shift2_open_time]"
-                                                class="form-control form-control-sm rounded-3 js-s2-open" style="width:110px;" value="{{ $s2Open }}">
-                                            <span class="text-muted">–</span>
-                                            <input type="time" name="hours[{{ $dayNum }}][shift2_close_time]"
-                                                class="form-control form-control-sm rounded-3 js-s2-close" style="width:110px;" value="{{ $s2Close }}">
+                                        <div class="d-flex align-items-end gap-1">
+                                            <div class="d-flex flex-column">
+                                                <input type="time" name="hours[{{ $dayNum }}][shift2_open_time]"
+                                                    class="form-control form-control-sm rounded-3 js-s2-open" style="width:110px;" value="{{ $s2Open }}"
+                                                    data-day="{{ $dayNum }}" aria-label="{{ __('Start time') }}" title="{{ __('Start time') }}">
+                                                <small class="text-muted" style="font-size:.6rem;line-height:1;margin-top:2px;">{{ __('Start time') }}</small>
+                                            </div>
+                                            <span class="text-muted" style="padding-bottom:14px;">–</span>
+                                            <div class="d-flex flex-column">
+                                                <input type="time" name="hours[{{ $dayNum }}][shift2_close_time]"
+                                                    class="form-control form-control-sm rounded-3 js-s2-close" style="width:110px;" value="{{ $s2Close }}"
+                                                    data-day="{{ $dayNum }}" aria-label="{{ __('End time') }}" title="{{ __('End time') }}">
+                                                <small class="text-muted" style="font-size:.6rem;line-height:1;margin-top:2px;">{{ __('End time') }}</small>
+                                            </div>
                                         </div>
                                         <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2 js-remove-shift2" data-day="{{ $dayNum }}">
                                             <i data-feather="x-circle" style="width:16px;height:16px;"></i>
                                         </button>
+                                    </div>
+
+                                    {{-- Inline validation message for this day --}}
+                                    <div class="js-day-error text-danger small mt-2 d-none" id="day-error-{{ $dayNum }}">
+                                        <i data-feather="alert-circle" style="width:13px;height:13px;" class="me-1"></i>
+                                        <span class="js-day-error-text"></span>
                                     </div>
 
                                     {{-- Visual time bar --}}
@@ -418,11 +463,77 @@ document.addEventListener('DOMContentLoaded', function () {
         form.addEventListener('change', window.markHoursDirty);
 
         // Enable disabled inputs before submit, then show the saving state.
-        form.addEventListener('submit', function () {
+        form.addEventListener('submit', function (e) {
+            if (!validateHours()) {          // block illogical times before they reach the server
+                e.preventDefault();
+                setSaveState('dirty');
+                return;
+            }
             form.querySelectorAll('input[type="time"]').forEach(function (el) { el.disabled = false; });
             setSaveState('saving');
         });
     }
+
+    // ── Client-side time-range validation ──────────────────────────
+    function showDayError(day, msg) {
+        var box = document.getElementById('day-error-' + day);
+        if (!box) return;
+        var txt = box.querySelector('.js-day-error-text');
+        if (txt) txt.textContent = msg;
+        box.classList.remove('d-none');
+    }
+    function clearDayError(day) {
+        var box = document.getElementById('day-error-' + day);
+        if (box) box.classList.add('d-none');
+    }
+
+    function validateHours() {
+        var ok = true, firstBad = null;
+        var msgAfter  = @json(__('The end time must be after the start time.'));
+        var msgShift2 = @json(__('Shift 2 must start after shift 1 ends.'));
+
+        dayKeys.forEach(function (day) {
+            clearDayError(day);
+            var toggle = document.getElementById('day-open-' + day);
+            if (!toggle || !toggle.checked) return;   // closed days are not validated
+
+            var block = document.getElementById('day-block-' + day);
+            var s1o = block.querySelector('.js-s1-open');
+            var s1c = block.querySelector('.js-s1-close');
+            if (s1o && s1c && s1o.value && s1c.value && s1c.value <= s1o.value) {
+                showDayError(day, msgAfter);
+                ok = false; if (!firstBad) firstBad = s1c;
+                return;
+            }
+
+            var s2Row = document.getElementById('shift2-row-' + day);
+            if (s2Row && !s2Row.classList.contains('d-none')) {
+                var s2o = block.querySelector('.js-s2-open');
+                var s2c = block.querySelector('.js-s2-close');
+                if (s2o && s2c && s2o.value && s2c.value && s2c.value <= s2o.value) {
+                    showDayError(day, msgAfter);
+                    ok = false; if (!firstBad) firstBad = s2c;
+                    return;
+                }
+                if (s1c && s2o && s1c.value && s2o.value && s2o.value < s1c.value) {
+                    showDayError(day, msgShift2);
+                    ok = false; if (!firstBad) firstBad = s2o;
+                }
+            }
+        });
+
+        if (firstBad) { firstBad.focus(); firstBad.scrollIntoView({behavior:'smooth', block:'center'}); }
+        if (typeof feather !== 'undefined') feather.replace();
+        return ok;
+    }
+
+    // Clear a day's error as soon as the user adjusts its times.
+    document.querySelectorAll('input[type="time"]').forEach(function (inp) {
+        inp.addEventListener('input', function () {
+            var d = this.getAttribute('data-day');
+            if (d !== null) clearDayError(d);
+        });
+    });
 });
 </script>
 @endpush

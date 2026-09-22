@@ -86,6 +86,18 @@ Route::prefix('owner')->name('owner.')->group(function () {
                 Route::get('export', 'export')->middleware('owner.can:field-visits.view.all')->name('export');
             });
 
+        // ── Branch photo review (business + GlowRez-team photos) ──
+        Route::middleware('owner.can:photos.review')->prefix('photo-reviews')->name('photo-reviews.')
+            ->controller(\App\Http\Controllers\Owner\PhotoReviewController::class)
+            ->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('team-upload', 'teamStore')->name('team-upload');
+                Route::post('{image}/approve', 'approve')->name('approve');
+                Route::post('{image}/reject', 'reject')->name('reject');
+                Route::post('{image}/cover', 'cover')->name('cover');
+                Route::delete('{image}', 'destroy')->name('destroy');
+            });
+
         Route::resource('categories', CategoryController::class);
         Route::resource('service-categories', ServiceCategoryController::class)->except(['create', 'edit', 'show']);
 

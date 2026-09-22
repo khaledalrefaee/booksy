@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Company;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -56,7 +57,13 @@ class OnboardingService
     /** 0–100 integer percentage of setup completed (all steps, logo included). */
     public static function percent(Company $company): int
     {
-        $done  = array_filter(self::completion($company));
+        return self::percentFor(self::completion($company));
+    }
+
+    /** Percentage from an already-computed completion map (no queries). */
+    private static function percentFor(array $completion): int
+    {
+        $done  = array_filter($completion);
         $total = count(self::stepDefinitions());
 
         return $total === 0 ? 100 : (int) round(count($done) / $total * 100);
@@ -70,8 +77,13 @@ class OnboardingService
     /** The required steps still missing — empty means the business can go live. */
     public static function publishBlockers(Company $company): array
     {
-        $completion = self::completion($company);
-        $blockers   = [];
+        return self::blockersFor(self::completion($company));
+    }
+
+    /** Blockers from an already-computed completion map (no queries). */
+    private static function blockersFor(array $completion): array
+    {
+        $blockers = [];
 
         foreach (self::stepDefinitions() as $step) {
             if ($step['required'] && ! ($completion[$step['key']] ?? false)) {
@@ -85,7 +97,61 @@ class OnboardingService
     /** True when every *required* step is done (logo is optional). */
     public static function canPublish(Company $company): bool
     {
-        return self::publishBlockers($company) === [];
+        return self::blockersFor(self::completion($company)) === [];
+    }
+
+    /**
+     * Bulk onboarding percentage for many companies — batched so the whole set
+     * costs a handful of queries instead of ~5 per company (the owner dashboard
+     * "needs help" widget would otherwise fire 200+ queries). Expects each
+     * company to have its `branches` relation eager-loaded.
+     *
+     * @param  Collection<int, Company>  $companies
+     * @return array<int, int>  company id => percent (0–100)
+     */
+    public static function percentForMany(Collection $companies): array
+    {
+        // Map every branch id back to its company in one pass.
+        $branchToCompany = [];
+        foreach ($companies as $company) {
+            foreach ($company->branches as $branch) {
+                $branchToCompany[$branch->id] = $company->id;
+            }
+        }
+        $allBranchIds = array_keys($branchToCompany);
+
+        // Two batched existence sweeps instead of one exists() per company.
+        $companiesWithHours = [];
+        $companiesWithServices = [];
+
+        if ($allBranchIds !== []) {
+            foreach (DB::table('branch_working_hours')->whereIn('branch_id', $allBranchIds)->distinct()->pluck('branch_id') as $bid) {
+                $companiesWithHours[$branchToCompany[$bid]] = true;
+            }
+            foreach (DB::table('services')->whereIn('branch_id', $allBranchIds)->distinct()->pluck('branch_id') as $bid) {
+                $companiesWithServices[$branchToCompany[$bid]] = true;
+            }
+        }
+
+        $result = [];
+        foreach ($companies as $company) {
+            // Same head-office rule as headOffice(): flagged branch, lowest id,
+            // else the oldest branch — resolved in-memory from the loaded set.
+            $headOffice = $company->branches->where('is_head_office', true)->sortBy('id')->first()
+                ?? $company->branches->sortBy('id')->first();
+
+            $result[$company->id] = self::percentFor([
+                'logo' => filled($company->logo),
+                'location' => $headOffice !== null
+                    && $headOffice->governorate_id !== null
+                    && $headOffice->latitude !== null
+                    && $headOffice->longitude !== null,
+                'working_hours' => isset($companiesWithHours[$company->id]),
+                'service' => isset($companiesWithServices[$company->id]),
+            ]);
+        }
+
+        return $result;
     }
 
     /**
@@ -99,13 +165,18 @@ class OnboardingService
         $ob         = $company->onboarding;
         $headOffice = $company->headOffice();
 
+        // Compute completion once and derive the rest from it, instead of
+        // re-running the same 4 queries via percent()/canPublish()/blockers().
+        $completion = self::completion($company);
+        $blockers   = self::blockersFor($completion);
+
         return [
-            'steps'        => self::completion($company),
-            'percent'      => self::percent($company),
+            'steps'        => $completion,
+            'percent'      => self::percentFor($completion),
             'tourDone'     => $ob?->tour_completed_at !== null,
             'dismissed'    => $ob?->dismissed_at !== null,
-            'canPublish'   => self::canPublish($company),
-            'blockers'     => self::publishBlockers($company),
+            'canPublish'   => $blockers === [],
+            'blockers'     => $blockers,
             'published'    => $company->status === 'active',
             'submittedForReview' => $company->submitted_for_review_at !== null,
             'headOfficeId' => $headOffice?->id,

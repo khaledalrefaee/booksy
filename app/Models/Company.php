@@ -143,6 +143,21 @@ class Company extends Authenticatable
         return $this->hasMany(Branch::class);
     }
 
+    /**
+     * The timezone used to anchor this company's day boundaries (reports,
+     * the Daily Business Summary, scheduled sends).
+     *
+     * There is no per-company timezone column yet: the whole platform stores
+     * and reads datetimes in one application timezone (config('app.timezone'),
+     * currently Asia/Damascus). This accessor is the single place that answers
+     * "what is this company's local time?", so the day a per-company setting is
+     * introduced only this method changes — every caller keeps working.
+     */
+    public function timezone(): string
+    {
+        return config('app.timezone');
+    }
+
     public function bookingPolicies(): HasMany
     {
         return $this->hasMany(BookingPolicy::class);

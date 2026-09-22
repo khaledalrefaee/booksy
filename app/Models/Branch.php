@@ -85,6 +85,16 @@ class Branch extends Model
         return url('/s/' . $this->slug);
     }
 
+    /**
+     * Shareable marketing tracking link for a given source code (IN|FB|WA|WEB).
+     * A customer who books after arriving through it has that source recorded on
+     * the appointment. Uses the branch slug — never the numeric id.
+     */
+    public function trackingUrl(string $code): string
+    {
+        return url('/branch/' . $this->slug . '/' . strtoupper($code));
+    }
+
     // Convenience helpers
     public function isActive(): bool    { return $this->status === 'active'; }
     public function isInactive(): bool  { return $this->status === 'inactive'; }
@@ -224,6 +234,60 @@ class Branch extends Model
     public function images(): HasMany
     {
         return $this->hasMany(BranchImage::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Public-facing photos only: approved, with the cover first. This is what
+     * the customer-facing marketplace should load — pending/rejected photos and
+     * the raw sort order never leak to visitors.
+     */
+    public function approvedImages(): HasMany
+    {
+        return $this->hasMany(BranchImage::class)
+            ->where('status', BranchImage::STATUS_APPROVED)
+            ->orderByDesc('is_cover')
+            ->orderBy('sort_order');
+    }
+
+    /** The designated cover, falling back to the first approved photo. */
+    public function coverImage(): ?BranchImage
+    {
+        $loaded = $this->relationLoaded('approvedImages') ? $this->approvedImages : null;
+
+        return ($loaded?->firstWhere('is_cover', true) ?? $loaded?->first())
+            ?? $this->approvedImages()->first();
+    }
+
+    /**
+     * Guarantee the branch has exactly one cover among its approved photos:
+     * when none is flagged, promote the earliest approved one. Safe to call
+     * after any change to a photo's status or after a delete.
+     */
+    public function ensureHasCover(): void
+    {
+        $hasCover = $this->images()
+            ->where('is_cover', true)
+            ->where('status', BranchImage::STATUS_APPROVED)
+            ->exists();
+
+        if ($hasCover) {
+            return;
+        }
+
+        // Prefer a "place" photo for the cover (it represents the venue), then
+        // fall back to work photos, then to sort order.
+        $first = $this->images()
+            ->where('status', BranchImage::STATUS_APPROVED)
+            ->reorder() // drop the relationship's default sort_order so type can lead
+            ->orderByRaw("CASE WHEN type = ? THEN 0 ELSE 1 END", [BranchImage::TYPE_PLACE])
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->first();
+
+        if ($first) {
+            $this->images()->update(['is_cover' => false]);
+            $first->update(['is_cover' => true]);
+        }
     }
 
     public function loyaltyRewards(): HasMany

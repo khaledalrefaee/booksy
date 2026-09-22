@@ -301,6 +301,7 @@ class WaitlistController extends Controller
                 'total_price'    => $service->finalPrice(),
                 'payment_status' => 'pending',
                 'notes'          => $waitlistEntry->notes,
+                'booking_source' => \App\Enums\BookingSource::Reception->value,
             ]);
 
             \App\Models\AppointmentService::create([

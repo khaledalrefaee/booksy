@@ -48,6 +48,12 @@ Route::get('/business/{company}', [FrontController::class, 'show'])->name('front
 Route::get('/venues', [FrontController::class, 'venues'])->name('front.venues');
 Route::get('/category/{slug}', [FrontController::class, 'categoryPage'])->name('front.category');
 Route::get('/branch/{branch}', [FrontController::class, 'branchShow'])->name('front.branch');
+/* Marketing tracking links: /branch/{slug}/IN|FB|WA|WEB — records the booking
+   source in the session, then forwards to the normal branch/booking page. Uses
+   the branch slug (not id). Constrained so it never shadows other /branch/* URLs. */
+Route::get('/branch/{slug}/{source}', [FrontController::class, 'branchSource'])
+    ->where('source', 'IN|FB|WA|WEB|in|fb|wa|web|instagram|facebook|whatsapp|website')
+    ->name('front.branch.source');
 Route::get('/s/{slug}', [FrontController::class, 'privateBooking'])->name('front.private-booking');
 Route::get('/for-business', [FrontController::class, 'business'])->name('front.business');
 Route::get('/about', [FrontController::class, 'about'])->name('front.about');
@@ -159,6 +165,19 @@ if (app()->environment('local')) {
         abort_unless(in_array($code, ['403', '404', '419', '429', '500', '503'], true), 404);
         return response()->view("errors.{$code}", [], (int) $code);
     })->name('errors.preview');
+
+    // Local-only preview for the Daily Business Summary email.
+    //   /_preview/daily-summary            → first active company
+    //   /_preview/daily-summary?company=5  → a specific company id
+    // Read-only (just SELECTs), so it renders even while the DB is in
+    // innodb_force_recovery. The logo shows via CID only in the real email.
+    Route::get('/_preview/daily-summary', function (\Illuminate\Http\Request $request, \App\Services\DailyBusinessSummaryService $service) {
+        $company = $request->filled('company')
+            ? \App\Models\Company::findOrFail($request->integer('company'))
+            : \App\Models\Company::where('status', 'active')->firstOrFail();
+
+        return new \App\Mail\DailyBusinessSummaryMail($service->build($company));
+    })->name('daily-summary.preview');
 }
 
 require __DIR__.'/owner.php';

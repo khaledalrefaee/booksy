@@ -30,6 +30,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('sms:send-reminders')->everyTenMinutes();
         $schedule->command('sms:send-followups')->dailyAt('10:00');
         $schedule->command('sms:expire-credits')->dailyAt('00:30');
+
+        // Daily Business Summary — runs hourly; the command mails only the
+        // companies for which it is 9 PM in their own timezone, so it lands at
+        // 21:00 local no matter where the server clock sits.
+        $schedule->command('summary:daily-business')->hourly()->withoutOverlapping();
     })
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -51,6 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'owner.mustchange' => EnsureOwnerPasswordChanged::class,
             'company.auth'     => AuthenticateCompany::class,
             'company.verified' => EnsureCompanyVerified::class,
+            'company.context'  => \App\Http\Middleware\ShareBranchContext::class,
             'company.guest' => RedirectIfCompanyAuthenticated::class,
             'feature'       => EnsureCompanyFeature::class,
             'customer.auth' => AuthenticateCustomer::class,

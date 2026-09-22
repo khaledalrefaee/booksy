@@ -11,9 +11,17 @@ use App\Models\Service;
 use App\Models\WaitlistEntry;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 final class DashboardStatisticsService
 {
+    /**
+     * How long dashboard aggregates stay cached. Short enough that the numbers
+     * feel live, long enough that a traffic spike doesn't re-run ~20 aggregate
+     * queries over the whole appointments table on every page load.
+     */
+    private const CACHE_TTL = 300; // 5 minutes
+
     /**
      * @return array{appointments_total: int, appointments_pending: int, branches: int, services: int, waitlist_waiting: int}
      */
@@ -24,38 +32,44 @@ final class DashboardStatisticsService
      */
     public function forPlatform(): array
     {
-        return [
+        return Cache::remember('dash.platform.stats', self::CACHE_TTL, fn () => [
             'appointments_total' => Appointment::query()->count(),
             'appointments_pending' => Appointment::query()->where('status', 'pending')->count(),
             'companies' => Company::query()->count(),
             'branches' => Branch::query()->count(),
             'services' => Service::query()->count(),
             'waitlist_waiting' => WaitlistEntry::query()->where('status', 'waiting')->count(),
-        ];
+        ]);
     }
 
     public function forCompany(Company $company): array
     {
-        $branchIds = $company->branches()->pluck('id');
+        return Cache::remember("dash.company.{$company->id}.stats", self::CACHE_TTL, function () use ($company) {
+            $branchIds = $company->branches()->pluck('id');
 
-        return [
-            'appointments_total' => Appointment::query()->where('company_id', $company->id)->count(),
-            'appointments_pending' => Appointment::query()
-                ->where('company_id', $company->id)
-                ->where('status', 'pending')
-                ->count(),
-            'branches' => $company->branches()->count(),
-            'services' => Service::query()->whereIn('branch_id', $branchIds)->count(),
-            'waitlist_waiting' => WaitlistEntry::query()
-                ->where('company_id', $company->id)
-                ->where('status', 'waiting')
-                ->count(),
-        ];
+            return [
+                'appointments_total' => Appointment::query()->where('company_id', $company->id)->count(),
+                'appointments_pending' => Appointment::query()
+                    ->where('company_id', $company->id)
+                    ->where('status', 'pending')
+                    ->count(),
+                'branches' => $company->branches()->count(),
+                'services' => Service::query()->whereIn('branch_id', $branchIds)->count(),
+                'waitlist_waiting' => WaitlistEntry::query()
+                    ->where('company_id', $company->id)
+                    ->where('status', 'waiting')
+                    ->count(),
+            ];
+        });
     }
 
     public function chartDataForPlatform(): array
     {
-        return $this->buildChartData(null);
+        return Cache::remember(
+            'dash.platform.charts.' . app()->getLocale(),
+            self::CACHE_TTL,
+            fn () => $this->buildChartData(null),
+        );
     }
 
     /**
@@ -70,12 +84,20 @@ final class DashboardStatisticsService
      */
     public function chartDataForCompany(Company $company): array
     {
-        return $this->buildChartData($company->id, $company);
+        return Cache::remember(
+            "dash.company.{$company->id}.charts." . app()->getLocale(),
+            self::CACHE_TTL,
+            fn () => $this->buildChartData($company->id, $company),
+        );
     }
 
     public function monthChartForCompany(Company $company, int $year, int $month): array
     {
-        return $this->buildMonthDailySeries($year, $month, $company->id);
+        return Cache::remember(
+            "dash.company.{$company->id}.monthchart.{$year}.{$month}",
+            self::CACHE_TTL,
+            fn () => $this->buildMonthDailySeries($year, $month, $company->id),
+        );
     }
 
     private function buildMonthDailySeries(int $year, int $month, ?int $companyId): array
@@ -84,28 +106,44 @@ final class DashboardStatisticsService
         $start = Carbon::create($year, $month, 1, 0, 0, 0, $tz)->startOfMonth();
         $end   = $start->copy()->endOfMonth();
 
-        $query = Appointment::query()->whereBetween('start_time', [$start, $end]);
+        $byDay = $this->groupedCounts($companyId, $start, $end, 'DAY(start_time)');
+
+        $labels = $total = $pending = $completed = [];
+
+        for ($d = 1; $d <= $start->daysInMonth; $d++) {
+            $row         = $byDay->get($d);
+            $labels[]    = (string) $d;
+            $total[]     = (int) ($row->total ?? 0);
+            $pending[]   = (int) ($row->pending ?? 0);
+            $completed[] = (int) ($row->completed ?? 0);
+        }
+
+        return compact('labels', 'total', 'pending', 'completed');
+    }
+
+    /**
+     * Bucketed appointment counts computed in SQL (GROUP BY) instead of loading
+     * every row into PHP and grouping in memory — the difference between a
+     * 12-second dashboard and a sub-second one at 50k+ appointments.
+     *
+     * @return \Illuminate\Support\Collection<int|string, object{total:int, pending:int, completed:int}>
+     *         keyed by the bucket expression's value
+     */
+    private function groupedCounts(?int $companyId, Carbon $from, Carbon $to, string $keyExpr): Collection
+    {
+        $query = Appointment::query()
+            ->whereBetween('start_time', [$from, $to])
+            ->selectRaw("{$keyExpr} as k")
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending")
+            ->selectRaw("SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed")
+            ->groupBy('k');
 
         if ($companyId !== null) {
             $query->where('company_id', $companyId);
         }
 
-        $rows  = $query->get(['start_time', 'status']);
-        $byDay = $rows->groupBy(
-            fn (Appointment $r) => (int) $r->start_time?->timezone($tz)->format('j')
-        );
-
-        $labels = $total = $pending = $completed = [];
-
-        for ($d = 1; $d <= $start->daysInMonth; $d++) {
-            $group       = $byDay->get($d, collect());
-            $labels[]    = (string) $d;
-            $total[]     = $group->count();
-            $pending[]   = $group->where('status', 'pending')->count();
-            $completed[] = $group->where('status', 'completed')->count();
-        }
-
-        return compact('labels', 'total', 'pending', 'completed');
+        return $query->get()->keyBy('k');
     }
 
     /**
@@ -116,17 +154,7 @@ final class DashboardStatisticsService
         $tz = config('app.timezone');
         $now = now($tz);
 
-        $recentQuery = Appointment::query()
-            ->where('start_time', '>=', $now->copy()->subDays(29)->startOfDay())
-            ->where('start_time', '<=', $now->copy()->addDays(7)->endOfDay());
-
-        if ($companyId !== null) {
-            $recentQuery->where('company_id', $companyId);
-        }
-
-        $recent = $recentQuery->get(['start_time', 'status', 'total_price']);
-
-        $daily = $this->buildDailySeries($recent, $now, $tz, 30);
+        $daily = $this->buildDailySeries($companyId, $now, 30);
         $monthly = $this->buildMonthlySeries($now, $tz, 12, $companyId, $company?->created_at);
         $status = $this->buildStatusBreakdown($companyId);
         $revenue = $this->buildRevenueSeries($now, $tz, 12, $companyId);
@@ -217,11 +245,11 @@ final class DashboardStatisticsService
      * @param  Collection<int, Appointment>  $appointments
      * @return array{labels: list<string>, total: list<int>, pending: list<int>, completed: list<int>}
      */
-    private function buildDailySeries(Collection $appointments, Carbon $now, string $tz, int $days): array
+    private function buildDailySeries(?int $companyId, Carbon $now, int $days): array
     {
-        $byDay = $appointments->groupBy(
-            fn (Appointment $row) => $row->start_time?->timezone($tz)->format('Y-m-d') ?? ''
-        );
+        $from  = $now->copy()->subDays($days - 1)->startOfDay();
+        $to    = $now->copy()->addDays(7)->endOfDay();
+        $byDay = $this->groupedCounts($companyId, $from, $to, 'DATE(start_time)');
 
         $labels = [];
         $total = [];
@@ -230,13 +258,12 @@ final class DashboardStatisticsService
 
         for ($i = $days - 1; $i >= -7; $i--) {
             $day = $now->copy()->subDays($i);
-            $key = $day->format('Y-m-d');
-            $rows = $byDay->get($key, collect());
+            $row = $byDay->get($day->format('Y-m-d'));
 
             $labels[] = $day->format('d');
-            $total[] = $rows->count();
-            $pending[] = $rows->where('status', 'pending')->count();
-            $completed[] = $rows->where('status', 'completed')->count();
+            $total[] = (int) ($row->total ?? 0);
+            $pending[] = (int) ($row->pending ?? 0);
+            $completed[] = (int) ($row->completed ?? 0);
         }
 
         return compact('labels', 'total', 'pending', 'completed');
@@ -248,31 +275,30 @@ final class DashboardStatisticsService
     private function buildRevenueSeries(Carbon $now, string $tz, int $months, ?int $companyId = null): array
     {
         $from = $now->copy()->subMonths($months - 1)->startOfMonth();
+        $to   = $now->copy()->endOfMonth();
 
-        $rowsQuery = Appointment::query()
-            ->where('start_time', '>=', $from)
+        $query = Appointment::query()
+            ->whereBetween('start_time', [$from, $to])
             ->whereIn('status', ['completed', 'confirmed'])
-            ->whereNotNull('total_price');
+            ->whereNotNull('total_price')
+            ->selectRaw("DATE_FORMAT(start_time, '%Y-%m') as k")
+            ->selectRaw('SUM(total_price) as revenue')
+            ->groupBy('k');
 
         if ($companyId !== null) {
-            $rowsQuery->where('company_id', $companyId);
+            $query->where('company_id', $companyId);
         }
 
-        $rows = $rowsQuery->get(['start_time', 'total_price']);
-
-        $byMonth = $rows->groupBy(
-            fn (Appointment $row) => $row->start_time?->timezone($tz)->format('Y-m') ?? ''
-        );
+        $byMonth = $query->get()->keyBy('k');
 
         $labels = [];
         $total = [];
 
         for ($i = $months - 1; $i >= 0; $i--) {
             $month = $now->copy()->subMonths($i);
-            $key = $month->format('Y-m');
 
             $labels[] = $month->translatedFormat('M Y');
-            $total[] = round((float) $byMonth->get($key, collect())->sum('total_price'), 2);
+            $total[] = round((float) ($byMonth->get($month->format('Y-m'))->revenue ?? 0), 2);
         }
 
         return compact('labels', 'total');
@@ -284,18 +310,9 @@ final class DashboardStatisticsService
     private function buildMonthlySeries(Carbon $now, string $tz, int $months, ?int $companyId = null, ?Carbon $companyCreatedAt = null): array
     {
         $from = $now->copy()->subMonths($months - 1)->startOfMonth();
+        $to   = $now->copy()->endOfMonth();
 
-        $rowsQuery = Appointment::query()->where('start_time', '>=', $from);
-
-        if ($companyId !== null) {
-            $rowsQuery->where('company_id', $companyId);
-        }
-
-        $rows = $rowsQuery->get(['start_time']);
-
-        $byMonth = $rows->groupBy(
-            fn (Appointment $row) => $row->start_time?->timezone($tz)->format('Y-m') ?? ''
-        );
+        $byMonth = $this->groupedCounts($companyId, $from, $to, "DATE_FORMAT(start_time, '%Y-%m')");
 
         // Show year only when account is >= 12 months old (spans two calendar years)
         $accountAgeMonths = $companyCreatedAt ? $companyCreatedAt->diffInMonths($now) : 0;
@@ -306,13 +323,12 @@ final class DashboardStatisticsService
 
         for ($i = $months - 1; $i >= 0; $i--) {
             $month = $now->copy()->subMonths($i);
-            $key = $month->format('Y-m');
 
             // If account < 1 year: plain month number. If >= 1 year: "Jan '24" style.
             $labels[] = $showYear
                 ? $month->translatedFormat("M 'y")
                 : (string) $month->month;
-            $total[] = $byMonth->get($key, collect())->count();
+            $total[] = (int) ($byMonth->get($month->format('Y-m'))->total ?? 0);
         }
 
         return compact('labels', 'total');
@@ -324,18 +340,7 @@ final class DashboardStatisticsService
         $start = $now->copy()->startOfDay();
         $end   = $now->copy()->endOfDay();
 
-        $query = Appointment::query()
-            ->whereBetween('start_time', [$start, $end]);
-
-        if ($companyId !== null) {
-            $query->where('company_id', $companyId);
-        }
-
-        $rows = $query->get(['start_time', 'status']);
-
-        $byHour = $rows->groupBy(
-            fn (Appointment $r) => (int) $r->start_time?->timezone($tz)->format('G')
-        );
+        $byHour = $this->groupedCounts($companyId, $start, $end, 'HOUR(start_time)');
 
         // Determine working hour range from branch working hours (today's day of week)
         $todayDow = (int) $now->dayOfWeek; // 0=Sun … 6=Sat
@@ -365,11 +370,11 @@ final class DashboardStatisticsService
         $completed = [];
 
         for ($h = $hourFrom; $h <= $hourTo; $h++) {
-            $group = $byHour->get($h, collect());
+            $row = $byHour->get($h);
             $labels[]    = sprintf('%02d:00', $h);
-            $total[]     = $group->count();
-            $pending[]   = $group->where('status', 'pending')->count();
-            $completed[] = $group->where('status', 'completed')->count();
+            $total[]     = (int) ($row->total ?? 0);
+            $pending[]   = (int) ($row->pending ?? 0);
+            $completed[] = (int) ($row->completed ?? 0);
         }
 
         return compact('labels', 'total', 'pending', 'completed');
@@ -379,20 +384,9 @@ final class DashboardStatisticsService
     private function buildWeeklySeries(Carbon $now, string $tz, ?int $companyId): array
     {
         $start = $now->copy()->subDays(6)->startOfDay();
+        $end   = $now->copy()->endOfDay();
 
-        $query = Appointment::query()
-            ->where('start_time', '>=', $start)
-            ->where('start_time', '<=', $now->copy()->endOfDay());
-
-        if ($companyId !== null) {
-            $query->where('company_id', $companyId);
-        }
-
-        $rows = $query->get(['start_time', 'status']);
-
-        $byDay = $rows->groupBy(
-            fn (Appointment $r) => $r->start_time?->timezone($tz)->format('Y-m-d') ?? ''
-        );
+        $byDay = $this->groupedCounts($companyId, $start, $end, 'DATE(start_time)');
 
         $labels = [];
         $total  = [];
@@ -400,14 +394,13 @@ final class DashboardStatisticsService
         $completed = [];
 
         for ($i = 6; $i >= 0; $i--) {
-            $day   = $now->copy()->subDays($i);
-            $key   = $day->format('Y-m-d');
-            $group = $byDay->get($key, collect());
+            $day = $now->copy()->subDays($i);
+            $row = $byDay->get($day->format('Y-m-d'));
 
             $labels[]    = $day->translatedFormat('D d M');
-            $total[]     = $group->count();
-            $pending[]   = $group->where('status', 'pending')->count();
-            $completed[] = $group->where('status', 'completed')->count();
+            $total[]     = (int) ($row->total ?? 0);
+            $pending[]   = (int) ($row->pending ?? 0);
+            $completed[] = (int) ($row->completed ?? 0);
         }
 
         return compact('labels', 'total', 'pending', 'completed');

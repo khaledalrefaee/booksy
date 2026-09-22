@@ -39,6 +39,7 @@
         </div>
     </div>
     @include('company.partials.bottom-nav')
+    @include('company.partials.filter-sheet')
     @include('company.partials.onboarding-tour')
     @include('company.partials.help-center')
     @include('company.partials.js')

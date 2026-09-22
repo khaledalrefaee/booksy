@@ -223,6 +223,7 @@ class BookingController extends Controller
                 'total_price'  => $service->price,
                 'payment_status'=> 'pending',
                 'notes'        => $request->notes,
+                'booking_source' => $this->resolveBookingSource($service->branch_id),
             ]);
         });
 
@@ -401,6 +402,7 @@ class BookingController extends Controller
                         'total_price'     => $svc->price,
                         'payment_status'  => 'pending',
                         'notes'           => $data['notes'] ?? null,
+                        'booking_source'  => $this->resolveBookingSource($svc->branch_id),
                     ]);
                 }
                 return $appts;
@@ -656,6 +658,18 @@ class BookingController extends Controller
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
+
+    /**
+     * The booking source for an online booking at this branch: the source
+     * captured from the tracking link the customer arrived through (kept in the
+     * session, scoped per branch), or null for a direct/untracked booking.
+     */
+    private function resolveBookingSource(int $branchId): ?string
+    {
+        $stored = session('bkg_source.' . $branchId);
+
+        return \App\Enums\BookingSource::tryFrom((string) $stored)?->value;
+    }
 
     private function nextAvailableDate(Employee $employee, Service $service, ?Carbon $from = null): ?string
     {

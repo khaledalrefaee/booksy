@@ -15,6 +15,14 @@
         catch (\Throwable $e) { $pendingCompanies = 0; }
     }
 
+    // Branch photos waiting for review (only queried when the viewer can review).
+    $pendingPhotos = $bkOwnerPendingPhotos ?? null;
+    if ($pendingPhotos === null) {
+        try { $pendingPhotos = Gate::allows('owner-can', 'photos.review')
+            ? (int) \App\Models\BranchImage::where('status', 'pending')->count() : 0; }
+        catch (\Throwable $e) { $pendingPhotos = 0; }
+    }
+
     $can = fn (string $k) => Gate::allows('owner-can', $k);
 
     // Which rail section owns the current route
@@ -107,6 +115,15 @@
                 <a href="{{ route('owner.reviews.index') }}"
                    class="bk-pl {{ request()->routeIs('owner.reviews.*') ? 'active' : '' }}">
                     <i data-feather="star"></i><span>{{ __('Reviews') }}</span>
+                </a>
+                @endcan
+                @can('owner-can', 'photos.review')
+                <a href="{{ route('owner.photo-reviews.index') }}"
+                   class="bk-pl {{ request()->routeIs('owner.photo-reviews.*') ? 'active' : '' }}">
+                    <i data-feather="image"></i><span>{{ __('Photo review') }}</span>
+                    @if($pendingPhotos > 0)
+                        <span class="bk-nav-badge">{{ $pendingPhotos > 99 ? '99+' : $pendingPhotos }}</span>
+                    @endif
                 </a>
                 @endcan
                 @can('owner-can', 'notifications.send')

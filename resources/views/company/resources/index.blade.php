@@ -5,6 +5,7 @@
     <div class="d-flex justify-content-between align-items-center flex-wrap grid-margin">
         <h4 class="mb-0">{{ __('Resources & rooms') }}</h4>
 
+        @if(! ($branchContext ?? null))
         <form method="GET" class="d-flex align-items-center gap-2">
             <select name="branch_id" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">{{ __('All branches') }}</option>
@@ -15,6 +16,7 @@
                 @endforeach
             </select>
         </form>
+        @endif
     </div>
 
     @include('company.partials.flash')

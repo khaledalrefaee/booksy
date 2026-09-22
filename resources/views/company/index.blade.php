@@ -202,7 +202,7 @@
 <div class="bk-hero bk-a1">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
         <div>
-            <h2 class="bk-hero-title">{{ __('Business') }} <span>{{ __('Dashboard') }}</span></h2>
+            <h2 class="bk-hero-title"><span>{{ __('Dashboard') }}</span></h2>
             <p class="bk-hero-sub">
                 <i data-feather="briefcase" style="width:13px;height:13px;display:inline;margin-right:5px;"></i>
                 {{ $company->localizedName() }}

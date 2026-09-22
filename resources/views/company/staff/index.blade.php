@@ -25,10 +25,11 @@
 {{-- ══ FILTER BAR ══ --}}
 <div class="card shadow-sm mb-4 bk-a2">
     <div class="card-body py-3">
-        <form method="GET" action="{{ route('company.staff.index') }}" class="d-flex flex-wrap align-items-center gap-3">
+        <form method="GET" action="{{ route('company.staff.index') }}" class="d-flex flex-wrap align-items-center gap-3" data-filter-sheet="{{ __('Filters') }}">
             <input type="hidden" name="tab" value="{{ $activeTab }}">
 
-            {{-- Branch filter --}}
+            {{-- Branch filter — hidden when the sidebar already scopes to one branch --}}
+            @if(! ($branchContext ?? null))
             <div class="d-flex align-items-center gap-2">
                 <i data-feather="map-pin" style="width:14px;height:14px;opacity:.5;"></i>
                 <select name="branch_id" class="form-select form-select-sm rounded-pill" style="width:auto;min-width:160px;"
@@ -41,6 +42,7 @@
                     @endforeach
                 </select>
             </div>
+            @endif
 
             {{-- Live search --}}
             <div class="position-relative flex-grow-1" style="max-width:280px;">

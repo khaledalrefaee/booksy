@@ -59,7 +59,8 @@
         </div>
     </form>
 
-    {{-- Branch filter --}}
+    {{-- Branch filter — hidden when the sidebar already scopes to one branch --}}
+    @if(! ($branchContext ?? null))
     <div class="d-flex flex-wrap gap-2 mb-4">
         <a href="{{ $baseUrl }}?period={{ $period }}{{ $period==='custom' ? '&from='.($customFrom ?? '').'&to='.($customTo ?? '') : '' }}"
            class="branch-pill {{ !$branchId ? 'active' : '' }}">
@@ -72,6 +73,7 @@
         </a>
         @endforeach
     </div>
+    @endif
 
     {{-- Total summary cards per currency --}}
     @if($summary->isEmpty())
