@@ -74,11 +74,8 @@ class SendDailyBusinessSummary extends Command
 
                 $report = $service->build($company, $localNow);
 
-                if (! $service->hasReportableData($report)) {
-                    $this->line("Company #{$company->id} has no reportable data — skipped.");
-                    $skipped++;
-                    continue;
-                }
+                // Every active company with an email receives its summary —
+                // even a quiet day goes out with zeroed figures.
 
                 // Claim the day's slot *before* queueing, so a concurrent run
                 // can't double-send. Roll it back if the dispatch itself fails.

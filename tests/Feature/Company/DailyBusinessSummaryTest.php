@@ -360,19 +360,22 @@ class DailyBusinessSummaryTest extends TestCase
         $this->assertSame(1, DailySummaryLog::where('company_id', $company->id)->count());
     }
 
-    public function test_command_skips_inactive_companies_and_empty_ones(): void
+    public function test_command_skips_inactive_but_still_mails_active_empty_companies(): void
     {
         Mail::fake();
 
+        // Inactive company: never mailed, even with data.
         $inactive = Company::factory()->create(['status' => 'inactive']);
         $branchI  = Branch::factory()->create(['company_id' => $inactive->id]);
         $this->appt($branchI, 'completed', $this->today(10));
 
-        $emptyActive = $this->activeCompany();
-        Branch::factory()->create(['company_id' => $emptyActive->id]); // no bookings
+        // Active company with no bookings at all: still gets a zeroed summary.
+        $emptyActive = $this->activeCompany(['email' => 'quiet@salon.test']);
+        Branch::factory()->create(['company_id' => $emptyActive->id]);
 
         $this->artisan('summary:daily-business', ['--force' => true])->assertSuccessful();
 
-        Mail::assertNothingQueued();
+        Mail::assertQueued(DailyBusinessSummaryMail::class, 1);
+        Mail::assertQueued(DailyBusinessSummaryMail::class, fn ($m) => $m->hasTo('quiet@salon.test'));
     }
 }
