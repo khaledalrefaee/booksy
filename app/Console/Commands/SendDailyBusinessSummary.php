@@ -3,44 +3,47 @@
 namespace App\Console\Commands;
 
 use App\Mail\DailyBusinessSummaryMail;
+use App\Mail\HolidayGreetingMail;
 use App\Models\Company;
 use App\Models\DailySummaryLog;
 use App\Services\DailyBusinessSummaryService;
+use App\Services\DailySummaryScheduleResolver;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Sends the Daily Business Summary email to each active company's owner.
+ * Sends each active company its daily email, at a time derived from the
+ * company's own working hours ({@see DailySummaryScheduleResolver}):
  *
- * Scheduled hourly (see bootstrap/app.php). Each run only mails the companies
- * for which it is currently the send hour *in that company's own timezone*
- * ({@see Company::timezone()}) — so the report always lands at 9 PM local, and
- * the logic already works per-company the day a timezone column is added.
+ *   • Open today   → the stats summary, one hour after the latest branch close.
+ *   • Closed today → a holiday greeting at midday (weekly day off or a
+ *     company holiday).
+ *   • No hours set → the stats summary at 21:00 (the safe default).
  *
- * The unique (company_id, summary_date) row in daily_summary_logs guarantees a
- * company is never mailed twice on the same local day.
+ * Scheduled hourly (see bootstrap/app.php); each run mails only the companies
+ * whose computed send-hour is the current hour in their own timezone
+ * ({@see Company::timezone()}). The unique (company_id, summary_date) row in
+ * daily_summary_logs guarantees one email per company per local day.
  */
 class SendDailyBusinessSummary extends Command
 {
     protected $signature = 'summary:daily-business
         {--company= : Only this company id (ignores the hour gate)}
-        {--force : Send now regardless of the local hour}
+        {--force : Send now regardless of the computed hour}
         {--resend : Send even if already sent today (testing)}';
 
-    protected $description = 'Email each active company its Daily Business Summary at 9 PM company-local time';
+    protected $description = 'Email each active company its daily summary (or a holiday greeting) at the right local hour';
 
-    /** The company-local hour the summary is sent (24h). */
-    private const SEND_HOUR = 21;
-
-    public function handle(DailyBusinessSummaryService $service): int
+    public function handle(DailyBusinessSummaryService $service, DailySummaryScheduleResolver $resolver): int
     {
         // Company-facing email: render in the platform's primary language.
         app()->setLocale(config('app.locale', 'ar'));
 
-        $onlyId  = $this->option('company');
-        $force   = (bool) $this->option('force') || $onlyId !== null;
-        $resend  = (bool) $this->option('resend');
+        $onlyId = $this->option('company');
+        $force  = (bool) $this->option('force') || $onlyId !== null;
+        $resend = (bool) $this->option('resend');
+        $isAr   = app()->getLocale() === 'ar';
 
         $query = Company::query()->where('status', 'active');
         if ($onlyId !== null) {
@@ -49,13 +52,14 @@ class SendDailyBusinessSummary extends Command
 
         $sent = $skipped = 0;
 
-        $query->orderBy('id')->chunkById(100, function ($companies) use ($service, $force, $resend, &$sent, &$skipped) {
+        $query->orderBy('id')->chunkById(100, function ($companies) use ($service, $resolver, $force, $resend, $isAr, &$sent, &$skipped) {
             foreach ($companies as $company) {
                 $tz       = $company->timezone();
                 $localNow = Carbon::now($tz);
+                $plan     = $resolver->resolve($company, $localNow);
 
-                // Only fire in the company's own 9 PM hour (unless forced).
-                if (! $force && $localNow->hour !== self::SEND_HOUR) {
+                // Only fire in the company's own computed send-hour (unless forced).
+                if (! $force && $localNow->hour !== $plan['hour']) {
                     continue;
                 }
 
@@ -72,10 +76,9 @@ class SendDailyBusinessSummary extends Command
                     continue;
                 }
 
-                $report = $service->build($company, $localNow);
-
-                // Every active company with an email receives its summary —
-                // even a quiet day goes out with zeroed figures.
+                $mailable = $plan['mode'] === DailySummaryScheduleResolver::MODE_GREETING
+                    ? new HolidayGreetingMail($company, $isAr, $plan['holiday_name'])
+                    : new DailyBusinessSummaryMail($service->build($company, $localNow));
 
                 // Claim the day's slot *before* queueing, so a concurrent run
                 // can't double-send. Roll it back if the dispatch itself fails.
@@ -85,7 +88,7 @@ class SendDailyBusinessSummary extends Command
                 );
 
                 try {
-                    Mail::to($company->email)->queue(new DailyBusinessSummaryMail($report));
+                    Mail::to($company->email)->queue($mailable);
                     $sent++;
                 } catch (\Throwable $e) {
                     // Keep the day open for a retry; never let one company abort the batch.
@@ -98,7 +101,7 @@ class SendDailyBusinessSummary extends Command
             }
         });
 
-        $this->info("Daily summaries — queued {$sent}, skipped {$skipped}.");
+        $this->info("Daily emails — queued {$sent}, skipped {$skipped}.");
 
         return self::SUCCESS;
     }

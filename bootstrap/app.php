@@ -31,10 +31,21 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('sms:send-followups')->dailyAt('10:00');
         $schedule->command('sms:expire-credits')->dailyAt('00:30');
 
-        // Daily Business Summary — runs hourly; the command mails only the
-        // companies for which it is 9 PM in their own timezone, so it lands at
-        // 21:00 local no matter where the server clock sits.
+        // Daily company email — runs hourly; the command picks each company's
+        // own send-hour from its working hours (1h after closing on open days,
+        // midday greeting when closed, 21:00 if no hours are set) in the
+        // company's timezone, so it lands at the right local hour everywhere.
         $schedule->command('summary:daily-business')->hourly()->withoutOverlapping();
+
+        // Drain the queue from the scheduler so queued mail (incl. the summary)
+        // is delivered without a persistent worker/Supervisor: the same
+        // per-minute cron that runs the scheduler processes pending jobs and
+        // exits when the queue is empty. Remove this if a dedicated worker is
+        // set up. max-time keeps each run under a minute; the 5-minute overlap
+        // lock frees itself if a run ever hangs.
+        $schedule->command('queue:work --stop-when-empty --max-time=55 --tries=3')
+            ->everyMinute()
+            ->withoutOverlapping(5);
     })
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
