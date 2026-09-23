@@ -152,7 +152,7 @@ class DailySummaryScheduleTest extends TestCase
     {
         Mail::fake();
 
-        $company = Company::factory()->create(['status' => 'active', 'email' => 'owner@salon.test']);
+        $company = Company::factory()->create(['status' => 'active', 'email' => 'owner@salon.test', 'phone_verified_at' => now()]);
         $branch  = Branch::factory()->create(['company_id' => $company->id]);
         $this->hours($branch, $this->todayDow(), true, '20:00');
         CompanyHoliday::create([
@@ -174,7 +174,7 @@ class DailySummaryScheduleTest extends TestCase
         // Close 18:00 → send hour 19:00.
         Carbon::setTestNow(Carbon::create(2026, 9, 22, 19, 0, 0, config('app.timezone')));
 
-        $company = Company::factory()->create(['status' => 'active', 'email' => 'owner@salon.test']);
+        $company = Company::factory()->create(['status' => 'active', 'email' => 'owner@salon.test', 'phone_verified_at' => now()]);
         $branch  = Branch::factory()->create(['company_id' => $company->id]);
         $this->hours($branch, $this->todayDow(), true, '18:00');
 

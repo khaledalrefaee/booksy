@@ -45,9 +45,16 @@ class SendDailyBusinessSummary extends Command
         $resend = (bool) $this->option('resend');
         $isAr   = app()->getLocale() === 'ar';
 
-        $query = Company::query()->where('status', 'active');
         if ($onlyId !== null) {
-            $query->whereKey($onlyId);
+            // Explicit target (ops/testing): bypass the eligibility filters.
+            $query = Company::query()->whereKey($onlyId);
+        } else {
+            // Scheduled run: only active, account-confirmed companies
+            // (owner verified via OTP — {@see Company::isVerified()}).
+            // Unconfirmed accounts never get mail.
+            $query = Company::query()
+                ->where('status', 'active')
+                ->whereNotNull('phone_verified_at');
         }
 
         $sent = $skipped = 0;

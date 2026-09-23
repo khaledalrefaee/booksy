@@ -45,7 +45,10 @@ class DailyBusinessSummaryTest extends TestCase
 
     private function activeCompany(array $attrs = []): Company
     {
-        return Company::factory()->create(array_merge(['status' => 'active'], $attrs));
+        return Company::factory()->create(array_merge([
+            'status'            => 'active',
+            'phone_verified_at' => now(), // confirmed account
+        ], $attrs));
     }
 
     /** Create one appointment with full control and no incidental factory rows. */
@@ -377,5 +380,21 @@ class DailyBusinessSummaryTest extends TestCase
 
         Mail::assertQueued(DailyBusinessSummaryMail::class, 1);
         Mail::assertQueued(DailyBusinessSummaryMail::class, fn ($m) => $m->hasTo('quiet@salon.test'));
+    }
+
+    public function test_command_skips_active_but_unconfirmed_companies(): void
+    {
+        Mail::fake();
+
+        // Active but never confirmed the account (phone_verified_at is null).
+        $unconfirmed = Company::factory()->create([
+            'status' => 'active', 'phone_verified_at' => null,
+        ]);
+        $branch = Branch::factory()->create(['company_id' => $unconfirmed->id]);
+        $this->appt($branch, 'completed', $this->today(10), ['total_price' => 500]);
+
+        $this->artisan('summary:daily-business', ['--force' => true])->assertSuccessful();
+
+        Mail::assertNothingQueued();
     }
 }
