@@ -420,7 +420,9 @@
                 {{-- Color bar --}}
                 @php
                     $byStatus = $recentAppointments->countBy('status');
-                    $scColors = ['pending'=>'#f4a642','confirmed'=>'#2bcf7e','completed'=>'#3dbbd4','cancelled'=>'rgba(255,255,255,.08)','rejected'=>'rgba(255,255,255,.08)','no_show'=>'rgba(255,255,255,.08)'];
+                    $scColors = request()->cookie('company_theme', 'dark') === 'light'
+                        ? ['pending'=>'#f4a642','confirmed'=>'#2bcf7e','completed'=>'#3dbbd4','cancelled'=>'rgba(255,255,255,.08)','rejected'=>'rgba(255,255,255,.08)','no_show'=>'rgba(255,255,255,.08)']
+                        : ['pending'=>'#D4AA5E','confirmed'=>'#8FB27A','completed'=>'#8EA8C8','cancelled'=>'rgba(255,255,255,.08)','rejected'=>'rgba(255,255,255,.08)','no_show'=>'rgba(255,255,255,.08)'];
                 @endphp
                 <div class="bk-color-bar">
                     @foreach($byStatus as $st => $cnt)
@@ -536,11 +538,15 @@ var charts  = p.charts || {};
 var labels  = p.labels || {};
 
 /* Brand accent for charts — gold highlight on olive surfaces (matches front identity) */
-var gold = '{{ request()->cookie('company_theme','dark') === 'light' ? '#C7A15A' : '#D8B873' }}';
-var olive = '{{ request()->cookie('company_theme','dark') === 'light' ? '#4B5D34' : '#A6BC7E' }}';
+var gold = '{{ request()->cookie('company_theme','dark') === 'light' ? '#C7A15A' : '#C9A96A' }}';
+var olive = '{{ request()->cookie('company_theme','dark') === 'light' ? '#4B5D34' : '#A9B48C' }}';
 var c = isDark
-    ? {text:'#BFC2AD', grid:'rgba(255,255,255,.06)', card:'#252C1B', muted:'#8B9078'}
+    ? {text:'#C5C8BD', grid:'rgba(255,255,255,.05)', card:'#191D14', muted:'#92978B'}
     : {text:'#4B4E42', grid:'rgba(0,0,0,.07)',       card:'#FFFFFF', muted:'#7B7C6D'};
+/* Status palette — restrained in dark so status reads without shouting */
+var statusClr = isDark
+    ? {pending:'#D4AA5E', confirmed:'#8FB27A', completed:'#8EA8C8'}
+    : {pending:'#f4a642', confirmed:'#2bcf7e', completed:'#3dbbd4'};
 
 /* ── Counter animation ── */
 function runCounters(){
@@ -695,7 +701,7 @@ function renderDonut(){
     var series    = isEmpty ? [1] : [pending, confirmed, completed, other];
     var clrs      = isEmpty
         ? [isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)']
-        : ['#f4a642','#2bcf7e','#3dbbd4', isDark ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.08)'];
+        : [statusClr.pending, statusClr.confirmed, statusClr.completed, isDark ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.08)'];
     var lbls      = isEmpty ? ['—'] : ['Pending','Confirmed','Completed','Other'];
 
     new ApexCharts(node, {
@@ -719,7 +725,7 @@ function renderDonut(){
                     formatter: function(){ return isEmpty ? '0' : String(realTotal); }
                 },
                 value:{
-                    color    : isDark ? '#ffffff' : '#333',
+                    color    : isDark ? '#F4F4EF' : '#333',
                     fontSize : '18px',
                     fontWeight: 700,
                     formatter: function(v){ return String(parseInt(v)||0); }

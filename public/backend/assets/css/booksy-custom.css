@@ -30,24 +30,28 @@ html { scroll-behavior: smooth; }
     --bk-scrim:rgba(30,30,20,.42);
     --bk-online:#3F6B2E;
 }
+/* Dark = neutral charcoal surfaces; olive only for sidebar, selection and
+   primary actions; gold only for key numbers and small highlights. */
 .bk-theme-dark {
-    --bk-bg:#1B2015; --bk-surface:#252C1B; --bk-surface-2:#2E3623;
-    --bk-sidebar:#161B10; --bk-sidebar-hover:#2A331B;
-    --bk-border:#3A4330; --bk-border-strong:#69735A;
-    --bk-text:#F0EEE3; --bk-text-soft:#BFC2AD; --bk-text-muted:#8B9078;
-    --bk-accent:#A6BC7E; --bk-accent-fill:#5C7038; --bk-accent-hover:#6E854A;
-    --bk-accent-ink:#121509; --bk-accent-wash:#2A331B;
-    --bk-gold:#D8B873; --bk-gold-strong:#E4C588; --bk-gold-soft:#332C18; --bk-gold-ink:#1B1707;
-    --bk-success:#8BC26A; --bk-success-bg:#1E2C15;
-    --bk-warning:#E0B44E; --bk-warning-bg:#2E2610;
-    --bk-danger:#E08A8A;  --bk-danger-bg:#2E1616;
-    --bk-info:#8FB0DA;    --bk-info-bg:#182231;
-    --bk-purple:#C084FC;  --bk-purple-bg:#2A1338;
-    --bk-shadow:0 1px 2px rgba(0,0,0,.5);
-    --bk-shadow-lg:0 20px 48px rgba(0,0,0,.6);
-    --bk-shadow-xl:0 28px 64px rgba(0,0,0,.7);
-    --bk-scrim:rgba(0,0,0,.6);
-    --bk-online:#8BC26A;
+    --bk-bg:#13160F; --bk-surface:#191D14; --bk-surface-2:#1F2419;
+    --bk-sidebar:#0F120B; --bk-sidebar-hover:#1F2419;
+    --bk-border:rgba(255,255,255,.07); --bk-border-strong:rgba(255,255,255,.14);
+    --bk-text:#F4F4EF; --bk-text-soft:#C5C8BD; --bk-text-muted:#92978B;
+    /* --bk-accent is the olive used for text/icons (lifted for legibility);
+       --bk-accent-fill is the brand olive #66734F for filled controls. */
+    --bk-accent:#A9B48C; --bk-accent-fill:#66734F; --bk-accent-hover:#717E59;
+    --bk-accent-ink:#F7F7F2; --bk-accent-wash:#252C1D;
+    --bk-gold:#C9A96A; --bk-gold-strong:#D3B57A; --bk-gold-soft:#241F16; --bk-gold-ink:#1A1508;
+    --bk-success:#8FB27A; --bk-success-bg:#161D14;
+    --bk-warning:#D4AA5E; --bk-warning-bg:#211C12;
+    --bk-danger:#D98A8A;  --bk-danger-bg:#231617;
+    --bk-info:#8EA8C8;    --bk-info-bg:#141A22;
+    --bk-purple:#B79BE0;  --bk-purple-bg:#1E1828;
+    --bk-shadow:0 1px 0 rgba(0,0,0,.25);
+    --bk-shadow-lg:0 8px 24px rgba(0,0,0,.35);
+    --bk-shadow-xl:0 18px 44px rgba(0,0,0,.5);
+    --bk-scrim:rgba(5,6,8,.62);
+    --bk-online:#8FB27A;
 }
 
 /* ════════════════════════════════════════════════
@@ -100,13 +104,13 @@ html { scroll-behavior: smooth; }
     --bs-link-hover-color:#3C4B29; --bs-primary:#4B5D34; --bs-primary-rgb:75,93,52;
 }
 .bk-theme-dark {
-    --bs-body-bg:#1B2015; --bs-body-bg-rgb:27,32,21;
-    --bs-body-color:#F0EEE3; --bs-body-color-rgb:240,238,227;
-    --bs-border-color:#3A4330; --bs-heading-color:#F0EEE3;
-    --bs-secondary-bg:#2E3623; --bs-tertiary-bg:#2E3623;
-    --bs-emphasis-color:#F0EEE3; --bs-secondary-color:#BFC2AD;
-    --bs-link-color:#A6BC7E; --bs-link-color-rgb:166,188,126;
-    --bs-link-hover-color:#B7CA90; --bs-primary:#A6BC7E; --bs-primary-rgb:166,188,126;
+    --bs-body-bg:#13160F; --bs-body-bg-rgb:19,22,15;
+    --bs-body-color:#F4F4EF; --bs-body-color-rgb:244,244,239;
+    --bs-border-color:rgba(255,255,255,.07); --bs-heading-color:#F4F4EF;
+    --bs-secondary-bg:#1F2419; --bs-tertiary-bg:#1F2419;
+    --bs-emphasis-color:#F4F4EF; --bs-secondary-color:#C5C8BD;
+    --bs-link-color:#A9B48C; --bs-link-color-rgb:169,180,140;
+    --bs-link-hover-color:#BCC59F; --bs-primary:#A9B48C; --bs-primary-rgb:169,180,140;
 }
 
 /* ── Animations ── */
@@ -1759,3 +1763,132 @@ select option {
 
 /* Inline icon for dropdown-menu items (replaces emoji prefixes) — RTL-safe. */
 .bk-mi{ width:14px; height:14px; margin-inline-end:8px; vertical-align:-2px; opacity:.7; flex:0 0 auto; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   DARK MODE REFINEMENT — calm SaaS surfaces (dark theme only)
+   Same layout and components; just lighter visual weight: neutral charcoal
+   ground, hairline borders, no glows, olive/gold used as accents only.
+   Everything is scoped to .bk-theme-dark so light mode is untouched.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Shell: charcoal page, olive-tinted sidebar, hairline separation ── */
+.bk-theme-dark .sidebar { box-shadow:none !important; border-inline-end:1px solid var(--bk-border) !important; }
+.bk-theme-dark .sidebar .sidebar-header { border-bottom:1px solid var(--bk-border) !important; }
+.bk-theme-dark .page-wrapper .navbar {
+    background:var(--bk-bg) !important;
+    border-bottom:1px solid var(--bk-border) !important;
+    box-shadow:none !important;
+}
+
+/* ── Sidebar nav: subtle olive selection, understated icons ── */
+.bk-theme-dark .bk-ctx-btn { background:transparent; }
+.bk-theme-dark .bk-ctx-btn:hover { background:var(--bk-sidebar-hover); }
+.bk-theme-dark .bk-nl { color:var(--bk-text-muted); }
+.bk-theme-dark .bk-nl svg { opacity:.7; }
+.bk-theme-dark .bk-nl:hover { color:var(--bk-text); }
+.bk-theme-dark .bk-nl.active { background:var(--bk-accent-wash); color:var(--bk-text); font-weight:600; }
+.bk-theme-dark .bk-nl.active svg { color:var(--bk-accent); opacity:1; }
+.bk-theme-dark .bk-nav-title { color:color-mix(in srgb,var(--bk-text-muted) 75%,transparent); font-weight:600; }
+.bk-theme-dark .sidebar .nav-link.active .link-title { color:var(--bk-text) !important; }
+
+/* ── Cards: flat, hairline, no shadow ── */
+.bk-theme-dark .card { box-shadow:none !important; }
+.bk-theme-dark .card:hover { border-color:rgba(255,255,255,.1) !important; }
+
+/* ── Hero: same olive panel, lower saturation, gold kept as a detail ── */
+.bk-theme-dark .bk-hero {
+    background:linear-gradient(115deg, #232A1D 0%, #2D3525 58%, #262D1F 100%);
+    border:1px solid var(--bk-border);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bk-gold) 10%,transparent);
+}
+.bk-theme-dark .bk-hero::after { opacity:.35; }
+.bk-theme-dark .bk-hero-title { font-weight:700; color:var(--bk-text); }
+.bk-theme-dark .bk-hero-title span { color:var(--bk-gold); }
+.bk-theme-dark .bk-hero-sub { color:var(--bk-text-muted); }
+.bk-theme-dark .bk-hero .bk-navbar-action-primary {
+    background:var(--bk-accent-fill); color:var(--bk-accent-ink) !important; box-shadow:none;
+}
+.bk-theme-dark .bk-hero .bk-navbar-action-primary:hover {
+    background:var(--bk-accent-hover); color:var(--bk-accent-ink) !important; transform:none;
+}
+.bk-theme-dark .bk-hero .bk-navbar-action-ghost {
+    background:rgba(255,255,255,.05); color:var(--bk-text) !important; border-color:rgba(255,255,255,.1);
+}
+.bk-theme-dark .bk-hero .bk-navbar-action-ghost:hover { background:rgba(255,255,255,.09); transform:none; }
+
+/* ── Buttons: flat olive primary, quiet secondaries, no glow ── */
+.bk-theme-dark .bk-navbar-action-primary,
+.bk-theme-dark .bk-navbar-action-primary:hover { box-shadow:none; }
+.bk-theme-dark .bk-navbar-action-ghost { background:transparent; }
+.bk-theme-dark .btn-primary { box-shadow:none !important; font-weight:600 !important; }
+.bk-theme-dark .btn-outline-secondary,
+.bk-theme-dark .btn-outline-primary { border-color:rgba(255,255,255,.1) !important; }
+.bk-theme-dark .btn-outline-secondary:hover,
+.bk-theme-dark .btn-outline-primary:hover {
+    background:var(--bk-surface-2) !important; border-color:rgba(255,255,255,.18) !important;
+}
+
+/* ── Stat cards: one neutral surface, colour lives in the icon + number ── */
+.bk-theme-dark .bk-stat,
+.bk-theme-dark .bk-stat[data-accent] {
+    background:var(--bk-surface);
+    border-color:var(--bk-border);
+    box-shadow:none;
+}
+.bk-theme-dark .bk-stat:hover {
+    transform:translateY(-2px);
+    background:var(--bk-surface-2);
+    border-color:rgba(255,255,255,.1);
+    box-shadow:none;
+}
+.bk-theme-dark .bk-stat:hover .bk-stat-icon { transform:none; box-shadow:none; }
+.bk-theme-dark .bk-stat:hover .bk-stat-num { transform:none; }
+.bk-theme-dark .bk-stat-icon { background:color-mix(in srgb,var(--bk-accent-local) 10%,transparent); color:var(--bk-accent-local); }
+.bk-theme-dark .bk-stat-label { font-weight:600; letter-spacing:.8px; }
+.bk-theme-dark .bk-stat-bar { height:2px; background:rgba(255,255,255,.04); }
+.bk-theme-dark .bk-stat-bar-fill { background:color-mix(in srgb,var(--bk-accent-local) 55%,transparent); }
+
+/* ── Quick actions: open tiles inside the card (no box-in-box) ── */
+.bk-theme-dark .bk-qa {
+    background:transparent !important;
+    border-color:var(--bk-border) !important;
+    box-shadow:none !important;
+}
+.bk-theme-dark .bk-qa:hover {
+    transform:none;
+    background:var(--bk-surface-2) !important;
+    border-color:rgba(255,255,255,.1) !important;
+    box-shadow:none !important;
+}
+.bk-theme-dark .bk-qa-ic { background:var(--bk-accent-wash); color:var(--bk-accent); }
+.bk-theme-dark .bk-qa:hover .bk-qa-ic {
+    background:var(--bk-accent-wash) !important; color:var(--bk-gold) !important;
+    transform:none; box-shadow:none;
+}
+.bk-theme-dark .bk-qa-lbl { font-weight:500 !important; color:var(--bk-text-soft); }
+.bk-theme-dark .bk-qa:hover .bk-qa-lbl { color:var(--bk-text); }
+.bk-theme-dark .bk-qa-dot { animation:none; }
+
+/* ── Filter tabs: quiet track, olive selection without glow ── */
+.bk-theme-dark .bk-filter-tabs { background:transparent; border-color:var(--bk-border); }
+.bk-theme-dark .bk-filter-tab.active { box-shadow:none; }
+
+/* ── Section headers + links ── */
+.bk-theme-dark .bk-sh-link { color:var(--bk-text-muted); opacity:1; }
+.bk-theme-dark .bk-sh-link:hover { color:var(--bk-gold); }
+
+/* ── Tables / activity rows: hairline separators, soft hover ── */
+.bk-theme-dark .table thead th {
+    font-weight:600; letter-spacing:.9px;
+    border-bottom-color:var(--bk-border) !important;
+}
+.bk-theme-dark .table td { border-color:rgba(255,255,255,.045) !important; }
+.bk-theme-dark .table tbody tr:last-child td { border-bottom:0 !important; }
+.bk-theme-dark .bk-table-row:hover,
+.bk-theme-dark .table-hover > tbody > tr:hover > * { background:rgba(255,255,255,.025) !important; }
+.bk-theme-dark .bk-color-bar { height:3px; opacity:.85; }
+.bk-theme-dark .bk-badge { font-weight:600; letter-spacing:.4px; }
+
+/* ── Inputs / selects: softer rims ── */
+.bk-theme-dark .form-control:not(:focus),
+.bk-theme-dark .form-select:not(:focus) { border-color:rgba(255,255,255,.1) !important; }
