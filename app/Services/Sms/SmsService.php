@@ -217,15 +217,54 @@ class SmsService
 
     private function phoneFor(Appointment $appointment): ?string
     {
-        return $appointment->customer_phone ?: $appointment->customer?->phone;
+        $phone = $appointment->customer_phone ?: $appointment->customer?->phone;
+
+        return $phone ? $this->internationalize($phone) : null;
     }
 
-    /** One logical message per booking visit (grouped rows share the key). */
+    /**
+     * Numbers typed at reception are often local ("0949 863 373"). Without the
+     * country code they never match the SMS-channel dial codes, and Rassel
+     * can't route them. Complete them with the platform default dial code:
+     * "0949863373" → "963949863373", "00963…" → "963…". Already-international
+     * numbers pass through unchanged.
+     */
+    private function internationalize(string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', $phone);
+
+        if (str_starts_with($digits, '00')) {
+            return substr($digits, 2);
+        }
+        if (str_starts_with($digits, '0')) {
+            $cc = preg_replace('/\D+/', '', (string) config('booksy.default_dial_code', '+963'));
+
+            return $cc . substr($digits, 1);
+        }
+
+        return $digits;
+    }
+
+    /**
+     * One logical message per booking visit (grouped rows share the key).
+     * A reminder is also tied to the start time it announced: move the booking
+     * and the new time gets its own reminder, while the old one can't repeat.
+     */
     private function dedupeKey(Appointment $appointment, string $type): string
     {
         $scope = $appointment->booking_group_id
             ? 'g' . $appointment->booking_group_id
             : 'a' . $appointment->id;
+
+        if ($type === 'reminder') {
+            // A group's guests start one after another — key on the visit's
+            // first start so a later guest can't trigger a second reminder.
+            $start = $appointment->booking_group_id
+                ? Appointment::where('booking_group_id', $appointment->booking_group_id)->min('start_time')
+                : $appointment->start_time;
+            $start = $start instanceof Carbon ? $start : Carbon::parse($start);
+            $scope .= ':' . $start->format('YmdHi');
+        }
 
         return "sms:{$type}:{$scope}";
     }

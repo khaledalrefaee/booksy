@@ -36,6 +36,31 @@ function jfetch(url, opts) {
 }
 function refreshViews() { if (window.bkRefreshViews) window.bkRefreshViews(); }
 
+/* ════ Filters toggle (phones) ════
+   The filter bar is collapsed on small screens so the calendar is on the first
+   screen; the dot on the toggle says a non-default filter is still active. */
+var fltBtn  = document.getElementById('bk-filter-toggle');
+var fltBar  = document.getElementById('bk-topbar');
+var fltBranch = document.getElementById('filter-branch');
+var fltSearch = document.getElementById('bk-search');
+var fltBranchDefault = fltBranch ? fltBranch.value : '';
+if (fltBtn && fltBar) {
+    fltBtn.addEventListener('click', function () {
+        var open = !fltBar.classList.contains('is-open');
+        fltBar.classList.toggle('is-open', open);
+        fltBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    var markFilters = function () {
+        var active = (fltSearch && fltSearch.value.trim() !== '')
+            || (fltBranch && fltBranch.value !== fltBranchDefault)
+            || !!fltBar.querySelector('.bk-st-pill.off');
+        fltBtn.classList.toggle('has-filters', active);
+    };
+    fltBar.addEventListener('click', function () { setTimeout(markFilters, 0); });
+    fltBar.addEventListener('change', markFilters);
+    fltBar.addEventListener('input', markFilters);
+}
+
 /* ════ Add menu ════ */
 var addBtn  = document.getElementById('bk-add-btn');
 var addMenu = document.getElementById('bk-add-menu');

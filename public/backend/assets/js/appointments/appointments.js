@@ -1374,19 +1374,28 @@ function renderStaffGrid(data, keepScroll) {
 
     /* ── Responsive sizing (Fresha-style compact mobile) ── */
     var isMobile = window.innerWidth <= 768;
-    var TIME_W   = isMobile ? 46 : 52;   /* time column width */
-    var HDR_H    = isMobile ? 76 : 96;   /* employee header height (matches CSS) */
-    var COL_MIN  = isMobile ? 104 : 145; /* min employee column width */
+    var TIME_W   = isMobile ? 52 : 60;    /* time column width */
+    var HDR_H    = isMobile ? 76 : 96;    /* employee header height (matches CSS) */
+    var COL_MIN  = isMobile ? 150 : 220;  /* min employee column width — wide enough for full names */
     document.getElementById('sf-grid').style.minWidth = isMobile ? '0' : '600px';
 
-    /* Fresha mobile behavior: N whole columns fit the screen, time axis always pinned,
-       swipe horizontally (snap per employee) to reach the rest */
+    /* Time axis always pinned; the rest of the team is reached by swiping, or
+       by grabbing the header row with the mouse. When not everyone fits, the
+       next employee's column deliberately peeks in at the edge so it reads as
+       "there's more this way". */
     var wrapEl = document.getElementById('sf-grid-wrap');
     var colW = null;
-    if (isMobile && staff.length) {
-        var wrapW   = wrapEl.clientWidth || window.innerWidth;
-        var visCols = Math.max(1, Math.min(staff.length, Math.floor((wrapW - TIME_W) / 112)));
-        colW = Math.floor((wrapW - TIME_W - 2) / visCols);
+    if (staff.length) {
+        var wrapW = wrapEl.clientWidth || window.innerWidth;
+        var avail = wrapW - TIME_W - 2;
+        if (staff.length * COL_MIN > avail) {
+            var visCols = Math.max(1, Math.floor(avail / COL_MIN));
+            /* leaving room for the peek must not squeeze columns below the minimum */
+            while (visCols > 1 && avail / (visCols + 0.4) < COL_MIN) visCols--;
+            colW = Math.floor(avail / (visCols + 0.4));
+        } else if (isMobile) {
+            colW = Math.floor(avail / staff.length);
+        }
     }
     wrapEl.style.scrollSnapType     = isMobile ? 'x proximity' : '';
     wrapEl.style.scrollPaddingInline = isMobile ? TIME_W + 'px' : '';
@@ -1412,7 +1421,7 @@ function renderStaffGrid(data, keepScroll) {
                 html += '<div style="height:' + Q + 'px;position:relative;border-top:' + bTop + ';">'
                     + (showLbl
                         ? '<span style="position:absolute;top:2px;left:0;right:0;text-align:center;'
-                          + 'font-size:.55rem;font-weight:' + (qi === 0 ? '800' : '600') + ';'
+                          + 'font-size:' + (qi === 0 ? '.74rem' : '.64rem') + ';font-weight:' + (qi === 0 ? '800' : '600') + ';'
                           + 'color:var(--cal-text-muted);direction:ltr;">' + hh24 + ':' + qLbls[qi] + '</span>'
                         : '')
                     + '</div>';
@@ -1422,16 +1431,16 @@ function renderStaffGrid(data, keepScroll) {
             var ap  = h < 12 ? (IS_RTL?'ص':'AM') : (IS_RTL?'م':'PM');
             /* :00 — hour label spans full Q, vertically centred */
             html += '<div style="height:' + Q + 'px;position:relative;border-top:1px solid var(--cal-border);">'
-                  + '<span style="position:absolute;top:3px;' + (IS_RTL?'left':'right') + ':6px;'
-                  + 'font-size:.62rem;font-weight:700;color:var(--cal-text-muted);line-height:1.15;text-align:' + (IS_RTL?'left':'right') + ';">'
-                  + h12 + '<small style="font-size:.48rem;display:block;margin-top:1px;">' + ap + '</small></span>'
+                  + '<span style="position:absolute;top:3px;' + (IS_RTL?'left':'right') + ':8px;'
+                  + 'font-size:.85rem;font-weight:800;color:var(--cal-text-soft, var(--cal-text-muted));line-height:1.1;text-align:' + (IS_RTL?'left':'right') + ';">'
+                  + h12 + '<small style="font-size:.62rem;font-weight:700;display:block;margin-top:1px;color:var(--cal-text-muted);">' + ap + '</small></span>'
                   + '</div>';
             /* :15 — just a subtle line, no text */
             html += '<div style="height:' + Q + 'px;border-top:1px solid var(--cal-border2);"></div>';
             /* :30 — slightly more visible dashed, small "30" label */
             html += '<div style="height:' + Q + 'px;position:relative;border-top:1px dashed var(--cal-border);">'
-                  + '<span style="position:absolute;top:2px;' + (IS_RTL?'left':'right') + ':6px;'
-                  + 'font-size:.45rem;color:var(--cal-text-muted);opacity:.6;">30</span>'
+                  + '<span style="position:absolute;top:2px;' + (IS_RTL?'left':'right') + ':8px;'
+                  + 'font-size:.62rem;font-weight:600;color:var(--cal-text-muted);opacity:.75;">30</span>'
                   + '</div>';
             /* :45 — subtle line, no text */
             html += '<div style="height:' + Q + 'px;border-top:1px solid var(--cal-border2);"></div>';
@@ -1593,6 +1602,54 @@ function renderStaffGrid(data, keepScroll) {
         container.scrollTop = scrollTo;
     }
 }
+
+/* ── Drag the staff header to flip between employees ──
+   With more staff than fit, the next column peeks in at the edge (see
+   renderStaffGrid). Mouse users can grab the header row and pull it sideways;
+   touch keeps its native swipe. Only the header pans, so dragging appointments
+   and clicking empty slots in the grid body are untouched. */
+(function () {
+    var wrap = document.getElementById('sf-grid-wrap');
+    var grid = document.getElementById('sf-grid');
+    if (!wrap || !grid) return;
+
+    /* grab cursor only when there is actually something off-screen */
+    function refresh() {
+        wrap.classList.toggle('sf-can-pan', wrap.scrollWidth - wrap.clientWidth > 4);
+    }
+    window.addEventListener('resize', refresh);
+    /* every re-render of any staff view replaces the grid's children */
+    new MutationObserver(function () { requestAnimationFrame(refresh); })
+        .observe(grid, { childList: true });
+
+    var pan = null;
+    wrap.addEventListener('pointerdown', function (e) {
+        if (e.pointerType !== 'mouse' || e.button !== 0) return;   /* touch already swipes natively */
+        if (!e.target.closest('.sf-emp-header') || !wrap.classList.contains('sf-can-pan')) return;
+        /* scrollLeft is physical: the same formula works in RTL (0 → -max) */
+        pan = { x: e.clientX, left: wrap.scrollLeft, id: e.pointerId };
+        wrap.setPointerCapture(e.pointerId);
+        wrap.classList.add('sf-panning');
+        e.preventDefault();
+    });
+    wrap.addEventListener('pointermove', function (e) {
+        if (!pan || e.pointerId !== pan.id) return;
+        wrap.scrollLeft = pan.left - (e.clientX - pan.x);
+    });
+    function endPan(e) {
+        if (!pan || e.pointerId !== pan.id) return;
+        pan = null;
+        wrap.classList.remove('sf-panning');   /* snap re-engages and settles on a column */
+    }
+    wrap.addEventListener('pointerup', endPan);
+    wrap.addEventListener('pointercancel', endPan);
+    /* the avatar <img> would otherwise start a native image drag */
+    wrap.addEventListener('dragstart', function (e) {
+        if (e.target.closest('.sf-emp-header')) e.preventDefault();
+    });
+
+    refresh();
+})();
 
 /* Day-view block click → full detail/checkout drawer (Fresha style) */
 window.sfShowPopup = function(el, ev) {
@@ -2691,20 +2748,59 @@ function qaEditOpen(i) {
     QA_ED.dur.innerHTML = dOpts;
     QA_ED.dur.value = String(it.duration);
 
-    /* start options on the branch appointment interval — editable for the
-       first service only. An existing off-grid start (e.g. 10:05 on a 15-min
-       grid) stays selectable so opening the editor never moves a booking. */
-    var sStep = _intervalMin(), curStart = qaItemStart(i), sVals = [];
-    for (var m = 0; m < 1440; m += sStep) sVals.push(m);
-    if (sVals.indexOf(curStart) < 0) { sVals.push(curStart); sVals.sort(function (a, b) { return a - b; }); }
-    var sOpts = sVals.map(function (v) { return '<option value="' + v + '">' + _fmtMinutes(v) + '</option>'; }).join('');
-    QA_ED.start.innerHTML = sOpts;
-    QA_ED.start.value = String(qaItemStart(i));
-    QA_ED.start.disabled = i !== 0;
+    qaEditOrigStart = qaItemStart(i);
+    QA_ED.start.innerHTML = '';
+    qaEditFillStarts();
 
     QA_ED.price.value = it.price;
     qaEditRefresh();
     QA_ED.panel.classList.remove('d-none');
+}
+
+/* Start options = ONLY the times the chosen team member can actually take this
+   service (inside their shift, no clash with a live appointment, for the whole
+   duration), on the branch interval grid. Unavailable times are never listed.
+   Rebuilt whenever the member or duration changes. Editable for the first
+   service only — later services start right after the previous one. */
+var qaEditOrigStart = 0;
+function qaEditFillStarts() {
+    var i = qaEditIdx;
+    if (i === null || !qaCart[i]) return;
+
+    if (i !== 0) {
+        var fixed = qaItemStart(i);
+        QA_ED.start.innerHTML = '<option value="' + fixed + '">' + _fmtMinutes(fixed) + '</option>';
+        QA_ED.start.disabled = true;
+        return;
+    }
+
+    var empId = parseInt(QA_ED.emp.value, 10) || 0;
+    var dur   = parseInt(QA_ED.dur.value, 10) || qaCart[i].duration;
+    /* keep whatever is picked now (or the booking's own start on first open) */
+    var cur   = QA_ED.start.value !== '' ? parseInt(QA_ED.start.value, 10) : qaEditOrigStart;
+    var step  = _intervalMin(), vals = [];
+    for (var m = 0; m <= 1440 - dur; m += step) {
+        if (qaAvail(empId, m, dur).ok) vals.push(m);
+    }
+    /* an existing off-grid start (10:05 on a 15-min grid) stays, if it is free */
+    if (vals.indexOf(cur) < 0 && qaAvail(empId, cur, dur).ok) {
+        vals.push(cur);
+        vals.sort(function (a, b) { return a - b; });
+    }
+
+    if (!vals.length) {
+        QA_ED.start.innerHTML = '<option value="">' + BK.t.no_available_times + '</option>';
+        QA_ED.start.disabled = true;
+        return;
+    }
+    QA_ED.start.innerHTML = vals.map(function (v) {
+        return '<option value="' + v + '">' + _fmtMinutes(v) + '</option>';
+    }).join('');
+    QA_ED.start.disabled = false;
+    /* current time gone → nearest free time from it onwards, else the last one */
+    var after = vals.filter(function (v) { return v >= cur; });
+    var pick  = vals.indexOf(cur) >= 0 ? cur : (after.length ? after[0] : vals[vals.length - 1]);
+    QA_ED.start.value = String(pick);
 }
 function qaEditClose() {
     qaEditIdx = null;
@@ -2716,7 +2812,8 @@ function qaEditRefresh() {
     var it    = qaCart[i];
     var empId = parseInt(QA_ED.emp.value, 10) || 0;
     var dur   = parseInt(QA_ED.dur.value, 10) || it.duration;
-    var start = parseInt(QA_ED.start.value, 10) || 0;
+    var noSlots = i === 0 && QA_ED.start.value === '';
+    var start = noSlots ? qaEditOrigStart : (parseInt(QA_ED.start.value, 10) || 0);
     var av    = qaAvail(empId, start, dur);
 
     /* team member note */
@@ -2736,6 +2833,17 @@ function qaEditRefresh() {
     /* start note + next-available suggestions */
     if (i !== 0) {
         QA_ED.startNote.textContent = BK.t.starts_right_after_the_previous_service;
+        QA_ED.startNote.className = 'qa-edit-note';
+        QA_ED.next.classList.add('d-none');
+    } else if (noSlots) {
+        QA_ED.startNote.textContent = '⚠ ' + BK.t.no_available_times_for_member;
+        QA_ED.startNote.className = 'qa-edit-note warn';
+        QA_ED.next.classList.add('d-none');
+    } else if (av.ok && start !== qaEditOrigStart) {
+        /* the booking's original time isn't free for this member → say so */
+        QA_ED.startNote.textContent = qaAvail(empId, qaEditOrigStart, dur).ok
+            ? ''
+            : BK.t.moved_to_nearest_available.replace(':t', _fmtMinutes(qaEditOrigStart));
         QA_ED.startNote.className = 'qa-edit-note';
         QA_ED.next.classList.add('d-none');
     } else if (!av.ok) {
@@ -2772,8 +2880,8 @@ function qaEditRefresh() {
     QA_ED.total.textContent = qaFmtDur(dur) + ' · ' + qaFmtPrice(p) + ' ' + _esc(it.currency);
 }
 
-QA_ED.emp.addEventListener('change', qaEditRefresh);
-QA_ED.dur.addEventListener('change', qaEditRefresh);
+QA_ED.emp.addEventListener('change', function () { qaEditFillStarts(); qaEditRefresh(); });
+QA_ED.dur.addEventListener('change', function () { qaEditFillStarts(); qaEditRefresh(); });
 QA_ED.start.addEventListener('change', qaEditRefresh);
 QA_ED.price.addEventListener('input', qaEditRefresh);
 QA_ED.chips.addEventListener('click', function(e){
@@ -4098,8 +4206,8 @@ window.addEventListener('resize', function(){
         _lastMobile = m;
         if (document.getElementById('view-staff').classList.contains('d-none')) return;
         if (crossed) { loadStaffView(); return; }
-        /* on mobile, column widths depend on viewport → re-render from cache */
-        if (m && sfView === 'day' && sfDayData) renderStaffGrid(sfDayData);
+        /* column widths (and the peeking next column) depend on the viewport → re-render from cache */
+        if (sfView === 'day' && sfDayData) renderStaffGrid(sfDayData, true);
         else if (m && sfLastEvents) { if (sfView === 'month') renderMonthGrid(); else renderRangeGrid(); }
     }, 250);
 });

@@ -52,10 +52,19 @@
                 </button>
             </div>
 
+            {{-- Filters toggle — phones only; the filter bar is collapsed there so
+                 the calendar starts on the first screen --}}
+            <button type="button" class="bk-filter-toggle" id="bk-filter-toggle"
+                    aria-controls="bk-topbar" aria-expanded="false"
+                    aria-label="{{ $isRtl ? 'الفلاتر' : 'Filters' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+                <span class="bk-filter-dot" aria-hidden="true"></span>
+            </button>
+
             {{-- Waitlist chip --}}
             <button type="button" class="bk-wl-chip" id="bk-wl-chip" aria-label="{{ __('Waitlist') }}">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                {{ $isRtl ? 'الانتظار' : 'Waitlist' }}
+                <span class="bk-wl-txt">{{ $isRtl ? 'الانتظار' : 'Waitlist' }}</span>
                 <span class="bk-wl-count" id="bk-wl-count">0</span>
             </button>
 
@@ -300,7 +309,7 @@
     </aside>
 
     {{-- ── Filters bar ── --}}
-    <div class="bk-topbar">
+    <div class="bk-topbar" id="bk-topbar">
 
         {{-- Branch selector — kept in the DOM (JS binds to it) but hidden when the
              sidebar already scopes to one branch; it stays pre-selected to that
@@ -766,6 +775,9 @@
         'has_no_shift_at_this_time'                => $isRtl ? 'ليس لديه مناوبة عمل في هذا التوقيت' : 'Has no shift at this time',
         'starts_right_after_the_previous_service'  => $isRtl ? 'تبدأ مباشرة بعد الخدمة السابقة' : 'Starts right after the previous service',
         'unavailable_at'                           => $isRtl ? 'غير متاح في' : 'Unavailable at',
+        'no_available_times'                       => $isRtl ? 'لا توجد أوقات متاحة' : 'No available times',
+        'no_available_times_for_member'            => $isRtl ? 'لا توجد أوقات متاحة لعضو الفريق هذا اليوم — اختر عضواً آخر أو غيّر المدة' : 'No free times for this team member today — pick someone else or change the duration',
+        'moved_to_nearest_available'               => $isRtl ? 'الوقت :t غير متاح لعضو الفريق — اخترنا أقرب وقت متاح' : ':t isn\'t free for this team member — picked the nearest free time',
         'manual_discount_applied'                  => $isRtl ? 'تم تطبيق خصم يدوي' : 'Manual discount applied',
         'reset'                                    => $isRtl ? 'إعادة تعيين' : 'Reset',
         'manual_increase'                          => $isRtl ? 'زيادة يدوية' : 'Manual increase',

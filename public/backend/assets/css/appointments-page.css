@@ -101,7 +101,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 132px;
+    max-width: 100%;
     line-height: 1.2;
     letter-spacing: .01em;
 }
@@ -111,6 +111,14 @@
     font-weight: 600;
     white-space: nowrap;
 }
+/* ── drag-to-pan: grab the staff header row with the mouse to flip between
+   employees. Only offered when some columns are off-screen (.sf-can-pan). ── */
+#sf-grid-wrap.sf-can-pan .sf-emp-header { cursor: grab; user-select: none; }
+#sf-grid-wrap.sf-panning,
+#sf-grid-wrap.sf-panning .sf-emp-header { cursor: grabbing; user-select: none; }
+/* snapping fights a live drag — re-enabled on release */
+#sf-grid-wrap.sf-panning { scroll-snap-type: none !important; }
+
 /* closed-hours — diagonal #667eea stripes */
 .sf-closed-zone {
     position: absolute;
@@ -665,6 +673,38 @@
 .bk-theme-light .bk-filter-icon {
     background: #f3f4f6;
 }
+
+/* Filters toggle — phones only (see MOBILE block) */
+.bk-filter-toggle {
+    display: none;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    border: 1px solid var(--cal-border);
+    background: var(--cal-surface);
+    color: var(--cal-text-soft);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.bk-filter-toggle[aria-expanded="true"] {
+    border-color: var(--cal-accent);
+    color: var(--cal-accent);
+}
+/* shown when any filter differs from the default */
+.bk-filter-dot {
+    position: absolute;
+    top: 6px;
+    inset-inline-end: 6px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--cal-accent);
+    display: none;
+}
+.bk-filter-toggle.has-filters .bk-filter-dot { display: block; }
 .bk-theme-light .bk-search-wrap {
     background: #f9fafb;
     border-color: #e5e7eb;
@@ -1961,10 +2001,42 @@ html[dir="rtl"] .ap-status { padding: 7px 16px 7px 30px; background-position: le
    MOBILE — Fresha-style compact layout
 ══════════════════════════════════════════ */
 @media (max-width: 768px) {
+    /* ── page header: two slim rows instead of four ──
+       row 1: title … [filters] [waitlist] [+ add]
+       row 2: view tabs, full width */
+    .bk-page-header { gap: 10px; margin-bottom: 12px; }
+    .bk-page-header > .d-flex { display: contents !important; }
+    .bk-header-left  { flex: 1 1 auto; min-width: 0; order: 0; gap: 0; }
+    .bk-header-icon  { display: none; }
+    .bk-page-header h4 { font-size: 1rem !important; }
+    .bk-today-label  { font-size: .66rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bk-filter-toggle { display: inline-flex; order: 1; }
+    .bk-page-header .bk-wl-chip { order: 2; padding: 0 10px; height: 36px; }
+    .bk-wl-chip .bk-wl-txt { display: none; }
+    .bk-add-wrap     { order: 3; }
+    .bk-new-appt-btn { padding: 0 14px; height: 36px; gap: 6px; box-shadow: none; }
+    .bk-view-tabs    { order: 4; flex: 1 1 100%; }
+    .bk-vtab         { flex: 1; justify-content: center; padding: 7px 6px; }
+
+    /* ── filter bar: collapsed behind the toggle ── */
+    #bk-topbar { display: none; padding: 10px 12px; gap: 10px; margin-bottom: 12px; }
+    #bk-topbar.is-open { display: flex; }
+    #bk-topbar .bk-search-wrap { flex: 1 1 100%; max-width: none; min-width: 0; }
+    /* status pills: one swipeable row instead of four wrapped rows */
+    #status-filters {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        width: 100%;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+    }
+    #status-filters::-webkit-scrollbar { display: none; }
+    #status-filters .bk-st-pill { flex-shrink: 0; white-space: nowrap; }
+
     /* staff header: compact but still clear (Fresha mobile) */
     .sf-emp-header { height: 76px; gap: 5px; padding: 8px 4px; }
     .sf-emp-av     { width: 40px; height: 40px; font-size: .72rem; }
-    .sf-emp-name   { font-size: .66rem; font-weight: 700; max-width: 100px; }
+    .sf-emp-name   { font-size: .66rem; font-weight: 700; }
     .sf-emp-hours  { display: none; }
 
     /* compact staff toolbar — arrows always visible at both ends */

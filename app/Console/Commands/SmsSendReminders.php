@@ -15,9 +15,13 @@ class SmsSendReminders extends Command
 
     public function handle(SmsService $sms): int
     {
-        // Each branch chooses its own lead time (reminder_offset_minutes). Run
-        // every 10 min with a ±6 min window so nothing is missed or repeated;
-        // SmsService de-dupes per booking group via dedupe_key.
+        // Each branch chooses its own lead time (reminder_offset_minutes). Runs
+        // every 10 min and picks up everything that hasn't started yet and is
+        // due within the lead time (+6 min so the 10-min cadence never skips
+        // one). The lower bound is "now", not "now + offset", so a booking made
+        // inside the lead time (booked at 14:00 for 14:30 with a 60-min
+        // reminder) still gets one. SmsService de-dupes per booking + start
+        // time, so nothing repeats — and a rescheduled booking is reminded again.
         $settings = SmsAutomationSetting::where('reminder_enabled', true)->with('branch')->get();
         $sent = 0;
 
@@ -25,7 +29,7 @@ class SmsSendReminders extends Command
             $offset      = max(1, (int) $setting->reminder_offset_minutes);
             // Appointment times are the branch's wall clock — measure from its "now".
             $now         = $setting->branch?->localNow() ?? now();
-            $windowStart = $now->copy()->addMinutes($offset - 6);
+            $windowStart = $now->copy();
             $windowEnd   = $now->copy()->addMinutes($offset + 6);
 
             $appointments = Appointment::query()

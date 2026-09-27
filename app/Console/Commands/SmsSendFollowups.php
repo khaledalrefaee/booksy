@@ -19,12 +19,15 @@ class SmsSendFollowups extends Command
         // exactly followup_days ago and message customers whose most recent
         // completed visit fell on that day (so someone who has since returned is
         // not nudged). dedupe_key stops a second send for the same visit.
-        $settings = SmsAutomationSetting::where('followup_enabled', true)->get();
+        $settings = SmsAutomationSetting::where('followup_enabled', true)->with('branch')->get();
         $sent = 0;
 
         foreach ($settings as $setting) {
             $days      = max(1, (int) $setting->followup_days);
-            $targetDay = now()->subDays($days)->toDateString();
+            // Visit dates are the branch's wall clock — count days from its "today",
+            // not the server's, or a branch in another timezone is a day off.
+            $today     = $setting->branch?->localNow() ?? now();
+            $targetDay = $today->copy()->subDays($days)->toDateString();
 
             $appointments = Appointment::query()
                 ->where('branch_id', $setting->branch_id)
