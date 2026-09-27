@@ -16,29 +16,54 @@
     $activeServices = $branch->services->where('is_active', true);
     $minPrice = $activeServices->pluck('price')->filter(fn($p) => $p > 0)->min();
 
+    // Staff photos are uploaded at full size (several MB) — a 192px copy is plenty.
+    $avatar = fn($e) => $e->image ? \App\Support\ImageThumb::url($e->image, 192) : null;
+
     $empData = $branch->employees->map(fn($e) => [
         'id'    => $e->id,
         'name'  => $isAr ? ($e->name_ar ?: $e->name_en) : ($e->name_en ?: $e->name_ar),
-        'image' => $e->image ? asset('storage/'.$e->image) : null,
+        'image' => $avatar($e),
         'cats'  => $e->serviceCategories->pluck('id')->toArray(),
     ])->values();
 
-    // gallery
-    $imgs = $allImages->map(fn($i) => asset('storage/'.$i->path))->values();
-    if ($imgs->isEmpty() && $company->logo) { $imgs = collect([asset('storage/'.$company->logo)]); }
+    // Photos: "place" photos show the venue (hero); "work" photos are the
+    // results gallery. Both only approved (FrontController::publicImages).
+    $placeImages = $allImages->where('type', \App\Models\BranchImage::TYPE_PLACE)->values();
+    $workImages  = $allImages->where('type', \App\Models\BranchImage::TYPE_WORK)->values();
+    $heroImages  = $placeImages->isNotEmpty() ? $placeImages : $workImages;
+
+    // hero gallery (≤1600px copies — the uploads can be 5000px+)
+    $imgs = $heroImages->map(fn($i) => $i->largeUrl())->values();
+
+    // The brand logo is identity, not a venue photo: shown on its own next to the
+    // name and never mixed into the photo gallery (only the share preview falls back to it).
+    $logoUrl = $company->logo && \Illuminate\Support\Facades\Storage::disk('public')->exists($company->logo)
+        ? \App\Support\ImageThumb::url($company->logo, 320) : null;   // 2× the 112px tile → crisp on retina
+
+    // work gallery: grid tile + large copy for the lightbox
+    $workData = $workImages->map(fn($i) => ['grid' => $i->gridUrl(), 'large' => $i->largeUrl(), 'w' => $i->width, 'h' => $i->height])->values();
+
+    // this branch's own contact channels (phones + its social links)
+    $contacts = $branch->publicContacts();
+    $whatsapp = collect($contacts)->firstWhere('platform', 'whatsapp');
+    // direct channels (call / WhatsApp) vs. the branch's social profiles — both render as icons only
+    $directContacts = collect($contacts)->filter(fn($c) => $c['kind'] === 'phone' || $c['platform'] === 'whatsapp')->values();
+    $socialContacts = collect($contacts)->reject(fn($c) => $c['kind'] === 'phone' || $c['platform'] === 'whatsapp')->values();
 
     // working hours
     $dayNames = $isAr ? ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت']
                       : ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     $whByDay  = $branch->workingHours->groupBy('day_of_week');
-    $todayDow = now()->dayOfWeek;
+    // "Now" and "today" are the branch's own clock (Branch Settings timezone).
+    $branchNow = $branch->localNow();
+    $todayDow = $branchNow->dayOfWeek;
     $todayOpen = $whByDay->get($todayDow, collect())->where('is_open', true);
     $isOpenNow = false; $todayLabel = $t('مغلق اليوم', 'Closed today');
     if ($todayOpen->isNotEmpty()) {
         $wh = $todayOpen->first();
-        $fmt = fn($v) => $v ? \Carbon\Carbon::createFromFormat('H:i:s', $v)->format('g:i A') : '';
+        $fmt = fn($v) => $v ? $branch->formatTime($v) : '';
         $todayLabel = $fmt($wh->open_time).' – '.$fmt($wh->close_time);
-        $nowT = now()->format('H:i:s');
+        $nowT = $branchNow->format('H:i:s');
         $isOpenNow = $wh->open_time && $wh->close_time && $nowT >= $wh->open_time && $nowT <= $wh->close_time;
     }
 
@@ -54,7 +79,7 @@
     variant="customer"
     :map-fab="false"
     ogType="business.business"
-    :ogImage="$imgs->first()"
+    :ogImage="$imgs->first() ?? ($company->logo ? asset('storage/'.$company->logo) : null)"
     :title="$brName.' — '.$coName.' | GlowRez'"
     :description="$city
         ? $t('احجز موعدك في '.$brName.' - '.$city.' عبر GlowRez — خدمات وأسعار وتقييمات وحجز فوري.', 'Book at '.$brName.' in '.$city.' on GlowRez — services, prices, reviews and instant booking.')
@@ -81,6 +106,7 @@
         'name'        => $brName.($coName && $coName !== $brName ? ' — '.$coName : ''),
         'url'         => url()->current(),
         'image'       => $imgs->take(4)->all() ?: null,
+        'logo'        => $company->logo ? asset('storage/'.$company->logo) : null,
         'description' => $isAr ? ('احجز موعدك في '.$brName.' عبر GlowRez.') : ('Book your appointment at '.$brName.' on GlowRez.'),
         'telephone'   => $branch->phone ?: null,
         'priceRange'  => $minPrice ? number_format((float)$minPrice).'+ SYP' : null,
@@ -141,12 +167,20 @@
 .br-gallery .g-more{ position:absolute; inset:0; display:grid; place-items:center; background:color-mix(in srgb,#000 45%,transparent); color:#fff; font-family:var(--bk-font-ui); font-weight:700; font-size:1.1rem; }
 .br-gallery-single{ grid-template-columns:1fr; grid-template-rows:1fr; }
 .br-gallery-single .g:first-child{ grid-row:1; }
-.br-gallery .g-ph{ width:100%; height:100%; display:grid; place-items:center; color:color-mix(in srgb,var(--bk-accent) 30%,transparent); }
+.br-gallery .g-empty{ cursor:default; background:var(--bk-surface-2); }
 @media (max-width:760px){ .br-gallery{ grid-template-columns:1fr 1fr; grid-template-rows:1fr; height:240px; } .br-gallery .g:first-child{ grid-row:1; grid-column:1/3; } .br-gallery .g:nth-child(n+3){ display:none; } }
 
 /* head */
 .br-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; margin:22px 0 4px; }
 .br-title{ font-size:var(--bk-fs-h1); }
+/* brand identity: logo tile beside the name (never part of the photo gallery) */
+.br-head-id{ display:flex; align-items:center; gap:18px; min-width:0; }
+.br-head-tx{ min-width:0; }
+.br-logo{ flex:0 0 112px; width:112px; height:112px; border-radius:50%; background:#fff; border:1px solid var(--bk-border); box-shadow:0 0 0 4px var(--bk-bg),0 0 0 5px color-mix(in srgb,var(--bk-gold-strong) 40%,transparent),var(--bk-shadow-sm); display:grid; place-items:center; overflow:hidden; }
+/* contain + inset: the whole mark stays visible inside the circle (wide wordmarks too) */
+.br-logo img{ width:78%; height:78%; object-fit:contain; display:block; }
+.br-head-co{ margin-top:2px; font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); font-weight:600; color:var(--bk-gold-strong); }
+@media (max-width:560px){ .br-head-id{ gap:14px; } .br-logo{ flex-basis:84px; width:84px; height:84px; } }
 .br-head-meta{ display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; margin-top:12px; font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); color:var(--bk-text-soft); }
 .br-head-meta .it{ display:inline-flex; align-items:center; gap:6px; }
 .br-head-meta svg{ width:16px; height:16px; color:var(--bk-accent); }
@@ -182,6 +216,18 @@
 .br-svc-cat{ margin-bottom:var(--bk-s6); }
 .br-svc-cat-h{ font-family:var(--bk-font-ui); font-weight:700; font-size:1rem; color:var(--bk-text); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
 .br-svc-cat-h svg{ width:18px; height:18px; color:var(--bk-accent); }
+/* collapsible category: the heading is the toggle (▼ open · ▲ collapsed) */
+button.br-svc-cat-h{ width:100%; padding:4px 0; background:none; border:0; cursor:pointer; text-align:start; }
+button.br-svc-cat-h:hover{ color:var(--bk-accent); }
+button.br-svc-cat-h:focus-visible{ outline:2px solid var(--bk-accent); outline-offset:3px; border-radius:var(--bk-r-sm); }
+.br-svc-cat-n{ min-width:22px; padding:0 6px; border-radius:var(--bk-r-pill); background:var(--bk-accent-wash); color:var(--bk-accent); font-size:var(--bk-fs-xs); font-weight:700; line-height:1.7; text-align:center; }
+.br-svc-cat-h .br-svc-cat-chev{ width:16px; height:16px; color:var(--bk-text-soft); transition:transform .3s var(--bk-ease); }
+.br-svc-cat-h[aria-expanded="false"] .br-svc-cat-chev{ transform:rotate(180deg); }
+.br-svc-list{ display:grid; grid-template-rows:1fr; opacity:1; transition:grid-template-rows .32s var(--bk-ease),opacity .25s ease; }
+.br-svc-list-in{ min-height:0; overflow:hidden; }
+.br-svc-cat.is-collapsed .br-svc-list{ grid-template-rows:0fr; opacity:0; }
+.br-svc-cat.is-collapsed .br-svc-list-in{ visibility:hidden; transition:visibility 0s .32s; }
+@media (prefers-reduced-motion:reduce){ .br-svc-list,.br-svc-cat-chev{ transition:none; } }
 .br-svc{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px; border:1px solid var(--bk-border); border-radius:var(--bk-r); background:var(--bk-surface); margin-bottom:10px; transition:border-color var(--bk-t) ease,box-shadow var(--bk-t) ease; }
 .br-svc-info{ flex:1 1 auto; min-width:0; }        /* name column takes the room, never collapses to 0 */
 .br-svc-nm{ overflow-wrap:break-word; }            /* wrap between words only — never letter-by-letter */
@@ -218,28 +264,67 @@
 .br-svc-price-was{ color:var(--bk-text-muted); font-weight:600; text-decoration:line-through; }
 .br-svc-off{ display:inline-flex; align-items:center; padding:1px 7px; border-radius:var(--bk-r-pill); font-family:var(--bk-font-ui); font-size:.6875rem; font-weight:700; line-height:1.6; color:#c0392b; background:color-mix(in srgb,#e53935 12%,transparent); border:1px solid color-mix(in srgb,#e53935 26%,transparent); }
 
-/* team — bare circular avatars (no card): photo · name · role, Fresha-style */
-.br-staff{ display:flex; gap:8px; overflow-x:auto; scroll-snap-type:x mandatory; padding:6px 2px 14px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
-.br-staff::-webkit-scrollbar{ display:none; }
-.br-mate{ flex:0 0 auto; width:112px; margin:0; text-align:center; scroll-snap-align:start; }
-.br-mate-av{ position:relative; width:92px; height:92px; border-radius:50%; margin:0 auto 11px; overflow:visible;
-  background:var(--bk-accent-wash); color:var(--bk-accent); display:grid; place-items:center;
-  font-family:var(--bk-font-display); font-weight:800; font-size:1.9rem; cursor:pointer;
-  transition:transform .45s var(--bk-spring); }
-/* gold ring drawn on hover (mask trick — no layout shift) */
-.br-mate-av::after{ content:""; position:absolute; inset:-4px; border-radius:50%; padding:3px; pointer-events:none;
-  background:var(--bk-grad-gold); opacity:0; transform:scale(.9); transition:opacity .4s var(--bk-ease),transform .45s var(--bk-spring);
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); -webkit-mask-composite:xor;
-  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); mask-composite:exclude; }
-.br-mate-av img{ width:100%; height:100%; border-radius:50%; object-fit:cover; }
-.br-mate:hover .br-mate-av{ transform:translateY(-6px) scale(1.06); }
-.br-mate:hover .br-mate-av::after{ opacity:1; transform:scale(1); }
-.br-mate-nm{ font-family:var(--bk-font-ui); font-weight:600; font-size:.92rem; color:var(--bk-text); line-height:1.3; }
-.br-mate-rl{ font-family:var(--bk-font-ui); font-size:var(--bk-fs-xs); color:var(--bk-text-muted); margin-top:2px; }
-/* staggered entrance — reuses .bkf-reveal observer; per-item delay set inline */
-.br-mate.bkf-reveal{ transform:translateY(18px) scale(.96); }
-.br-mate.bkf-reveal.is-in{ transform:none; }
-@media (prefers-reduced-motion:reduce){ .br-mate-av,.br-mate-av::after{ transition:none; } }
+/* team — uniform portrait cards: photo (or neutral silhouette) · name · role · specialties */
+.br-team{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(176px,1fr)); gap:12px; }
+.br-member{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:4px; padding:22px 14px 18px; border:1px solid var(--bk-border); border-radius:var(--bk-r-lg); background:var(--bk-surface); min-width:0; transition:border-color var(--bk-t) ease,box-shadow var(--bk-t) ease; }
+.br-member:hover{ border-color:color-mix(in srgb,var(--bk-accent) 30%,var(--bk-border)); box-shadow:var(--bk-shadow-sm); }
+.br-member-av{ flex:0 0 auto; width:80px; height:80px; margin-bottom:10px; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:var(--bk-surface-2); box-shadow:0 0 0 3px var(--bk-surface),0 0 0 4px color-mix(in srgb,var(--bk-gold-strong) 45%,transparent); }
+.br-member-av img{ width:100%; height:100%; object-fit:cover; display:block; }
+.br-member-av.is-empty{ background:var(--bk-accent-wash); color:color-mix(in srgb,var(--bk-accent) 70%,transparent); }
+.br-member-nm{ max-width:100%; font-family:var(--bk-font-ui); font-weight:700; color:var(--bk-text); line-height:1.35; overflow-wrap:anywhere; }
+.br-member-rl{ font-family:var(--bk-font-ui); font-size:var(--bk-fs-xs); color:var(--bk-gold-strong); font-weight:600; letter-spacing:.01em; }
+.br-member-sp{ display:flex; flex-wrap:wrap; justify-content:center; gap:4px; margin-top:8px; max-width:100%; }
+.br-member-chip{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:2px 9px; border-radius:var(--bk-r-pill); background:var(--bk-surface-2); color:var(--bk-text-soft); font-family:var(--bk-font-ui); font-size:.6875rem; font-weight:600; line-height:1.6; }
+.br-member-chip.is-more{ background:var(--bk-accent-wash); color:var(--bk-accent); }
+@media (max-width:560px){
+  .br-team{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .br-member{ padding:18px 10px 14px; }
+  .br-member-av{ width:64px; height:64px; margin-bottom:8px; }
+}
+
+/* service photo (only when the service has one) */
+.br-svc-img{ flex:0 0 64px; width:64px; height:64px; border-radius:var(--bk-r-sm); object-fit:cover; background:var(--bk-surface-2); }
+@media (max-width:560px){ .br-svc-img{ flex-basis:52px; width:52px; height:52px; } }
+
+/* visit: [address → directions → map] card · contact icons · opening hours — stacked */
+.br-visit-h{ font-family:var(--bk-font-ui); font-weight:700; font-size:var(--bk-fs-sm); color:var(--bk-text); margin:0 0 10px; }
+.br-visit-sub{ margin-top:26px; }
+.br-visit-addr{ font-family:var(--bk-font-ui); color:var(--bk-text-soft); line-height:1.7; margin:0; overflow-wrap:anywhere; }
+.br-place{ border:1px solid var(--bk-border); border-radius:var(--bk-r-lg); background:var(--bk-surface); overflow:hidden; }
+.br-place-top{ display:flex; align-items:center; gap:14px; padding:16px 18px; }
+.br-place-ic{ flex:0 0 40px; width:40px; height:40px; border-radius:50%; display:grid; place-items:center; background:var(--bk-accent-wash); color:var(--bk-accent); }
+.br-place-tx{ flex:1 1 auto; min-width:0; }
+.br-place-tx .br-visit-h{ margin-bottom:2px; }
+.br-place-dir{ flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:var(--bk-r-pill); border:1px solid color-mix(in srgb,var(--bk-accent) 35%,var(--bk-border)); color:var(--bk-accent); font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); font-weight:600; white-space:nowrap; transition:background var(--bk-t) ease,color var(--bk-t) ease; }
+.br-place-dir:hover{ background:var(--bk-accent); color:var(--bk-accent-ink); }
+.br-place-dir:focus-visible{ outline:2px solid var(--bk-accent); outline-offset:2px; }
+@media (max-width:480px){
+  .br-place-top{ flex-wrap:wrap; padding:14px; }
+  .br-place-dir{ flex:1 1 100%; justify-content:center; }
+}
+/* icon-only channels (contact + social) */
+.br-channels{ display:flex; flex-wrap:wrap; gap:10px; }
+.br-channels--center{ justify-content:center; }
+.br-center{ text-align:center; }
+.br-channel{ width:48px; height:48px; border-radius:50%; display:grid; place-items:center; border:1px solid var(--bk-border); background:var(--bk-surface); color:var(--bk-text-soft); transition:transform var(--bk-t) ease,border-color var(--bk-t) ease,box-shadow var(--bk-t) ease; }
+.br-channel:hover{ transform:translateY(-2px); border-color:currentColor; box-shadow:var(--bk-shadow-sm); }
+.br-channel:focus-visible{ outline:2px solid var(--bk-accent); outline-offset:2px; }
+.br-channel--phone{ color:var(--bk-accent); } .br-channel--whatsapp{ color:#1DA851; } .br-channel--instagram{ color:#D62976; }
+.br-channel--facebook{ color:#1877F2; } .br-channel--linkedin{ color:#0A66C2; } .br-channel--youtube{ color:#E00000; }
+.br-channel--twitter,.br-channel--tiktok{ color:var(--bk-text); } .br-channel--snapchat{ color:#E0B400; } .br-channel--website{ color:var(--bk-accent); }
+.br-icon-btn--wa{ color:#1DA851; }
+
+/* work gallery */
+.br-block-head{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:var(--bk-s5); }
+.br-block-head .br-block-title{ margin-bottom:0; }
+.br-block-count{ font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); color:var(--bk-text-muted); }
+.br-work{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+@media (max-width:760px){ .br-work{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; } }
+.br-work-tile{ display:block; padding:0; border:0; border-radius:var(--bk-r-sm); overflow:hidden; aspect-ratio:1 / 1; background:var(--bk-surface-2); cursor:zoom-in; }
+.br-work-tile img{ width:100%; height:100%; object-fit:cover; display:block; transition:opacity var(--bk-t) ease; }
+.br-work-tile:hover img{ opacity:.9; }
+.br-work-tile:focus-visible{ outline:2px solid var(--bk-accent); outline-offset:2px; }
+.br-work-more{ margin-top:12px; }
 
 /* reviews */
 .br-rev-summary{ display:flex; gap:32px; align-items:center; flex-wrap:wrap; padding:22px; border:1px solid var(--bk-border); border-radius:var(--bk-r-lg); background:var(--bk-surface); margin-bottom:22px; }
@@ -268,7 +353,9 @@
 .br-hours .row:nth-child(odd){ background:var(--bk-surface); } .br-hours .row:nth-child(even){ background:var(--bk-surface-2); }
 .br-hours .row.today{ background:var(--bk-accent-wash); color:var(--bk-accent); font-weight:700; }
 .br-hours .closed{ color:var(--bk-danger); }
-#br-map{ height:300px; width:100%; border-radius:var(--bk-r-lg); overflow:hidden; border:1px solid var(--bk-border); margin-top:16px; }
+/* isolation keeps Leaflet's internal z-indexes (400–1000) inside the map, so it can't
+   paint over the sticky header, the tab bar or the photo viewer */
+#br-map{ position:relative; z-index:0; isolation:isolate; height:300px; width:100%; overflow:hidden; border-top:1px solid var(--bk-border); }
 
 /* aside booking panel */
 .br-aside-inner{ position:sticky; top:calc(var(--bk-nav-h) + 16px); }
@@ -313,6 +400,9 @@
 .br-lb-x,.br-lb-nav{ position:absolute; background:rgba(255,255,255,.12); border:0; color:#fff; width:48px; height:48px; border-radius:50%; display:grid; place-items:center; cursor:pointer; }
 .br-lb-x{ top:20px; inset-inline-end:20px; } .br-lb-nav.prev{ inset-inline-start:16px; } .br-lb-nav.next{ inset-inline-end:16px; }
 .br-lb-nav{ top:50%; transform:translateY(-50%); }
+.br-lb-count{ position:absolute; inset-block-end:18px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,.8); font-family:var(--bk-font-ui); font-size:var(--bk-fs-sm); }
+.br-lb-x:focus-visible,.br-lb-nav:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+@media (max-width:560px){ .br-lb-nav{ width:40px; height:40px; } .br-lb img{ max-width:100vw; border-radius:0; } }
 
 /* booking modal → olive identity + our dark theme (higher specificity beats the partial's own rule) */
 html #bk-modal{ --bk-sel:var(--bk-accent); --bk-sel-text:#fff; --bk-gold:#8A6317; }
@@ -329,6 +419,9 @@ html[data-bk-theme="dark"] #bk-modal{ --bk-bg:#252C1B; --bk-card:#2E3623; --bk-b
 .br-svc-tab{ flex:0 0 auto; scroll-snap-align:start; padding:9px 16px; border-radius:var(--bk-r-pill); border:1px solid var(--bk-border); background:var(--bk-surface); color:var(--bk-text-soft); font-family:var(--bk-font-ui); font-weight:600; font-size:var(--bk-fs-sm); white-space:nowrap; cursor:pointer; transition:all var(--bk-t) ease; }
 .br-svc-tab:hover{ border-color:color-mix(in srgb,var(--bk-accent) 45%,transparent); color:var(--bk-accent); }
 .br-svc-tab.is-active{ background:var(--bk-accent); color:var(--bk-accent-ink); border-color:var(--bk-accent); }
+/* mouse users can grab-and-drag the rail (touch/trackpad keep native scrolling) */
+@media (hover:hover) and (pointer:fine){ .br-svc-tabs{ cursor:grab; } }
+.br-svc-tabs.is-dragging{ cursor:grabbing; scroll-snap-type:none; user-select:none; }
 
 .br-gallery{ position:relative; }
 .br-photos-badge{ position:absolute; inset-block-end:12px; inset-inline-end:12px; display:none; align-items:center; gap:6px; padding:8px 14px; border:0; border-radius:var(--bk-r-pill); background:color-mix(in srgb,#000 55%,transparent); color:#fff; font-family:var(--bk-font-ui); font-weight:600; font-size:var(--bk-fs-sm); backdrop-filter:blur(4px); cursor:pointer; z-index:2; }
@@ -396,7 +489,8 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
         </div>
       @endforeach
     @else
-      <div class="g"><div class="g-ph"><x-icon name="{{ $catIcon($company->category->slug ?? '') }}" :size="48"/></div></div>
+      {{-- no venue photos yet: a plain, quiet surface — no stock image, no icon --}}
+      <div class="g g-empty" aria-hidden="true"></div>
     @endif
     @if($imgs->count() > 1)
       <button type="button" class="br-photos-badge" onclick="brLb.open(0)"><x-icon name="grid" :size="16"/>{{ $imgs->count() }} {{ $t('صورة','photos') }}</button>
@@ -405,14 +499,20 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
 
   {{-- head --}}
   <div class="br-head">
-    <div>
+    <div class="br-head-id">
+      @if($logoUrl)
+        <span class="br-logo"><img src="{{ $logoUrl }}" alt="{{ $coName }}" width="112" height="112" decoding="async"></span>
+      @endif
+    <div class="br-head-tx">
       <h1 class="br-title">{{ $brName }}</h1>
+      @if($coName && $coName !== $brName)<div class="br-head-co">{{ $coName }}</div>@endif
       <div class="br-head-meta">
         @if($catName)<span class="bkf-chip"><x-icon name="{{ $catIcon($company->category->slug ?? '') }}" :size="14"/>{{ $catName }}</span>@endif
         @if($avg)<span class="br-rate-pill bkf-tnum"><x-icon name="star-fill" :size="16"/>{{ number_format($avg,1) }} <span style="color:var(--bk-text-muted);font-weight:500">· {{ $totalRev }} {{ $t('تقييم','reviews') }}</span></span>@endif
         @if($city || $branch->address)<span class="it"><x-icon name="map-pin" :size="16"/>{{ $city ?: Str::limit($branch->address, 40) }}</span>@endif
         <span class="br-open {{ $isOpenNow ? 'on' : 'off' }}"><span class="dot"></span>{{ $isOpenNow ? $t('مفتوح الآن','Open now') : $t('مغلق الآن','Closed') }} · {{ $todayLabel }}</span>
       </div>
+    </div>
     </div>
     <div class="br-head-actions">
       <button type="button" class="br-icon-btn" data-fav="{{ $branch->id }}" aria-label="{{ $t('حفظ','Save') }}">
@@ -421,8 +521,11 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
       @if($branch->latitude && $branch->longitude)
       <a class="br-icon-btn" href="https://www.google.com/maps/dir/?api=1&destination={{ $branch->latitude }},{{ $branch->longitude }}" target="_blank" rel="noopener" aria-label="{{ $t('الاتجاهات','Directions') }}"><x-icon name="navigation" :size="20"/></a>
       @endif
+      @if($whatsapp)
+      <a class="br-icon-btn br-icon-btn--wa" href="{{ $whatsapp['href'] }}" target="_blank" rel="noopener" aria-label="WhatsApp">@include('partials.social-icon', ['platform' => 'whatsapp', 'size' => 19])</a>
+      @endif
       @if($branch->phone)
-      <a class="br-icon-btn" href="tel:{{ $branch->phone }}" aria-label="{{ $t('اتصال','Call') }}"><x-icon name="phone" :size="20"/></a>
+      <a class="br-icon-btn" href="tel:{{ preg_replace('/[^\d+]/', '', $branch->phone) }}" aria-label="{{ $t('اتصال','Call') }}"><x-icon name="phone" :size="20"/></a>
       @endif
     </div>
   </div>
@@ -430,10 +533,11 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
   {{-- tabs --}}
   <div class="br-tabs" id="br-tabs">
     <button class="br-tab is-active" data-target="br-services">{{ $t('الخدمات','Services') }}</button>
-    @if($branch->description_en || $branch->description_ar)<button class="br-tab" data-target="br-about">{{ $t('نبذة','About') }}</button>@endif
     @if($employees->isNotEmpty())<button class="br-tab" data-target="br-team">{{ $t('الفريق','Team') }}</button>@endif
-    @if($totalRev)<button class="br-tab" data-target="br-reviews">{{ $t('التقييمات','Reviews') }}</button>@endif
     <button class="br-tab" data-target="br-location">{{ $t('الموقع وأوقات العمل','Location & hours') }}</button>
+    @if($workImages->isNotEmpty())<button class="br-tab" data-target="br-work">{{ $t('معرض الأعمال','Our work') }}</button>@endif
+    @if($totalRev)<button class="br-tab" data-target="br-reviews">{{ $t('التقييمات','Reviews') }}</button>@endif
+    @if($branch->description_en || $branch->description_ar)<button class="br-tab" data-target="br-about">{{ $t('نبذة','About') }}</button>@endif
   </div>
 
   <div class="br-layout">
@@ -444,6 +548,7 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
       <section class="br-block" id="br-services">
         <h2 class="br-block-title">{{ $t('الخدمات والأسعار','Services & prices') }}</h2>
         @if($servicesByCategory->count() > 1)
+        {{-- every category is rendered; the rail scrolls (wheel / touch / mouse-drag) --}}
         <div class="br-svc-tabs" id="br-svc-tabs" role="tablist" aria-label="{{ $t('تصنيفات الخدمات','Service categories') }}">
           <button type="button" class="br-svc-tab is-active" data-cat="all">{{ $t('الكل','All') }}</button>
           @foreach($servicesByCategory as $catId => $services)
@@ -455,7 +560,13 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
         @forelse($servicesByCategory as $catId => $services)
           @php $scName = $services->first()->serviceCategory?->localizedName() ?? $t('خدمات','Services'); @endphp
           <div class="br-svc-cat" data-cat="{{ $catId }}">
-            <div class="br-svc-cat-h"><x-icon name="tag" :size="18"/>{{ $scName }}</div>
+            {{-- ▼ open · ▲ collapsed — folds this category's services --}}
+            <button type="button" class="br-svc-cat-h" aria-expanded="true" aria-controls="br-svc-list-{{ $loop->index }}">
+              <x-icon name="tag" :size="18"/><span>{{ $scName }}</span>
+              <span class="br-svc-cat-n bkf-tnum">{{ $services->where('is_active', true)->count() }}</span>
+              <x-icon name="chevron-down" :size="16" class="br-svc-cat-chev"/>
+            </button>
+            <div class="br-svc-list" id="br-svc-list-{{ $loop->index }}"><div class="br-svc-list-in">
             @foreach($services->where('is_active', true) as $svc)
               @php $sName = $isAr ? ($svc->name_ar ?: $svc->name_en) : ($svc->name_en ?: $svc->name_ar); @endphp
               @php
@@ -486,6 +597,10 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
                     : '-'.number_format((float) $svc->discount_value, 0).' '.$svcCurrency;
               @endphp
               <div class="br-svc">
+                @if($svc->image_path)
+                  {{-- the service's own photo (160px copy of the upload); services without one simply have no image --}}
+                  <img class="br-svc-img" src="{{ \App\Support\ImageThumb::url($svc->image_path, 160) }}" alt="{{ $sName }}" width="64" height="64" loading="lazy" decoding="async">
+                @endif
                 <div class="br-svc-info">
                   <div class="br-svc-nm-row">
                     <span class="br-svc-nm">{{ $sName }}</span>
@@ -537,34 +652,148 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
                 </button>
               </div>
             @endforeach
+            </div></div>
           </div>
         @empty
           <div class="br-book-empty"><x-icon name="scissors" :size="34"/><div>{{ $t('لا توجد خدمات منشورة بعد.','No services listed yet.') }}</div></div>
         @endforelse
       </section>
 
-      {{-- about --}}
-      @if($branch->description_en || $branch->description_ar)
-      <section class="br-block" id="br-about">
-        <h2 class="br-block-title">{{ $t('نبذة عن '.$brName, 'About '.$brName) }}</h2>
-        <p class="br-desc">{{ $isAr ? ($branch->description_ar ?: $branch->description_en) : ($branch->description_en ?: $branch->description_ar) }}</p>
-      </section>
-      @endif
-
       {{-- team --}}
       @if($employees->isNotEmpty())
       <section class="br-block" id="br-team">
-        <h2 class="br-block-title">{{ $t('تعرّف على الفريق','Meet the team') }}</h2>
-        <div class="br-staff bkf-rail">
+        <h2 class="br-block-title">{{ $t('الفريق','Team') }}</h2>
+        <ul class="br-team">
           @foreach($employees as $emp)
-            @php $eName = $isAr ? ($emp->name_ar ?: $emp->name_en) : ($emp->name_en ?: $emp->name_ar); @endphp
-            <figure class="br-mate bkf-reveal" style="transition-delay:{{ min($loop->index, 12) * 60 }}ms">
-              <span class="br-mate-av">
-                @if($emp->image)<img src="{{ asset('storage/'.$emp->image) }}" alt="{{ $eName }}" loading="lazy" decoding="async">@else{{ mb_substr($eName ?: 'S', 0, 1) }}@endif
+            @php
+              $eName  = $isAr ? ($emp->name_ar ?: $emp->name_en) : ($emp->name_en ?: $emp->name_ar);
+              $eRole  = $emp->role?->localizedName();
+              $eSpecs = $emp->serviceCategories->map(fn($c) => $c->localizedName())->filter()->values();
+            @endphp
+            <li class="br-member">
+              <span class="br-member-av {{ $avatar($emp) ? '' : 'is-empty' }}" aria-hidden="true">
+                {{-- only the member's own uploaded photo; otherwise a neutral silhouette --}}
+                @if($src = $avatar($emp))<img src="{{ $src }}" alt="" width="80" height="80" loading="lazy" decoding="async">@else<x-icon name="user" :size="30"/>@endif
               </span>
-              <figcaption class="br-mate-nm">{{ $eName }}</figcaption>
-              @if($emp->role)<span class="br-mate-rl">{{ $emp->role->localizedName() ?? ($isAr ? $emp->role->name_ar ?? '' : $emp->role->name_en ?? '') }}</span>@endif
-            </figure>
+              <span class="br-member-nm">{{ $eName }}</span>
+              @if($eRole)<span class="br-member-rl">{{ $eRole }}</span>@endif
+              @if($eSpecs->isNotEmpty())
+                <span class="br-member-sp">
+                  @foreach($eSpecs->take(2) as $sp)<span class="br-member-chip">{{ $sp }}</span>@endforeach
+                  @if($eSpecs->count() > 2)<span class="br-member-chip is-more bkf-tnum">+{{ $eSpecs->count() - 2 }}</span>@endif
+                </span>
+              @endif
+            </li>
+          @endforeach
+        </ul>
+      </section>
+      @endif
+
+      {{-- location · contact · hours --}}
+      <section class="br-block" id="br-location">
+        <h2 class="br-block-title">{{ $t('الموقع وأوقات العمل','Location & hours') }}</h2>
+        @php
+          $hasGeo  = $branch->latitude && $branch->longitude;
+          $addrTxt = $branch->fullAddress() ?: $branch->address;
+        @endphp
+        {{-- 1 · address → directions → map: one connected card --}}
+        @if($addrTxt || $hasGeo)
+        <div class="br-place">
+          <div class="br-place-top">
+            <span class="br-place-ic"><x-icon name="map-pin" :size="18"/></span>
+            <div class="br-place-tx">
+              <div class="br-visit-h">{{ $t('العنوان','Address') }}</div>
+              <p class="br-visit-addr">{{ $addrTxt ?: ($city ?: $brName) }}</p>
+            </div>
+            @if($hasGeo)
+              <a class="br-place-dir" href="https://www.google.com/maps/dir/?api=1&destination={{ $branch->latitude }},{{ $branch->longitude }}" target="_blank" rel="noopener">
+                <x-icon name="navigation" :size="15"/><span>{{ $t('الاتجاهات','Directions') }}</span>
+              </a>
+            @endif
+          </div>
+          @if($hasGeo)
+            <div id="br-map" data-lat="{{ $branch->latitude }}" data-lng="{{ $branch->longitude }}" data-name="{{ $brName }}"></div>
+          @endif
+        </div>
+        @endif
+
+        {{-- 2 · contact: icon buttons only — numbers stay behind the tap --}}
+        @if($directContacts->isNotEmpty())
+          <div class="br-visit-h br-visit-sub br-center">{{ $t('التواصل','Contact') }}</div>
+          <div class="br-channels br-channels--center">
+            @foreach($directContacts as $c)
+              @php $cLabel = $c['kind'] === 'phone' ? $t('اتصال','Call') : $c['label']; @endphp
+              <a class="br-channel br-channel--{{ $c['platform'] ?? 'phone' }}" href="{{ $c['href'] }}" @if($c['kind'] === 'social') target="_blank" rel="noopener" @endif aria-label="{{ $cLabel }}" title="{{ $cLabel }}">
+                @if($c['kind'] === 'phone')<x-icon name="phone" :size="20"/>@else @include('partials.social-icon', ['platform' => $c['platform'], 'size' => 20])@endif
+              </a>
+            @endforeach
+          </div>
+        @endif
+
+        <div class="br-visit-col">
+            <div class="br-visit-h br-visit-sub">{{ $t('أوقات العمل','Opening hours') }}</div>
+            @if($branch->workingHours->isNotEmpty())
+            <div class="br-hours">
+              @php
+                $fmt = function ($v) use ($branch) {
+                    if (!$v) return '';
+                    return $branch->formatTime($v instanceof \DateTimeInterface ? $v : \Carbon\Carbon::parse($v));
+                };
+                // Start the week where the branch starts it (Branch Settings).
+                $weekOrder = collect(range(0, 6))->map(fn($i) => ($i + (int) ($branch->first_day_of_week ?? 0)) % 7);
+              @endphp
+              @foreach($weekOrder as $d)
+                @php
+                  $shifts = $whByDay->get($d, collect())->where('is_open', true)->sortBy('shift_number');
+                @endphp
+                <div class="row {{ $d === $todayDow ? 'today' : '' }}">
+                  <span>{{ $dayNames[$d] }}{{ $d === $todayDow ? ' · '.$t('اليوم','Today') : '' }}</span>
+                  <span class="bkf-tnum" dir="ltr">
+                    @if($shifts->isEmpty())<span class="closed">{{ $t('مغلق','Closed') }}</span>
+                    @else{{ $shifts->map(fn($w) => $fmt($w->open_time).' – '.$fmt($w->close_time))->implode(', ') }}@endif
+                  </span>
+                </div>
+              @endforeach
+            </div>
+            @else
+              <p class="br-desc">{{ $t('لم يُحدَّد أوقات العمل بعد. تواصل مع المكان لمعرفة المواعيد.','Opening hours haven’t been added yet — contact the venue to check.') }}</p>
+            @endif
+        </div>
+      </section>
+
+      {{-- work gallery — results photos (type "work"), separate from the venue photos above --}}
+      @if($workImages->isNotEmpty())
+      <section class="br-block" id="br-work">
+        <div class="br-block-head">
+          <h2 class="br-block-title">{{ $t('معرض الأعمال','Our work') }}</h2>
+          <span class="br-block-count bkf-tnum">{{ $workImages->count() }} {{ $t('صورة','photos') }}</span>
+        </div>
+        <div class="br-work" id="br-work-grid">
+          @foreach($workData as $i => $w)
+            <button type="button" class="br-work-tile {{ $i >= 9 ? 'br-hidden' : '' }}" data-work="{{ $i }}"
+                    aria-label="{{ $t('عرض الصورة '.($i + 1).' من '.$workData->count(), 'View photo '.($i + 1).' of '.$workData->count()) }}">
+              <img src="{{ $w['grid'] }}" alt="" loading="lazy" decoding="async"
+                   @if($w['w'] && $w['h']) width="{{ min(640, $w['w']) }}" height="{{ (int) round(min(640, $w['w']) * $w['h'] / $w['w']) }}" @endif>
+            </button>
+          @endforeach
+        </div>
+        @if($workData->count() > 9)
+          <button type="button" class="bkf-btn bkf-btn-ghost bkf-btn-sm br-work-more" id="br-work-more">
+            {{ $t('عرض كل الصور ('.$workData->count().')', 'Show all '.$workData->count().' photos') }}
+          </button>
+        @endif
+      </section>
+      @endif
+
+      {{-- the branch's social profiles — brand icons only --}}
+      @if($socialContacts->isNotEmpty())
+      <section class="br-block" id="br-social">
+        <h2 class="br-block-title">{{ $t('تابعنا','Follow us') }}</h2>
+        <div class="br-channels">
+          @foreach($socialContacts as $c)
+            <a class="br-channel br-channel--{{ $c['platform'] }}" href="{{ $c['href'] }}" target="_blank" rel="noopener" aria-label="{{ $c['label'] }}" title="{{ $c['label'] }}">
+              @include('partials.social-icon', ['platform' => $c['platform'], 'size' => 20])
+            </a>
           @endforeach
         </div>
       </section>
@@ -600,37 +829,15 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
       </section>
       @endif
 
-      {{-- location + hours --}}
-      <section class="br-block" id="br-location">
-        <h2 class="br-block-title">{{ $t('الموقع وأوقات العمل','Location & hours') }}</h2>
-        @if($branch->address)<p class="br-desc" style="margin-bottom:14px"><x-icon name="map-pin" :size="16" style="color:var(--bk-accent);vertical-align:-2px"/> {{ $branch->fullAddress() ?: $branch->address }}</p>@endif
-        @if($branch->workingHours->isNotEmpty())
-        <div class="br-hours">
-          @php
-            $fmt = function ($v) {
-                if (!$v) return '';
-                return $v instanceof \DateTimeInterface ? $v->format('g:i A') : \Carbon\Carbon::parse($v)->format('g:i A');
-            };
-          @endphp
-          @for($d = 0; $d <= 6; $d++)
-            @php
-              $dh = $whByDay->get($d, collect())->where('is_open', true);
-              $w  = $dh->first();
-            @endphp
-            <div class="row {{ $d === $todayDow ? 'today' : '' }}">
-              <span>{{ $dayNames[$d] }}{{ $d === $todayDow ? ' · '.$t('اليوم','Today') : '' }}</span>
-              <span class="bkf-tnum">
-                @if($dh->isEmpty() || !$w)<span class="closed">{{ $t('مغلق','Closed') }}</span>
-                @else{{ $fmt($w->open_time) }} – {{ $fmt($w->close_time) }}@endif
-              </span>
-            </div>
-          @endfor
-        </div>
-        @endif
-        @if($branch->latitude && $branch->longitude)
-          <div id="br-map" data-lat="{{ $branch->latitude }}" data-lng="{{ $branch->longitude }}" data-name="{{ $brName }}"></div>
-        @endif
+
+      {{-- about --}}
+      @if($branch->description_en || $branch->description_ar)
+      <section class="br-block" id="br-about">
+        <h2 class="br-block-title">{{ $t('نبذة عن '.$brName, 'About '.$brName) }}</h2>
+        <p class="br-desc">{{ $isAr ? ($branch->description_ar ?: $branch->description_en) : ($branch->description_en ?: $branch->description_ar) }}</p>
       </section>
+      @endif
+
     </div>
 
     {{-- ASIDE: booking cart --}}
@@ -687,11 +894,12 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
 </div>
 
 {{-- lightbox --}}
-<div class="br-lb" id="br-lb">
+<div class="br-lb" id="br-lb" role="dialog" aria-modal="true" aria-label="{{ $t('عارض الصور','Photo viewer') }}">
   <button class="br-lb-x" onclick="brLb.close()" aria-label="{{ $t('إغلاق','Close') }}"><x-icon name="x" :size="22"/></button>
-  <button class="br-lb-nav prev" onclick="brLb.step(-1)" aria-label="prev"><x-icon name="chevron-right" :size="22" style="transform:scaleX(-1)"/></button>
-  <img id="br-lb-img" src="" alt="">
-  <button class="br-lb-nav next" onclick="brLb.step(1)" aria-label="next"><x-icon name="chevron-right" :size="22"/></button>
+  <button class="br-lb-nav prev" onclick="brLb.step(-1)" aria-label="{{ $t('السابقة','Previous') }}"><x-icon name="chevron-right" :size="22" style="transform:scaleX(-1)"/></button>
+  <img id="br-lb-img" alt="">
+  <button class="br-lb-nav next" onclick="brLb.step(1)" aria-label="{{ $t('التالية','Next') }}"><x-icon name="chevron-right" :size="22"/></button>
+  <span class="br-lb-count bkf-tnum" id="br-lb-count" dir="ltr" aria-live="polite"></span>
 </div>
 
 @include('front.partials.group-booking-modal')
@@ -706,6 +914,7 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
   var branchId = @json($branch->id), branchName = @json($brName);
   var EMPS = @json($empData);
   var GALLERY = @json($imgs->take(20)->values());
+  var WORK = @json($workData);
   var MINPRICE = @json($minPrice ?: 0);
   var cart = [];
 
@@ -815,7 +1024,36 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
       // keep the chosen chip in view
       if (t.scrollIntoView) t.scrollIntoView({ inline:'center', block:'nearest', behavior:'smooth' });
     }); });
+
+    // mouse drag-to-scroll (touch & trackpads already scroll natively)
+    var down = false, dragged = false, x0 = 0, s0 = 0;
+    tabsBar.addEventListener('pointerdown', function(e){
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      down = true; dragged = false; x0 = e.clientX; s0 = tabsBar.scrollLeft;
+    });
+    tabsBar.addEventListener('pointermove', function(e){
+      if (!down) return;
+      var dx = e.clientX - x0;
+      if (!dragged && Math.abs(dx) > 5){ dragged = true; tabsBar.classList.add('is-dragging'); try { tabsBar.setPointerCapture(e.pointerId); } catch (x) {} }
+      if (dragged){ tabsBar.scrollLeft = s0 - dx; e.preventDefault(); }
+    });
+    function endDrag(){ if (!down) return; down = false; tabsBar.classList.remove('is-dragging'); }
+    tabsBar.addEventListener('pointerup', endDrag);
+    tabsBar.addEventListener('pointercancel', endDrag);
+    // a drag must not also "click" the chip it started on
+    tabsBar.addEventListener('click', function(e){ if (dragged){ e.stopPropagation(); e.preventDefault(); dragged = false; } }, true);
+    tabsBar.addEventListener('dragstart', function(e){ e.preventDefault(); });
+
   })();
+
+  /* ── services: fold / unfold one category (▼ open · ▲ collapsed) ── */
+  document.querySelectorAll('button.br-svc-cat-h').forEach(function(h){
+    h.addEventListener('click', function(){
+      var open = h.getAttribute('aria-expanded') !== 'false';
+      h.setAttribute('aria-expanded', open ? 'false' : 'true');
+      h.closest('.br-svc-cat').classList.toggle('is-collapsed', open);
+    });
+  });
 
   /* ── hours: collapse to today on small screens ── */
   (function(){
@@ -830,15 +1068,35 @@ body:has(.br-bar) .bkf-footer{ padding-bottom:calc(80px + env(safe-area-inset-bo
     hours.parentNode.insertBefore(btn, hours.nextSibling);
   })();
 
-  /* ── lightbox ── */
-  var lbIdx = 0;
+  /* ── lightbox: one viewer, two photo sets (venue hero · work gallery) ── */
+  var LB_SETS = { hero: GALLERY, work: WORK.map(function (w) { return w.large; }) };
+  var lbSet = 'hero', lbIdx = 0, lbReturn = null;
+  function lbShow(){
+    var list = LB_SETS[lbSet] || [];
+    el('br-lb-img').src = list[lbIdx] || '';
+    el('br-lb-count').textContent = list.length > 1 ? (lbIdx + 1) + ' / ' + list.length : '';
+    var multi = list.length > 1;
+    document.querySelectorAll('.br-lb-nav').forEach(function (b) { b.style.display = multi ? '' : 'none'; });
+  }
   window.brLb = {
-    open:function(i){ lbIdx=i; el('br-lb-img').src=GALLERY[i]; el('br-lb').classList.add('open'); document.body.style.overflow='hidden'; },
-    close:function(){ el('br-lb').classList.remove('open'); document.body.style.overflow=''; },
-    step:function(d){ lbIdx=(lbIdx+d+GALLERY.length)%GALLERY.length; el('br-lb-img').src=GALLERY[lbIdx]; }
+    open:function(i, set){ lbSet = set || 'hero'; lbIdx = i; lbReturn = document.activeElement; lbShow(); el('br-lb').classList.add('open'); document.body.style.overflow='hidden'; el('br-lb').querySelector('.br-lb-x').focus(); },
+    close:function(){ el('br-lb').classList.remove('open'); document.body.style.overflow=''; if (lbReturn && lbReturn.focus) lbReturn.focus(); },
+    step:function(d){ var n = (LB_SETS[lbSet] || []).length; if (!n) return; lbIdx=(lbIdx+d+n)%n; lbShow(); }
   };
-  document.querySelectorAll('#br-gallery [data-lb]').forEach(function(g){ g.addEventListener('click', function(){ brLb.open(+g.dataset.lb); }); });
+  document.querySelectorAll('#br-gallery [data-lb]').forEach(function(g){ g.addEventListener('click', function(){ brLb.open(+g.dataset.lb, 'hero'); }); });
+  document.querySelectorAll('[data-work]').forEach(function(g){ g.addEventListener('click', function(){ brLb.open(+g.dataset.work, 'work'); }); });
   document.addEventListener('keydown', function(e){ if(!el('br-lb').classList.contains('open'))return; if(e.key==='Escape')brLb.close(); if(e.key==='ArrowRight')brLb.step(AR?-1:1); if(e.key==='ArrowLeft')brLb.step(AR?1:-1); });
+  // swipe on touch screens
+  (function(){ var x0 = null, lb = el('br-lb');
+    lb.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; }, { passive:true });
+    lb.addEventListener('touchend', function(e){ if (x0 === null) return; var dx = e.changedTouches[0].clientX - x0; x0 = null;
+      if (Math.abs(dx) > 40) brLb.step((dx < 0) !== AR ? 1 : -1); }, { passive:true });
+  })();
+
+  /* ── work gallery: reveal the rest (images stay lazy-loaded) ── */
+  (function(){ var more = el('br-work-more'); if (!more) return;
+    more.addEventListener('click', function(){ document.querySelectorAll('#br-work-grid .br-hidden').forEach(function (t) { t.classList.remove('br-hidden'); }); more.remove(); });
+  })();
 
   /* ── leaflet single-marker map ── */
   function initMap(){

@@ -856,6 +856,15 @@
         'isRtl'        => $isRtl,
         'fcLocale'     => $fcLocale,
         'firstBranch'  => $branches->first()->id ?? '',
+        // Per-branch clock (Branch Settings): the calendar follows the selected
+        // branch's timezone ("now"), clock style, week start and slot interval.
+        'branchSettings' => $branches->mapWithKeys(fn ($b) => [$b->id => [
+            'tz'          => $b->tz(),
+            'time_format' => $b->uses24HourClock() ? '24h' : '12h',
+            'first_day'   => (int) ($b->first_day_of_week ?? 0),
+            'interval'    => (int) ($b->appointment_interval ?: 15),
+            'open'        => optional($b->workingHours->where('is_open', true)->min('open_time'), fn ($t) => substr($t, 0, 5)),
+        ]]),
         'statusDefs'   => $statusDefs,
         'allowedMoves' => $allowedMoves,
         'liveStatuses' => $liveStatuses,

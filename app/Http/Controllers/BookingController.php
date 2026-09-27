@@ -6,6 +6,7 @@ use App\Enums\AppointmentStatus;
 use App\Events\AppointmentBooked;
 use App\Http\Controllers\CustomerAuthController;
 use App\Models\Appointment;
+use App\Models\Branch;
 use App\Models\Employee;
 use App\Models\Service;
 use Illuminate\Http\JsonResponse;
@@ -28,21 +29,33 @@ class BookingController extends Controller
         ]);
 
         $employee = Employee::with(['workingHours', 'leaves'])->findOrFail($request->employee_id);
-        $service  = Service::findOrFail($request->service_id);
+        $service  = Service::with('branch')->findOrFail($request->service_id);
+        $branch   = $service->branch;
         $date     = Carbon::parse($request->date)->startOfDay();
         $dayOfWeek = (int) $date->dayOfWeek; // 0=Sun … 6=Sat
 
-        // Check working hours (an employee may have multiple shifts per day)
-        $shifts = $employee->workingHours
-            ->where('day_of_week', $dayOfWeek)
-            ->where('is_working', true)
-            ->sortBy('shift_number')
-            ->values();
+        // Branch booking rules (online on/off, same-day, booking window)
+        if ($closed = $this->dayBlockReason($branch, $date)) {
+            return response()->json([
+                'available' => false,
+                'reason'    => $closed,
+                'message'   => $branch->bookingBlockMessage($closed),
+                'slots'     => [],
+                'next_date' => $closed === 'online_disabled' ? null : $this->nextAvailableDate($employee, $service),
+            ]);
+        }
+
+        // Working hours (an employee may have multiple shifts per day). Staff
+        // without their own schedule for this weekday work the branch hours —
+        // the same rule the dashboard calendar uses.
+        $branch->loadMissing('workingHours');
+        $shifts = $employee->shiftsOn($dayOfWeek, $branch);
 
         if ($shifts->isEmpty()) {
             return response()->json([
                 'available'    => false,
                 'reason'       => 'not_working',
+                'message'      => $branch->bookingBlockMessage('not_working'),
                 'working_hours'=> null,
                 'slots'        => [],
                 'next_date'    => $this->nextAvailableDate($employee, $service),
@@ -88,22 +101,27 @@ class BookingController extends Controller
             ->whereIn('status', AppointmentStatus::blockingValues())
             ->get(['resource_id', 'start_time', 'end_time']);
 
-        // Generate slots every 15 min within each shift — breaks between shifts are excluded automatically
+        // Offer a start every <branch interval> minutes within each shift — breaks
+        // between shifts are excluded automatically. The interval only decides
+        // WHEN a service may start; each slot still lasts the full service duration.
         $duration = $service->duration_minutes;
+        $step     = $branch->bookingRules()['interval'];
         $slots    = [];
-        $now      = now();
-        $isToday  = $date->isToday();
+        $now      = $branch->localNow();              // branch wall clock
+        $earliest = $branch->earliestBookableStart(); // … + minimum notice
+        $anyAhead = false;
 
         foreach ($shifts as $shift) {
-            $whStart = Carbon::parse($date->toDateString() . ' ' . $shift->start_time);
-            $whEnd   = Carbon::parse($date->toDateString() . ' ' . $shift->end_time);
+            $whStart = Carbon::parse($date->toDateString() . ' ' . $shift['start']);
+            $whEnd   = Carbon::parse($date->toDateString() . ' ' . $shift['end']);
             $cursor  = $whStart->clone();
 
             while ($cursor->clone()->addMinutes($duration)->lte($whEnd)) {
                 $slotEnd = $cursor->clone()->addMinutes($duration);
 
-                // Hide slots that already started (today only)
-                if ($isToday && $cursor->lt($now)) { $cursor->addMinutes(15); continue; }
+                // Hide slots that already started or fall inside the minimum notice
+                if ($cursor->lte($now) || $cursor->lt($earliest)) { $cursor->addMinutes($step); continue; }
+                $anyAhead = true;
 
                 $overlaps = $booked->contains(
                     fn($a) => $a->start_time->lt($slotEnd) && $a->end_time->gt($cursor)
@@ -122,24 +140,28 @@ class BookingController extends Controller
                 if (!$overlaps) {
                     $slots[] = [
                         'time'   => $cursor->format('H:i'),
+                        'label'  => $branch->formatTime($cursor),
                         'start'  => $cursor->toDateTimeString(),
                         'end'    => $slotEnd->toDateTimeString(),
                     ];
                 }
 
-                $cursor->addMinutes(15);
+                $cursor->addMinutes($step);
             }
         }
 
         return response()->json([
             'available'     => count($slots) > 0,
-            'reason'        => count($slots) === 0 ? 'fully_booked' : null,
+            // fully_booked only when times were still ahead and all are taken
+            'reason'        => count($slots) ? null : ($anyAhead ? 'fully_booked' : 'no_more_today'),
+            'message'       => count($slots) ? null : $branch->bookingBlockMessage($anyAhead ? 'fully_booked' : 'no_more_today'),
             'working_hours' => [
-                'start'  => $shifts->first()->start_time,
-                'end'    => $shifts->last()->end_time,
-                'shifts' => $shifts->map(fn($s) => ['start' => $s->start_time, 'end' => $s->end_time])->values(),
+                'start'  => $shifts->first()['start'],
+                'end'    => $shifts->last()['end'],
+                'shifts' => $shifts,
             ],
             'slots'         => $slots,
+            'time_format'   => $branch->bookingRules()['time_format'],
             'employee'      => [
                 'id'    => $employee->id,
                 'name'  => app()->getLocale() === 'ar' ? ($employee->name_ar ?? $employee->name_en) : ($employee->name_en ?? $employee->name_ar),
@@ -172,19 +194,25 @@ class BookingController extends Controller
         $startTime = Carbon::parse($request->start_time);
         $endTime   = $startTime->clone()->addMinutes($service->duration_minutes);
 
-        // Never allow a slot that has already started. The slots endpoint hides
-        // past times, but a stale tab or a direct POST must be rejected too.
-        if ($startTime->lte(now())) {
+        // Enforce the branch's booking rules on the server too — the slots
+        // endpoint already hides disallowed times, but a stale tab or a direct
+        // POST must be rejected. "Now" is the branch's own wall clock.
+        if ($blocked = $service->branch->bookingBlockReason($startTime)) {
             return response()->json([
-                'message'  => __('This time has already passed. Please pick a later slot.'),
-                'past'     => true,
+                'message'  => $service->branch->bookingBlockMessage($blocked),
+                'reason'   => $blocked,
+                'past'     => $blocked === 'past',
             ], 422);
         }
 
         $allocator = app(\App\Services\ResourceAllocator::class);
 
         // DB transaction + lock to prevent race condition
-        $appointment = DB::transaction(function () use ($request, $service, $employee, $startTime, $endTime, $customer, $allocator) {
+        // Confirmed straight away, or waiting for the business to approve it
+        // (Booking & Cancellation Policy → online booking).
+        $status = $service->branch->onlineBookingStatus($customer);
+
+        $appointment = DB::transaction(function () use ($request, $service, $employee, $startTime, $endTime, $customer, $allocator, $status) {
 
             // Lock check: any overlapping active appointment for this employee?
             $conflict = Appointment::where('employee_id', $employee->id)
@@ -219,7 +247,7 @@ class BookingController extends Controller
                 'service_id'   => $service->id,
                 'start_time'   => $startTime,
                 'end_time'     => $endTime,
-                'status'       => AppointmentStatus::Pending,
+                'status'       => $status,
                 'total_price'  => $service->price,
                 'payment_status'=> 'pending',
                 'notes'        => $request->notes,
@@ -245,10 +273,11 @@ class BookingController extends Controller
 
         return response()->json([
             'booked'  => true,
+            'confirmed' => $appointment->status === AppointmentStatus::Confirmed, // false = awaiting approval
             'appointment' => [
                 'id'         => $appointment->id,
-                'start_time' => $appointment->start_time->format('D, d M Y · H:i'),
-                'end_time'   => $appointment->end_time->format('H:i'),
+                'start_time' => $appointment->start_time->format('D, d M Y') . ' · ' . $service->branch->formatTime($appointment->start_time),
+                'end_time'   => $service->branch->formatTime($appointment->end_time),
                 'service'    => app()->getLocale() === 'ar' ? $service->name_ar : $service->name_en,
                 'price'      => $appointment->total_price,
                 'status'     => $appointment->status,
@@ -264,32 +293,64 @@ class BookingController extends Controller
      */
     public function groupSlots(Request $request): JsonResponse
     {
-        $data = $this->validateSpec($request, false);
-        $date = Carbon::parse($data['date'])->startOfDay();
-        $now  = now();
-        $isToday = $date->isToday();
+        $data   = $this->validateSpec($request, false);
+        $date   = Carbon::parse($data['date'])->startOfDay();
+        $branch = Branch::findOrFail($data['branch_id']);
+
+        if ($closed = $this->dayBlockReason($branch, $date)) {
+            return response()->json([
+                'available' => false,
+                'slots'     => [],
+                'reason'    => $closed,
+                'message'   => $branch->bookingBlockMessage($closed),
+            ]);
+        }
 
         [$employees, $empById, $services, $booked, $gridStart, $gridEnd, $guestBlocks]
             = $this->prepareSpec($data, $date);
 
         if (!$gridStart) {
-            return response()->json(['available' => false, 'slots' => [], 'reason' => 'closed']);
+            // Nobody works this day. If nobody works ANY day, the venue simply
+            // hasn't set its hours yet — say so rather than "closed".
+            $reason = $branch->openWeekdays() ? 'closed' : 'no_hours';
+            return response()->json([
+                'available' => false,
+                'slots'     => [],
+                'reason'    => $reason,
+                'message'   => $branch->bookingBlockMessage($reason),
+            ]);
         }
 
         $allocator = app(\App\Services\ResourceAllocator::class);
-        $slots = [];
+        $slots     = [];
+        $anyAhead  = false; // was any start time still bookable (not past / too soon)?
+        $step      = $branch->bookingRules()['interval'];
+        $now       = $branch->localNow();              // branch wall clock
+        $earliest  = $branch->earliestBookableStart(); // … + minimum notice
 
-        for ($t = $gridStart->clone(); $t->lte($gridEnd); $t->addMinutes(15)) {
-            if ($isToday && $t->lt($now)) continue;
+        for ($t = $gridStart->clone(); $t->lte($gridEnd); $t->addMinutes($step)) {
+            if ($t->lte($now) || $t->lt($earliest)) continue;
+            $anyAhead = true;
             if ($this->resolveAssignment($data['mode'], $guestBlocks, $employees, $empById, $booked, $date, $t, $allocator) !== null) {
-                $slots[] = ['time' => $t->format('H:i'), 'start' => $date->toDateString() . ' ' . $t->format('H:i') . ':00'];
+                $slots[] = [
+                    'time'  => $t->format('H:i'),
+                    'label' => $branch->formatTime($t),
+                    'start' => $date->toDateString() . ' ' . $t->format('H:i') . ':00',
+                ];
             }
         }
 
+        // Empty day: "fully_booked" only when there WERE times ahead and all are
+        // taken — that is the one case the waitlist ("notify me") makes sense for.
+        // If the day's remaining times have simply passed, say so instead.
+        $reason = count($slots) ? null : ($anyAhead ? 'fully_booked' : 'no_more_today');
+
         return response()->json([
-            'available' => count($slots) > 0,
-            'reason'    => count($slots) ? null : 'fully_booked',
-            'slots'     => $slots,
+            'available'   => count($slots) > 0,
+            'reason'      => $reason,
+            'message'     => $reason ? $branch->bookingBlockMessage($reason) : null,
+            'slots'       => $slots,
+            'time_format' => $branch->bookingRules()['time_format'],
         ]);
     }
 
@@ -309,13 +370,15 @@ class BookingController extends Controller
         $date = Carbon::parse($data['start_time'])->startOfDay();
         $start = Carbon::parse($data['start_time']);
 
-        // Reject any visit that starts in the past (stale slot / direct POST).
-        if ($start->lte(now())) {
+        // Reject a visit the branch's booking rules don't allow (past, same-day
+        // off, inside the minimum notice, beyond the window, online booking off)
+        // — a stale slot or a direct POST. "Now" is the branch's wall clock.
+        $branch = Branch::findOrFail($data['branch_id']);
+        if ($blocked = $branch->bookingBlockReason($start)) {
             return response()->json([
-                'message' => app()->getLocale() === 'ar'
-                    ? 'هذا الوقت مضى بالفعل. الرجاء اختيار وقت لاحق.'
-                    : 'This time has already passed. Please pick a later slot.',
-                'past'    => true,
+                'message' => $branch->bookingBlockMessage($blocked),
+                'reason'  => $blocked,
+                'past'    => $blocked === 'past',
             ], 422);
         }
 
@@ -332,10 +395,11 @@ class BookingController extends Controller
                 return response()->json([
                     'booked'    => true,
                     'duplicate' => true,
+                    'confirmed' => $existing->first()->status === AppointmentStatus::Confirmed,
                     'count'     => $existing->count(),
                     'summary'   => [
-                        'start' => $existing->first()->start_time->format('D, d M Y · H:i'),
-                        'end'   => $existing->last()->end_time->format('H:i'),
+                        'start' => $existing->first()->start_time->format('D, d M Y') . ' · ' . $existing->first()->branch?->formatTime($existing->first()->start_time),
+                        'end'   => $existing->last()->branch?->formatTime($existing->last()->end_time),
                         'total' => (float) $existing->sum('total_price'),
                     ],
                 ], 200);
@@ -347,8 +411,12 @@ class BookingController extends Controller
 
         $allocator = app(\App\Services\ResourceAllocator::class);
 
+        // Confirmed straight away, or waiting for the business to approve it
+        // (Booking & Cancellation Policy → online booking).
+        $status = $branch->onlineBookingStatus($customer);
+
         try {
-            $created = DB::transaction(function () use ($data, $guestBlocks, $employees, $empById, $date, $start, $allocator, $customer, $idemKey) {
+            $created = DB::transaction(function () use ($data, $guestBlocks, $employees, $empById, $date, $start, $allocator, $customer, $idemKey, $status) {
                 // Fresh booked map under lock
                 $lockedBooked = Appointment::whereIn('employee_id', $employees->pluck('id'))
                     ->whereDate('start_time', $date->toDateString())
@@ -398,7 +466,7 @@ class BookingController extends Controller
                         'service_id'      => $svc->id,
                         'start_time'      => $job['start'],
                         'end_time'        => $job['end'],
-                        'status'          => AppointmentStatus::Pending,
+                        'status'          => $status,
                         'total_price'     => $svc->price,
                         'payment_status'  => 'pending',
                         'notes'           => $data['notes'] ?? null,
@@ -424,11 +492,12 @@ class BookingController extends Controller
         $last  = $created[count($created) - 1];
         return response()->json([
             'booked' => true,
+            'confirmed' => $first->status === AppointmentStatus::Confirmed, // false = awaiting approval
             'count'  => count($created),
             'reference' => $first->reference,
             'summary' => [
-                'start' => $first->start_time->format('D, d M Y · H:i'),
-                'end'   => $last->end_time->format('H:i'),
+                'start' => $first->start_time->format('D, d M Y') . ' · ' . $branch->formatTime($first->start_time),
+                'end'   => $branch->formatTime($last->end_time),
                 'total' => collect($created)->sum('total_price'),
                 'reference' => $first->reference,
             ],
@@ -456,10 +525,14 @@ class BookingController extends Controller
     /** Load employees, services, the day's bookings, the time grid and per-guest blocks. */
     private function prepareSpec(array $data, Carbon $date): array
     {
+        $branch    = Branch::with('workingHours')->findOrFail($data['branch_id']);
         $employees = Employee::with(['workingHours', 'serviceCategories', 'leaves'])
             ->where('branch_id', $data['branch_id'])
             ->where('is_active', true)
             ->get();
+        // Staff without their own schedule fall back to the branch hours
+        // (Employee::shiftsOn) — hand them the loaded branch, no per-row query.
+        $employees->each(fn ($e) => $e->setRelation('branch', $branch));
         $empById = $employees->keyBy('id');
 
         $svcIds   = collect($data['guests'])->flatMap(fn ($g) => $g['service_ids'])->unique()->values();
@@ -474,10 +547,9 @@ class BookingController extends Controller
         $dow = (int) $date->dayOfWeek;
         $gridStart = null; $gridEnd = null;
         foreach ($employees as $e) {
-            foreach ($e->workingHours->where('day_of_week', $dow)->where('is_working', true) as $sh) {
-                if (!$sh->start_time || !$sh->end_time) continue;
-                $ws = Carbon::parse($date->toDateString() . ' ' . $sh->start_time);
-                $we = Carbon::parse($date->toDateString() . ' ' . $sh->end_time);
+            foreach ($e->shiftsOn($dow, $branch) as $sh) {
+                $ws = Carbon::parse($date->toDateString() . ' ' . $sh['start']);
+                $we = Carbon::parse($date->toDateString() . ' ' . $sh['end']);
                 if (!$gridStart || $ws->lt($gridStart)) $gridStart = $ws;
                 if (!$gridEnd   || $we->gt($gridEnd))   $gridEnd   = $we;
             }
@@ -611,10 +683,9 @@ class BookingController extends Controller
         $dow = (int) $date->dayOfWeek;
 
         $inShift = false;
-        foreach ($emp->workingHours->where('day_of_week', $dow)->where('is_working', true) as $sh) {
-            if (!$sh->start_time || !$sh->end_time) continue;
-            $ws = Carbon::parse($date->toDateString() . ' ' . $sh->start_time);
-            $we = Carbon::parse($date->toDateString() . ' ' . $sh->end_time);
+        foreach ($emp->shiftsOn($dow) as $sh) {
+            $ws = Carbon::parse($date->toDateString() . ' ' . $sh['start']);
+            $we = Carbon::parse($date->toDateString() . ' ' . $sh['end']);
             if ($start->gte($ws) && $end->lte($we)) { $inShift = true; break; }
         }
         if (!$inShift) return false;
@@ -671,15 +742,40 @@ class BookingController extends Controller
         return \App\Enums\BookingSource::tryFrom((string) $stored)?->value;
     }
 
+    /**
+     * Why a whole DAY is closed to online booking at this branch, or null.
+     * Per-slot rules (minimum notice, already-started) are applied per slot.
+     */
+    private function dayBlockReason(Branch $branch, Carbon $date): ?string
+    {
+        $rules = $branch->bookingRules();
+        $day   = $date->toDateString();
+
+        return match (true) {
+            ! $rules['online']                               => 'online_disabled',
+            $day < $rules['today']                           => 'past',
+            ! $rules['same_day'] && $day === $rules['today'] => 'same_day_disabled',
+            $day > $rules['last_date']                       => 'too_far',
+            default                                          => null,
+        };
+    }
+
     private function nextAvailableDate(Employee $employee, Service $service, ?Carbon $from = null): ?string
     {
-        $cursor = ($from ?? now())->startOfDay();
+        $branch = $service->branch;
+        $branch->loadMissing('workingHours');
+        $rules  = $branch->bookingRules();
+        $step   = $rules['interval'];
+        $cursor = ($from ?? $branch->localToday())->copy()->startOfDay();
 
-        for ($i = 0; $i < 60; $i++) {
+        // Never suggest a day the branch's booking window excludes.
+        if (! $rules['same_day'] && $cursor->toDateString() === $rules['today']) {
+            $cursor->addDay();
+        }
+
+        for ($i = 0; $i < 60 && $cursor->toDateString() <= $rules['last_date']; $i++) {
             $dayOfWeek = (int) $cursor->dayOfWeek;
-            $shifts = $employee->workingHours
-                ->where('day_of_week', $dayOfWeek)
-                ->where('is_working', true);
+            $shifts = $employee->shiftsOn($dayOfWeek, $branch);
 
             if ($shifts->isNotEmpty()) {
                 // Check leave (hourly permissions don't make the whole day unavailable)
@@ -700,9 +796,9 @@ class BookingController extends Controller
 
                     $totalSlots = 0;
                     foreach ($shifts as $shift) {
-                        $whStart = Carbon::parse($cursor->toDateString() . ' ' . $shift->start_time);
-                        $whEnd   = Carbon::parse($cursor->toDateString() . ' ' . $shift->end_time);
-                        $totalSlots += max(0, (int) floor($whStart->diffInMinutes($whEnd) / 15) - (int) ceil($duration / 15) + 1);
+                        $whStart = Carbon::parse($cursor->toDateString() . ' ' . $shift['start']);
+                        $whEnd   = Carbon::parse($cursor->toDateString() . ' ' . $shift['end']);
+                        $totalSlots += max(0, (int) floor(($whStart->diffInMinutes($whEnd) - $duration) / $step) + 1);
                     }
 
                     if ($booked < $totalSlots) {

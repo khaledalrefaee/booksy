@@ -47,7 +47,10 @@ Route::view('/business/terms', 'front.legal.business-terms')->name('front.busine
 Route::get('/business/{company}', [FrontController::class, 'show'])->name('front.show');
 Route::get('/venues', [FrontController::class, 'venues'])->name('front.venues');
 Route::get('/category/{slug}', [FrontController::class, 'categoryPage'])->name('front.category');
-Route::get('/branch/{branch}', [FrontController::class, 'branchShow'])->name('front.branch');
+/* Public branch page is addressed by its unique slug (route('front.branch', $b) emits
+   /branch/{slug}). Legacy /branch/{id} links & printed QR codes still resolve — see
+   Branch::resolveRouteBinding — and 301 to the slug URL. */
+Route::get('/branch/{branch:slug}', [FrontController::class, 'branchShow'])->name('front.branch');
 /* Marketing tracking links: /branch/{slug}/IN|FB|WA|WEB — records the booking
    source in the session, then forwards to the normal branch/booking page. Uses
    the branch slug (not id). Constrained so it never shadows other /branch/* URLs. */

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
+use App\Models\Branch;
 use App\Services\WhatsappService;
 use Illuminate\Console\Command;
 
@@ -20,22 +21,27 @@ class SendAppointmentReminders extends Command
         // failures. The scheduler runs every 10 min; a ±6 min window covers it
         // without gaps, and the service de-dupes per group so nothing repeats.
         $minutesBefore = 60;
-        $windowStart   = now()->addMinutes($minutesBefore - 6);
-        $windowEnd     = now()->addMinutes($minutesBefore + 6);
 
+        // Appointment times are each branch's wall clock, so the window is
+        // computed per timezone (one query per distinct zone — usually one).
         // App bookings keep the phone on the customer record, not the denormalised
         // customer_phone column — so accept EITHER, or the reminder never fires for
         // anyone who booked through the site.
-        $appointments = Appointment::query()
-            ->whereIn('status', [AppointmentStatus::Pending->value, AppointmentStatus::Confirmed->value])
-            ->whereBetween('start_time', [$windowStart, $windowEnd])
-            ->where(function ($q) {
-                $q->whereNotNull('customer_phone')
-                  ->orWhereHas('customer', fn ($c) => $c->whereNotNull('phone'));
-            })
-            ->with(['branch', 'service', 'company', 'customer', 'employee'])
-            ->orderBy('id')
-            ->get();
+        $appointments = collect();
+        foreach (Branch::idsByTimezone() as $tz => $branchIds) {
+            $now = Branch::wallNowIn($tz);
+            $appointments = $appointments->concat(Appointment::query()
+                ->whereIn('branch_id', $branchIds)
+                ->whereIn('status', [AppointmentStatus::Pending->value, AppointmentStatus::Confirmed->value])
+                ->whereBetween('start_time', [$now->copy()->addMinutes($minutesBefore - 6), $now->copy()->addMinutes($minutesBefore + 6)])
+                ->where(function ($q) {
+                    $q->whereNotNull('customer_phone')
+                      ->orWhereHas('customer', fn ($c) => $c->whereNotNull('phone'));
+                })
+                ->with(['branch', 'service', 'company', 'customer', 'employee'])
+                ->get());
+        }
+        $appointments = $appointments->sortBy('id')->values();
 
         // Send once per visit: for grouped bookings only the first row (lowest id)
         // triggers the consolidated reminder; siblings are skipped.

@@ -95,10 +95,18 @@
 .gb-day{ flex:0 0 auto; width:52px; text-align:center; padding:10px 0; border:1px solid var(--bk-border); border-radius:var(--bk-r); background:var(--bk-surface); cursor:pointer; }
 .gb-day.is-active{ background:var(--bk-accent); border-color:var(--bk-accent); color:var(--bk-accent-ink); }
 .gb-day .d{ font-family:var(--bk-font-display); font-weight:800; font-size:1.1rem; }
+.gb-day.is-off{ opacity:.38; cursor:not-allowed; }
 .gb-day .w{ font-family:var(--bk-font-ui); font-size:.68rem; opacity:.75; }
 .gb-slots{ display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
 .gb-slot{ padding:10px 14px; border:1px solid var(--bk-border); border-radius:var(--bk-r-sm); background:var(--bk-surface); color:var(--bk-text); font-family:var(--bk-font-ui); font-weight:600; font-size:.85rem; cursor:pointer; }
 .gb-slot:hover{ border-color:var(--bk-accent); }
+/* times grouped by part of day: morning · afternoon · late afternoon · evening */
+.gb-period{ flex:0 0 100%; }
+.gb-period + .gb-period{ margin-top:14px; }
+.gb-period-h{ display:flex; align-items:baseline; gap:6px; margin-bottom:8px; font-family:var(--bk-font-ui); font-weight:700; font-size:.8rem; color:var(--bk-text-soft); }
+.gb-period-h span{ font-weight:500; color:var(--bk-text-muted); font-variant-numeric:tabular-nums; }
+.gb-period-slots{ display:grid; grid-template-columns:repeat(auto-fill,minmax(88px,1fr)); gap:8px; }
+.gb-period-slots .gb-slot{ padding-inline:8px; text-align:center; font-variant-numeric:tabular-nums; }
 .gb-slot.is-on{ background:var(--bk-accent); color:var(--bk-accent-ink); border-color:var(--bk-accent); }
 .gb-empty{ text-align:center; color:var(--bk-text-muted); font-family:var(--bk-font-ui); font-size:.88rem; padding:30px 10px; }
 .gb-skel{ height:38px; width:78px; border-radius:var(--bk-r-sm); background:linear-gradient(90deg,var(--bk-surface-2),var(--bk-surface-3),var(--bk-surface-2)); background-size:200% 100%; animation:gbShimmer 1.2s infinite; }
@@ -120,6 +128,17 @@ window.GroupBookingModal = (function () {
   const AR = @json($isAr);
   const CUR = @json($isAr ? 'ل.س' : 'SYP');
   const BRANCH_ID = @json($branch->id);
+  // Branch booking rules (Branch Settings): the branch-local "today", booking window, clock style.
+  const RULES = @json($branch->bookingRules());
+  // Weekdays (0=Sun…6=Sat) someone works — staff schedules, else branch hours.
+  const OPEN_DAYS = @json($branch->openWeekdays());
+  // Parts of the day the time list is grouped into (by start hour, branch-local).
+  const PERIODS = [
+    { from: 0,  to: 12, label: AR ? 'صباحاً'     : 'Morning' },
+    { from: 12, to: 15, label: AR ? 'بعد الظهر'  : 'Afternoon' },
+    { from: 15, to: 18, label: AR ? 'بعد العصر'  : 'Late afternoon' },
+    { from: 18, to: 24, label: AR ? 'مساءً'      : 'Evening' },
+  ];
   const SERVICES = @json($gbServices);
   const EMPLOYEES = @json($gbEmployees);
   const SLOTS_URL = @json(route('booking.group-slots'));
@@ -144,6 +163,7 @@ window.GroupBookingModal = (function () {
   const totalServices = () => st.guests.reduce((s,g)=> s + g.services.length, 0);
 
   function open(initialServiceIds) {
+    if (!RULES.online) { showClosed(); return; }
     var idem = 'gb-' + Date.now() + '-' + Math.random().toString(36).slice(2,10);
     st = { step:0, activeGuest:0, guests:[{services:(initialServiceIds||[]).slice(), employeeId:null}],
            staffMode:'any', oneEmployee:null, weekOffset:0, date:null, slot:null, cache:{}, idempotencyKey:idem };
@@ -159,7 +179,7 @@ window.GroupBookingModal = (function () {
   function back() { if (st.step > 0) { st.step--; render(); } }
   function next() {
     if (st.step === 0) { if (totalServices() === 0) return; st.step = 1; }
-    else if (st.step === 1) { st.step = 2; st.date = today(); st.cache = {}; }
+    else if (st.step === 1) { st.step = 2; st.date = firstDay(); st.cache = {}; }
     else if (st.step === 2) { if (!st.slot) return; st.step = 3; }
     else if (st.step === 3) { confirmBooking(); return; }
     render();
@@ -183,7 +203,7 @@ window.GroupBookingModal = (function () {
     el('gb-foot-p').textContent = money(totalPrice());
     if (st.step === 0) { el('gb-foot-l').textContent = totalServices()+' '+(AR?'خدمة':'services'); nextBtn.textContent = AR?'متابعة':'Continue'; nextBtn.disabled = totalServices()===0; }
     else if (st.step === 1) { el('gb-foot-l').textContent = st.guests.length+' '+(AR?'ضيف':'guests'); nextBtn.textContent = AR?'اختر الوقت':'Pick time'; nextBtn.disabled=false; }
-    else if (st.step === 2) { el('gb-foot-l').textContent = st.slot ? st.slot.time : (AR?'اختر وقتاً':'Select a time'); nextBtn.textContent = AR?'متابعة':'Continue'; nextBtn.disabled = !st.slot; }
+    else if (st.step === 2) { el('gb-foot-l').textContent = st.slot ? st.slot.label : (AR?'اختر وقتاً':'Select a time'); nextBtn.textContent = AR?'متابعة':'Continue'; nextBtn.disabled = !st.slot; }
     else if (st.step === 3) { el('gb-foot-l').textContent = totalServices()+' '+(AR?'خدمة':'services'); nextBtn.textContent = AR?'تأكيد الحجز':'Confirm booking'; nextBtn.disabled=false; }
   }
 
@@ -268,22 +288,39 @@ window.GroupBookingModal = (function () {
   }
 
   /* ── step 2: time ── */
-  function today(){ return new Date().toISOString().slice(0,10); }
-  function addDays(s,n){ const d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+  // Dates are plain Y-m-d strings in the BRANCH calendar. "Today" comes from the
+  // server (the branch clock), never the visitor's device, and dates are built
+  // locally — toISOString() would shift them to UTC and skip a day east of GMT.
+  function today(){ return RULES.today; }
+  function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function addDays(s,n){ const d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d); }
+  function isWorkday(ds){ return OPEN_DAYS.indexOf(new Date(ds+'T00:00:00').getDay()) > -1; }
+  function dayOpen(ds){ return ds <= RULES.last_date && (RULES.same_day || ds !== RULES.today) && isWorkday(ds); }
+  // The first bookable day on/after `from` (default today) inside the booking window.
+  function firstDay(from){ let ds = from || today(); while (ds <= RULES.last_date){ if (dayOpen(ds)) return ds; ds = addDays(ds, 1); } return from || today(); }
 
   function renderTime() {
     const b = el('gb-body');
+    // No hours set anywhere → nothing can ever be booked: say so plainly instead
+    // of showing a calendar where every day is empty.
+    if (!OPEN_DAYS.length) {
+      b.innerHTML = `<div class="gb-empty">${AR ? 'لم يحدّد المكان أوقات العمل بعد، لذلك لا يمكن الحجز إلكترونياً حالياً. تواصل مع المكان مباشرة.' : 'This venue hasn’t set its opening hours yet, so online booking isn’t available. Please contact the venue directly.'}</div>`;
+      st.slot = null; updateFoot(); return;
+    }
     const first = new Date(addDays(today(), st.weekOffset)+'T00:00:00');
     let h = `<div class="gb-month"><span class="gb-month-l">${MONTHS[first.getMonth()]} ${first.getFullYear()}</span>
       <span><button class="gb-navb" ${st.weekOffset===0?'disabled':''} onclick="GroupBookingModal._week(-7)">‹</button>
-      <button class="gb-navb" onclick="GroupBookingModal._week(7)">›</button></span></div><div class="gb-days">`;
+      <button class="gb-navb" ${addDays(today(), st.weekOffset+14) > RULES.last_date ? 'disabled' : ''} onclick="GroupBookingModal._week(7)">›</button></span></div><div class="gb-days">`;
     for (let i=0;i<14;i++){ const ds=addDays(today(), st.weekOffset+i); const d=new Date(ds+'T00:00:00');
-      h += `<div class="gb-day ${ds===st.date?'is-active':''}" onclick="GroupBookingModal._pickDay('${ds}')"><div class="d">${d.getDate()}</div><div class="w">${DAYS[d.getDay()]}</div></div>`; }
+      if (ds > RULES.last_date) break;   // beyond the branch's booking window
+      const on = dayOpen(ds);
+      const closedTip = isWorkday(ds) ? '' : ` title="${AR?'مغلق':'Closed'}"`;
+      h += `<div class="gb-day ${ds===st.date?'is-active':''} ${on?'':'is-off'}"${closedTip} ${on ? `onclick="GroupBookingModal._pickDay('${ds}')"` : 'aria-disabled="true"'}><div class="d">${d.getDate()}</div><div class="w">${DAYS[d.getDay()]}</div></div>`; }
     h += '</div><div class="gb-slots" id="gb-slots"></div>';
     b.innerHTML = h;
     fetchSlots();
   }
-  function _week(n){ st.weekOffset=Math.max(0,st.weekOffset+n); if(st.date < addDays(today(),st.weekOffset)) st.date = addDays(today(),st.weekOffset); render(); }
+  function _week(n){ st.weekOffset=Math.max(0,st.weekOffset+n); if(st.date < addDays(today(),st.weekOffset)) st.date = addDays(today(),st.weekOffset); if(!dayOpen(st.date)) st.date = firstDay(st.date); render(); }
   function _pickDay(ds){ st.date=ds; st.slot=null; render(); }
 
   function fetchSlots() {
@@ -297,13 +334,25 @@ window.GroupBookingModal = (function () {
   function paintSlots(d){
     const grid = el('gb-slots'); if(!grid) return;
     if (!d.available || !d.slots.length){
-      grid.innerHTML = `<div class="gb-empty">${AR?'لا أوقات متاحة في هذا اليوم':'No times available this day'}</div>`
-        + `<button type="button" class="bkf-btn bkf-btn-soft bkf-btn-block" style="margin-top:12px" onclick="GroupBookingModal._waitlist(this)">🔔 ${AR?'أخبرني عند توفّر موعد':'Notify me when a slot opens'}</button>`;
+      grid.innerHTML = `<div class="gb-empty">${esc(d.message || (AR?'لا أوقات متاحة في هذا اليوم':'No times available this day'))}</div>`
+        // The waitlist only makes sense when the day HAS times and all are taken —
+        // not when the venue is closed, the day is over, or it's outside the window.
+        + (d.reason === 'fully_booked'
+            ? `<button type="button" class="bkf-btn bkf-btn-soft bkf-btn-block" style="margin-top:12px" onclick="GroupBookingModal._waitlist(this)">🔔 ${AR?'أخبرني عند توفّر موعد':'Notify me when a slot opens'}</button>`
+            : '');
       updateFoot(); return;
     }
-    grid.innerHTML = d.slots.map(s=>`<button class="gb-slot ${st.slot&&st.slot.time===s.time?'is-on':''}" onclick="GroupBookingModal._pickSlot('${s.time}')">${s.time}</button>`).join('');
+    // s.time (H:i) is the booking key; s.label is the branch-formatted display (24h / 12h).
+    const btn = s => `<button class="gb-slot ${st.slot&&st.slot.time===s.time?'is-on':''}" data-time="${s.time}" data-label="${esc(s.label||s.time)}" onclick="GroupBookingModal._pickSlot(this)">${esc(s.label||s.time)}</button>`;
+    // Grouped by part of day; only periods that have times are shown.
+    grid.innerHTML = PERIODS.map(p => {
+      const list = d.slots.filter(s => { const h = parseInt(s.time, 10); return h >= p.from && h < p.to; });
+      return list.length
+        ? `<div class="gb-period"><div class="gb-period-h">${p.label}<span>(${list.length})</span></div><div class="gb-period-slots">${list.map(btn).join('')}</div></div>`
+        : '';
+    }).join('');
   }
-  function _pickSlot(t){ st.slot={time:t}; document.querySelectorAll('#gb-slots .gb-slot').forEach(b=>b.classList.toggle('is-on', b.textContent.trim()===t)); updateFoot(); }
+  function _pickSlot(btn){ st.slot={time:btn.dataset.time, label:btn.dataset.label}; document.querySelectorAll('#gb-slots .gb-slot').forEach(b=>b.classList.toggle('is-on', b===btn)); updateFoot(); }
 
   /* ── waitlist: join when the chosen day is full ── */
   async function _waitlist(btn){
@@ -338,7 +387,7 @@ window.GroupBookingModal = (function () {
       g.services.forEach(id=>{ const s=SVC[id]; h += `<div class="gb-sum-row"><span>${esc(s.name)}</span><span>${money(s.price)}</span></div>`; });
     });
     const dLbl = new Date(st.date+'T00:00:00').toLocaleDateString(AR?'ar-SY':'en-US',{weekday:'long',day:'numeric',month:'long'});
-    h += `<div class="gb-sum-row"><span class="g">${AR?'الموعد':'When'}</span><strong>${dLbl} · ${st.slot.time}</strong></div>`;
+    h += `<div class="gb-sum-row"><span class="g">${AR?'الموعد':'When'}</span><strong>${dLbl} · ${esc(st.slot.label)}</strong></div>`;
     h += `<div class="gb-sum-row" style="border:0"><strong>${AR?'الإجمالي':'Total'}</strong><strong class="gb-foot-p" style="font-size:1.1rem">${money(totalPrice())}</strong></div>`;
     b.innerHTML = h;
   }
@@ -350,18 +399,32 @@ window.GroupBookingModal = (function () {
     const btn = el('gb-next'); btn.disabled=true; btn.textContent = AR?'جارٍ الحجز…':'Booking…';
     const res = await fetch(BOOK_URL, { method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':TOKEN,'X-Requested-With':'XMLHttpRequest'}, body:JSON.stringify(buildSpec(true)) })
       .then(r=>r.text()).then(t=>JSON.parse(t.replace(/^﻿/,''))).catch(()=>({error:true}));
-    if (res.booked) showSuccess(res.summary);
+    // `confirmed` is false when the business approves online bookings manually.
+    if (res.booked) showSuccess(res.summary, res.confirmed !== false);
     else if (res.conflict) { st.step=2; st.slot=null; st.cache={}; render(); alert(res.message || (AR?'تعذّر الحجز في هذا الوقت. اختر وقتاً آخر.':'Couldn’t book this time. Pick another.')); }
-    else { btn.disabled=false; btn.textContent=AR?'تأكيد الحجز':'Confirm booking'; alert(AR?'حدث خطأ. حاول مجدداً.':'Something went wrong. Try again.'); }
+    // A booking rule refused it (too soon, same-day off…) — say which, not "error".
+    else { btn.disabled=false; btn.textContent=AR?'تأكيد الحجز':'Confirm booking'; alert(res.message || (AR?'حدث خطأ. حاول مجدداً.':'Something went wrong. Try again.')); }
   }
-  function showSuccess(sum) {
+  function showSuccess(sum, confirmed) {
     st.step = 4; render();
-    el('gb-body').innerHTML = `<div class="gb-success"><div class="ic">✅</div>
-      <h3>${AR?'تم تأكيد حجزك!':'Booking confirmed!'}</h3>
+    const head = confirmed
+      ? `<div class="ic">✅</div><h3>${AR?'تم تأكيد حجزك!':'Booking confirmed!'}</h3>`
+      : `<div class="ic">⏳</div><h3>${AR?'تم إرسال طلب الحجز':'Booking request sent'}</h3>
+         <p>${AR?'سيؤكّد المركز موعدك قريباً، وسنرسل لك إشعاراً عند التأكيد.':'The venue will confirm your appointment shortly — we’ll let you know.'}</p>`;
+    el('gb-body').innerHTML = `<div class="gb-success">${head}
       <p>${sum?sum.start:''}<br><strong>${totalServices()} ${AR?'خدمة':'services'} · ${money(sum?sum.total:totalPrice())}</strong></p>
       <button class="bkf-btn bkf-btn-primary bkf-btn-block" style="margin-top:20px" onclick="GroupBookingModal.close()">${AR?'تم ✓':'Done ✓'}</button></div>`;
     el('gb-title').textContent = AR?'تم':'Done';
     el('gb-back').style.display='none'; el('gb-foot').style.display='none';
+  }
+
+  /* Online booking switched off for this branch (Branch Settings) */
+  function showClosed() {
+    el('gb-overlay').classList.add('open'); el('gb-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    el('gb-title').textContent = AR ? 'الحجز الإلكتروني' : 'Online booking';
+    el('gb-back').style.display = 'none'; el('gb-foot').style.display = 'none';
+    el('gb-body').innerHTML = `<div class="gb-empty">${AR ? 'الحجز الإلكتروني غير متاح في هذا الفرع حالياً. تواصل مع الفرع مباشرة.' : 'Online booking is currently unavailable at this branch. Please contact the branch directly.'}</div>`;
   }
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }

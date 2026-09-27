@@ -81,7 +81,10 @@
         <div class="bk-card"><div class="bk-card-body">
             <h3 class="bk-card-title mb-3"><i data-feather="shield"></i> {{ __('Booking & cancellation policy') }}</h3>
             <dl class="bk-dl">
-                <dt>{{ __('Cancellation window') }}</dt><dd>{{ $companyPolicy->cancellation_window_hours }} {{ __('hours') }}</dd>
+                <dt>{{ __('Allow online bookings') }}</dt><dd>{{ $companyPolicy->allow_online_booking ? __('Yes') : __('No') }}</dd>
+                <dt>{{ __('New online bookings') }}</dt><dd>{{ $companyPolicy->auto_confirm_online_bookings ? __('Confirm automatically') : __('Need my approval') }}</dd>
+                <dt>{{ __('Customer can cancel / reschedule') }}</dt><dd>{{ $companyPolicy->allow_customer_cancel ? __('Yes') : __('No') }} / {{ $companyPolicy->allow_customer_reschedule ? __('Yes') : __('No') }}</dd>
+                <dt>{{ __('Cancellation deadline') }}</dt><dd>{{ $companyPolicy->cancellation_deadline_minutes ? __(':time before', ['time' => \App\Support\BranchSettings::durationLabel($companyPolicy->cancellation_deadline_minutes)]) : __('Up to the appointment time') }}</dd>
                 <dt>{{ __('Late grace') }}</dt><dd>{{ $companyPolicy->late_grace_minutes }} {{ __('min') }}</dd>
                 <dt>{{ __('Require confirmation') }}</dt><dd>{{ $companyPolicy->require_confirmation ? __('Yes') : __('No') }}</dd>
                 <dt>{{ __('Reminder channel') }}</dt><dd>{{ __($companyPolicy->reminder_channel ?? '—') }}</dd>

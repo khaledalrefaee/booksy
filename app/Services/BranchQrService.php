@@ -55,7 +55,9 @@ class BranchQrService
         // 1 ── Black-on-white QR, High EC, quiet zone (recoloured next) ──
         $png = (new Builder(
             writer               : new PngWriter(),
-            data                 : route('front.branch', $branch),
+            // encode the permanent id URL: it never changes (a slug can, on rename)
+            // and 301-redirects to the current /branch/{slug} page
+            data                 : route('front.branch', ['branch' => $branch->id]),
             encoding             : new Encoding('UTF-8'),
             errorCorrectionLevel : ErrorCorrectionLevel::High,
             size                 : self::QR_SIZE,

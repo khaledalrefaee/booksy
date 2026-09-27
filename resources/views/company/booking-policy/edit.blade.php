@@ -25,7 +25,7 @@
          style="background:color-mix(in srgb,var(--bk-bg) 82%,transparent);">
         <div>
             <h4 class="bk-t-page mb-1">{{ __('Booking & Cancellation Policy') }}</h4>
-            <p class="text-muted small mb-0">{{ __('Control how the system handles cancellations, lateness and no-shows.') }}</p>
+            <p class="text-muted small mb-0">{{ __('Control online booking, cancelling, rescheduling, lateness and no-shows.') }}</p>
         </div>
         <button type="submit" form="policy-form" class="btn btn-gold rounded-pill px-4">
             <i data-feather="check" style="width:15px;height:15px;" class="me-1"></i>{{ __('Save changes') }}

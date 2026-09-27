@@ -38,10 +38,12 @@ class FlagNoShowAppointments extends Command
                 AppointmentStatus::Pending->value,
                 AppointmentStatus::Confirmed->value,
             ])
-            ->where('start_time', '<', now())
+            // Coarse pre-filter wide enough for any timezone (±14h); the exact
+            // check below uses each branch's own wall clock.
+            ->where('start_time', '<', now()->addHours(14))
             // Guard against a backlog sweeping up ancient rows the first time
             // this runs on an existing database.
-            ->where('start_time', '>', now()->subDay())
+            ->where('start_time', '>', now()->subDay()->subHours(14))
             ->chunkById(200, function ($appointments) use ($transition, $forced, $fallback, &$flagged, &$failed) {
                 foreach ($appointments as $appointment) {
                     $grace = $forced;
@@ -51,7 +53,8 @@ class FlagNoShowAppointments extends Command
                     }
 
                     // Not past the grace window yet — leave it for a later run.
-                    if ($appointment->start_time->copy()->addMinutes($grace)->isFuture()) {
+                    $branchNow = $appointment->branch?->localNow() ?? now();
+                    if ($appointment->start_time->copy()->addMinutes($grace)->gt($branchNow)) {
                         continue;
                     }
 

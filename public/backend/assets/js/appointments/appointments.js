@@ -79,6 +79,70 @@ var FC_LOCALE  = BK.fcLocale;
 /* last-resort branch when nothing else gives context (single-branch companies) */
 var FIRST_BRANCH = BK.firstBranch;
 
+/* ── Branch clock (Branch Settings) ──
+   Appointment times arrive as the branch's wall-clock time with no offset, so
+   the calendar already places them correctly in any browser. What must follow
+   the BRANCH (not the device) is "now"/"today", the 12/24-hour style, the week
+   start and the snap interval. The selected branch drives these; in All
+   Branches the first branch is the reference. */
+var BRANCH_SETTINGS = BK.branchSettings || {};
+
+function _branchCfg() {
+    var sel = document.getElementById('filter-branch');
+    var id  = activeBranch || (sel && sel.value) || FIRST_BRANCH;
+    return BRANCH_SETTINGS[id] || BRANCH_SETTINGS[FIRST_BRANCH] || null;
+}
+
+/* The branch's current wall-clock time as a local Date (same frame as events). */
+function _branchNow() {
+    var cfg = _branchCfg();
+    if (!cfg || !cfg.tz || !window.Intl) return new Date();
+    var p = {};
+    try {
+        new Intl.DateTimeFormat('en-US', {
+            timeZone: cfg.tz, hour12: false, year: 'numeric', month: 'numeric', day: 'numeric',
+            hour: 'numeric', minute: 'numeric', second: 'numeric'
+        }).formatToParts(new Date()).forEach(function (x) { p[x.type] = x.value; });
+    } catch { return new Date(); }   // unknown zone in an old browser → device clock
+    return new Date(+p.year, +p.month - 1, +p.day, (+p.hour) % 24, +p.minute, +p.second);
+}
+
+function _is24h() {
+    var cfg = _branchCfg();
+    return !!(cfg && cfg.time_format === '24h');
+}
+
+function _firstDay() {
+    var cfg = _branchCfg();
+    return cfg ? cfg.first_day : (IS_RTL ? 0 : 1);
+}
+
+/* The branch appointment interval in minutes (start times step by this). */
+function _intervalMin() {
+    var cfg = _branchCfg();
+    return cfg && cfg.interval ? cfg.interval : 15;
+}
+
+function _snap() {
+    var m   = _intervalMin();
+    return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0') + ':00';
+}
+
+function _scrollTime() {
+    var cfg = _branchCfg();
+    return (cfg && cfg.open ? cfg.open : '08:00') + ':00';
+}
+
+/* Re-apply the branch-driven options after the branch filter changes. */
+function _applyBranchClock() {
+    SF_FD = _firstDay();
+    if (typeof calendar !== 'undefined' && calendar) {
+        calendar.setOption('firstDay', _firstDay());
+        calendar.setOption('snapDuration', _snap());
+        calendar.setOption('scrollTime', _scrollTime());
+    }
+}
+
 /* ── status metadata + legal moves, straight from the PHP enum ──
    Nothing here is hand-maintained: adding a status or changing a colour is a
    one-line edit in App\Enums\AppointmentStatus and this follows automatically. */
@@ -104,7 +168,11 @@ var activeStatuses = Object.keys(STATUS_DEFS);
 function _nextMoves(from) {
     return ALLOWED_MOVES[from] || [];
 }
-var activeBranch   = '';
+/* Start from the sidebar Branch Context: the server pre-selects #filter-branch
+   with it (hidden when a single branch is the context), so the calendar's
+   requests AND its clock / time format / interval follow that branch from the
+   first render — never a different "first branch". Empty = All Branches. */
+var activeBranch   = (document.getElementById('filter-branch') || {}).value || '';
 
 /* ════════════════════════════════
    FULLCALENDAR
@@ -122,8 +190,10 @@ var calendar = new FullCalendar.Calendar(calEl, {
     // the whole page to fit every event (height:'auto' made a huge DOM the
     // browser had to lay out and repaint on every scroll).
     height:       '78vh',
-    firstDay:     IS_RTL ? 0 : 1,
+    firstDay:     _firstDay(),
     nowIndicator: true,
+    // "Now" and "today" are the branch's clock, not the device's.
+    now:          function () { return _branchNow(); },
     navLinks:     true,
     dayMaxEvents: true,
     // High-volume days otherwise stack into an unreadable wall of overlapping
@@ -131,10 +201,11 @@ var calendar = new FullCalendar.Calendar(calEl, {
     // the rest collapse into a "+N more" popover instead of piling up.
     eventMaxStack:    4,
     slotEventOverlap: false,
-    scrollTime:   '08:00:00',
+    scrollTime:   _scrollTime(),
     slotMinTime:  '00:00:00',
     slotMaxTime:  '24:00:00',
     slotDuration: '00:30:00',
+    snapDuration: _snap(),   // drag / select snaps to the branch's appointment interval
     expandRows:   false,
 
     headerToolbar: {
@@ -164,6 +235,9 @@ var calendar = new FullCalendar.Calendar(calEl, {
     /* Custom slot labels */
     slotLabelContent: function (arg) {
         var h    = arg.date.getHours();
+        if (_is24h()) {
+            return { html: '<span style="direction:ltr">' + String(h).padStart(2, '0') + ':00</span>' };
+        }
         var h12  = h % 12 || 12;
         var ampm = h < 12
             ? (IS_RTL ? 'ص' : 'AM')
@@ -360,7 +434,7 @@ function showPopup(a, ev) {
     var auditRow = document.getElementById('bk-pp-audit');
     if (a.changedBy) {
         var dt = a.changedAt ? new Date(a.changedAt).toLocaleString(IS_RTL ? 'ar-SA' : 'en-US', {
-            month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12: true
+            month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12: !_is24h()
         }) : '';
         var prev = a.prevStatus ? (STATUS_LABELS[a.prevStatus] || a.prevStatus) + ' → ' : '';
         auditRow.innerHTML = '<svg style="flex-shrink:0;color:var(--bk-accent);" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
@@ -464,10 +538,10 @@ function renderListRows() {
                 var empCol = EMP_COLORS[empIdx];
                 var empImg = pr.employeeImage || null;
                 var dt     = ev.start ? new Date(ev.start).toLocaleString(IS_RTL ? 'ar-SA' : 'en-US', {
-                    year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12: true
+                    year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12: !_is24h()
                 }) : '—';
                 var endDt  = ev.end ? new Date(ev.end).toLocaleTimeString(IS_RTL ? 'ar-SA' : 'en-US', {
-                    hour:'2-digit', minute:'2-digit', hour12: true
+                    hour:'2-digit', minute:'2-digit', hour12: !_is24h()
                 }) : '';
 
                 /* relative time */
@@ -687,6 +761,7 @@ document.querySelectorAll('.bk-st-pill').forEach(function (btn) {
 
 document.getElementById('filter-branch').addEventListener('change', function () {
     activeBranch = this.value;
+    _applyBranchClock();   // week start, snap interval, clock style follow the branch
     listLoaded   = false;
     listAllData  = [];
     calRefetch();
@@ -722,7 +797,7 @@ document.getElementById('bk-search').addEventListener('input', function () {
    STAFF VIEW
 ════════════════════════════════ */
 var STAFF_URL  = BK.routes.appointmentsStaffEvents;
-var sfDate     = new Date();
+var sfDate     = _branchNow();
 var sfLoaded   = false;
 
 var SF_EMP_COLORS = ['#7c3aed','#10b981','#f97316','#ef4444','#06b6d4','#ec4899','#f59e0b','#8b5cf6','#14b8a6','#a855f7'];
@@ -748,7 +823,7 @@ function sfFmtTitle(d) {
     return dn + '، ' + d.getDate() + ' ' + mn + ' ' + d.getFullYear();
 }
 function sfIsToday(d) {
-    var t = new Date();
+    var t = _branchNow();
     return d.getDate()===t.getDate() && d.getMonth()===t.getMonth() && d.getFullYear()===t.getFullYear();
 }
 function sfSameDay(a, b) {
@@ -756,7 +831,7 @@ function sfSameDay(a, b) {
 }
 function sfAddDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
 
-var SF_FD = IS_RTL ? 6 : 1; /* first day of week: Sat (ar) / Mon (en) */
+var SF_FD = _firstDay(); /* first day of week — Branch Settings */
 function sfStartOfWeek(d) {
     var x = new Date(d); x.setHours(0,0,0,0);
     x.setDate(x.getDate() - ((x.getDay() - SF_FD + 7) % 7));
@@ -917,7 +992,7 @@ function renderRangeGrid() {
             html += '<div class="sf-rg-cell' + (sfIsToday(day2) ? ' today' : '') + '" data-date="' + sfDateStr(day2) + '" data-emp="' + emp.id + '">';
             cellAppts.forEach(function(a, ci){
                 sfChipMap[a.id] = a;
-                var tRange = _fmt24(a.start) + (a.end ? ' – ' + _fmt24(a.end) : '');
+                var tRange = _fmtTime(a.start) + (a.end ? ' – ' + _fmtTime(a.end) : '');
                 html += '<div class="sf-rg-chip" data-aid="' + a.id + '" style="' + sfChipBg(a.color)
                     + 'border-inline-start-color:' + a.color + ';animation-delay:' + Math.min(ci * 35, 240) + 'ms;">'
                     + '<span class="ct">' + tRange + '</span><span class="cn">' + _esc(a.customer) + '</span></div>';
@@ -987,7 +1062,7 @@ function renderMonthGrid() {
                   + '<div class="sf-mn-num">' + day.getDate() + '</div>';
             list.slice(0, 3).forEach(function(a){
                 html += '<div class="sf-mn-chip sf-chip-click" data-aid="' + a.id + '" style="' + sfChipBg(a.color) + '">'
-                      + '<span class="ct">' + _fmt24(a.start) + '</span><span class="cn">' + _esc(a.customer) + '</span></div>';
+                      + '<span class="ct">' + _fmtTime(a.start) + '</span><span class="cn">' + _esc(a.customer) + '</span></div>';
             });
             if (list.length > 3) {
                 html += '<div class="sf-mn-more">+' + (list.length - 3) + ' ' + (IS_RTL ? 'المزيد' : 'more') + '</div>';
@@ -1017,7 +1092,7 @@ function sfOpenDayPop(dateStr, ev) {
     }
     appts.forEach(function(a){
         html += '<div class="sf-chip sf-chip-click" data-aid="' + a.id + '" style="' + sfChipBg(a.color) + '">'
-              + '<span class="ct">' + _fmt24(a.start) + '</span><span class="cn">' + _esc(a.customer) + '</span></div>';
+              + '<span class="ct">' + _fmtTime(a.start) + '</span><span class="cn">' + _esc(a.customer) + '</span></div>';
     });
     html += '<button class="dp-open" data-date="' + dateStr + '">' + (IS_RTL ? 'فتح عرض اليوم' : 'Open day view') + '</button>';
     sfDayPop.innerHTML = html;
@@ -1434,8 +1509,8 @@ function renderStaffGrid(data, keepScroll) {
             if (!startD) return;
             var startMin = startD.getHours() * 60 + startD.getMinutes();
             var endMin   = endD ? (endD.getHours() * 60 + endD.getMinutes()) : startMin + 30;
-            a.startLabel = startD.toLocaleTimeString(IS_RTL?'ar-SA':'en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
-            a.endLabel   = endD ? endD.toLocaleTimeString(IS_RTL?'ar-SA':'en-US',{hour:'2-digit',minute:'2-digit',hour12:true}) : '';
+            a.startLabel = startD.toLocaleTimeString(IS_RTL?'ar-SA':'en-US',{hour:'2-digit',minute:'2-digit',hour12:!_is24h()});
+            a.endLabel   = endD ? endD.toLocaleTimeString(IS_RTL?'ar-SA':'en-US',{hour:'2-digit',minute:'2-digit',hour12:!_is24h()}) : '';
             var topMin = startMin - HOUR_S_LOCAL * 60;
             var durMin = Math.max(endMin - startMin, 15); /* min 15min height so label is readable */
             var topPx2 = topMin * (SLOT_H / 60);
@@ -1478,7 +1553,7 @@ function renderStaffGrid(data, keepScroll) {
 
         /* ── Now indicator ── */
         if (sfIsToday(sfDate)) {
-            var now2    = new Date();
+            var now2    = _branchNow();
             var nowMin2 = now2.getHours() * 60 + now2.getMinutes() - HOUR_S_LOCAL * 60;
             if (nowMin2 > 0 && nowMin2 < totalH * 60) {
                 var nowPx2 = nowMin2 * (SLOT_H / 60);
@@ -1512,7 +1587,7 @@ function renderStaffGrid(data, keepScroll) {
     } else {
         var scrollTo = 0;
         if (sfIsToday(sfDate)) {
-            var cur = new Date();
+            var cur = _branchNow();
             scrollTo = Math.max(0, (cur.getHours() - HOUR_S_LOCAL - 1) * SLOT_H);
         }
         container.scrollTop = scrollTo;
@@ -1539,7 +1614,7 @@ function sfNav(dir) {
 document.getElementById('sf-prev').addEventListener('click', function(){ sfNav(-1); });
 document.getElementById('sf-next').addEventListener('click', function(){ sfNav(1); });
 document.getElementById('sf-today').addEventListener('click', function(){
-    sfDate = new Date(); loadStaffView();
+    sfDate = _branchNow(); loadStaffView();
 });
 
 /* ════════════════════════════════
@@ -1589,7 +1664,8 @@ function sfSnapMinutes(colEl, clientY) {
     var rect = colEl.getBoundingClientRect();
     var y    = Math.max(0, Math.min(clientY - rect.top, rect.height - 1));
     var mins = sfHourStart * 60 + y / (SLOT_H / 60);
-    return Math.round(mins / 5) * 5; /* 5-minute precision (Fresha-like) */
+    var step = _intervalMin();   /* click / drag snaps to the branch appointment interval */
+    return Math.round(mins / step) * step;
 }
 function sfColUnderPoint(x, y) {
     var els = document.elementsFromPoint(x, y);
@@ -2565,7 +2641,8 @@ function qaAvail(empId, fromMin, durMin) {
 }
 function qaNextSlots(empId, fromMin, durMin) {
     var out = [];
-    for (var t = Math.ceil(fromMin / 5) * 5; t <= 1440 - durMin && out.length < 3; t += 5) {
+    var step = _intervalMin();   /* suggest starts on the branch interval grid */
+    for (var t = Math.ceil(fromMin / step) * step; t <= 1440 - durMin && out.length < 3; t += step) {
         if (qaAvail(empId, t, durMin).ok) out.push(t);
     }
     return out;
@@ -2614,9 +2691,13 @@ function qaEditOpen(i) {
     QA_ED.dur.innerHTML = dOpts;
     QA_ED.dur.value = String(it.duration);
 
-    /* start options every 5 min — editable for the first service only */
-    var sOpts = '';
-    for (var m = 0; m < 1440; m += 5) sOpts += '<option value="' + m + '">' + _fmtMinutes(m) + '</option>';
+    /* start options on the branch appointment interval — editable for the
+       first service only. An existing off-grid start (e.g. 10:05 on a 15-min
+       grid) stays selectable so opening the editor never moves a booking. */
+    var sStep = _intervalMin(), curStart = qaItemStart(i), sVals = [];
+    for (var m = 0; m < 1440; m += sStep) sVals.push(m);
+    if (sVals.indexOf(curStart) < 0) { sVals.push(curStart); sVals.sort(function (a, b) { return a - b; }); }
+    var sOpts = sVals.map(function (v) { return '<option value="' + v + '">' + _fmtMinutes(v) + '</option>'; }).join('');
     QA_ED.start.innerHTML = sOpts;
     QA_ED.start.value = String(qaItemStart(i));
     QA_ED.start.disabled = i !== 0;
@@ -3954,7 +4035,7 @@ window.bkRefreshViews = function () {
 /* When no slot was clicked, guess the most useful moment: the date the user
    is looking at, at the next quarter-hour if that's today, else 09:00. */
 function bkQuickAddDefaultDate() {
-    var base = new Date();
+    var base = _branchNow();
     try {
         if (calRendered && !document.getElementById('view-cal').classList.contains('d-none')) {
             base = calendar.getDate();
@@ -3963,7 +4044,7 @@ function bkQuickAddDefaultDate() {
         }
     } catch (e) { /* fall through to today */ }
 
-    var now = new Date();
+    var now = _branchNow();
     var d   = new Date(base);
     if (d.toDateString() === now.toDateString()) {
         /* setMinutes(60) rolls into the next hour on its own */
@@ -4041,6 +4122,7 @@ function _initials(n) {
 }
 function _fmtTime(d) {
     if (!d) return '';
+    if (_is24h()) return _fmt24(d);
     return d.toLocaleTimeString(IS_RTL ? 'ar-SA' : 'en-US', { hour:'2-digit', minute:'2-digit', hour12:true });
 }
 function _hashStr(s) {
@@ -4051,6 +4133,7 @@ function _hashStr(s) {
 function _fmtMinutes(totalMin) {
     var h   = Math.floor(totalMin / 60);
     var m   = totalMin % 60;
+    if (_is24h()) return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
     var h12 = h % 12 || 12;
     var ap  = h < 12 ? (IS_RTL ? 'ص' : 'AM') : (IS_RTL ? 'م' : 'PM');
     return h12 + (m ? ':' + String(m).padStart(2,'0') : '') + ' ' + ap;

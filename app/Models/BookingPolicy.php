@@ -7,10 +7,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BookingPolicy extends Model
 {
+    /** Cancellation / reschedule deadline options (minutes before the start). 0 = up to the start. */
+    public const CANCEL_DEADLINES = [0, 30, 60, 120, 360, 720, 1440];
+
     protected $fillable = [
         'company_id',
         'branch_id',
-        'cancellation_window_hours',
+        'allow_online_booking',
+        'allow_same_day_booking',
+        'auto_confirm_online_bookings',
+        'allow_customer_cancel',
+        'allow_customer_reschedule',
+        'cancellation_deadline_minutes',
         'late_grace_minutes',
         'late_action',
         'reminder_channel',
@@ -37,7 +45,12 @@ class BookingPolicy extends Model
     protected function casts(): array
     {
         return [
-            'cancellation_window_hours'   => 'integer',
+            'allow_online_booking'        => 'boolean',
+            'allow_same_day_booking'      => 'boolean',
+            'auto_confirm_online_bookings' => 'boolean',
+            'allow_customer_cancel'       => 'boolean',
+            'allow_customer_reschedule'   => 'boolean',
+            'cancellation_deadline_minutes' => 'integer',
             'late_grace_minutes'          => 'integer',
             'reminder_on_booking'         => 'boolean',
             'reminder_24h'                => 'boolean',
@@ -61,7 +74,12 @@ class BookingPolicy extends Model
     public static function defaults(): array
     {
         return [
-            'cancellation_window_hours'   => 24,
+            'allow_online_booking'        => true,
+            'allow_same_day_booking'      => true,
+            'auto_confirm_online_bookings' => false,   // false = online bookings wait for approval
+            'allow_customer_cancel'       => true,
+            'allow_customer_reschedule'   => true,
+            'cancellation_deadline_minutes' => 0,   // 0 = up to the appointment time
             'late_grace_minutes'          => 15,
             'late_action'                 => 'staff_decides',
             'reminder_channel'            => 'whatsapp',

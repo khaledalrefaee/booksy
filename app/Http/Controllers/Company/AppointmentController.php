@@ -60,7 +60,7 @@ class AppointmentController extends Controller
         }
 
         $appointments = $query->paginate(20)->withQueryString();
-        $branches     = $company->branches()->orderBy('sort_order')->get();
+        $branches     = $company->branches()->with('workingHours')->orderBy('sort_order')->get();
 
         return view('company.appointments.index', compact('appointments', 'branches'));
     }
@@ -236,7 +236,7 @@ class AppointmentController extends Controller
         $services = $appointment->appointmentServices->map(fn ($as) => [
             'name'     => $as->service?->localizedName() ?? '—',
             'employee' => $as->employee?->localizedName() ?? $fallbackEmp,
-            'start'    => $as->start_time?->format('H:i'),
+            'start'    => $as->start_time ? $appointment->branch?->formatTime($as->start_time) : null,
             'duration' => $as->start_time && $as->end_time ? (int) round($as->start_time->diffInMinutes($as->end_time)) : null,
             'price'    => (float) $as->price,
         ])->values();
@@ -245,7 +245,7 @@ class AppointmentController extends Controller
             $services = collect([[
                 'name'     => $appointment->service?->localizedName() ?? '—',
                 'employee' => $fallbackEmp,
-                'start'    => $appointment->start_time?->format('H:i'),
+                'start'    => $appointment->start_time ? $appointment->branch?->formatTime($appointment->start_time) : null,
                 'duration' => $appointment->start_time && $appointment->end_time
                     ? (int) round($appointment->start_time->diffInMinutes($appointment->end_time)) : null,
                 'price'    => (float) $appointment->total_price,
@@ -262,8 +262,9 @@ class AppointmentController extends Controller
             'employeeId'    => $appointment->employee_id,
             'resource'      => $appointment->resource?->localizedName(),
             'dateIso'       => $appointment->start_time?->format('Y-m-d'),
-            'startLabel'    => $appointment->start_time?->format('H:i'),
-            'endLabel'      => $appointment->end_time?->format('H:i'),
+            // Labels in the branch clock style (Branch Settings → time format).
+            'startLabel'    => $appointment->start_time ? $appointment->branch?->formatTime($appointment->start_time) : null,
+            'endLabel'      => $appointment->end_time ? $appointment->branch?->formatTime($appointment->end_time) : null,
             'customer'      => [
                 'id'    => $appointment->customer_id,
                 'name'  => $appointment->customer?->name ?? $appointment->customer_name ?? __('Walk-in'),
@@ -1989,8 +1990,8 @@ class AppointmentController extends Controller
                 'price'       => number_format((float) $a->total_price, 2),
                 'startIso'    => $a->start_time?->format('Y-m-d\TH:i:s'),
                 'endIso'      => $a->end_time?->format('Y-m-d\TH:i:s'),
-                'startLabel'  => $a->start_time?->format('h:i A'),
-                'endLabel'    => $a->end_time?->format('h:i A'),
+                'startLabel'  => $a->start_time ? $a->branch?->formatTime($a->start_time) : null,
+                'endLabel'    => $a->end_time ? $a->branch?->formatTime($a->end_time) : null,
                 'changedBy'   => $a->status_changed_by_name,
                 'showUrl'     => str_replace('__ID__', (string) $a->id, $showTpl),
             ];

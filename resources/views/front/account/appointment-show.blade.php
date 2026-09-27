@@ -89,6 +89,8 @@
 .bkf-resched-slots{ margin-top:12px; min-height:44px; }
 .bkf-resched-hint{ margin:0; font-size:.85rem; color:var(--bk-text-muted); }
 .bkf-slot-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(74px,1fr)); gap:8px; }
+.bkf-slot-period + .bkf-slot-period{ margin-top:14px; }
+.bkf-slot-period-h{ margin-bottom:8px; font-family:var(--bk-font-ui); font-weight:700; font-size:.8rem; color:var(--bk-text-soft); }
 .bkf-slot{ padding:9px 6px; border-radius:var(--bk-r-sm); border:1.5px solid var(--bk-border); background:var(--bk-surface);
   color:var(--bk-text); font-family:var(--bk-font-ui); font-size:.84rem; font-weight:600; cursor:pointer; text-align:center;
   font-variant-numeric:tabular-nums; transition:border-color var(--bk-t) ease, background var(--bk-t) ease; }
@@ -162,7 +164,7 @@
             if ($r->customer_name) { $rmeta .= ' · 🧑‍🤝‍🧑 ' . $r->customer_name; }
           @endphp
           <div class="bkf-ad-svc-row">
-            <span class="t">{{ $r->start_time->format('g:i A') }}</span>
+            <span class="t">{{ $a->branch->formatTime($r->start_time) }}</span>
             <div class="m">
               <span class="n">{{ $rsvc }}</span>
               <span class="s">{{ $rmeta }}</span>
@@ -176,8 +178,8 @@
       <div class="bkf-ad-when">
         <span class="ic"><x-icon name="calendar-check" :size="24"/></span>
         <div>
-          <b>{{ $a->start_time->translatedFormat('l') }} · {{ $a->start_time->format('d/m') }} — {{ $a->start_time->format('g:i A') }}</b>
-          <small>{{ $a->start_time->format('g:i A') }} – {{ $a->end_time->format('g:i A') }} · {{ $a->start_time->translatedFormat('d F Y') }}</small>
+          <b>{{ $a->start_time->translatedFormat('l') }} · {{ $a->start_time->format('d/m') }} — {{ $a->branch->formatTime($a->start_time) }}</b>
+          <small>{{ $a->branch->formatTime($a->start_time) }} – {{ $a->branch->formatTime($a->end_time) }} · {{ $a->start_time->translatedFormat('d F Y') }}</small>
         </div>
       </div>
 
@@ -274,7 +276,7 @@
           @csrf
           <input type="hidden" name="start_time" data-resched-start>
           <input type="date" class="bkf-ad-reason-note" data-resched-date
-                 min="{{ now()->format('Y-m-d') }}" value="{{ $a->start_time->format('Y-m-d') }}" style="min-height:auto;padding:11px 12px">
+                 min="{{ $a->branch->bookingRules()['same_day'] ? $a->branch->bookingRules()['today'] : $a->branch->localToday()->addDay()->toDateString() }}" max="{{ $a->branch->bookingRules()['last_date'] }}" value="{{ $a->start_time->format('Y-m-d') }}" style="min-height:auto;padding:11px 12px">
           <div class="bkf-resched-slots" data-resched-slots><p class="bkf-resched-hint">{{ $isAr ? 'اختر يوماً لعرض الأوقات المتاحة.' : 'Choose a day to see available times.' }}</p></div>
           <div class="bkf-ad-confirm-row" style="margin-top:12px">
             <button type="button" class="bkf-btn bkf-btn-soft" data-resched-close>{{ $isAr ? 'تراجع' : 'Cancel' }}</button>
@@ -287,16 +289,16 @@
       @if($canCancel)
       <div class="bkf-ad-confirm" data-cancel-panel hidden>
         <p><x-icon name="alert" :size="20"/>{{ $isAr ? 'يؤسفنا ذلك. أخبرنا بالسبب حتى نتحسّن — لا يمكن التراجع بعد الإلغاء.' : 'Sorry to see you go. Tell us why so we can improve — this cannot be undone.' }}</p>
-        <div class="bkf-ad-policy {{ $isLateCancel ? 'is-late' : '' }}">
-          <x-icon name="{{ $isLateCancel ? 'alert' : 'shield' }}" :size="16"/>
+        @if($changeDeadline)
+        <div class="bkf-ad-policy">
+          <x-icon name="shield" :size="16"/>
           <span>
-            @if($isLateCancel)
-              {{ $isAr ? 'أنت تلغي بعد مهلة الإلغاء المجانية (' . $cancelWindowHours . ' ساعة قبل الموعد). قد يطبّق المركز سياسته.' : 'You are cancelling after the free window (' . $cancelWindowHours . 'h before). The venue may apply its policy.' }}
-            @else
-              {{ $isAr ? 'الإلغاء مجاني حتى ' . $cancelWindowHours . ' ساعة قبل الموعد — أي قبل ' . $freeUntil->translatedFormat('l') . ' ' . $freeUntil->format('d/m g:i A') . '.' : 'Free cancellation until ' . $cancelWindowHours . 'h before — that is before ' . $freeUntil->translatedFormat('D') . ' ' . $freeUntil->format('d/m g:i A') . '.' }}
-            @endif
+            {{ $isAr
+                ? 'يمكنك الإلغاء أو تغيير الموعد عبر الإنترنت حتى ' . $changeDeadline->translatedFormat('l') . ' ' . $changeDeadline->format('d/m') . ' ' . $a->branch->formatTime($changeDeadline) . '. بعدها تواصل مع المركز.'
+                : 'You can cancel or change online until ' . $changeDeadline->translatedFormat('D') . ' ' . $changeDeadline->format('d/m') . ' ' . $a->branch->formatTime($changeDeadline) . '. After that, please contact the venue.' }}
           </span>
         </div>
+        @endif
         <form method="POST" action="{{ route('account.appointment.cancel', $a) }}" data-cancel-form>
           @csrf
           <div class="bkf-ad-reasons">
@@ -325,7 +327,7 @@
           <li class="bkf-tl-item">
             <span class="bkf-tl-dot"></span>
             <div class="bkf-tl-body">
-              <div class="bkf-tl-when">{{ $ev['at']->translatedFormat('d/m') }} · {{ $ev['at']->format('g:i A') }}</div>
+              <div class="bkf-tl-when">{{ $a->branch->toLocal($ev['at'])->translatedFormat('d/m') }} · {{ $a->branch->formatTime($a->branch->toLocal($ev['at'])) }}</div>
               <div class="bkf-tl-what">{{ $ev['label'] }}</div>
               @if($ev['reason'])<div class="bkf-tl-reason">{{ $ev['reason'] }}</div>@endif
             </div>
@@ -385,17 +387,32 @@
       var q = slotsUrl+'?employee_id='+encodeURIComponent(emp)+'&service_id='+encodeURIComponent(svc)+'&date='+encodeURIComponent(rDate.value);
       fetch(q,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(function(r){return r.json();}).then(function(d){
         var slots=(d&&d.slots)||[];
-        if(!slots.length){ rSlots.innerHTML='<p class="bkf-resched-hint">'+(isAr?'لا أوقات متاحة في هذا اليوم.':'No times available on this day.')+'</p>'; return; }
-        var g=document.createElement('div'); g.className='bkf-slot-grid';
-        slots.forEach(function(s){
-          var b=document.createElement('button'); b.type='button'; b.className='bkf-slot'; b.textContent=fmt(s.time); b.dataset.start=s.start;
-          b.addEventListener('click', function(){
-            [].forEach.call(g.querySelectorAll('.bkf-slot'),function(x){x.classList.remove('sel');});
-            b.classList.add('sel'); rStart.value=s.start; if(rSubmit) rSubmit.disabled=false;
+        if(!slots.length){ rSlots.innerHTML='<p class="bkf-resched-hint">'+((d&&d.message)||(isAr?'لا أوقات متاحة في هذا اليوم.':'No times available on this day.'))+'</p>'; return; }
+        // Grouped by part of day (by start hour), same as the booking modal.
+        var periods=[
+          {from:0, to:12, label:isAr?'صباحاً':'Morning'},
+          {from:12,to:15, label:isAr?'بعد الظهر':'Afternoon'},
+          {from:15,to:18, label:isAr?'بعد العصر':'Late afternoon'},
+          {from:18,to:24, label:isAr?'مساءً':'Evening'}
+        ];
+        var wrap=document.createElement('div');
+        periods.forEach(function(p){
+          var list=slots.filter(function(s){ var h=parseInt(s.time,10); return h>=p.from && h<p.to; });
+          if(!list.length) return;
+          var sec=document.createElement('div'); sec.className='bkf-slot-period';
+          var h=document.createElement('div'); h.className='bkf-slot-period-h'; h.textContent=p.label+' ('+list.length+')';
+          var g=document.createElement('div'); g.className='bkf-slot-grid';
+          list.forEach(function(s){
+            var b=document.createElement('button'); b.type='button'; b.className='bkf-slot'; b.textContent=s.label||fmt(s.time); b.dataset.start=s.start;
+            b.addEventListener('click', function(){
+              [].forEach.call(wrap.querySelectorAll('.bkf-slot'),function(x){x.classList.remove('sel');});
+              b.classList.add('sel'); rStart.value=s.start; if(rSubmit) rSubmit.disabled=false;
+            });
+            g.appendChild(b);
           });
-          g.appendChild(b);
+          sec.appendChild(h); sec.appendChild(g); wrap.appendChild(sec);
         });
-        rSlots.innerHTML=''; rSlots.appendChild(g);
+        rSlots.innerHTML=''; rSlots.appendChild(wrap);
       }).catch(function(){ rSlots.innerHTML='<p class="bkf-resched-hint">'+(isAr?'تعذّر التحميل.':'Could not load.')+'</p>'; });
     }
     function fmt(t){ var p=t.split(':'),h=+p[0],m=p[1],ap=h>=12?'PM':'AM',h12=h%12||12; return h12+':'+m+' '+ap; }

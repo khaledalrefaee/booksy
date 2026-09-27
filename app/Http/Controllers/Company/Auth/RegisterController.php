@@ -33,12 +33,13 @@ class RegisterController extends Controller
             // Phone arrives in E.164 (e.g. +9639...) from intl-tel-input; the
             // real per-country validity check happens client-side. This is a
             // format guard, not a length-only rule.
-            'phone'                 => ['required', 'string', 'max:20', 'regex:/^\+[1-9]\d{7,14}$/'],
+            'phone'                 => ['required', 'string', 'max:20', 'regex:/^\+[1-9]\d{7,14}$/', 'unique:companies,phone'],
             'category_id'           => ['required', 'exists:categories,id'],
             'password'              => ['required', 'string', 'min:8'],
             'terms'                 => ['accepted'],
         ], [
             'phone.regex'    => __('Please enter a valid phone number.'),
+            'phone.unique'   => __('This phone number is already registered.'),
             'terms.accepted' => __('You must agree to the Terms of Service and Privacy Policy.'),
         ]);
 

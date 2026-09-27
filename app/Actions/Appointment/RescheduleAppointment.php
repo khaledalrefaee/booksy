@@ -33,7 +33,11 @@ class RescheduleAppointment
         if (! in_array($primary->status, self::MOVABLE, true)) {
             return ['ok' => false, 'message' => $ar ? 'لا يمكن تغيير موعد بهذه الحالة.' : 'This appointment can no longer be rescheduled.'];
         }
-        if ($newStart->lte(now())) {
+        // Appointment times are branch wall-clock times — compare against the
+        // branch's own "now", not the server's.
+        $branchNow = $primary->branch?->localNow() ?? now();
+
+        if ($newStart->lte($branchNow)) {
             return ['ok' => false, 'message' => $ar ? 'هذا الوقت مضى بالفعل. اختر وقتاً لاحقاً.' : 'This time has already passed. Please pick a later slot.'];
         }
 
@@ -47,7 +51,7 @@ class RescheduleAppointment
         };
 
         try {
-            $result = DB::transaction(function () use ($primary, $newStart, $allocator, $ar, $meta, $actor) {
+            $result = DB::transaction(function () use ($primary, $newStart, $allocator, $ar, $meta, $actor, $branchNow) {
                 // The whole visit moves by the same delta as the primary row.
                 $rows = $primary->booking_group_id
                     ? Appointment::where('booking_group_id', $primary->booking_group_id)
@@ -63,7 +67,7 @@ class RescheduleAppointment
                     $rowEnd   = ($row->end_time ?? $row->start_time->copy()->addMinutes((int) ($row->service?->duration_minutes ?? 30)))
                                     ->copy()->addMinutes($delta);
 
-                    if ($rowStart->lte(now())) {
+                    if ($rowStart->lte($branchNow)) {
                         throw new \RuntimeException($ar ? 'الوقت الجديد في الماضي.' : 'The new time is in the past.');
                     }
                     if ($row->employee_id && ! $this->employeeFree($row->employee_id, $rowStart, $rowEnd, $ownIds)) {

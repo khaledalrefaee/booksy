@@ -109,7 +109,8 @@ class BranchController extends Controller
             'longitude'      => $data['longitude'] ?? null,
         ]);
 
-        SocialLink::syncFor($branch, $request->input('social_links', []));
+        // Local WhatsApp numbers ("09…") are completed with the branch country's dial code.
+        SocialLink::syncFor($branch, $request->input('social_links', []), $branch->country()->value('dial_code'));
 
         // Generate QR code
         try {
@@ -265,7 +266,8 @@ class BranchController extends Controller
         ]);
 
         // Sync social links
-        SocialLink::syncFor($branch, $request->input('social_links', []));
+        // Local WhatsApp numbers ("09…") are completed with the branch country's dial code.
+        SocialLink::syncFor($branch, $request->input('social_links', []), $branch->country()->value('dial_code'));
 
         // Regenerate QR (URL stays same but logo may have changed)
         try {
@@ -442,6 +444,8 @@ class BranchController extends Controller
             $filename = \Str::uuid() . '.webp';
             $storagePath = $dir . '/' . $filename;
             $this->convertToWebp($real, $absDir . DIRECTORY_SEPARATOR . $filename, $cfg['webp_quality']);
+            // Grid + hero/lightbox sizes for the public branch page.
+            \App\Support\ImageThumb::warm($storagePath, \App\Models\BranchImage::THUMB_WIDTHS);
 
             $img = $branch->images()->create([
                 'path'       => $storagePath,
@@ -506,6 +510,7 @@ class BranchController extends Controller
 
         $wasCover = $image->is_cover;
 
+        \App\Support\ImageThumb::forget($image->path);
         Storage::disk('public')->delete($image->path);
         $image->delete();
 

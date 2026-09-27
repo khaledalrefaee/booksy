@@ -108,10 +108,14 @@ class CustomerAccountController extends Controller
             : collect([$appointment]);
         $visitTotal = (float) $visitRows->sum('total_price');
 
-        $canCancel = in_array($appointment->status, [
+        // Self-service is governed by the branch's settings (cancel/reschedule
+        // switches + cancellation deadline), measured on the branch's clock.
+        $isOpenBooking = in_array($appointment->status, [
             AppointmentStatus::Pending,
             AppointmentStatus::Confirmed,
-        ], true) && $appointment->start_time->isFuture();
+        ], true);
+        $branch        = $appointment->branch;
+        $canCancel     = $isOpenBooking && $branch->customerCanCancel($appointment->start_time);
 
         // A completed visit with no review yet can be rated.
         $canReview = $appointment->status === AppointmentStatus::Completed
@@ -129,14 +133,14 @@ class CustomerAccountController extends Controller
         $cancelReasons = $this->cancelReasons();
 
         // A future pending/confirmed booking can be moved to another time.
-        $canReschedule = $canCancel;
+        $canReschedule = $isOpenBooking && $branch->customerCanReschedule($appointment->start_time);
 
-        // Cancellation policy the customer should see up-front: free until N hours
-        // before the start; cancelling after that is a "late" cancellation.
-        $policy            = $appointment->company?->effectiveBookingPolicy($appointment->branch);
-        $cancelWindowHours = (int) ($policy->cancellation_window_hours ?? 24);
-        $freeUntil         = $appointment->start_time->copy()->subHours($cancelWindowHours);
-        $isLateCancel      = now()->greaterThan($freeUntil);
+        // The policy's cancellation deadline, shown up-front: after it the
+        // customer can no longer cancel or move the booking online.
+        // null = no deadline (allowed up to the appointment time).
+        $changeDeadline = $branch->bookingPolicy()->cancellation_deadline_minutes > 0
+            ? $branch->changeDeadlineFor($appointment->start_time)
+            : null;
 
         // Human-readable timeline for the customer + support, newest last.
         $timeline = $appointment->transitions
@@ -151,7 +155,7 @@ class CustomerAccountController extends Controller
         return view('front.account.appointment-show', compact(
             'appointment', 'isAr', 'canCancel', 'canReview', 'canReschedule',
             'cancelReason', 'cancelReasons', 'timeline', 'visitRows', 'visitTotal',
-            'cancelWindowHours', 'freeUntil', 'isLateCancel',
+            'changeDeadline',
         ));
     }
 
@@ -329,6 +333,14 @@ class CustomerAccountController extends Controller
     {
         $this->authorizeOwnership($appointment);
 
+        // Branch Settings: cancelling may be off, or past the deadline.
+        if ($appointment->branch && ! $appointment->branch->customerCanCancel($appointment->start_time)) {
+            $isAr = app()->getLocale() === 'ar';
+            return redirect()->route('account.appointment', $appointment)->with('account_error', $isAr
+                ? 'لم يعد إلغاء هذا الموعد متاحاً عبر الإنترنت. يرجى التواصل مع الفرع.'
+                : 'This appointment can no longer be cancelled online. Please contact the branch.');
+        }
+
         $reasons = $this->cancelReasons();
         $data = $request->validate([
             'reason' => ['nullable', Rule::in(array_keys($reasons))],
@@ -338,7 +350,7 @@ class CustomerAccountController extends Controller
         // Build a human-readable reason (preset label + optional free note), the
         // same shape the reminder-link cancel records, so the booking history
         // reads consistently wherever the cancellation came from.
-        $reason = $data['reason'] ? $reasons[$data['reason']] : __('Cancelled by customer');
+        $reason = ($data['reason'] ?? null) ? $reasons[$data['reason']] : __('Cancelled by customer');
         if (!empty($data['note'])) {
             $reason .= ' — ' . trim($data['note']);
         }
@@ -399,6 +411,19 @@ class CustomerAccountController extends Controller
         $request->validate(['start_time' => ['required', 'date']]);
         $oldStart = $appointment->start_time->toDateTimeString();
         $newStart = \Illuminate\Support\Carbon::parse($request->input('start_time'));
+
+        // Branch Settings: rescheduling may be off or past the deadline, and the
+        // new time must respect the branch's booking window like a new booking.
+        $branch = $appointment->branch;
+        if ($branch && ! $branch->customerCanReschedule($appointment->start_time)) {
+            return redirect()->route('account.appointment', $appointment)->with('account_error', $isAr
+                ? 'لم تعد إعادة جدولة هذا الموعد متاحة عبر الإنترنت. يرجى التواصل مع الفرع.'
+                : 'This appointment can no longer be rescheduled online. Please contact the branch.');
+        }
+        if ($branch && ($blocked = $branch->bookingBlockReason($newStart)) && $blocked !== 'online_disabled') {
+            return redirect()->route('account.appointment', $appointment)
+                ->with('account_error', $branch->bookingBlockMessage($blocked));
+        }
 
         $result = app(\App\Actions\Appointment\RescheduleAppointment::class)(
             $appointment,

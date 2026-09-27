@@ -1,0 +1,1184 @@
+{
+    "info": {
+        "name": "GlowRez",
+        "description": "GlowRez Mobile API.\n\n📁 Customer — تسجيل دخول العميل (هاتف + كود) والملف الشخصي.\n📁 Company → Auth — تسجيل/تحقق/دخول/استعادة كلمة مرور الشركة.\n\nكل الردود بشكل موحّد:\n{ \"status\": true|false, \"message\": \"...\", \"data\": {...}, \"errors\": {...} }\n(errors تظهر فقط مع أخطاء التحقق 422).\n\nاللغة: هيدر Accept-Language (ar/en) أو lang=ar — المتغيّر {{lang}}.\nعدّل base_url من تبويب Variables.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://127.0.0.1:8000",
+            "type": "string"
+        },
+        {
+            "key": "lang",
+            "value": "ar",
+            "type": "string"
+        },
+        {
+            "key": "company_email",
+            "value": "company@example.com",
+            "type": "string"
+        },
+        {
+            "key": "company_phone",
+            "value": "+963991234567",
+            "type": "string"
+        },
+        {
+            "key": "company_password",
+            "value": "password123",
+            "type": "string"
+        },
+        {
+            "key": "company_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "company_dev_code",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "reset_method",
+            "value": "email",
+            "type": "string"
+        },
+        {
+            "key": "reset_value",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "reset_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "company_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "phone",
+            "value": "963991234567",
+            "type": "string"
+        },
+        {
+            "key": "dev_code",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Customer",
+            "description": "تسجيل دخول العميل عبر رقم الجوال + كود تحقق، ملف شخصي (اسم + تاريخ ميلاد → يُحسب العمر)، ورفع صورة.\n\nكل الردود بشكل موحّد:\n{ \"status\": true|false, \"message\": \"...\", \"data\": {...}, \"errors\": {...} }\n\nالتوجيه: رقم سوري (963) → SMS عبر Rasel، أي بلد آخر → واتساب.\nاللغة: أرسل lang=ar أو lang=en (أو هيدر Accept-Language).\n\nالاستخدام:\n1. عدّل المتغيّر base_url (تبويب Variables) ورقم phone.\n2. شغّل \"1. Send Code\" — يُلتقط dev_code تلقائياً (بيئة local).\n3. شغّل \"2. Verify Code\" — يُلتقط token تلقائياً.\n4. شغّل باقي الطلبات — تستعمل token تلقائياً.\n\nملاحظة: phone يُشارَك بين Send و Verify عبر متغيّر {{phone}}، فلا تختلف الأرقام بينهما.",
+            "item": [
+                {
+                    "name": "1. Send Code — إرسال الكود",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "const data = res.data || {};",
+                                    "pm.test('status true', () => pm.expect(res.status).to.be.true);",
+                                    "if (data.dev_code) { pm.collectionVariables.set('dev_code', data.dev_code); }",
+                                    "if (data.phone)    { pm.collectionVariables.set('phone', data.phone); }",
+                                    "console.log('dev_code:', data.dev_code, 'channel:', data.channel);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept-Language",
+                                "value": "{{lang}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "urlencoded",
+                            "urlencoded": [
+                                {
+                                    "key": "phone",
+                                    "value": "{{phone}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "lang",
+                                    "value": "{{lang}}",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/customer/send-code",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "customer",
+                                "send-code"
+                            ]
+                        },
+                        "description": "يرسل كود تحقق من 4 أرقام. data يحوي channel (sms/whatsapp) و expires_in. في بيئة local يرجّع dev_code."
+                    }
+                },
+                {
+                    "name": "2. Verify Code — التحقق وإصدار Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const res = pm.response.json();",
+                                    "const data = res.data || {};",
+                                    "pm.test('status true', () => pm.expect(res.status).to.be.true);",
+                                    "if (data.token) { pm.collectionVariables.set('token', data.token); console.log('token saved'); }"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept-Language",
+                                "value": "{{lang}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "urlencoded",
+                            "urlencoded": [
+                                {
+                                    "key": "phone",
+                                    "value": "{{phone}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "code",
+                                    "value": "{{dev_code}}",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/customer/verify-code",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "customer",
+                                "verify-code"
+                            ]
+                        },
+                        "description": "يتحقق من الكود ويرجّع data.token + data.needs_profile + data.customer. phone نفسه المستخدم في Send Code (متغيّر {{phone}})."
+                    }
+                },
+                {
+                    "name": "3. Me — بيانات العميل",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept-Language",
+                                "value": "{{lang}}"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/customer/me",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "customer",
+                                "me"
+                            ]
+                        },
+                        "description": "بيانات العميل. data.customer يحوي age محسوباً من date_of_birth، و has_avatar، و needs_profile."
+                    }
+                },
+                {
+                    "name": "4. Update Profile — الاسم وتاريخ الميلاد",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept-Language",
+                                "value": "{{lang}}"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "urlencoded",
+                            "urlencoded": [
+                                {
+                                    "key": "name",
+                                    "value": "خالد الرفاعي",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "date_of_birth",
+                                    "value": "2000-05-01",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/customer/profile",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "customer",
+                                "profile"
+                            ]
+                        },
+                        "description": "يحفظ الاسم (مطلوب) وتاريخ الميلاد (اختياري، صيغة YYYY-MM-DD). العمر يُحسب تلقائياً من تاريخ الميلاد ولا يُطلب من المستخدم."
+                    }
+                },
+                {
+                    "name": "5. Upload Avatar — رفع الصورة",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept-Language",
+                                "value": "{{lang}}"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "avatar",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/customer/avatar",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "customer",
+                                "avatar"
+                            ]
+                        },
+                        "description": "رفع/تبديل صورة الملف الشخصي (jpeg/jpg/png/webp، حتى 5MB). اختياري عند التسجيل — يمكن رفعها لاحقاً من البروفايل. اختر ملفاً في حقل avatar (نوعه File)."
+                    }
+                },
+                {
+                    "name": "6. Logout — تسجيل الخروج",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.collectionVariables.set('token', '');",
+                                    "console.log('token cleared');"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept-Language",
+                                "value": "{{lang}}"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/customer/logout",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "customer",
+                                "logout"
+                            ]
+                        },
+                        "description": "يلغي الـ token الحالي (تسجيل خروج الجهاز)."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Company",
+            "item": [
+                {
+                    "name": "Auth",
+                    "description": "مصادقة حساب الشركة (صاحب العمل) — بنفس أسلوب Customer API تماماً.\n\nالمصادقة: Authorization: Bearer {{company_token}}\n\nالاستخدام:\n1. عدّل company_email و company_phone و company_password (تبويب Variables في الـ collection).\n2. Register → يُحفظ company_id (وفي بيئة local يُحفظ company_dev_code).\n3. Verify Registration OTP (كود واحد وصل للإيميل والهاتف) → يُحفظ company_token تلقائياً.\n4. Login يحفظ company_token أيضاً. Logout يمسحه.\n5. Forgot (Email أو SMS) → Verify Forgot Password OTP (يُحفظ reset_token) → Reset Password.\n\nملاحظة: dev_code يظهر فقط عندما APP_ENV=local؛ في الإنتاج قيمته null دائماً — خذ الكود من الإيميل/الرسالة.\nالتوثيق الكامل: docs/api/company-auth.md",
+                    "item": [
+                        {
+                            "name": "Categories",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "const data = res.data || {};",
+                                            "pm.test('status true', () => pm.expect(res.status).to.be.true);",
+                                            "const cats = data.categories || [];",
+                                            "if (cats.length) { pm.collectionVariables.set('category_id', cats[0].id); }",
+                                            "console.log('categories:', cats.map(c => c.id + '=' + c.name).join(', '));"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/categories",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "categories"
+                                    ]
+                                },
+                                "description": "قائمة فئات الأعمال (صالون، سبا، عيادة…) — عامة بدون token. استخدم id الفئة المختارة كـ category_id في Register.\nname حسب اللغة (Accept-Language)، و name_en/name_ar كلاهما. icon = اسم أيقونة Feather (مثل scissors) أو null إذا كانت الأيقونة صورة مرفوعة (عندها icon_url)."
+                            }
+                        },
+                        {
+                            "name": "Register",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "const data = res.data || {};",
+                                            "pm.test('status true', () => pm.expect(res.status).to.be.true);",
+                                            "if (data.company_id) { pm.collectionVariables.set('company_id', data.company_id); }",
+                                            "if (data.dev_code) { pm.collectionVariables.set('company_dev_code', data.dev_code); }",
+                                            "console.log('company_id:', data.company_id, 'phone_channel:', data.phone_channel, 'dev_code:', data.dev_code);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/register",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "register"
+                                    ]
+                                },
+                                "description": "إنشاء حساب شركة (نفس حقول تسجيل الويب). الحساب غير مؤكَّد (email_verified=false, phone_verified=false).\nيُرسَل كود واحد نفسه إلى الإيميل وإلى الهاتف (رقم سوري → SMS، غير ذلك → واتساب؛ data.phone_channel).\nيرجّع data.company_id (يُحفظ تلقائياً) + email/phone مقنّعة + expires_in + resend_after + dev_code (local فقط). لا يرجّع token.\nالإيميل والهاتف كلاهما فريد. phone بصيغة E.164 مع + (مثل +963991234567).",
+                                "body": {
+                                    "mode": "urlencoded",
+                                    "urlencoded": [
+                                        {
+                                            "key": "name_en",
+                                            "value": "Glow Studio",
+                                            "type": "text",
+                                            "description": "مطلوب — اسم الشركة بالإنجليزي (≤255)"
+                                        },
+                                        {
+                                            "key": "name_ar",
+                                            "value": "استوديو جلو",
+                                            "type": "text",
+                                            "description": "اختياري — اسم الشركة بالعربي (≤255)"
+                                        },
+                                        {
+                                            "key": "owner_name",
+                                            "value": "خالد الرفاعي",
+                                            "type": "text",
+                                            "description": "مطلوب — اسم صاحب الشركة (≤255)"
+                                        },
+                                        {
+                                            "key": "email",
+                                            "value": "{{company_email}}",
+                                            "type": "text",
+                                            "description": "مطلوب — إيميل صالح (فريد في التسجيل)"
+                                        },
+                                        {
+                                            "key": "phone",
+                                            "value": "{{company_phone}}",
+                                            "type": "text",
+                                            "description": "مطلوب — فريد، صيغة E.164 مع + مثل +963991234567"
+                                        },
+                                        {
+                                            "key": "category_id",
+                                            "value": "{{category_id}}",
+                                            "type": "text",
+                                            "description": "مطلوب — id من GET /api/company/categories (يُحفظ تلقائياً من طلب Categories)"
+                                        },
+                                        {
+                                            "key": "password",
+                                            "value": "{{company_password}}",
+                                            "type": "text",
+                                            "description": "مطلوب — 8 أحرف على الأقل"
+                                        },
+                                        {
+                                            "key": "password_confirmation",
+                                            "value": "{{company_password}}",
+                                            "type": "text",
+                                            "description": "مطلوب — مطابق لـ password"
+                                        },
+                                        {
+                                            "key": "terms",
+                                            "value": "1",
+                                            "type": "text",
+                                            "description": "مطلوب — الموافقة على الشروط: 1 / true / yes"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Verify Registration OTP",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "const data = res.data || {};",
+                                            "pm.test('status true', () => pm.expect(res.status).to.be.true);",
+                                            "if (data.token) { pm.collectionVariables.set('company_token', data.token); console.log('company_token saved'); }",
+                                            "if (data.company && data.company.id) { pm.collectionVariables.set('company_id', data.company.id); }"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/verify",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "verify"
+                                    ]
+                                },
+                                "description": "حقل واحد: الكود الذي وصل للإيميل أو للهاتف (نفس الكود).\nالنجاح → email_verified=true و phone_verified=true و data.token (يُحفظ في company_token) + data.company.\n5 محاولات خاطئة → 429 وتُلغى الأكواد، اطلب كوداً جديداً عبر Resend.",
+                                "body": {
+                                    "mode": "urlencoded",
+                                    "urlencoded": [
+                                        {
+                                            "key": "company_id",
+                                            "value": "{{company_id}}",
+                                            "type": "text",
+                                            "description": "مطلوب — من رد Register (أو من رد Login عند verification_required)"
+                                        },
+                                        {
+                                            "key": "code",
+                                            "value": "{{company_dev_code}}",
+                                            "type": "text",
+                                            "description": "مطلوب — الكود المرسل (4 أرقام)"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Resend Registration OTP",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "const data = res.data || {};",
+                                            "if (data.dev_code) { pm.collectionVariables.set('company_dev_code', data.dev_code); }",
+                                            "console.log('status:', res.status, 'retry_after:', data.retry_after, 'dev_code:', data.dev_code);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/resend",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "resend"
+                                    ]
+                                },
+                                "description": "يرسل كوداً جديداً (نفسه) إلى الإيميل والهاتف معاً.\nقيود: 60 ثانية بين كل كود، و4 أكواد كحد أقصى كل 10 دقائق → 429 مع data.retry_after (بالثواني).",
+                                "body": {
+                                    "mode": "urlencoded",
+                                    "urlencoded": [
+                                        {
+                                            "key": "company_id",
+                                            "value": "{{company_id}}",
+                                            "type": "text",
+                                            "description": "مطلوب — من رد Register (أو من رد Login عند verification_required)"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Login",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "const data = res.data || {};",
+                                            "pm.test('status true', () => pm.expect(res.status).to.be.true);",
+                                            "if (data.token) { pm.collectionVariables.set('company_token', data.token); console.log('company_token saved'); }",
+                                            "if (data.company && data.company.id) { pm.collectionVariables.set('company_id', data.company.id); }"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/login",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "login"
+                                    ]
+                                },
+                                "description": "تسجيل الدخول بالإيميل + كلمة المرور (مثل الويب). يرجّع data.token (يُحفظ في company_token) + data.company.\nحساب غير مؤكَّد → 403 مع data.verification_required=true و data.company_id (استدعِ Resend ثم Verify).\nحساب موقوف → 403.",
+                                "body": {
+                                    "mode": "urlencoded",
+                                    "urlencoded": [
+                                        {
+                                            "key": "email",
+                                            "value": "{{company_email}}",
+                                            "type": "text",
+                                            "description": "مطلوب — إيميل صالح (فريد في التسجيل)"
+                                        },
+                                        {
+                                            "key": "password",
+                                            "value": "{{company_password}}",
+                                            "type": "text",
+                                            "description": "مطلوب — 8 أحرف على الأقل"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Forgot Password - Email",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "const data = res.data || {};",
+                                            "pm.test('status true', () => pm.expect(res.status).to.be.true);",
+                                            "pm.collectionVariables.set('reset_method', 'email');",
+                                            "pm.collectionVariables.set('reset_value', pm.collectionVariables.get('company_email'));",
+                                            "if (data.dev_code) { pm.collectionVariables.set('company_dev_code', data.dev_code); }",
+                                            "console.log('reset via', 'email', 'dev_code:', data.dev_code);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/password/forgot",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "password",
+                                        "forgot"
+                                    ]
+                                },
+                                "description": "يرسل كود استعادة (صالح 10 دقائق) إلى الإيميل. الرد نفسه دائماً سواء وُجد الحساب أم لا (منع كشف الحسابات).",
+                                "body": {
+                                    "mode": "urlencoded",
+                                    "urlencoded": [
+                                        {
+                                            "key": "method",
+                                            "value": "email",
+                                            "type": "text",
+                                            "description": "email أو sms (sms = الهاتف: سوري → SMS، غير ذلك → واتساب)"
+                                        },
+                                        {
+                                            "key": "value",
+                                            "value": "{{company_email}}",
+                                            "type": "text",
+                                            "description": "مطلوب — الإيميل إذا method=email، أو رقم الهاتف (مع + أو بدونها) إذا method=sms"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Forgot Password - SMS",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "const data = res.data || {};",
+                                            "pm.test('status true', () => pm.expect(res.status).to.be.true);",
+                                            "pm.collectionVariables.set('reset_method', 'sms');",
+                                            "pm.collectionVariables.set('reset_value', pm.collectionVariables.get('company_phone'));",
+                                            "if (data.dev_code) { pm.collectionVariables.set('company_dev_code', data.dev_code); }",
+                                            "console.log('reset via', 'sms', 'dev_code:', data.dev_code);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/password/forgot",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "password",
+                                        "forgot"
+                                    ]
+                                },
+                                "description": "يرسل كود استعادة إلى الهاتف (سوري → SMS، غير ذلك → واتساب). يقبل الرقم مع + أو بدونه.",
+                                "body": {
+                                    "mode": "urlencoded",
+                                    "urlencoded": [
+                                        {
+                                            "key": "method",
+                                            "value": "sms",
+                                            "type": "text",
+                                            "description": "email أو sms (sms = الهاتف: سوري → SMS، غير ذلك → واتساب)"
+                                        },
+                                        {
+                                            "key": "value",
+                                            "value": "{{company_phone}}",
+                                            "type": "text",
+                                            "description": "مطلوب — الإيميل إذا method=email، أو رقم الهاتف (مع + أو بدونها) إذا method=sms"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Verify Forgot Password OTP",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "const data = res.data || {};",
+                                            "pm.test('status true', () => pm.expect(res.status).to.be.true);",
+                                            "if (data.reset_token) { pm.collectionVariables.set('reset_token', data.reset_token); console.log('reset_token saved'); }"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/password/verify",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "password",
+                                        "verify"
+                                    ]
+                                },
+                                "description": "يتحقق من كود الاستعادة (بنفس method/value المستخدمة في Forgot — تُملأ تلقائياً) ويرجّع data.reset_token مؤقتاً (15 دقيقة، استخدام واحد). لا يغيّر كلمة المرور.",
+                                "body": {
+                                    "mode": "urlencoded",
+                                    "urlencoded": [
+                                        {
+                                            "key": "method",
+                                            "value": "{{reset_method}}",
+                                            "type": "text",
+                                            "description": "email أو sms (sms = الهاتف: سوري → SMS، غير ذلك → واتساب)"
+                                        },
+                                        {
+                                            "key": "value",
+                                            "value": "{{reset_value}}",
+                                            "type": "text",
+                                            "description": "مطلوب — الإيميل إذا method=email، أو رقم الهاتف (مع + أو بدونها) إذا method=sms"
+                                        },
+                                        {
+                                            "key": "code",
+                                            "value": "{{company_dev_code}}",
+                                            "type": "text",
+                                            "description": "مطلوب — الكود المرسل (4 أرقام)"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Reset Password",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "const data = res.data || {};",
+                                            "pm.test('status true', () => pm.expect(res.status).to.be.true);",
+                                            "pm.collectionVariables.set('reset_token', '');",
+                                            "pm.collectionVariables.set('company_token', '');"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/password/reset",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "password",
+                                        "reset"
+                                    ]
+                                },
+                                "description": "يضبط كلمة المرور الجديدة (8 أحرف على الأقل + تأكيد). الـ reset_token يُلغى بعد الاستخدام، وكل جلسات الأجهزة (tokens) السابقة تُسجَّل خروجها. بعدها سجّل الدخول من جديد.",
+                                "body": {
+                                    "mode": "urlencoded",
+                                    "urlencoded": [
+                                        {
+                                            "key": "reset_token",
+                                            "value": "{{reset_token}}",
+                                            "type": "text",
+                                            "description": "مطلوب — من رد Verify Forgot Password OTP (15 دقيقة، استخدام واحد)"
+                                        },
+                                        {
+                                            "key": "password",
+                                            "value": "new-password-1",
+                                            "type": "text",
+                                            "description": "مطلوب — 8 أحرف على الأقل"
+                                        },
+                                        {
+                                            "key": "password_confirmation",
+                                            "value": "new-password-1",
+                                            "type": "text",
+                                            "description": "مطلوب — مطابق لـ password"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Me",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/me",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "me"
+                                    ]
+                                },
+                                "description": "بيانات الشركة المسجّلة دخولها (نفس شكل data.company في Login/Verify)."
+                            }
+                        },
+                        {
+                            "name": "Logout",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "const data = res.data || {};",
+                                            "pm.collectionVariables.set('company_token', '');",
+                                            "console.log('company_token cleared');"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/logout",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "logout"
+                                    ]
+                                },
+                                "description": "يلغي الـ token الحالي (تسجيل خروج الجهاز)."
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Profile",
+                    "description": "تعديل بيانات الشركة والشعار — يتطلب Authorization: Bearer {{company_token}} (من Login أو Verify).\nكل الردود ترجّع data.company بنفس شكل Me.",
+                    "item": [
+                        {
+                            "name": "Update Profile",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/profile",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "profile"
+                                    ]
+                                },
+                                "description": "تعديل بيانات الشركة (نفس حقول صفحة الملف الشخصي في الويب) + رفع الشعار في نفس الطلب.\nكل الحقول اختيارية — أرسل فقط ما تغيّر (أوقف أي حقل لا تريد تعديله بإلغاء علامة الصح بجانبه).\nالـ Body نوعه form-data (بسبب ملف الشعار).",
+                                "body": {
+                                    "mode": "formdata",
+                                    "formdata": [
+                                        {
+                                            "key": "name_en",
+                                            "value": "Glow Studio",
+                                            "type": "text",
+                                            "description": "اختياري — اسم الشركة بالإنجليزي (≤255). إذا أُرسل لا يكون فارغاً"
+                                        },
+                                        {
+                                            "key": "name_ar",
+                                            "value": "استوديو جلو",
+                                            "type": "text",
+                                            "description": "اختياري — اسم الشركة بالعربي (≤255). إذا أُرسل لا يكون فارغاً"
+                                        },
+                                        {
+                                            "key": "email",
+                                            "value": "{{company_email}}",
+                                            "type": "text",
+                                            "description": "اختياري — إيميل صالح وفريد (يمكن إرسال إيميلك الحالي)"
+                                        },
+                                        {
+                                            "key": "phone",
+                                            "value": "{{company_phone}}",
+                                            "type": "text",
+                                            "description": "اختياري — فريد، صيغة E.164 مع + مثل +963991234567"
+                                        },
+                                        {
+                                            "key": "logo",
+                                            "type": "file",
+                                            "src": [],
+                                            "description": "اختياري — صورة الشعار: jpeg/jpg/png/webp حتى 2MB. اختر ملفاً (نوع الحقل File)"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Upload Logo",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/logo",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "logo"
+                                    ]
+                                },
+                                "description": "رفع/تبديل الشعار وحده. الشعار القديم يُحذف تلقائياً. data.company.logo = رابط الصورة.",
+                                "body": {
+                                    "mode": "formdata",
+                                    "formdata": [
+                                        {
+                                            "key": "logo",
+                                            "type": "file",
+                                            "src": [],
+                                            "description": "مطلوب — صورة الشعار: jpeg/jpg/png/webp حتى 2MB. اختر ملفاً (نوع الحقل File)"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Delete Logo",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/logo",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "logo"
+                                    ]
+                                },
+                                "description": "حذف الشعار الحالي. data.company.logo يصبح null."
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

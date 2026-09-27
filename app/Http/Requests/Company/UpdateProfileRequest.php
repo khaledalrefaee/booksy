@@ -22,7 +22,7 @@ class UpdateProfileRequest extends FormRequest
             'name_en'  => ['required', 'string', 'max:255'],
             'name_ar'  => ['required', 'string', 'max:255'],
             'email'    => ['required', 'email', 'max:255', Rule::unique('companies', 'email')->ignore($companyId)],
-            'phone'    => ['nullable', 'string', 'max:30'],
+            'phone'    => ['nullable', 'string', 'max:30', Rule::unique('companies', 'phone')->ignore($companyId)],
             'logo'     => ['nullable', 'image', 'max:2048'],
             'password' => ['nullable', 'string', Password::min(8)->uncompromised(), 'confirmed'],
         ];

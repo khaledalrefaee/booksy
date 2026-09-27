@@ -517,6 +517,7 @@ class EmployeeController extends Controller
                 Storage::disk('public')->delete($employee->image);
             }
             $updateData['image'] = $this->storeAsWebP($request->file('image'));
+            \App\Support\ImageThumb::warm($updateData['image'], [192]); // public-page avatar
         }
 
         $employee->update($updateData);

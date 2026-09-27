@@ -6,32 +6,90 @@
 --}}
 <div class="js-policy" data-idp="{{ $idp }}">
 
-    {{-- ① Cancellation window ─────────────────────────────── --}}
+    {{-- ① Online booking & customer self-service ───────────── --}}
+    <div class="card border-0 shadow-sm rounded-4 mb-3">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="bk-icon-gold d-inline-flex align-items-center justify-content-center rounded-3" style="width:34px;height:34px;">
+                    <i data-feather="globe" style="width:16px;height:16px;"></i>
+                </span>
+                <h6 class="bk-t-card mb-0">{{ __('Online booking') }}</h6>
+            </div>
+
+            <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" role="switch" id="{{ $idp }}_ob"
+                       name="{{ $prefix }}[allow_online_booking]" value="1" @checked($p->allow_online_booking)>
+                <label class="form-check-label small fw-semibold" for="{{ $idp }}_ob">{{ __('Allow online bookings') }}</label>
+            </div>
+            <p class="text-muted small mb-3 ps-5">{{ __('When off, the booking page shows the branch but customers can’t book online.') }}</p>
+
+            <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" role="switch" id="{{ $idp }}_sd"
+                       name="{{ $prefix }}[allow_same_day_booking]" value="1" @checked($p->allow_same_day_booking)>
+                <label class="form-check-label small fw-semibold" for="{{ $idp }}_sd">{{ __('Allow same-day bookings') }}</label>
+            </div>
+            <p class="text-muted small mb-3 ps-5">{{ __('Let customers book appointments for later today.') }}</p>
+
+            <span class="form-label small fw-semibold d-block mb-2">{{ __('New online bookings') }}</span>
+            <div class="d-flex flex-column gap-2">
+                <label class="bk-radio-tile d-flex align-items-start gap-2 p-2 rounded-3 border mb-0">
+                    <input class="form-check-input mt-1" type="radio" name="{{ $prefix }}[auto_confirm_online_bookings]" value="0" @checked(! $p->auto_confirm_online_bookings)>
+                    <span class="small">
+                        <span class="fw-semibold d-block">{{ __('Need my approval') }}</span>
+                        <span class="text-muted">{{ __('They arrive as “Pending” and the customer is told once you confirm.') }}</span>
+                    </span>
+                </label>
+                <label class="bk-radio-tile d-flex align-items-start gap-2 p-2 rounded-3 border mb-0">
+                    <input class="form-check-input mt-1" type="radio" name="{{ $prefix }}[auto_confirm_online_bookings]" value="1" @checked($p->auto_confirm_online_bookings)>
+                    <span class="small">
+                        <span class="fw-semibold d-block">{{ __('Confirm automatically') }}</span>
+                        <span class="text-muted">{{ __('Confirmed straight away. Customers with repeated no-shows still need your approval when no-show protection asks for it.') }}</span>
+                    </span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    {{-- ② Cancelling & rescheduling ───────────────────────────── --}}
     <div class="card border-0 shadow-sm rounded-4 mb-3">
         <div class="card-body p-4">
             <div class="d-flex align-items-center gap-2 mb-3">
                 <span class="bk-icon-gold d-inline-flex align-items-center justify-content-center rounded-3" style="width:34px;height:34px;">
                     <i data-feather="rotate-ccw" style="width:16px;height:16px;"></i>
                 </span>
-                <h6 class="bk-t-card mb-0">{{ __('Cancellation window') }}</h6>
+                <h6 class="bk-t-card mb-0">{{ __('Cancelling & rescheduling') }}</h6>
             </div>
 
-            <label class="form-label small fw-semibold mb-1" for="{{ $idp }}_cw">
-                {{ __('Customer can cancel or reschedule on their own until') }}
-            </label>
-            <select class="form-select rounded-3" id="{{ $idp }}_cw" name="{{ $prefix }}[cancellation_window_hours]" style="max-width:280px;">
-                @foreach ([48 => __(':n hours before', ['n' => 48]), 24 => __(':n hours before', ['n' => 24]), 12 => __(':n hours before', ['n' => 12]), 6 => __(':n hours before', ['n' => 6]), 2 => __(':n hours before', ['n' => 2]), 0 => __('Self-cancel not allowed')] as $val => $lbl)
-                    <option value="{{ $val }}" @selected((int) $p->cancellation_window_hours === $val)>{{ $lbl }}</option>
+            <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" role="switch" id="{{ $idp }}_cc"
+                       name="{{ $prefix }}[allow_customer_cancel]" value="1" @checked($p->allow_customer_cancel)>
+                <label class="form-check-label small fw-semibold" for="{{ $idp }}_cc">{{ __('Allow customers to cancel bookings') }}</label>
+            </div>
+            <p class="text-muted small mb-3 ps-5">{{ __('From their account or the reminder link.') }}</p>
+
+            <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" role="switch" id="{{ $idp }}_cr"
+                       name="{{ $prefix }}[allow_customer_reschedule]" value="1" @checked($p->allow_customer_reschedule)>
+                <label class="form-check-label small fw-semibold" for="{{ $idp }}_cr">{{ __('Allow customers to reschedule bookings') }}</label>
+            </div>
+            <p class="text-muted small mb-3 ps-5">{{ __('Customers pick a new time from the available slots; the booking keeps its services and staff.') }}</p>
+
+            <label class="form-label small fw-semibold mb-1" for="{{ $idp }}_cdl">{{ __('Cancellation deadline') }}</label>
+            <select class="form-select rounded-3" id="{{ $idp }}_cdl" name="{{ $prefix }}[cancellation_deadline_minutes]" style="max-width:280px;">
+                @foreach (\App\Models\BookingPolicy::CANCEL_DEADLINES as $min)
+                    <option value="{{ $min }}" @selected((int) $p->cancellation_deadline_minutes === $min)>
+                        {{ $min === 0 ? __('Up to the appointment time') : __(':time before', ['time' => \App\Support\BranchSettings::durationLabel($min)]) }}
+                    </option>
                 @endforeach
             </select>
             <p class="text-muted small mb-0 mt-2">
                 <i data-feather="info" style="width:13px;height:13px;" class="me-1"></i>
-                {{ __('Cancelling after this point is recorded as a "late cancellation".') }}
+                {{ __('After this point, customers need to contact the branch. Rescheduling uses the same deadline.') }}
             </p>
         </div>
     </div>
 
-    {{-- ② Lateness & attendance ───────────────────────────── --}}
+    {{-- ③ Lateness & attendance ───────────────────────────── --}}
     <div class="card border-0 shadow-sm rounded-4 mb-3">
         <div class="card-body p-4">
             <div class="d-flex align-items-center gap-2 mb-3">
@@ -64,7 +122,7 @@
         </div>
     </div>
 
-    {{-- ③ Reminders ───────────────────────────────────────── --}}
+    {{-- ④ Reminders ───────────────────────────────────────── --}}
     <div class="card border-0 shadow-sm rounded-4 mb-3">
         <div class="card-body p-4">
             <div class="d-flex align-items-center gap-2 mb-3">
@@ -123,7 +181,7 @@
         </div>
     </div>
 
-    {{-- ④ No-show protection (advanced, collapsed) ─────────── --}}
+    {{-- ⑤ No-show protection (advanced, collapsed) ─────────── --}}
     <details class="card border-0 shadow-sm rounded-4 mb-3 bk-details">
         <summary class="card-body p-4 d-flex align-items-center gap-2" style="cursor:pointer;list-style:none;">
             <span class="bk-icon-gold d-inline-flex align-items-center justify-content-center rounded-3" style="width:34px;height:34px;">
@@ -209,7 +267,7 @@
         </div>
     </details>
 
-    {{-- ⑤ Message templates (advanced, collapsed) ──────────── --}}
+    {{-- ⑥ Message templates (advanced, collapsed) ──────────── --}}
     <details class="card border-0 shadow-sm rounded-4 mb-3 bk-details">
         <summary class="card-body p-4 d-flex align-items-center gap-2" style="cursor:pointer;list-style:none;">
             <span class="bk-icon-gold d-inline-flex align-items-center justify-content-center rounded-3" style="width:34px;height:34px;">

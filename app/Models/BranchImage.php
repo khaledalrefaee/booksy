@@ -18,6 +18,11 @@ class BranchImage extends Model
     public const TYPE_PLACE = 'place';
     public const TYPE_WORK  = 'work';
 
+    /** Downscaled copies served on the public page: grid tile, hero / lightbox. */
+    public const THUMB_GRID = 640;
+    public const THUMB_LARGE = 1600;
+    public const THUMB_WIDTHS = [self::THUMB_GRID, self::THUMB_LARGE];
+
     protected $fillable = [
         'branch_id', 'path', 'type', 'sort_order',
         'status', 'source', 'is_cover', 'rejection_reason',
@@ -39,6 +44,18 @@ class BranchImage extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    /** Grid-sized URL (≤640px wide) — never load the full upload in a grid. */
+    public function gridUrl(): string
+    {
+        return \App\Support\ImageThumb::url($this->path, self::THUMB_GRID);
+    }
+
+    /** Hero / lightbox URL (≤1600px wide). */
+    public function largeUrl(): string
+    {
+        return \App\Support\ImageThumb::url($this->path, self::THUMB_LARGE);
     }
 
     /* ─────────────────────────  Scopes  ───────────────────────── */

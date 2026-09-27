@@ -88,6 +88,11 @@
                                 <i data-feather="clock" style="width:13px;height:13px;" class="me-1"></i>
                                 {{ __('Hours') }}
                             </a>
+                            <a href="{{ route('company.branches.settings.edit', $branch) }}"
+                               class="btn btn-sm btn-outline-primary rounded-pill">
+                                <i data-feather="sliders" style="width:13px;height:13px;" class="me-1"></i>
+                                {{ __('Settings') }}
+                            </a>
                             <a href="{{ route('company.appointments.index', ['branch_id' => $branch->id]) }}"
                                class="btn btn-sm btn-outline-primary rounded-pill">
                                 <i data-feather="calendar" style="width:13px;height:13px;" class="me-1"></i>

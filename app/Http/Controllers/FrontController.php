@@ -136,7 +136,9 @@ class FrontController extends Controller
             'id'         => $b->id,
             'name'       => $isAr ? ($b->name_ar ?? $b->name_en) : ($b->name_en ?? $b->name_ar),
             'company'    => $isAr ? ($company->name_ar ?? $company->name_en) : ($company->name_en ?? $company->name_ar),
-            'logo'       => $company->logo ? asset('storage/'.$company->logo) : null,
+            // only when the file really exists — a dangling path would render a broken image
+            'logo'       => $company->logo && \Illuminate\Support\Facades\Storage::disk('public')->exists($company->logo)
+                ? \App\Support\ImageThumb::url($company->logo, 160) : null,
             'image'      => $img ? asset('storage/'.$img->path) : null,
             'category'   => $company->category ? ($isAr ? $company->category->name_ar : $company->category->name_en) : null,
             'cat_slug'   => $company->category?->slug,
@@ -344,9 +346,18 @@ class FrontController extends Controller
             404
         );
 
+        // Legacy /branch/{id} (old links, QR codes) → permanent redirect to the slug URL.
+        if ($branch->slug && request()->segment(2) !== $branch->slug) {
+            $qs = request()->getQueryString();
+            return redirect()->to(route('front.branch', $branch) . ($qs ? '?' . $qs : ''), 301);
+        }
+
         $branch->load([
             'company.category',
             'company.socialLinks',
+            // The branch's OWN contact channels — never the company's or a sibling's.
+            'socialLinks',
+            'country',
             'images' => self::publicImages(),
             'workingHours',
             // Only services the merchant has published AND exposed for online booking
@@ -382,6 +393,9 @@ class FrontController extends Controller
         $branch->load([
             'company.category',
             'company.socialLinks',
+            // The branch's OWN contact channels — never the company's or a sibling's.
+            'socialLinks',
+            'country',
             'images' => self::publicImages(),
             'workingHours',
             'services' => fn($q) => $q->where('is_active', true)->with('serviceCategory'),

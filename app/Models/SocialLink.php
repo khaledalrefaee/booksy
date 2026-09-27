@@ -36,17 +36,38 @@ class SocialLink extends Model
 
     /**
      * Build the full URL from a raw handle/phone/url value.
+     * $dialCode (e.g. "+963") completes a local phone number ("0962…").
      */
-    public static function buildUrl(string $platform, string $raw): string
+    public static function buildUrl(string $platform, string $raw, ?string $dialCode = null): string
     {
         $meta = self::$platforms[$platform] ?? null;
         if (! $meta) return $raw;
 
         return match ($meta['input_type']) {
-            'phone'  => $meta['base_url'] . preg_replace('/[^\d]/', '', $raw),
+            'phone'  => $meta['base_url'] . self::internationalDigits($raw, $dialCode),
             'handle' => $meta['base_url'] . ltrim(trim($raw), '@'),
             default  => trim($raw),
         };
+    }
+
+    /**
+     * A phone number as international digits only, the form wa.me needs:
+     * "+963 962-812 838" / "00963962812838" → "963962812838"; a local
+     * "0962812838" gets the dial code (when known) in place of the trunk 0.
+     */
+    public static function internationalDigits(string $raw, ?string $dialCode = null): string
+    {
+        $digits = preg_replace('/\D/', '', $raw);
+
+        if (str_starts_with($digits, '00')) {
+            return substr($digits, 2);
+        }
+        $dial = preg_replace('/\D/', '', (string) $dialCode);
+        if ($dial !== '' && str_starts_with($digits, '0') && ! str_starts_with(trim($raw), '+')) {
+            return $dial . substr($digits, 1);
+        }
+
+        return $digits;
     }
 
     /**
@@ -67,7 +88,7 @@ class SocialLink extends Model
      * Delete all social links for the given model and re-insert the non-empty ones.
      * $links format: [platform => handle/phone/url]
      */
-    public static function syncFor(Model $model, array $links): void
+    public static function syncFor(Model $model, array $links, ?string $dialCode = null): void
     {
         $model->socialLinks()->delete();
 
@@ -78,7 +99,7 @@ class SocialLink extends Model
 
             $toInsert[] = [
                 'platform' => $platform,
-                'url'      => self::buildUrl($platform, $raw),
+                'url'      => self::buildUrl($platform, $raw, $dialCode),
             ];
         }
 

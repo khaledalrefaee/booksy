@@ -28,7 +28,12 @@ class UpdateCompanyRequest extends FormRequest
                 'max:255',
                 Rule::unique('companies', 'email')->ignore($this->resolveCompanyId()),
             ],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => [
+                'nullable',
+                'string',
+                'max:30',
+                Rule::unique('companies', 'phone')->ignore($this->resolveCompanyId()),
+            ],
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'password' => ['nullable', 'string', 'min:8', 'max:255'],
             'logo' => ['nullable', 'image', 'max:4096'],

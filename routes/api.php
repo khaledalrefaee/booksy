@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\Companies\AuthController as CompanyAuthController;
+use App\Http\Controllers\Api\Companies\CategoryController;
 use App\Http\Controllers\Api\Customers\AuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -10,8 +12,17 @@ use Illuminate\Support\Facades\Route;
 | Stateless, JSON-only. Registered with the `/api` prefix (bootstrap/app.php).
 | Every route runs `api.locale` so the caller's language (?lang / Accept-Language)
 | drives both message bodies and JSON responses. Protected routes add
-| `customer.api`, which resolves the bearer token issued by verify-code.
+| `customer.api`, which resolves the bearer token issued by verify-code;
+| company routes use `company.api` (token from company verify / login).
 */
+
+// ->middleware('throttle:6,60,api-company-register')
+// ->middleware('throttle:10,10,api-company-verify')
+// ->middleware('throttle:6,10,api-company-resend')
+// ->middleware('throttle:10,10,api-company-login')
+
+
+
 
 Route::middleware('api.locale')->group(function () {
 
@@ -27,6 +38,37 @@ Route::middleware('api.locale')->group(function () {
             Route::post('profile', [AuthController::class, 'updateProfile'])->name('profile');
             Route::post('avatar',  [AuthController::class, 'uploadAvatar'])->name('avatar');
             Route::post('logout',  [AuthController::class, 'logout'])->name('logout');
+        });
+    });
+
+    // ── Company authentication (email + password, OTP-verified sign-up) ──────
+    // Throttles mirror the web panel (routes/company.php): codes cost SMS money.
+    // The 3rd throttle arg is a per-route key — without it every throttled route
+    // shares ONE per-IP counter, so failed logins would also block forgot-password.
+    
+    Route::prefix('company')->name('api.company.')->group(function () {
+
+        Route::get('categories', [CategoryController::class, 'index']);
+
+        // Public — sign-up, sign-in and password recovery.
+        Route::post('register', [CompanyAuthController::class, 'register'])->name('register');
+        Route::post('verify',   [CompanyAuthController::class, 'verify'])->name('verify');
+        Route::post('resend',   [CompanyAuthController::class, 'resend'])->name('resend');
+        Route::post('login',    [CompanyAuthController::class, 'login'])->name('login');
+
+        Route::prefix('password')->name('password.')->group(function () {
+            Route::post('forgot', [CompanyAuthController::class, 'forgotPassword'])->middleware('throttle:4,10,api-company-pw-forgot')->name('forgot');
+            Route::post('verify', [CompanyAuthController::class, 'verifyResetCode'])->middleware('throttle:10,10,api-company-pw-verify')->name('verify');
+            Route::post('reset',  [CompanyAuthController::class, 'resetPassword'])->middleware('throttle:6,10,api-company-pw-reset')->name('reset');
+        });
+
+        // Protected — require the bearer token from verify / login.
+        Route::middleware('company.api')->group(function () {
+            Route::get('me',      [CompanyAuthController::class, 'me'])->name('me');
+            Route::post('profile', [CompanyAuthController::class, 'updateProfile'])->name('profile');
+            Route::post('logo',    [CompanyAuthController::class, 'uploadLogo'])->name('logo');
+            Route::delete('logo',  [CompanyAuthController::class, 'deleteLogo'])->name('logo.delete');
+            Route::post('logout', [CompanyAuthController::class, 'logout'])->name('logout');
         });
     });
 

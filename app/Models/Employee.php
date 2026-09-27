@@ -173,6 +173,38 @@ class Employee extends Authenticatable
         return $this->hasMany(EmployeeWorkingHour::class)->orderBy('day_of_week')->orderBy('shift_number');
     }
 
+    /**
+     * The shifts this employee works on a weekday (0=Sun … 6=Sat), as
+     * [['start' => 'H:i:s', 'end' => 'H:i:s'], …].
+     *
+     * Same rule as the dashboard calendar: an employee with their own rows for
+     * that weekday follows them (a row marked "not working" = day off); one
+     * with no row for that weekday works the BRANCH's opening hours. Online
+     * booking and the staff calendar therefore always agree on availability.
+     */
+    public function shiftsOn(int $dow, ?Branch $branch = null): \Illuminate\Support\Collection
+    {
+        $own = $this->workingHours->where('day_of_week', $dow);
+
+        if ($own->isNotEmpty()) {
+            return $own->where('is_working', true)
+                ->filter(fn ($h) => $h->start_time && $h->end_time)
+                ->sortBy('shift_number')
+                ->map(fn ($h) => ['start' => $h->start_time, 'end' => $h->end_time])
+                ->values();
+        }
+
+        $branch ??= $this->branch;
+
+        return $branch
+            ? $branch->workingHours->where('day_of_week', $dow)->where('is_open', true)
+                ->filter(fn ($h) => $h->open_time && $h->close_time)
+                ->sortBy('shift_number')
+                ->map(fn ($h) => ['start' => $h->open_time, 'end' => $h->close_time])
+                ->values()
+            : collect();
+    }
+
     public function leaves(): HasMany
     {
         return $this->hasMany(EmployeeLeave::class);

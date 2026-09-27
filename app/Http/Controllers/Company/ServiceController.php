@@ -95,6 +95,7 @@ class ServiceController extends Controller
 
         if ($request->hasFile('image')) {
             $data['image_path'] = $request->file('image')->store('services', 'public');
+            \App\Support\ImageThumb::warm($data['image_path'], [160]); // public-page copy
         }
 
         $service = $branch->services()->create($data);
@@ -141,6 +142,7 @@ class ServiceController extends Controller
                 Storage::disk('public')->delete($service->image_path);
             }
             $data['image_path'] = $request->file('image')->store('services', 'public');
+            \App\Support\ImageThumb::warm($data['image_path'], [160]); // public-page copy
         } elseif ($request->boolean('remove_image') && $service->image_path) {
             Storage::disk('public')->delete($service->image_path);
             $data['image_path'] = null;

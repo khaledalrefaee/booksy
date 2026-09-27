@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Company\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\OtpCode;
 use App\Services\CompanyVerificationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -28,34 +27,24 @@ class VerificationController extends Controller
     }
 
     /** Verify the submitted code and mark the account confirmed. */
-    public function verify(Request $request): RedirectResponse
+    public function verify(Request $request, CompanyVerificationService $verification): RedirectResponse
     {
         $data = $request->validate([
             'code' => ['required', 'string', 'size:4'],
         ]);
 
         $company = Auth::guard('company')->user();
+        $result  = $verification->consumeCode($company, $data['code']);
 
-        $otp = OtpCode::query()
-            ->where('phone', $company->phone)
-            ->where('code', $data['code'])
-            ->whereNull('used_at')
-            ->where('expires_at', '>', now())
-            ->latest()
-            ->first();
+        if ($result === CompanyVerificationService::CODE_LOCKED) {
+            return back()->withErrors(['code' => __('Too many incorrect attempts. Please request a new code.')]);
+        }
 
-        if (! $otp) {
+        if ($result !== CompanyVerificationService::CODE_OK) {
             return back()->withErrors(['code' => __('The code is invalid or has expired.')]);
         }
 
-        $otp->update(['used_at' => now()]);
-        $company->update([
-            'phone_verified_at' => now(),
-            'email_verified_at' => $company->email_verified_at ?? now(),
-        ]);
-
-        // Seed the head-office branch so the setup checklist can begin.
-        \App\Services\CompanySetupService::ensureHeadOffice($company);
+        $verification->markVerified($company);
 
         return redirect()->route('company.dashboard')
             ->with('status', __('Your account has been verified. Welcome aboard!'));
@@ -70,12 +59,7 @@ class VerificationController extends Controller
             return redirect()->route('company.dashboard');
         }
 
-        $recent = OtpCode::query()
-            ->where('phone', $company->phone)
-            ->where('created_at', '>=', now()->subMinutes(10))
-            ->count();
-
-        if ($recent >= 4) {
+        if ($verification->retryAfter($company) !== null) {
             return back()->withErrors(['code' => __('Too many attempts. Please try again in a few minutes.')]);
         }
 

@@ -31,13 +31,17 @@ trait ApiResponse
         ], $code);
     }
 
-    /** A failed response. Pass $errors for field-level validation messages. */
-    protected function error(string $message, int $code = 400, ?array $errors = null): JsonResponse
+    /**
+     * A failed response. Pass $errors for field-level validation messages, and
+     * $data only when the client needs context to recover (e.g. which account
+     * still has to be verified).
+     */
+    protected function error(string $message, int $code = 400, ?array $errors = null, mixed $data = null): JsonResponse
     {
         $payload = [
             'status'  => false,
             'message' => $message,
-            'data'    => null,
+            'data'    => $data,
         ];
 
         if ($errors !== null) {

@@ -49,7 +49,7 @@ class AppointmentConfirmController extends Controller
         return $this->page('success', '✅', __('Appointment confirmed!'),
             __('Thank you! Your appointment on :date at :time is confirmed. We look forward to seeing you. 💛', [
                 'date' => $appointment->start_time->translatedFormat('l d/m'),
-                'time' => $appointment->start_time->format('g:i A'),
+                'time' => $appointment->branch?->formatTime($appointment->start_time) ?? $appointment->start_time->format('g:i A'),
             ]), $appointment);
     }
 
@@ -61,6 +61,7 @@ class AppointmentConfirmController extends Controller
 
         $appointment = $confirmation->appointment;
         if (!$appointment) return $this->page('error', '❌', __('Not found'), __('Appointment not found.'));
+        if ($closed = $this->cancellationClosed($appointment)) return $closed;
 
         return response()->view('appointment.cancel-form', [
             'token'       => $token,
@@ -77,6 +78,7 @@ class AppointmentConfirmController extends Controller
 
         $appointment = $confirmation->appointment;
         if (!$appointment) return $this->page('error', '❌', __('Not found'), __('Appointment not found.'));
+        if ($closed = $this->cancellationClosed($appointment)) return $closed;
 
         $reasons = $this->cancelReasons();
         $data = $request->validate([
@@ -118,6 +120,25 @@ class AppointmentConfirmController extends Controller
         }
 
         return Appointment::where('booking_group_id', $appointment->booking_group_id)->get();
+    }
+
+    /**
+     * The branch's customer-cancellation rule (Branch Settings): cancelling
+     * may be switched off, or closed once the cancellation deadline passes.
+     */
+    private function cancellationClosed(Appointment $appointment)
+    {
+        $branch = $appointment->branch;
+        if (! $branch || $branch->customerCanCancel($appointment->start_time)) {
+            return null;
+        }
+
+        $ar = app()->getLocale() === 'ar';
+
+        return $this->page('info', 'ℹ️',
+            $ar ? 'لا يمكن الإلغاء عبر الرابط' : 'Online cancellation closed',
+            $ar ? 'لإلغاء هذا الموعد أو تغييره، يرجى التواصل مع الفرع مباشرة.' : 'To cancel or change this appointment, please contact the branch directly.',
+            $appointment);
     }
 
     /** Shared early-exit pages for an invalid / used / expired link. */

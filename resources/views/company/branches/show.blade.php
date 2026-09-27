@@ -415,6 +415,10 @@
                        class="btn btn-sm rounded-pill px-3" style="font-size:12px;font-weight:600;background:rgba(79,172,254,.12);color:#4facfe;border:none;">
                         <i data-feather="clock" style="width:12px;height:12px;" class="me-1"></i>{{ __('Working Hours') }}
                     </a>
+                    <a href="{{ route('company.branches.settings.edit', $branch) }}"
+                       class="btn btn-sm rounded-pill px-3" style="font-size:12px;font-weight:600;background:rgba(75,93,52,.12);color:var(--bk-accent);border:none;">
+                        <i data-feather="sliders" style="width:12px;height:12px;" class="me-1"></i>{{ __('Branch Settings') }}
+                    </a>
                     <a href="{{ route('company.branches.gallery', $branch) }}"
                        class="btn btn-sm rounded-pill px-3" style="font-size:12px;font-weight:600;background:rgba(75,93,52,.12);color:var(--bk-accent);border:none;">
                         <i data-feather="image" style="width:12px;height:12px;" class="me-1"></i>{{ __('Gallery') }}

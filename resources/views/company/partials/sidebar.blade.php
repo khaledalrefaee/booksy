@@ -136,6 +136,9 @@
                 <a href="{{ route('company.branches.working-hours.edit', $ctx) }}" class="bk-nl {{ request()->routeIs('company.branches.working-hours.*') ? 'active' : '' }}">
                     <i data-feather="clock"></i><span>{{ __('Working Hours') }}</span>
                 </a>
+                <a href="{{ route('company.branches.settings.edit', $ctx) }}" class="bk-nl {{ request()->routeIs('company.branches.settings.*') ? 'active' : '' }}">
+                    <i data-feather="sliders"></i><span>{{ __('Branch Settings') }}</span>
+                </a>
                 <a href="{{ route('company.branches.gallery', $ctx) }}" class="bk-nl {{ request()->routeIs('company.branches.gallery') ? 'active' : '' }}">
                     <i data-feather="image"></i><span>{{ __('Gallery') }}</span>
                 </a>

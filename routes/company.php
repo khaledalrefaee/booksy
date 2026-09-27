@@ -133,6 +133,10 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::get( 'branches/{branch}/working-hours', [WorkingHoursController::class, 'edit'])->name('branches.working-hours.edit');
         Route::post('branches/{branch}/working-hours', [WorkingHoursController::class, 'update'])->name('branches.working-hours.update');
 
+        // Branch settings: timezone, time format, slot interval, booking rules
+        Route::get('branches/{branch}/settings', [\App\Http\Controllers\Company\BranchSettingsController::class, 'edit'])->name('branches.settings.edit');
+        Route::put('branches/{branch}/settings', [\App\Http\Controllers\Company\BranchSettingsController::class, 'update'])->name('branches.settings.update');
+
         // Services (nested under branch, shallow)
         Route::patch('services/{service}/toggle-active', [ServiceController::class, 'toggleActive'])->name('services.toggle-active');
         Route::post( 'services/{service}/duplicate',     [ServiceController::class, 'duplicate'])->name('services.duplicate');

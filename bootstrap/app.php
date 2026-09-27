@@ -72,6 +72,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'feature'       => EnsureCompanyFeature::class,
             'customer.auth' => AuthenticateCustomer::class,
             'customer.api'  => \App\Http\Middleware\AuthenticateCustomerApi::class,
+            'company.api'   => \App\Http\Middleware\AuthenticateCompanyApi::class,
             'api.locale'    => \App\Http\Middleware\SetApiLocale::class,
             'staff.auth'       => AuthenticateStaff::class,
             'staff.mustchange' => EnsureStaffPasswordChanged::class,

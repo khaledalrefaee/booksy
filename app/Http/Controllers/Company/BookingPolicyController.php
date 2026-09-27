@@ -27,12 +27,15 @@ class BookingPolicyController extends Controller
         $companyPolicy = $company->bookingPolicies()->whereNull('branch_id')->first()
             ?? new BookingPolicy(BookingPolicy::defaults());
 
-        // Per-branch overrides keyed by branch id (fall back to defaults for display)
+        // Per-branch overrides keyed by branch id. A branch without its own row
+        // follows the company policy (effectiveBookingPolicy), so show THAT —
+        // not factory defaults — or switching to per-branch mode would silently
+        // reset every branch on the next save.
         $branchPolicies = [];
         foreach ($branches as $branch) {
             $branchPolicies[$branch->id] = $company->bookingPolicies()
                 ->where('branch_id', $branch->id)->first()
-                ?? new BookingPolicy(BookingPolicy::defaults());
+                ?? $companyPolicy;
         }
 
         return view('company.booking-policy.edit', [
@@ -83,8 +86,15 @@ class BookingPolicyController extends Controller
      */
     private function savePolicy(Company $company, ?int $branchId, array $input): void
     {
+        $deadline = (int) ($input['cancellation_deadline_minutes'] ?? 0);
+
         $clean = [
-            'cancellation_window_hours'   => (int) ($input['cancellation_window_hours'] ?? 24),
+            'allow_online_booking'          => ! empty($input['allow_online_booking']),
+            'allow_same_day_booking'        => ! empty($input['allow_same_day_booking']),
+            'auto_confirm_online_bookings'  => ($input['auto_confirm_online_bookings'] ?? '0') === '1',
+            'allow_customer_cancel'         => ! empty($input['allow_customer_cancel']),
+            'allow_customer_reschedule'     => ! empty($input['allow_customer_reschedule']),
+            'cancellation_deadline_minutes' => in_array($deadline, BookingPolicy::CANCEL_DEADLINES, true) ? $deadline : 0,
             'late_grace_minutes'          => (int) ($input['late_grace_minutes'] ?? 15),
             'late_action'                 => in_array($input['late_action'] ?? '', ['staff_decides', 'auto_cancel']) ? $input['late_action'] : 'staff_decides',
             'reminder_channel'            => in_array($input['reminder_channel'] ?? '', ['whatsapp', 'sms']) ? $input['reminder_channel'] : 'whatsapp',

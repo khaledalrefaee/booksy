@@ -43,10 +43,10 @@ class SitemapController extends Controller
             Branch::query()
                 ->marketplace()
                 ->whereHas('company', fn ($q) => $q->where('status', 'active'))
-                ->get(['id', 'updated_at'])
+                ->get(['id', 'slug', 'updated_at'])
                 ->each(function ($b) use (&$urls) {
                     $urls[] = [
-                        'loc'        => route('front.branch', $b->id),
+                        'loc'        => route('front.branch', $b),
                         'lastmod'    => optional($b->updated_at)->toAtomString(),
                         'changefreq' => 'weekly',
                         'priority'   => '0.8',
