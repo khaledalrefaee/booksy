@@ -16,10 +16,10 @@
                 <span aria-hidden="true">·</span> {{ __('SMS') }}
             </div>
             <h1 class="sx-title">{{ __('SMS Overview') }}</h1>
-            <p class="sx-subtitle">{{ __('Your SMS balance, per branch. Credits are managed by GlowRez — enable automations to start using them.') }}</p>
+            <p class="sx-subtitle">{{ __('Your SMS balance, per branch. Customer messages to local numbers are paid from it.') }}</p>
         </div>
         <div class="sx-head-actions">
-            <a href="{{ route('company.sms.automations') }}" class="sx-btn sx-btn-ghost"><i data-feather="zap"></i>{{ __('Automations') }}</a>
+            <a href="{{ route('company.sms.automations') }}" class="sx-btn sx-btn-ghost"><i data-feather="bell"></i>{{ __('Customer messages') }}</a>
             <a href="{{ route('company.sms.purchase') }}" class="sx-btn sx-btn-primary"><i data-feather="shopping-bag"></i>{{ __('Purchase SMS') }}</a>
         </div>
     </header>

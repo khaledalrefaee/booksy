@@ -122,64 +122,19 @@
         </div>
     </div>
 
-    {{-- ④ Reminders ───────────────────────────────────────── --}}
-    <div class="card border-0 shadow-sm rounded-4 mb-3">
-        <div class="card-body p-4">
-            <div class="d-flex align-items-center gap-2 mb-3">
-                <span class="bk-icon-gold d-inline-flex align-items-center justify-content-center rounded-3" style="width:34px;height:34px;">
-                    <i data-feather="bell" style="width:16px;height:16px;"></i>
-                </span>
-                <h6 class="bk-t-card mb-0">{{ __('Reminders') }}</h6>
-                <span class="badge bk-badge-gold ms-auto">{{ __('Biggest impact') }}</span>
-            </div>
-
-            <span class="form-label small fw-semibold d-block mb-2">{{ __('Channel') }}</span>
-            <div class="btn-group mb-3" role="group">
-                <input type="radio" class="btn-check" name="{{ $prefix }}[reminder_channel]" id="{{ $idp }}_ch_wa" value="whatsapp" @checked($p->reminder_channel !== 'sms')>
-                <label class="btn btn-outline-primary rounded-start-3" for="{{ $idp }}_ch_wa">
-                    <i data-feather="message-circle" style="width:14px;height:14px;" class="me-1"></i>{{ __('WhatsApp') }}
-                </label>
-                <input type="radio" class="btn-check" name="{{ $prefix }}[reminder_channel]" id="{{ $idp }}_ch_sms" value="sms" @checked($p->reminder_channel === 'sms')>
-                <label class="btn btn-outline-primary rounded-end-3" for="{{ $idp }}_ch_sms">
-                    <i data-feather="smartphone" style="width:14px;height:14px;" class="me-1"></i>{{ __('SMS') }}
-                </label>
-            </div>
-
-            <span class="form-label small fw-semibold d-block mb-2">{{ __('Send a reminder') }}</span>
-            <div class="d-flex flex-wrap gap-3 mb-3">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="{{ $idp }}_rb" name="{{ $prefix }}[reminder_on_booking]" value="1" @checked($p->reminder_on_booking)>
-                    <label class="form-check-label small" for="{{ $idp }}_rb">{{ __('On booking') }}</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="{{ $idp }}_r24" name="{{ $prefix }}[reminder_24h]" value="1" @checked($p->reminder_24h)>
-                    <label class="form-check-label small" for="{{ $idp }}_r24">{{ __('24 hours before') }}</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="{{ $idp }}_r3" name="{{ $prefix }}[reminder_3h]" value="1" @checked($p->reminder_3h)>
-                    <label class="form-check-label small" for="{{ $idp }}_r3">{{ __('3 hours before') }}</label>
-                </div>
-            </div>
-
-            <div class="form-check form-switch mb-2">
-                <input class="form-check-input js-reveal-toggle" type="checkbox" role="switch"
-                       id="{{ $idp }}_rc" name="{{ $prefix }}[require_confirmation]" value="1"
-                       data-reveal="{{ $idp }}_rc_wrap" @checked($p->require_confirmation)>
-                <label class="form-check-label small fw-semibold" for="{{ $idp }}_rc">
-                    {{ __('Ask the customer to confirm attendance') }}
-                </label>
-            </div>
-            <div id="{{ $idp }}_rc_wrap" class="ps-4 pt-1" @if(! $p->require_confirmation) hidden @endif>
-                <label class="form-label small mb-1" for="{{ $idp }}_cd">{{ __("If not confirmed before") }}</label>
-                <select class="form-select form-select-sm rounded-3" id="{{ $idp }}_cd" name="{{ $prefix }}[confirmation_deadline_hours]" style="max-width:240px;">
-                    @foreach ([12 => __(':n hours', ['n' => 12]), 6 => __(':n hours', ['n' => 6]), 3 => __(':n hours', ['n' => 3]), 0 => __('Do not release')] as $val => $lbl)
-                        <option value="{{ $val }}" @selected((int) $p->confirmation_deadline_hours === $val)>{{ $lbl }}</option>
-                    @endforeach
-                </select>
-                <p class="text-muted small mb-0 mt-1">{{ __('The slot is then flagged for staff and offered to the waiting list.') }}</p>
-            </div>
+    {{-- ④ Customer messages live on their own page now (one place, both channels) --}}
+    <a href="{{ route('company.sms.automations') }}" class="card border-0 shadow-sm rounded-4 mb-3 text-decoration-none">
+        <div class="card-body p-4 d-flex align-items-center gap-3">
+            <span class="bk-icon-gold d-inline-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width:34px;height:34px;">
+                <i data-feather="bell" style="width:16px;height:16px;"></i>
+            </span>
+            <span class="flex-grow-1">
+                <span class="bk-t-card d-block">{{ __('Reminders & customer messages') }}</span>
+                <span class="text-muted small">{{ __('Booking message, reminder, attendance confirmation and follow-up — all in one place.') }}</span>
+            </span>
+            <i data-feather="{{ app()->getLocale() === 'ar' ? 'chevron-left' : 'chevron-right' }}" class="text-muted" style="width:18px;height:18px;"></i>
         </div>
-    </div>
+    </a>
 
     {{-- ⑤ No-show protection (advanced, collapsed) ─────────── --}}
     <details class="card border-0 shadow-sm rounded-4 mb-3 bk-details">
@@ -267,38 +222,5 @@
         </div>
     </details>
 
-    {{-- ⑥ Message templates (advanced, collapsed) ──────────── --}}
-    <details class="card border-0 shadow-sm rounded-4 mb-3 bk-details">
-        <summary class="card-body p-4 d-flex align-items-center gap-2" style="cursor:pointer;list-style:none;">
-            <span class="bk-icon-gold d-inline-flex align-items-center justify-content-center rounded-3" style="width:34px;height:34px;">
-                <i data-feather="edit-3" style="width:16px;height:16px;"></i>
-            </span>
-            <span>
-                <span class="bk-t-card d-block">{{ __('Message templates') }}</span>
-                <span class="text-muted small">{{ __('Leave blank to use the friendly defaults') }}</span>
-            </span>
-            <i data-feather="chevron-down" class="ms-auto bk-details-chevron" style="width:18px;height:18px;"></i>
-        </summary>
-        <div class="card-body px-4 pb-4 pt-0">
-            <p class="text-muted small mb-3">
-                {{ __('Available variables:') }}
-                <code class="bk-badge-gold px-2 py-1 rounded-2">{name}</code>
-                <code class="bk-badge-gold px-2 py-1 rounded-2">{time}</code>
-                <code class="bk-badge-gold px-2 py-1 rounded-2">{service}</code>
-                <code class="bk-badge-gold px-2 py-1 rounded-2">{link}</code>
-            </p>
-            @foreach ([
-                'msg_confirm'      => __('Booking confirmation'),
-                'msg_reminder_24h' => __('Reminder — 24 hours before'),
-                'msg_reminder_3h'  => __('Reminder — 3 hours before'),
-                'msg_unconfirmed'  => __('Not confirmed in time'),
-            ] as $field => $label)
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold mb-1">{{ $label }}</label>
-                    <textarea class="form-control rounded-3" rows="2" name="{{ $prefix }}[{{ $field }}]" placeholder="{{ __('Using default message…') }}">{{ $p->{$field} }}</textarea>
-                </div>
-            @endforeach
-        </div>
-    </details>
 
 </div>

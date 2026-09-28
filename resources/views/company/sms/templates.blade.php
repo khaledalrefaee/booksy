@@ -3,9 +3,9 @@
 
 @php
     $meta = [
-        'confirmation' => ['icon' => 'check-circle', 'title' => __('Confirmation'), 'desc' => __('Sent when a booking is created.')],
-        'reminder'     => ['icon' => 'clock',        'title' => __('Reminder'),     'desc' => __('Sent before the appointment.')],
-        'followup'     => ['icon' => 'refresh-cw',   'title' => __('Follow-up'),    'desc' => __('Sent after the last visit.')],
+        'confirmation' => ['icon' => 'check-circle', 'title' => __('Booking message'),                 'desc' => __('Sent as soon as a booking is made, with its date and time.')],
+        'reminder'     => ['icon' => 'clock',        'title' => __('Reminder before the appointment'), 'desc' => __('Sent once, at the time you choose.')],
+        'followup'     => ['icon' => 'refresh-cw',   'title' => __('Follow-up after the visit'),       'desc' => __('Invites the customer back if they haven\'t booked again.')],
     ];
     // Build "{{ var }}" without literal double-braces so Blade doesn't parse them.
     $wrap = fn ($v) => '{' . '{' . $v . '}' . '}';
@@ -16,14 +16,14 @@
     <header class="sx-head sx-reveal">
         <div>
             <div class="sx-eyebrow">
-                <a href="{{ route('company.sms.overview') }}">{{ __('SMS') }}</a>
-                <span aria-hidden="true">·</span> {{ __('Setup') }}
+                <a href="{{ route('company.sms.automations') }}">{{ __('Customer messages') }}</a>
+                <span aria-hidden="true">·</span> {{ __('Templates') }}
             </div>
-            <h1 class="sx-title">{{ __('SMS Templates') }}</h1>
-            <p class="sx-subtitle">{{ __('Personalise each message with variables. The counter shows the length and how many SMS it will cost.') }}</p>
+            <h1 class="sx-title">{{ __('Message templates') }}</h1>
+            <p class="sx-subtitle">{{ __('Your text is used for both SMS and WhatsApp. Leave a message unchanged to keep the default. The counter shows how many SMS it will cost.') }}</p>
         </div>
         <div class="sx-head-actions">
-            <a href="{{ route('company.sms.automations') }}" class="sx-btn sx-btn-ghost"><i data-feather="zap"></i>{{ __('Automations') }}</a>
+            <a href="{{ route('company.sms.automations') }}" class="sx-btn sx-btn-ghost"><i data-feather="bell"></i>{{ __('Customer messages') }}</a>
         </div>
     </header>
 

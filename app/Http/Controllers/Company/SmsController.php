@@ -74,8 +74,12 @@ class SmsController extends Controller
         $company  = $this->company();
         $branches = $company->branches()->orderBy('sort_order')->get();
 
-        $settings = SmsAutomationSetting::where('company_id', $company->id)
-            ->get()->keyBy('branch_id');
+        // Every branch shows its effective settings — saved, or the defaults a
+        // branch actually runs on before anyone saves it.
+        $saved    = SmsAutomationSetting::where('company_id', $company->id)->get()->keyBy('branch_id');
+        $settings = $branches->mapWithKeys(fn ($b) => [
+            $b->id => $saved[$b->id] ?? new SmsAutomationSetting(SmsAutomationSetting::defaults()),
+        ]);
 
         return view('company.sms.automations', compact('company', 'branches', 'settings'));
     }
@@ -88,6 +92,7 @@ class SmsController extends Controller
         $data = $request->validate([
             'confirmation_enabled'    => ['nullable', 'boolean'],
             'reminder_enabled'        => ['nullable', 'boolean'],
+            'ask_confirmation'        => ['nullable', 'boolean'],
             'reminder_offset_minutes' => ['required', 'integer', 'min:5', 'max:1440'],
             'followup_enabled'        => ['nullable', 'boolean'],
             'followup_days'           => ['required', 'integer', 'min:1', 'max:365'],
@@ -99,12 +104,13 @@ class SmsController extends Controller
                 'confirmation_enabled'    => $request->boolean('confirmation_enabled'),
                 'reminder_enabled'        => $request->boolean('reminder_enabled'),
                 'reminder_offset_minutes' => $data['reminder_offset_minutes'],
+                'ask_confirmation'        => $request->boolean('ask_confirmation'),
                 'followup_enabled'        => $request->boolean('followup_enabled'),
                 'followup_days'           => $data['followup_days'],
             ]
         );
 
-        return back()->with('success', __('Automations saved for :branch.', ['branch' => $branch->localizedName()]));
+        return back()->with('success', __('Customer messages saved for :branch.', ['branch' => $branch->localizedName()]));
     }
 
     // ── Templates ────────────────────────────────────────────────────────────
@@ -141,10 +147,15 @@ class SmsController extends Controller
             'body' => ['required', 'string', 'max:1000'],
         ]);
 
-        SmsTemplate::updateOrCreate(
-            ['company_id' => $company->id, 'branch_id' => null, 'key' => $data['key'], 'locale' => $locale],
-            ['body' => $data['body'], 'is_active' => true]
-        );
+        $where = ['company_id' => $company->id, 'branch_id' => null, 'key' => $data['key'], 'locale' => $locale];
+
+        // Saving the default text unchanged = "keep the default": store nothing,
+        // so WhatsApp keeps its richer built-in layout for this message.
+        if (trim($data['body']) === trim(SmsTemplate::defaultBody($data['key'], $locale))) {
+            SmsTemplate::where($where)->delete();
+        } else {
+            SmsTemplate::updateOrCreate($where, ['body' => $data['body'], 'is_active' => true]);
+        }
 
         return back()->with('success', __('Template saved.'));
     }

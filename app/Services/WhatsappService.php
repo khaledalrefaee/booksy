@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\AppointmentConfirmation;
-use App\Models\BookingPolicy;
 use App\Models\Company;
 use App\Models\WhatsappLog;
 use Illuminate\Support\Facades\Http;
@@ -55,7 +54,9 @@ class WhatsappService
      */
     public function channelFor(string $phone): string
     {
-        $digits = preg_replace('/\D+/', '', $phone);
+        // Complete local numbers ("09…") first, or a Syrian number typed at
+        // reception would be misrouted to WhatsApp.
+        $digits = \App\Support\PhoneNumber::international($phone);
 
         foreach (config('booksy.sms.countries', ['963']) as $cc) {
             if ($cc !== '' && str_starts_with($digits, $cc)) {
@@ -68,6 +69,13 @@ class WhatsappService
 
     public function send(string $phone, string $message, ?int $companyId = null, ?int $appointmentId = null, string $type = 'general', ?string $channel = null): bool
     {
+        // A customer notice about an appointment that routes over SMS goes
+        // through the credit-tracked SMS pipeline (the branch's balance, the
+        // SMS history page) — never straight to the provider for free.
+        if ($channel === 'sms' && $companyId !== null && $appointmentId !== null) {
+            return $this->sendAppointmentSms($phone, $message, $appointmentId, $type);
+        }
+
         // Plan gate: skip silently when the company's plan doesn't include WhatsApp
         if ($companyId !== null) {
             $company = \App\Models\Company::find($companyId);
@@ -106,6 +114,36 @@ class WhatsappService
             Log::warning("WhatsApp send failed: {$e->getMessage()}");
             return false;
         }
+    }
+
+    /** Appointment notice over SMS → SmsService (credits + sms_messages log). */
+    private function sendAppointmentSms(string $phone, string $message, int $appointmentId, string $type): bool
+    {
+        $appointment = Appointment::with(['company', 'branch'])->find($appointmentId);
+        if (! $appointment || ! $appointment->company) {
+            return false;
+        }
+
+        // One SMS per notice per recipient. A move can happen more than once,
+        // so the rescheduled notice is keyed on the new time as well.
+        $scope = $type === 'appointment_rescheduled'
+            ? $appointment->start_time->format('YmdHi')
+            : \App\Support\PhoneNumber::international($phone);
+
+        $sms = app(\App\Services\Sms\SmsService::class)->sendManual(
+            $appointment->company,
+            $appointment->branch,
+            $phone,
+            $message,
+            [
+                'customer_id'    => $appointment->customer_id,
+                'appointment_id' => $appointment->id,
+                'message_type'   => substr($type, 0, 24),
+                'dedupe_key'     => "sms:{$type}:a{$appointment->id}:{$scope}",
+            ]
+        );
+
+        return $sms?->status === 'queued';
     }
 
     /** @return array{0: bool, 1: ?string} [ok, error] */
@@ -150,32 +188,6 @@ class WhatsappService
         return [$response->ok(), $response->ok() ? null : $response->body()];
     }
 
-    /** Effective booking policy for an appointment (unified or per-branch). */
-    private function policyFor(Appointment $appointment): BookingPolicy
-    {
-        $company = $appointment->company ?? Company::find($appointment->company_id);
-
-        return $company
-            ? $company->effectiveBookingPolicy($appointment->branch)
-            : new BookingPolicy(BookingPolicy::defaults());
-    }
-
-    /** Placeholder values shared by every appointment template. */
-    private function templateVars(Appointment $appointment, string $link = ''): array
-    {
-        return [
-            'name'     => $appointment->customer?->name ?: ($appointment->customer_name ?? ''),
-            'service'  => $appointment->service?->localizedName() ?? $appointment->service?->name ?? '',
-            'branch'   => $appointment->branch?->localizedName() ?? '',
-            'date'     => $appointment->start_time->translatedFormat('l d M Y'),
-            'short_date'=> $this->shortDateTime($appointment->start_time),
-            'time'     => $this->timeLabel($appointment->start_time),
-            'employee' => ($appointment->employee_requested && $appointment->employee)
-                ? $appointment->employee->localizedName() : '',
-            'link'     => $link,
-        ];
-    }
-
     /**
      * Professional 12-hour clock with correct AM/PM and no leading zero, e.g.
      * "4:00 PM". Used everywhere a time is shown to the customer.
@@ -183,12 +195,6 @@ class WhatsappService
     private function timeLabel(\Illuminate\Support\Carbon $dt): string
     {
         return $dt->format('g:i A');
-    }
-
-    /** Compact date + time, e.g. "23/08 — 4:00 PM". */
-    private function shortDateTime(\Illuminate\Support\Carbon $dt): string
-    {
-        return $dt->format('d/m') . ' — ' . $dt->format('g:i A');
     }
 
     /**
@@ -213,44 +219,56 @@ class WhatsappService
         $phone = $appointment->customer_phone ?? $appointment->customer?->phone;
         if (!$phone) return false;
 
-        $policy = $this->policyFor($appointment);
+        // Customer messages have ONE owner: the branch's "Customer messages"
+        // settings. SMS numbers are handled by SmsService::confirmation (credit
+        // tracked); this path is WhatsApp only.
+        $sms = app(\App\Services\Sms\SmsService::class);
+        if ($sms->routesOverSms($phone)) return false;
 
-        // Owner switched the "on booking" reminder off → don't message.
-        if (! $policy->reminder_on_booking) return false;
+        $settings = $sms->settingsFor($appointment);
+        if (! $settings?->confirmation_enabled) return false;
 
         // Whole visit as one message; one confirmation token acts on every row.
         $visit        = $this->visitAppointments($appointment);
         $primary      = $visit->first();
 
-        // The new SMS system owns confirmation for this branch/number → skip the
-        // legacy SMS so the customer doesn't get two copies.
-        if ($this->smsSystemOwns($primary, 'confirmation')) return false;
-
         $confirmation = AppointmentConfirmation::activeFor($primary);
         $confirmUrl   = route('appointment.confirm', ['token' => $confirmation->token]);
         $cancelUrl    = route('appointment.cancel-form', ['token' => $confirmation->token]);
 
-        // A single booking still honours the owner's custom template; grouped
-        // visits always use the built-in consolidated layout.
-        $message = null;
-        if ($visit->count() === 1) {
-            $message = $policy->message('msg_confirm', $this->templateVars($primary, $confirmUrl));
-        }
-        if ($message === null) {
-            $message = $this->defaultBookedMessage($visit, $policy, $confirmUrl, $cancelUrl);
+        // The company's own text (Message templates page) for a single booking;
+        // grouped visits — or no custom text — use the built-in layout.
+        $message = $visit->count() === 1
+            ? $this->customText($primary, 'confirmation', (bool) $settings->ask_confirmation)
+            : null;
+        $message ??= $this->defaultBookedMessage($visit, (bool) $settings->ask_confirmation, $confirmUrl, $cancelUrl);
+
+        return $this->send($phone, $message, $primary->company_id, $primary->id, 'appointment_booked', 'whatsapp');
+    }
+
+    /**
+     * The company's customised template for this message, rendered — or null
+     * when they kept the default (the WhatsApp default is the richer built-in
+     * layout, the SMS default is the short text).
+     */
+    private function customText(Appointment $appointment, string $key, bool $withLinks): ?string
+    {
+        $sms = app(\App\Services\Sms\SmsService::class);
+        $tpl = $sms->resolveTemplate($appointment->company_id, $appointment->branch_id, $key);
+        if (! $tpl || $tpl->company_id !== $appointment->company_id || trim((string) $tpl->body) === '') {
+            return null;
         }
 
-        return $this->send(
-            $phone, $message,
-            $primary->company_id,
-            $primary->id,
-            'appointment_booked',
-            $this->channelFor($phone)   // Syrian → SMS, everyone else → WhatsApp
-        );
+        $raw = $tpl->body;
+        if ($withLinks && ! str_contains($raw, 'confirm_link')) {
+            $raw .= "\n\n✔ للتأكيد:\n{{confirm_link}}\n\n❌ للإلغاء:\n{{cancel_link}}";
+        }
+
+        return $sms->render($raw, $appointment);
     }
 
     /** Consolidated "booked" message: one branch, one date, every service line. */
-    private function defaultBookedMessage($visit, BookingPolicy $policy, string $confirmUrl, string $cancelUrl): string
+    private function defaultBookedMessage($visit, bool $askConfirmation, string $confirmUrl, string $cancelUrl): string
     {
         $first    = $visit->first();
         $branch   = $first->branch?->localizedName() ?? '';
@@ -287,7 +305,7 @@ class WhatsappService
         }
         $msg .= "\n";
 
-        if ($policy->require_confirmation) {
+        if ($askConfirmation) {
             $msg .= "✔ لتأكيد الموعد:\n{$confirmUrl}\n\n"
                 . "❌ لإلغاء الموعد:\n{$cancelUrl}\n\n";
         }
@@ -310,26 +328,6 @@ class WhatsappService
         $result = app(\App\Services\Sms\RasselClient::class)->send($phone, $message);
 
         return [(bool) ($result['ok'] ?? false), $result['error'] ?? null];
-    }
-
-    /**
-     * True when the new credit-tracked SMS system owns this message for this
-     * appointment — i.e. the number routes over SMS and the branch has opted the
-     * matching automation on. When so, the legacy path skips the SMS send to
-     * avoid a duplicate; WhatsApp numbers are never affected.
-     */
-    private function smsSystemOwns(Appointment $appointment, string $type): bool
-    {
-        $phone = $appointment->customer_phone ?? $appointment->customer?->phone;
-        if (! $phone || $this->channelFor($phone) !== 'sms') {
-            return false;
-        }
-
-        try {
-            return app(\App\Services\Sms\SmsService::class)->automationHandles($appointment, $type, $phone);
-        } catch (\Throwable) {
-            return false;
-        }
     }
 
     public function sendAppointmentConfirmed(Appointment $appointment): bool
@@ -479,48 +477,73 @@ class WhatsappService
     }
 
     /**
-     * The single actionable reminder, sent ~1h before the visit: confirm or
-     * cancel (with a reason). Group bookings send ONE reminder for the whole
-     * visit, de-duped per group on the primary row. Routed by country channel.
+     * WhatsApp reminder before the visit, at the branch's chosen lead time
+     * ("Customer messages"). Group bookings send ONE reminder for the whole
+     * visit. De-duped per visit + start time, so a moved booking is reminded
+     * again for its new time. SMS numbers are handled by SmsService::reminder.
      */
-    public function sendReminder(Appointment $appointment, string $slot = '1h'): bool
+    public function sendReminder(Appointment $appointment): bool
     {
         $phone = $appointment->customer_phone ?? $appointment->customer?->phone;
         if (!$phone) return false;
 
-        $policy = $this->policyFor($appointment);
+        $sms = app(\App\Services\Sms\SmsService::class);
+        if ($sms->routesOverSms($phone)) return false;
 
-        // Reuse the "3h" toggle as the owner's on/off switch for this reminder.
-        if (! $policy->reminder_3h) return false;
+        $settings = $sms->settingsFor($appointment);
+        if (! $settings?->reminder_enabled) return false;
 
         $visit   = $this->visitAppointments($appointment);
         $primary = $visit->first();
 
-        // New SMS system owns the reminder for this branch/number → skip legacy SMS.
-        if ($this->smsSystemOwns($primary, 'reminder')) return false;
-
-        $type = 'reminder_' . $slot;
+        $type = 'reminder_' . $primary->start_time->format('YmdHi');
         $alreadySent = WhatsappLog::where('appointment_id', $primary->id)
-            ->whereIn('type', [$type, 'reminder']) // 'reminder' = legacy single reminder
+            ->where('type', $type)
             ->where('status', 'sent')
             ->exists();
         if ($alreadySent) return false;
 
+        $ask          = (bool) $settings->ask_confirmation;
         $confirmation = AppointmentConfirmation::activeFor($primary);
         $confirmUrl   = route('appointment.confirm', ['token' => $confirmation->token]);
         $cancelUrl    = route('appointment.cancel-form', ['token' => $confirmation->token]);
 
-        $message = $this->defaultReminderMessage($visit, $confirmUrl, $cancelUrl);
+        $message = $visit->count() === 1 ? $this->customText($primary, 'reminder', $ask) : null;
+        $message ??= $this->defaultReminderMessage($visit, $ask, $confirmUrl, $cancelUrl);
 
-        return $this->send($phone, $message, $primary->company_id, $primary->id, $type, $this->channelFor($phone));
+        return $this->send($phone, $message, $primary->company_id, $primary->id, $type, 'whatsapp');
     }
 
-    /** Consolidated 1h reminder with confirm / cancel links for the whole visit. */
-    private function defaultReminderMessage($visit, string $confirmUrl, string $cancelUrl): string
+    /** WhatsApp follow-up after the last visit (SMS numbers: SmsService::followup). */
+    public function sendFollowup(Appointment $appointment): bool
+    {
+        $phone = $appointment->customer_phone ?? $appointment->customer?->phone;
+        if (!$phone) return false;
+
+        $sms = app(\App\Services\Sms\SmsService::class);
+        if ($sms->routesOverSms($phone)) return false;
+        if (! $sms->settingsFor($appointment)?->followup_enabled) return false;
+
+        $type = 'followup';
+        if ($this->alreadySent($appointment->id, $type)) return false;
+
+        $tpl  = $sms->resolveTemplate($appointment->company_id, $appointment->branch_id, 'followup');
+        $body = $sms->render($tpl->body ?? \App\Models\SmsTemplate::defaultBody('followup'), $appointment);
+        if (trim($body) === '') return false;
+
+        return $this->send($phone, $body, $appointment->company_id, $appointment->id, $type, 'whatsapp');
+    }
+
+    /** Consolidated reminder for the whole visit, with confirm / cancel links when asked. */
+    private function defaultReminderMessage($visit, bool $askConfirmation, string $confirmUrl, string $cancelUrl): string
     {
         $first  = $visit->first();
         $branch = $first->branch?->localizedName() ?? '';
         $time   = $this->timeLabel($first->start_time);
+        $isToday = $first->start_time->isSameDay($first->branch?->localNow() ?? now());
+        $when    = $isToday
+            ? "اليوم الساعة {$time}"
+            : $first->start_time->translatedFormat('l d/m') . " الساعة {$time}";
 
         $guestLabels = $visit->pluck('customer_name')->filter()->unique()->values();
         $companion   = $guestLabels->isNotEmpty()
@@ -534,15 +557,23 @@ class WhatsappService
             $services[] = "💇 {$svc}{$emp}";
         }
 
-        return "⏰ *تذكير: موعدك بعد ساعة*\n\n"
+        // The lead time is the branch's choice now, so the header states the
+        // day and time instead of a fixed "in one hour".
+        $msg = "⏰ *تذكير بموعدك*\n\n"
             . "📍 *{$branch}*\n"
-            . "🕐 اليوم الساعة {$time}\n"
+            . "🕐 {$when}\n"
             . $companion
-            . implode("\n", array_values(array_unique($services))) . "\n\n"
-            . "يرجى تأكيد حضورك:\n"
-            . "✔ تأكيد الموعد:\n{$confirmUrl}\n\n"
-            . "❌ إلغاء الموعد (مع ذكر السبب):\n{$cancelUrl}\n\n"
-            . "💛 GlowRez";
+            . implode("\n", array_values(array_unique($services))) . "\n\n";
+
+        if ($askConfirmation) {
+            $msg .= "يرجى تأكيد حضورك:\n"
+                . "✔ تأكيد الموعد:\n{$confirmUrl}\n\n"
+                . "❌ إلغاء الموعد (مع ذكر السبب):\n{$cancelUrl}\n\n";
+        } else {
+            $msg .= "بانتظارك! ";
+        }
+
+        return $msg . "💛 GlowRez";
     }
 
     // ── Employee notifications ───────────────────────────────────────────────

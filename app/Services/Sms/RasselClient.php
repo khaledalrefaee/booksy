@@ -221,7 +221,7 @@ class RasselClient
 
     private function toE164(string $phone): string
     {
-        $digits = preg_replace('/\D+/', '', $phone);
+        $digits = \App\Support\PhoneNumber::international($phone);
 
         return $digits === '' ? '' : '+' . $digits;
     }

@@ -42,17 +42,20 @@ class SmsService
         return $this->queueForAppointment($appointment, 'followup');
     }
 
-    /** Does the branch's opt-in cover SMS for this event on an SMS-channel phone? */
-    public function automationHandles(Appointment $appointment, string $type, ?string $phone = null): bool
+    /**
+     * The single routing rule for customer messages: local-network numbers
+     * (after completing "09…" with the country code) go over SMS through this
+     * service and the branch's credits; everything else goes over WhatsApp.
+     */
+    public function routesOverSms(?string $phone): bool
     {
-        $phone ??= $this->phoneFor($appointment);
-        if (! $phone || ! $this->isSmsChannel($phone)) {
-            return false;
-        }
+        return $phone ? $this->isSmsChannel($this->internationalize($phone)) : false;
+    }
 
-        $setting = $this->settingFor($appointment->company_id, $appointment->branch_id);
-
-        return $setting?->enabledFor($type) ?? false;
+    /** The branch's customer-message settings (defaults when never saved). */
+    public function settingsFor(Appointment $appointment): ?SmsAutomationSetting
+    {
+        return $this->settingFor($appointment->company_id, $appointment->branch_id);
     }
 
     // ── Core pipeline ────────────────────────────────────────────────────────
@@ -75,7 +78,19 @@ class SmsService
         }
 
         $template = $this->resolveTemplate($appointment->company_id, $appointment->branch_id, $type);
-        $body     = $this->render($template->body ?? SmsTemplate::defaultBody($type), $appointment);
+        $raw      = $template->body ?? SmsTemplate::defaultBody($type, $this->localeFor($appointment->company_id));
+
+        // "Ask the customer to confirm attendance" → the booking message and the
+        // reminder carry the confirm / cancel links (unless the template already
+        // places them itself).
+        if ($setting->ask_confirmation && in_array($type, ['confirmation', 'reminder'], true)
+            && ! str_contains($raw, 'confirm_link')) {
+            $raw .= $this->localeFor($appointment->company_id) === 'en'
+                ? "\nConfirm: {{confirm_link}}\nCancel: {{cancel_link}}"
+                : "\nللتأكيد: {{confirm_link}}\nللإلغاء: {{cancel_link}}";
+        }
+
+        $body = $this->render($raw, $appointment);
         if (trim($body) === '') {
             return null;
         }
@@ -118,25 +133,30 @@ class SmsService
     }
 
     /**
-     * Send an ad-hoc (non-appointment) SMS through the same credit pipeline.
-     * Used by manual sends / future campaigns.
+     * Send any other SMS through the same credit pipeline: the always-on
+     * appointment notices (confirmed / moved / cancelled / waitlist) and
+     * manual sends. meta: customer_id, appointment_id, message_type, dedupe_key.
      */
     public function sendManual(Company $company, ?Branch $branch, string $phone, string $body, array $meta = []): ?SmsMessage
     {
-        if (trim($body) === '' || ! $this->isSmsChannel($phone)) {
+        if (trim($body) === '' || ! $this->routesOverSms($phone)) {
             return null;
+        }
+        if (! empty($meta['dedupe_key']) && SmsMessage::where('dedupe_key', $meta['dedupe_key'])->exists()) {
+            return null; // this exact notice was already handled
         }
 
         $credits = SmsSegment::credits($body);
         $wallet  = $branch ? $this->credits->contextWalletFor($branch) : $company->smsPoolWallet()->first();
 
         $message = new SmsMessage([
-            'company_id'   => $company->id,
-            'branch_id'    => $branch?->id,
-            'customer_id'  => $meta['customer_id'] ?? null,
-            'wallet_id'    => $wallet?->id,
-            'message_type' => 'manual',
-            'phone'        => $phone,
+            'company_id'     => $company->id,
+            'branch_id'      => $branch?->id,
+            'customer_id'    => $meta['customer_id'] ?? null,
+            'appointment_id' => $meta['appointment_id'] ?? null,
+            'wallet_id'      => $wallet?->id,
+            'message_type'   => $meta['message_type'] ?? 'manual',
+            'phone'          => $this->internationalize($phone),
             'body'         => $body,
             'segments'     => SmsSegment::analyze($body)['segments'],
             'provider'     => 'rasel',
@@ -167,9 +187,7 @@ class SmsService
             return null;
         }
 
-        return SmsAutomationSetting::where('company_id', $companyId)
-            ->where('branch_id', $branchId)
-            ->first();
+        return SmsAutomationSetting::forBranch($companyId, $branchId);
     }
 
     /** Most-specific-wins: branch → company → system default row. */
@@ -193,6 +211,18 @@ class SmsService
     public function render(string $body, Appointment $appointment): string
     {
         $vars = $this->variablesFor($appointment);
+
+        // Confirm / cancel links only when the text asks for them — minting a
+        // token for every message would be wasted work. One token per visit
+        // (the group's first row), shared with every other message of it.
+        if (str_contains($body, 'confirm_link') || str_contains($body, 'cancel_link')) {
+            $primary = $appointment->booking_group_id
+                ? (Appointment::where('booking_group_id', $appointment->booking_group_id)->orderBy('start_time')->first() ?? $appointment)
+                : $appointment;
+            $token = \App\Models\AppointmentConfirmation::activeFor($primary)->token;
+            $vars['confirm_link'] = route('appointment.confirm', ['token' => $token]);
+            $vars['cancel_link']  = route('appointment.cancel-form', ['token' => $token]);
+        }
 
         return preg_replace_callback('/\{\{\s*(\w+)\s*\}\}/', function ($m) use ($vars) {
             return $vars[$m[1]] ?? '';
@@ -222,27 +252,9 @@ class SmsService
         return $phone ? $this->internationalize($phone) : null;
     }
 
-    /**
-     * Numbers typed at reception are often local ("0949 863 373"). Without the
-     * country code they never match the SMS-channel dial codes, and Rassel
-     * can't route them. Complete them with the platform default dial code:
-     * "0949863373" → "963949863373", "00963…" → "963…". Already-international
-     * numbers pass through unchanged.
-     */
     private function internationalize(string $phone): string
     {
-        $digits = preg_replace('/\D+/', '', $phone);
-
-        if (str_starts_with($digits, '00')) {
-            return substr($digits, 2);
-        }
-        if (str_starts_with($digits, '0')) {
-            $cc = preg_replace('/\D+/', '', (string) config('booksy.default_dial_code', '+963'));
-
-            return $cc . substr($digits, 1);
-        }
-
-        return $digits;
+        return \App\Support\PhoneNumber::international($phone);
     }
 
     /**

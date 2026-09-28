@@ -20,14 +20,15 @@ use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule): void {
-        $schedule->command('appointments:send-reminders')->everyTenMinutes();
+        // Customer reminder (SMS or WhatsApp) at each branch's own lead time —
+        // every minute so "10 minutes before" means 10 minutes before.
+        $schedule->command('appointments:send-reminders')->everyMinute()->withoutOverlapping(5);
         $schedule->command('appointments:flag-no-shows')->everyFifteenMinutes()->withoutOverlapping();
         $schedule->command('booksy:process-recurring-expenses')->dailyAt('06:00');
         $schedule->command('employees:license-reminders')->dailyAt('09:00');
         $schedule->command('subscriptions:expiry-reminders')->dailyAt('08:00');
 
-        // SMS credit system
-        $schedule->command('sms:send-reminders')->everyTenMinutes();
+        // Customer follow-up (SMS or WhatsApp) + SMS credit housekeeping
         $schedule->command('sms:send-followups')->dailyAt('10:00');
         $schedule->command('sms:expire-credits')->dailyAt('00:30');
 

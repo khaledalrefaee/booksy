@@ -11,9 +11,9 @@ use Illuminate\Console\Command;
 class SmsSendFollowups extends Command
 {
     protected $signature = 'sms:send-followups';
-    protected $description = 'Send a win-back SMS N days after a customer\'s last visit, per branch opt-in';
+    protected $description = 'Send the win-back message (SMS or WhatsApp) N days after a customer\'s last visit, per branch "Customer messages" settings';
 
-    public function handle(SmsService $sms): int
+    public function handle(SmsService $sms, \App\Services\WhatsappService $whatsapp): int
     {
         // "N days after the last visit": for each opted-in branch, look at the day
         // exactly followup_days ago and message customers whose most recent
@@ -57,7 +57,11 @@ class SmsSendFollowups extends Command
 
                 $seenCustomers[$appt->customer_id] = true;
 
-                if ($sms->followup($appt)) {
+                $phone = $appt->customer_phone ?: $appt->customer?->phone;
+                $ok = $sms->routesOverSms($phone)
+                    ? (bool) $sms->followup($appt)      // SMS: branch credits
+                    : $whatsapp->sendFollowup($appt);   // everyone else
+                if ($ok) {
                     $sent++;
                 }
             }

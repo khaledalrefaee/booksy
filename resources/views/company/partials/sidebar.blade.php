@@ -188,7 +188,7 @@
                 <a href="{{ route('company.marketing.booking-sources') }}" class="bk-nl {{ request()->routeIs('company.marketing.booking-sources') ? 'active' : '' }}">
                     <i data-feather="share-2"></i><span>{{ __('Booking Sources') }}</span>
                 </a>
-                <a href="{{ route('company.sms.overview') }}" class="bk-nl {{ request()->routeIs('company.sms.*') ? 'active' : '' }}">
+                <a href="{{ route('company.sms.overview') }}" class="bk-nl {{ request()->routeIs('company.sms.*') && ! request()->routeIs('company.sms.automations*', 'company.sms.templates*') ? 'active' : '' }}">
                     <i data-feather="message-square"></i><span>{{ __('SMS') }}</span>
                 </a>
                 @feature('reports')
@@ -209,6 +209,9 @@
                 </a>
                 <a href="{{ route('company.booking-policy.edit') }}" class="bk-nl {{ request()->routeIs('company.booking-policy.*') ? 'active' : '' }}">
                     <i data-feather="shield"></i><span>{{ __('Booking policy') }}</span>
+                </a>
+                <a href="{{ route('company.sms.automations') }}" class="bk-nl {{ request()->routeIs('company.sms.automations*', 'company.sms.templates*') ? 'active' : '' }}">
+                    <i data-feather="bell"></i><span>{{ __('Customer messages') }}</span>
                 </a>
                 <a href="{{ route('company.profile.show') }}" class="bk-nl {{ request()->routeIs('company.profile.*') ? 'active' : '' }}">
                     <i data-feather="settings"></i><span>{{ __('Settings') }}</span>

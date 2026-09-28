@@ -26,6 +26,8 @@ class SmsTemplate extends Model
         'appointment_date',
         'appointment_time',
         'service_name',
+        'confirm_link',
+        'cancel_link',
     ];
 
     /** The built-in default bodies used to seed a company's templates. */
