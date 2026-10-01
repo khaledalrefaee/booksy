@@ -26,7 +26,10 @@
 
 <nav class="sidebar bk-sidebar-v4">
     <div class="sidebar-header">
-        <a href="{{ $dashUrl }}" class="sidebar-brand">GlowRez<span>.</span></a>
+        <a href="{{ $dashUrl }}" class="sidebar-brand sidebar-brand-logo" aria-label="GlowRez">
+            <img class="bk-sb-logo bk-sb-logo--light" src="{{ asset('images/glowrez-logo-light_1.webp') }}" alt="GlowRez">
+            <img class="bk-sb-logo bk-sb-logo--dark"  src="{{ asset('images/glowrez-logo-dark_1.webp') }}"  alt="" aria-hidden="true">
+        </a>
     </div>
 
     <div class="sidebar-body bk-sb4">
@@ -188,7 +191,7 @@
                 <a href="{{ route('company.marketing.booking-sources') }}" class="bk-nl {{ request()->routeIs('company.marketing.booking-sources') ? 'active' : '' }}">
                     <i data-feather="share-2"></i><span>{{ __('Booking Sources') }}</span>
                 </a>
-                <a href="{{ route('company.sms.overview') }}" class="bk-nl {{ request()->routeIs('company.sms.*') && ! request()->routeIs('company.sms.automations*', 'company.sms.templates*') ? 'active' : '' }}">
+                <a href="{{ route('company.sms.overview') }}" class="bk-nl {{ request()->routeIs('company.sms.*') && ! request()->routeIs('company.sms.automations*') ? 'active' : '' }}">
                     <i data-feather="message-square"></i><span>{{ __('SMS') }}</span>
                 </a>
                 @feature('reports')
@@ -210,7 +213,7 @@
                 <a href="{{ route('company.booking-policy.edit') }}" class="bk-nl {{ request()->routeIs('company.booking-policy.*') ? 'active' : '' }}">
                     <i data-feather="shield"></i><span>{{ __('Booking policy') }}</span>
                 </a>
-                <a href="{{ route('company.sms.automations') }}" class="bk-nl {{ request()->routeIs('company.sms.automations*', 'company.sms.templates*') ? 'active' : '' }}">
+                <a href="{{ route('company.sms.automations') }}" class="bk-nl {{ request()->routeIs('company.sms.automations*') ? 'active' : '' }}">
                     <i data-feather="bell"></i><span>{{ __('Customer messages') }}</span>
                 </a>
                 <a href="{{ route('company.profile.show') }}" class="bk-nl {{ request()->routeIs('company.profile.*') ? 'active' : '' }}">

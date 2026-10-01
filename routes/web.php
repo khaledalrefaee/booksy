@@ -62,6 +62,9 @@ Route::get('/for-business', [FrontController::class, 'business'])->name('front.b
 Route::get('/about', [FrontController::class, 'about'])->name('front.about');
 Route::get('/appointment/{token}/confirm', [AppointmentConfirmController::class, 'confirm'])->name('appointment.confirm');
 Route::get('/appointment/{token}/cancel',  [AppointmentConfirmController::class, 'cancelForm'])->name('appointment.cancel-form');
+// Short aliases for SMS: every character of a link costs credits.
+Route::get('/c/{token}', [AppointmentConfirmController::class, 'confirm'])->name('appointment.c');
+Route::get('/x/{token}', [AppointmentConfirmController::class, 'cancelForm'])->name('appointment.x');
 Route::post('/appointment/{token}/cancel', [AppointmentConfirmController::class, 'cancel'])->name('appointment.cancel-do');
 Route::get('/contact', [FrontController::class, 'contact'])->name('front.contact');
 Route::post('/contact', [FrontController::class, 'contactSend'])->name('front.contact.send');

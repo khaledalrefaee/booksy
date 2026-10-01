@@ -264,16 +264,15 @@
                    data-bs-toggle="dropdown">
                     @if($authCompany?->logo)
                         <img src="{{ asset('storage/'.$authCompany->logo) }}"
-                             class="rounded-circle" style="width:34px;height:34px;object-fit:cover;flex-shrink:0;border:2px solid rgba(75,93,52,.35);" alt="">
+                             class="rounded-circle" style="width:44px;height:44px;object-fit:contain;background:#fff;padding:2px;flex-shrink:0;border:2px solid #5C7038;" alt="{{ $authCompany?->localizedName() }}">
                     @else
-                        <img src="https://ui-avatars.com/api/?name={{ urlencode($authCompany?->localizedName() ?? 'Co') }}&size=34&background=4B5D34&color=FFFFFF&bold=true"
-                             class="rounded-circle" style="width:34px;height:34px;flex-shrink:0;border:2px solid rgba(75,93,52,.25);" alt="">
+                        <img src="https://ui-avatars.com/api/?name={{ urlencode($authCompany?->localizedName() ?? 'Co') }}&size=88&background=4B5D34&color=FFFFFF&bold=true"
+                             class="rounded-circle" style="width:44px;height:44px;flex-shrink:0;border:2px solid #5C7038;" alt="">
                     @endif
                     <div class="d-none d-md-block" style="line-height:1.2;text-align:{{ $isAr?'right':'left' }};">
-                        <div style="font-size:.78rem;font-weight:700;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        <div style="font-size:.92rem;font-weight:800;color:var(--bk-gold-strong, var(--bk-accent));max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                             {{ $authCompany?->localizedName() }}
                         </div>
-                        <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.6px;opacity:.4;">Business</div>
                     </div>
                 </a>
 

@@ -15,7 +15,6 @@
 <x-front.legal
     :title="($isAr ? 'الشروط والأحكام' : 'Terms of Service') . ' | GlowRez'"
     :description="$isAr ? 'الشروط والأحكام الخاصة باستخدام منصة GlowRez للحجز.' : 'Terms of Service governing the use of the GlowRez booking platform.'"
-    :eyebrow="$isAr ? 'قانوني' : 'Legal'"
     :heading="$isAr ? 'الشروط والأحكام' : 'Terms of Service'"
     :subtitle="$isAr ? 'الشروط والأحكام التي تنظّم استخدامك لمنصّة GlowRez.' : 'The terms and conditions that govern your use of the GlowRez platform.'"
     :updatedLabel="$isAr ? 'آخر تحديث:' : 'Last updated:'"

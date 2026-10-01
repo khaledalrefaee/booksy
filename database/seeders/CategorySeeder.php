@@ -27,8 +27,8 @@ class CategorySeeder extends Seeder
     private function categories(): array
     {
         return [
-            ['slug' => 'salon',              'name_en' => 'Salon',               'name_ar' => 'صالون',            'icon' => 'scissors'],
-            ['slug' => 'barbershop',         'name_en' => 'Barbershop',          'name_ar' => 'صالون حلاقة',       'icon' => 'scissors'],
+            ['slug' => 'salon',              'name_en' => "Women's Salon", 'name_ar' => 'صالون نسائي',           'icon' => 'scissors'],
+            ['slug' => 'barbershop',         'name_en' => "Men's Salon", 'name_ar' => 'صالون رجالي',       'icon' => 'scissors'],
             ['slug' => 'spa',                'name_en' => 'Spa',                 'name_ar' => 'سبا',              'icon' => 'droplet'],
             ['slug' => 'beauty-center',      'name_en' => 'Beauty Center',       'name_ar' => 'مركز تجميل',        'icon' => 'star'],
             ['slug' => 'nail-studio',        'name_en' => 'Nail Studio',         'name_ar' => 'استوديو أظافر',     'icon' => 'edit-2'],

@@ -133,16 +133,7 @@
     <div class="col-12 col-xl-8">
 
         {{-- Chart --}}
-        @if(count($chartData) > 1)
-        <div class="card border-0 shadow-sm mb-3" style="border-radius:16px;">
-            <div class="card-body p-3">
-                <div style="font-size:12px;font-weight:700;opacity:.4;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
-                    {{ __('Income vs Expenses') }}
-                </div>
-                <div id="cashChart"></div>
-            </div>
-        </div>
-        @endif
+        @include('company.cash._chart', ['chartData' => $chartData])
 
         {{-- Per-branch balance cards (only when showing all branches) --}}
         @if(!$branchId && $byBranch->isNotEmpty())
@@ -261,14 +252,14 @@
                 <div class="income-section">
                     <div style="font-size:10px;font-weight:700;color:#22c55e;opacity:.7;margin-bottom:8px;">⬆ {{ __('INCOME') }}</div>
                     @foreach($incomeCatsView as $key => $meta)
-                    @php $total = $byCat[$key] ?? 0; @endphp
-                    @if($total > 0)
+                    @php $totals = collect($byCat[$key] ?? [])->filter(fn($v) => $v > 0); @endphp
+                    @if($totals->isNotEmpty())
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <span style="font-size:15px;">{{ $meta['icon'] }}</span>
                         <div style="flex:1;min-width:0;">
                             <div class="d-flex justify-content-between" style="font-size:12px;font-weight:600;">
                                 <span>{{ __($meta['label_key']) }}</span>
-                                <span style="color:#22c55e;">{{ number_format($total,0) }}</span>
+                                <span class="text-end" style="color:#22c55e;font-weight:700;">@foreach($totals as $cur => $amt)<div style="white-space:nowrap;">{{ number_format($amt,0) }} <small style="opacity:.75;">{{ config("booksy.currencies.{$cur}.symbol", $cur) }}</small></div>@endforeach</span>
                             </div>
                         </div>
                     </div>
@@ -279,14 +270,14 @@
                 <div class="expense-section mt-3">
                     <div style="font-size:10px;font-weight:700;color:#ef4444;opacity:.7;margin-bottom:8px;">⬇ {{ __('EXPENSES') }}</div>
                     @foreach($expenseCatsView as $key => $meta)
-                    @php $total = $byCat[$key] ?? 0; @endphp
-                    @if($total > 0)
+                    @php $totals = collect($byCat[$key] ?? [])->filter(fn($v) => $v > 0); @endphp
+                    @if($totals->isNotEmpty())
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <span style="font-size:15px;">{{ $meta['icon'] }}</span>
                         <div style="flex:1;min-width:0;">
                             <div class="d-flex justify-content-between" style="font-size:12px;font-weight:600;">
                                 <span>{{ __($meta['label_key']) }}</span>
-                                <span style="color:#ef4444;">{{ number_format($total,0) }}</span>
+                                <span class="text-end" style="color:#ef4444;font-weight:700;">@foreach($totals as $cur => $amt)<div style="white-space:nowrap;">{{ number_format($amt,0) }} <small style="opacity:.75;">{{ config("booksy.currencies.{$cur}.symbol", $cur) }}</small></div>@endforeach</span>
                             </div>
                         </div>
                     </div>
@@ -368,108 +359,5 @@
 
 @push('scripts')
 <script src="{{ asset('backend/assets/vendors/apexcharts/apexcharts.min.js') }}"></script>
-<script>
-(function () {
-    var chartEl = document.getElementById('cashChart');
-    if (!chartEl) return;
 
-    var rawData = @json($chartData);
-    var isDark  = !document.documentElement.classList.contains('bk-theme-light');
-
-    var isAr = document.documentElement.getAttribute('dir') === 'rtl' || document.documentElement.lang === 'ar';
-    var monthsAr = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-    var monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-    var isMonthly = rawData.length > 0 && rawData[0].mode === 'month';
-
-    var dates = rawData.map(function(d) {
-        var parts = d.date.split('-');
-        var m = parseInt(parts[1]) - 1;
-        var day = parseInt(parts[2]);
-        if (isMonthly) {
-            return isAr ? monthsAr[m] : monthsEn[m];
-        }
-        return isAr ? (day + ' ' + monthsAr[m]) : (monthsEn[m] + ' ' + day);
-    });
-
-    var totalPoints = rawData.length;
-
-    new ApexCharts(chartEl, {
-        chart: {
-            type: 'area', height: 200,
-            toolbar: { show: false },
-            background: 'transparent',
-            animations: { enabled: true, speed: 600, easing: 'easeinout' },
-            zoom: { enabled: false },
-            fontFamily: 'inherit',
-        },
-        series: [
-            { name: '{{ __("Income") }}',   data: rawData.map(function(d){ return d.income;  }) },
-            { name: '{{ __("Expenses") }}', data: rawData.map(function(d){ return d.expense; }) },
-        ],
-        xaxis: {
-            categories: dates,
-            labels: {
-                rotate: -45,
-                rotateAlways: totalPoints > 10,
-                hideOverlappingLabels: true,
-                maxHeight: 60,
-                style: { fontSize: '9px', fontWeight: 600, colors: isDark ? '#64748b' : '#94a3b8' },
-                trim: true,
-            },
-            axisBorder: { show: false },
-            axisTicks: { show: false },
-            tickAmount: Math.min(totalPoints, 12),
-            tooltip: { enabled: false },
-        },
-        yaxis: {
-            labels: {
-                style: { colors: isDark ? '#64748b' : '#94a3b8', fontSize: '10px', fontWeight: 600 },
-                formatter: function(v) {
-                    if (v >= 1000000) return (v/1000000).toFixed(1) + 'M';
-                    if (v >= 1000) return (v/1000).toFixed(0) + 'K';
-                    return v.toFixed(0);
-                }
-            },
-        },
-        colors: ['#22c55e', '#ef4444'],
-        fill: {
-            type: 'gradient',
-            gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 90, 100] }
-        },
-        stroke: { curve: 'smooth', width: 2.5 },
-        dataLabels: { enabled: false },
-        legend: {
-            position: 'top',
-            horizontalAlign: isAr ? 'right' : 'left',
-            labels: { colors: isDark ? '#94a3b8' : '#64748b' },
-            fontSize: '11px',
-            fontWeight: 700,
-            markers: { width: 8, height: 8, radius: 8 },
-            itemMargin: { horizontal: 12 },
-        },
-        grid: {
-            borderColor: isDark ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.06)',
-            strokeDashArray: 4,
-            xaxis: { lines: { show: false } },
-            padding: { left: 8, right: 8 },
-        },
-        tooltip: {
-            theme: isDark ? 'dark' : 'light',
-            shared: true,
-            intersect: false,
-            style: { fontSize: '12px', fontFamily: 'inherit' },
-            y: { formatter: function(v) { return v ? v.toLocaleString() : '0'; } },
-            marker: { show: true },
-        },
-        markers: {
-            size: totalPoints <= 14 ? 4 : 0,
-            strokeWidth: 2,
-            strokeColors: isDark ? '#1e1e2d' : '#fff',
-            hover: { size: 6 },
-        },
-        theme: { mode: isDark ? 'dark' : 'light' },
-    }).render();
-})();
-</script>
 @endpush

@@ -216,6 +216,10 @@
                    class="bk-pl {{ request()->routeIs('owner.sms.packages') ? 'active' : '' }}">
                     <i data-feather="box"></i><span>{{ __('Packages') }}</span>
                 </a>
+                <a href="{{ route('owner.sms.templates') }}"
+                   class="bk-pl {{ request()->routeIs('owner.sms.templates') ? 'active' : '' }}">
+                    <i data-feather="edit-3"></i><span>{{ __('Message templates') }}</span>
+                </a>
                 <a href="{{ route('owner.sms.pricing') }}"
                    class="bk-pl {{ request()->routeIs('owner.sms.pricing') ? 'active' : '' }}">
                     <i data-feather="tag"></i><span>{{ __('Pricing') }}</span>

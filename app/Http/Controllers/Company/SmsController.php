@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Auth;
 /**
  * Company-facing SMS panel. Shows the company its own GlowRez credits (per
  * branch, with the shared company pool), lets it opt each branch into the
- * confirmation / reminder / follow-up automations, edit templates, set a
+ * confirmation / reminder / follow-up automations, set a
  * low-balance alert, review history, and request more credits.
  *
  * No control here sends an SMS or implies live sending — delivery is wired to
@@ -92,7 +92,6 @@ class SmsController extends Controller
         $data = $request->validate([
             'confirmation_enabled'    => ['nullable', 'boolean'],
             'reminder_enabled'        => ['nullable', 'boolean'],
-            'ask_confirmation'        => ['nullable', 'boolean'],
             'reminder_offset_minutes' => ['required', 'integer', 'min:5', 'max:1440'],
             'followup_enabled'        => ['nullable', 'boolean'],
             'followup_days'           => ['required', 'integer', 'min:1', 'max:365'],
@@ -104,75 +103,12 @@ class SmsController extends Controller
                 'confirmation_enabled'    => $request->boolean('confirmation_enabled'),
                 'reminder_enabled'        => $request->boolean('reminder_enabled'),
                 'reminder_offset_minutes' => $data['reminder_offset_minutes'],
-                'ask_confirmation'        => $request->boolean('ask_confirmation'),
                 'followup_enabled'        => $request->boolean('followup_enabled'),
                 'followup_days'           => $data['followup_days'],
             ]
         );
 
         return back()->with('success', __('Customer messages saved for :branch.', ['branch' => $branch->localizedName()]));
-    }
-
-    // ── Templates ────────────────────────────────────────────────────────────
-
-    public function templates()
-    {
-        $company = $this->company();
-        $keys    = ['confirmation', 'reminder', 'followup'];
-        $locale  = app()->getLocale() === 'en' ? 'en' : 'ar';
-
-        $templates = [];
-        foreach ($keys as $key) {
-            $tpl = SmsTemplate::where('company_id', $company->id)
-                ->whereNull('branch_id')->where('key', $key)->where('locale', $locale)->first();
-            $templates[$key] = $tpl?->body ?? SmsTemplate::defaultBody($key, $locale);
-        }
-
-        return view('company.sms.templates', [
-            'company'   => $company,
-            'templates' => $templates,
-            'keys'      => $keys,
-            'locale'    => $locale,
-            'variables' => SmsTemplate::VARIABLES,
-        ]);
-    }
-
-    public function updateTemplate(Request $request)
-    {
-        $company = $this->company();
-        $locale  = app()->getLocale() === 'en' ? 'en' : 'ar';
-
-        $data = $request->validate([
-            'key'  => ['required', 'in:confirmation,reminder,followup'],
-            'body' => ['required', 'string', 'max:1000'],
-        ]);
-
-        $where = ['company_id' => $company->id, 'branch_id' => null, 'key' => $data['key'], 'locale' => $locale];
-
-        // Saving the default text unchanged = "keep the default": store nothing,
-        // so WhatsApp keeps its richer built-in layout for this message.
-        if (trim($data['body']) === trim(SmsTemplate::defaultBody($data['key'], $locale))) {
-            SmsTemplate::where($where)->delete();
-        } else {
-            SmsTemplate::updateOrCreate($where, ['body' => $data['body'], 'is_active' => true]);
-        }
-
-        return back()->with('success', __('Template saved.'));
-    }
-
-    /** Char-counter / predicted-segment endpoint for the template editor. */
-    public function previewSegments(Request $request)
-    {
-        $body = (string) $request->input('body', '');
-        $a    = SmsSegment::analyze($body);
-
-        return response()->json([
-            'length'   => $a['length'],
-            'segments' => $a['segments'],
-            'encoding' => $a['encoding'],
-            'per'      => $a['per_segment'],
-            'credits'  => SmsSegment::credits($body),
-        ]);
     }
 
     // ── History ──────────────────────────────────────────────────────────────

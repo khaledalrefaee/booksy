@@ -8,10 +8,12 @@ use App\Models\Company;
 use App\Models\SmsMessage;
 use App\Models\SmsPackage;
 use App\Models\SmsSetting;
+use App\Models\SmsTemplate;
 use App\Models\SmsTransaction;
 use App\Models\SmsWallet;
 use App\Services\Sms\RasselAccountClient;
 use App\Services\Sms\SmsCreditService;
+use App\Services\Sms\SmsSegment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -25,6 +27,57 @@ use Illuminate\Support\Facades\DB;
 class SmsController extends Controller
 {
     public function __construct(private SmsCreditService $credits) {}
+
+    // ── Message templates (platform-wide; companies cannot edit them) ────────
+
+    public function templates()
+    {
+        $templates = [];
+        foreach (['ar', 'en'] as $locale) {
+            foreach (SmsTemplate::KEYS as $key) {
+                $row = SmsTemplate::whereNull('company_id')->whereNull('branch_id')
+                    ->where('key', $key)->where('locale', $locale)->first();
+                $templates[$locale][$key] = $row?->body ?? SmsTemplate::defaultBody($key, $locale);
+            }
+        }
+
+        return view('owner.sms.templates', [
+            'templates' => $templates,
+            'keys'      => SmsTemplate::KEYS,
+            'variables' => SmsTemplate::VARIABLES,
+        ]);
+    }
+
+    public function updateTemplate(Request $request)
+    {
+        $data = $request->validate([
+            'key'    => ['required', 'in:' . implode(',', SmsTemplate::KEYS)],
+            'locale' => ['required', 'in:ar,en'],
+            'body'   => ['required', 'string', 'max:1000'],
+        ]);
+
+        SmsTemplate::updateOrCreate(
+            ['company_id' => null, 'branch_id' => null, 'key' => $data['key'], 'locale' => $data['locale']],
+            ['body' => $data['body'], 'is_active' => true]
+        );
+
+        return back()->with('success', __('Template saved.'));
+    }
+
+    /** Char-counter / predicted-segment endpoint for the template editor. */
+    public function previewSegments(Request $request)
+    {
+        $body = (string) $request->input('body', '');
+        $a    = SmsSegment::analyze($body);
+
+        return response()->json([
+            'length'   => $a['length'],
+            'segments' => $a['segments'],
+            'encoding' => $a['encoding'],
+            'per'      => $a['per_segment'],
+            'credits'  => SmsSegment::credits($body),
+        ]);
+    }
 
     // ── Overview ─────────────────────────────────────────────────────────────
 

@@ -31,18 +31,18 @@
 .team-nav-tab {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 16px; border-radius: 10px; white-space: nowrap;
-    font-size: 12px; font-weight: 700; text-decoration: none;
-    color: rgba(255,255,255,.45); transition: all .15s; flex-shrink: 0;
+    font-size: 13px; font-weight: 700; text-decoration: none;
+    color: rgba(255,255,255,.78); transition: all .15s; flex-shrink: 0;
 }
-.bk-theme-light .team-nav-tab { color: rgba(0,0,0,.45); }
+.bk-theme-light .team-nav-tab { color: rgba(0,0,0,.72); }
 .team-nav-tab:hover { color: rgba(255,255,255,.85); background: rgba(255,255,255,.05); }
 .bk-theme-light .team-nav-tab:hover { color: rgba(0,0,0,.8); background: rgba(0,0,0,.04); }
 .team-nav-tab.active {
-    background: rgba(92,112,56,.18); color: #A6BC7E;
+    background: rgba(92,112,56,.32); color: #D7E8B8;
     box-shadow: 0 2px 8px rgba(92,112,56,.15);
 }
 .bk-theme-light .team-nav-tab.active { background: #fff; color: #5C7038; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-.team-nav-tab svg { width: 13px; height: 13px; }
+.team-nav-tab svg { width: 15px; height: 15px; }
 </style>
 <nav class="team-nav" aria-label="{{ __('Team') }}">
     @foreach($teamTabs as $tab)

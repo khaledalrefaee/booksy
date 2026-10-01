@@ -17,7 +17,7 @@ class FrontController extends Controller
     {
         $isAr = app()->getLocale() === 'ar';
 
-        $categories = Category::withCount('companies')->orderBy('sort_order')->get();
+        $categories = Category::withCount(['companies' => fn($q) => $q->where('status', 'active')])->having('companies_count', '>', 0)->orderBy('sort_order')->get();
 
         $branches = \App\Models\Branch::query()
             ->with([
@@ -271,7 +271,7 @@ class FrontController extends Controller
             ]);
         }
 
-        $categories = Category::withCount('companies')->orderBy('sort_order')->get();
+        $categories = Category::withCount(['companies' => fn($q) => $q->where('status', 'active')])->having('companies_count', '>', 0)->orderBy('sort_order')->get();
         $cities     = $this->cityList($isAr);
 
         return view('front.venues', compact(

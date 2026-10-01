@@ -15,6 +15,10 @@
     transition:transform .15s, box-shadow .15s;
     text-decoration:none;
 }
+@media (max-width: 991.98px) {
+    /* sit above the mobile bottom nav so it's visible the whole scroll */
+    .btn-add-tx { bottom:calc(84px + env(safe-area-inset-bottom)); inset-inline-end:16px; z-index:1040; }
+}
 .btn-add-tx:hover { transform:scale(1.08); box-shadow:0 10px 32px rgba(92,112,56,.6); color:#fff; }
 
 /* ─── Overpayment hint ──────────────────────────────────────────────────── */
@@ -36,6 +40,10 @@
 .bulk-bar.show { display:flex; }
 .bulk-bar .count { font-weight:800; font-size:14px; }
 .bulk-bar .btn { font-size:12px; font-weight:700; border-radius:20px; padding:4px 14px; }
+.bulk-bar .btn-bulk-cancel { background:rgba(255,255,255,.18); color:#fff; border:1.5px solid rgba(255,255,255,.7); }
+.bulk-bar .btn-bulk-cancel:hover { background:#fff; color:#3C4B29; }
+.bulk-bar .btn-delete-all { background:#fff; color:#b91c1c; border:1.5px solid #fff; }
+.bulk-bar .btn-delete-all:hover { background:#fee2e2; color:#991b1b; border-color:#fee2e2; }
 
 /* ─── Filter pills ─────────────────────────────────────────────────────── */
 .filter-pill {
@@ -131,7 +139,7 @@
             <div class="{{ $colSize }}">
                 <div class="balance-card">
                     <div class="balance-label">{{ __('Net balance') }} · {{ $cur }}</div>
-                    <div class="balance-value {{ $s['net'] >= 0 ? 'text-success' : 'text-danger' }}">
+                    <div class="balance-value {{ $s['net'] >= 0 ? 'text-success' : 'text-danger' }}" dir="ltr" style="text-align:start;">
                         {{ $s['net'] >= 0 ? '+' : '' }}{{ number_format($s['net'], 0) }}
                         <span>{{ $sym }}</span>
                     </div>
@@ -451,16 +459,7 @@
     <div class="col-12 col-xl-8">
 
         {{-- Chart --}}
-        @if(count($chartData) > 1)
-        <div class="card border-0 shadow-sm mb-3" style="border-radius:16px;">
-            <div class="card-body p-3">
-                <div style="font-size:12px;font-weight:700;opacity:.4;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
-                    {{ __('Income vs Expenses') }}
-                </div>
-                <div id="cashChart"></div>
-            </div>
-        </div>
-        @endif
+        @include('company.cash._chart', ['chartData' => $chartData])
 
         {{-- Filter pills --}}
         <div class="d-flex gap-2 flex-wrap mb-3">
@@ -487,11 +486,11 @@
         {{-- Bulk action bar --}}
         <div class="bulk-bar" id="bulkBar">
             <span class="count"><span id="selectedCount">0</span> {{ __('selected') }}</span>
-            <button type="button" class="btn btn-light btn-sm" onclick="uncheckAll()">{{ __('Cancel') }}</button>
+            <button type="button" class="btn btn-sm btn-bulk-cancel" onclick="uncheckAll()">{{ __('Cancel') }}</button>
             <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteSelectedModal">
                 🗑 {{ __('Delete selected') }}
             </button>
-            <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAllModal">
+            <button type="button" class="btn btn-sm btn-delete-all" data-bs-toggle="modal" data-bs-target="#deleteAllModal">
                 {{ __('Delete all') }} ({{ $totalTxCount }})
             </button>
         </div>
@@ -550,9 +549,9 @@
                             @if($tx->recordedBy) · <span style="opacity:.7;">👤 {{ $tx->recordedBy->name }}</span>@endif
                         </div>
                     </div>
-                    <div class="tx-amount" style="color:{{ $isIncome ? '#22c55e' : '#ef4444' }};">
+                    <div class="tx-amount" dir="ltr" style="color:{{ $isIncome ? '#22c55e' : '#ef4444' }};white-space:nowrap;">
                         {{ $isIncome ? '+' : '-' }}{{ number_format($tx->amount, 2) }}
-                        <span style="font-size:10px;opacity:.5;">{{ $sym }}</span>
+                        <span style="font-size:11px;font-weight:700;opacity:.8;">{{ $sym }}</span>
                     </div>
                     <div class="d-flex gap-1">
                         <button class="tx-edit" title="{{ __('Edit') }}"
@@ -598,14 +597,14 @@
                         ⬆ {{ __('INCOME') }}
                     </div>
                     @foreach($incomeCats as $key => $meta)
-                    @php $total = $byCat[$key] ?? 0; @endphp
-                    @if($total > 0)
+                    @php $totals = collect($byCat[$key] ?? [])->filter(fn($v) => $v > 0); @endphp
+                    @if($totals->isNotEmpty())
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <span style="font-size:16px;">{{ $meta['icon'] }}</span>
                         <div style="flex:1;min-width:0;">
                             <div class="d-flex justify-content-between" style="font-size:12px;font-weight:600;">
                                 <span>{{ __($meta['label_key']) }}</span>
-                                <span style="color:#22c55e;">{{ number_format($total,0) }}</span>
+                                <span class="text-end" style="color:#22c55e;font-weight:700;">@foreach($totals as $cur => $amt)<div style="white-space:nowrap;">{{ number_format($amt,0) }} <small style="opacity:.75;">{{ config("booksy.currencies.{$cur}.symbol", $cur) }}</small></div>@endforeach</span>
                             </div>
                         </div>
                     </div>
@@ -619,14 +618,14 @@
                         ⬇ {{ __('EXPENSES') }}
                     </div>
                     @foreach($expenseCats as $key => $meta)
-                    @php $total = $byCat[$key] ?? 0; @endphp
-                    @if($total > 0)
+                    @php $totals = collect($byCat[$key] ?? [])->filter(fn($v) => $v > 0); @endphp
+                    @if($totals->isNotEmpty())
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <span style="font-size:16px;">{{ $meta['icon'] }}</span>
                         <div style="flex:1;min-width:0;">
                             <div class="d-flex justify-content-between" style="font-size:12px;font-weight:600;">
                                 <span>{{ __($meta['label_key']) }}</span>
-                                <span style="color:#ef4444;">{{ number_format($total,0) }}</span>
+                                <span class="text-end" style="color:#ef4444;font-weight:700;">@foreach($totals as $cur => $amt)<div style="white-space:nowrap;">{{ number_format($amt,0) }} <small style="opacity:.75;">{{ config("booksy.currencies.{$cur}.symbol", $cur) }}</small></div>@endforeach</span>
                             </div>
                         </div>
                     </div>
@@ -1332,118 +1331,6 @@
             e.target.appendChild(input);
         });
     });
-
-    // ── ApexCharts ────────────────────────────────────────────────────────
-    var chartEl = document.getElementById('cashChart');
-    if (chartEl) {
-        var rawData = @json($chartData);
-        var isDark  = document.documentElement.classList.contains('bk-theme-dark') ||
-                      !document.documentElement.classList.contains('bk-theme-light');
-
-        var isAr = {{ ($isRtl ?? false) ? 'true' : 'false' }};
-        var monthsAr = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-        var monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-        var isMonthly = rawData.length > 0 && rawData[0].mode === 'month';
-
-        var dates = rawData.map(function(d) {
-            var parts = d.date.split('-');
-            var m = parseInt(parts[1]) - 1;
-            var day = parseInt(parts[2]);
-            if (isMonthly) {
-                return isAr ? monthsAr[m] : monthsEn[m];
-            }
-            return isAr ? (day + ' ' + monthsAr[m]) : (monthsEn[m] + ' ' + day);
-        });
-
-        var totalPoints = rawData.length;
-
-        var options = {
-            chart: {
-                type: 'area', height: 200,
-                toolbar: { show: false },
-                background: 'transparent',
-                animations: { enabled: true, speed: 600, easing: 'easeinout' },
-                zoom: { enabled: false },
-                fontFamily: 'inherit',
-                sparkline: { enabled: false },
-            },
-            series: [
-                { name: '{{ __("Income") }}',   data: rawData.map(function(d){ return d.income;  }) },
-                { name: '{{ __("Expenses") }}',  data: rawData.map(function(d){ return d.expense; }) },
-            ],
-            xaxis: {
-                categories: dates,
-                labels: {
-                    rotate: -45,
-                    rotateAlways: totalPoints > 10,
-                    hideOverlappingLabels: true,
-                    maxHeight: 60,
-                    style: { fontSize: '9px', fontWeight: 600, colors: isDark ? '#64748b' : '#94a3b8' },
-                    trim: true,
-                },
-                axisBorder: { show: false },
-                axisTicks: { show: false },
-                tickAmount: Math.min(totalPoints, 12),
-                tooltip: { enabled: false },
-            },
-            yaxis: {
-                labels: {
-                    style: { colors: isDark ? '#64748b' : '#94a3b8', fontSize: '10px', fontWeight: 600 },
-                    formatter: function(v) {
-                        if (v >= 1000000) return (v/1000000).toFixed(1) + 'M';
-                        if (v >= 1000) return (v/1000).toFixed(0) + 'K';
-                        return v.toFixed(0);
-                    }
-                },
-            },
-            colors: ['#22c55e', '#ef4444'],
-            fill: {
-                type: 'gradient',
-                gradient: {
-                    shadeIntensity: 1,
-                    opacityFrom: 0.35,
-                    opacityTo: 0.05,
-                    stops: [0, 90, 100]
-                }
-            },
-            stroke: { curve: 'smooth', width: 2.5 },
-            dataLabels: { enabled: false },
-            legend: {
-                position: 'top',
-                horizontalAlign: isAr ? 'right' : 'left',
-                labels: { colors: isDark ? '#94a3b8' : '#64748b' },
-                fontSize: '11px',
-                fontWeight: 700,
-                markers: { width: 8, height: 8, radius: 8 },
-                itemMargin: { horizontal: 12 },
-            },
-            grid: {
-                borderColor: isDark ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.06)',
-                strokeDashArray: 4,
-                xaxis: { lines: { show: false } },
-                padding: { left: 8, right: 8 },
-            },
-            tooltip: {
-                theme: isDark ? 'dark' : 'light',
-                shared: true,
-                intersect: false,
-                style: { fontSize: '12px', fontFamily: 'inherit' },
-                y: {
-                    formatter: function(v) { return v ? v.toLocaleString() : '0'; }
-                },
-                marker: { show: true },
-            },
-            markers: {
-                size: totalPoints <= 14 ? 4 : 0,
-                strokeWidth: 2,
-                strokeColors: isDark ? '#1e1e2d' : '#fff',
-                hover: { size: 6 },
-            },
-            theme: { mode: isDark ? 'dark' : 'light' },
-        };
-        new ApexCharts(chartEl, options).render();
-    }
 
 })();
 </script>

@@ -16,7 +16,6 @@
 <x-front.legal
     :title="($isAr ? 'سياسة الخصوصية' : 'Privacy Policy') . ' | GlowRez'"
     :description="$isAr ? 'سياسة الخصوصية في GlowRez — كيف نجمع بياناتك ونستخدمها ونحميها.' : 'GlowRez Privacy Policy — how we collect, use and protect your data.'"
-    :eyebrow="$isAr ? 'قانوني' : 'Legal'"
     :heading="$isAr ? 'سياسة الخصوصية' : 'Privacy Policy'"
     :subtitle="$isAr ? 'كيف تقوم GlowRez بجمع معلوماتك واستخدامها وحمايتها وإدارتها.' : 'How GlowRez collects, uses, protects, and manages your information.'"
     :updatedLabel="$isAr ? 'آخر تحديث:' : 'Last updated:'"

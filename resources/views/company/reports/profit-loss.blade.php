@@ -3,7 +3,7 @@
 @push('company-styles')
 <style>
 .pl-hero {
-    background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+    background: linear-gradient(135deg, #5C7038 0%, #3C4B29 100%);
     border-radius:20px; padding:26px 30px; margin-bottom:24px;
     color:#fff; position:relative; overflow:hidden;
 }

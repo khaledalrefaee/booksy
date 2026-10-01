@@ -214,11 +214,6 @@
                 <i data-feather="external-link" style="width:14px;height:14px;"></i>
                 {{ __('Public page') }}
             </a>
-            <a href="{{ route('company.appointments.index') }}"
-               class="bk-navbar-action bk-navbar-action-primary d-flex align-items-center gap-2">
-                <i data-feather="plus" style="width:14px;height:14px;"></i>
-                {{ __('New booking') }}
-            </a>
         </div>
     </div>
 </div>

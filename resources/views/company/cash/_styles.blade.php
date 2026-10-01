@@ -2,22 +2,23 @@
 <style>
 /* ─── Hero ─────────────────────────────────────────────────────────────── */
 .cash-hero {
-    background: linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+    background: linear-gradient(135deg, #5C7038 0%, #3C4B29 100%);
     border-radius: 22px; padding: 30px 32px 24px; margin-bottom: 24px;
     position: relative; overflow: hidden; color: #fff;
 }
+.cash-hero h3 { color:#fff !important; }
 @media (max-width: 576px) {
     .cash-hero { padding: 20px 16px 18px; border-radius: 16px; }
 }
 .cash-hero::before {
     content:''; position:absolute; top:-80px; left:-80px;
     width:260px; height:260px; border-radius:50%;
-    background:rgba(92,112,56,.12); pointer-events:none;
+    background:rgba(255,255,255,.06); pointer-events:none;
 }
 .cash-hero::after {
     content:''; position:absolute; bottom:-60px; right:-40px;
     width:200px; height:200px; border-radius:50%;
-    background:rgba(250,112,154,.08); pointer-events:none;
+    background:rgba(201,169,97,.10); pointer-events:none;
 }
 
 /* ─── Balance card ──────────────────────────────────────────────────────── */
@@ -38,6 +39,13 @@
     .cash-stat-icon { width: 30px; height: 30px; font-size: 14px; }
 }
 
+/* readable on the olive hero */
+.cash-hero .balance-value.text-success { color:#b7f0a8 !important; }
+.cash-hero .balance-value.text-danger  { color:#ffb4b4 !important; }
+.cash-hero .cash-stat-val[style*="#22c55e"] { color:#b7f0a8 !important; }
+.cash-hero .cash-stat-val[style*="#ef4444"] { color:#ffb4b4 !important; }
+.cash-hero .balance-label, .cash-hero .cash-stat-lbl { opacity:.75; }
+
 /* ─── Stat pills ────────────────────────────────────────────────────────── */
 .cash-stat { display:flex; align-items:center; gap:8px; min-width:0; }
 .cash-stat-icon {
@@ -51,12 +59,12 @@
 .period-tabs { display:flex; gap:6px; flex-wrap:wrap; }
 .period-tab {
     padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600;
-    border: 1.5px solid rgba(255,255,255,.12); cursor:pointer;
-    transition: all .15s; text-decoration:none; color:rgba(255,255,255,.55);
+    border: 1.5px solid rgba(255,255,255,.22); cursor:pointer;
+    transition: all .15s; text-decoration:none; color:rgba(255,255,255,.75);
     background:transparent;
 }
-.period-tab:hover  { border-color:rgba(255,255,255,.3); color:#fff; }
-.period-tab.active { background:#5C7038; border-color:#5C7038; color:#fff; }
+.period-tab:hover  { border-color:rgba(255,255,255,.45); color:#fff; }
+.period-tab.active { background:#C9A961; border-color:#C9A961; color:#2B3520; }
 
 /* ─── Transaction rows ──────────────────────────────────────────────────── */
 .tx-date-head {

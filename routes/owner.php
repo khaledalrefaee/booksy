@@ -294,6 +294,10 @@ Route::prefix('owner')->name('owner.')->group(function () {
             Route::put('packages/{package}',    'updatePackage')->name('packages.update');
             Route::delete('packages/{package}', 'destroyPackage')->name('packages.destroy');
 
+            Route::get('templates',      'templates')->name('templates');
+            Route::put('templates',      'updateTemplate')->name('templates.update');
+            Route::post('templates/preview', 'previewSegments')->name('templates.preview');
+
             Route::get('pricing',        'pricing')->name('pricing');
             Route::put('pricing',        'updatePricing')->name('pricing.update');
 

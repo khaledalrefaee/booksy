@@ -77,15 +77,19 @@ class CashController extends Controller
             ]);
     }
 
+    /** category => [currency => total] — amounts of different currencies must never be summed together. */
     private function byCategorySQL($baseQuery): \Illuminate\Support\Collection
     {
         return (clone $baseQuery)
-            ->select('category')
+            ->select('category', 'currency')
             ->selectRaw('SUM(amount) as total')
+            ->groupBy('category', 'currency')
+            ->get()
             ->groupBy('category')
-            ->pluck('total', 'category');
+            ->map(fn($rows) => $rows->pluck('total', 'currency'));
     }
 
+    /** @return array<string, array> currency => chart points (per day, or per month when the range is > 62 days) */
     private function chartDataSQL($baseQuery, Carbon $from, Carbon $to): array
     {
         $cats = BranchPayment::CATEGORIES;
@@ -93,46 +97,49 @@ class CashController extends Controller
         $expenseCats = collect($cats)->filter(fn($c) => $c['type'] === 'expense')->keys()->toArray();
 
         $totalDays = (int) $from->diffInDays($to) + 1;
+        $monthly   = $totalDays > 62;
+        $dtExpr    = $monthly ? "DATE_FORMAT(paid_at, '%Y-%m-01')" : "DATE(paid_at)";
 
         $incomePlaceholders  = implode(',', array_fill(0, count($incomeCats), '?'));
         $expensePlaceholders = implode(',', array_fill(0, count($expenseCats), '?'));
 
-        if ($totalDays > 62) {
-            $rows = (clone $baseQuery)
-                ->selectRaw("DATE_FORMAT(paid_at, '%Y-%m-01') as dt")
-                ->selectRaw("SUM(CASE WHEN category IN ({$incomePlaceholders}) THEN amount ELSE 0 END) as income", $incomeCats)
-                ->selectRaw("SUM(CASE WHEN category IN ({$expensePlaceholders}) THEN amount ELSE 0 END) as expense", $expenseCats)
-                ->groupByRaw("DATE_FORMAT(paid_at, '%Y-%m-01')")
-                ->orderBy('dt')
-                ->get();
-
-            return $rows->map(fn($r) => [
-                'date' => $r->dt, 'income' => (float) $r->income, 'expense' => (float) $r->expense, 'mode' => 'month',
-            ])->toArray();
-        }
-
         $rows = (clone $baseQuery)
-            ->selectRaw("DATE(paid_at) as dt")
+            ->select('currency')
+            ->selectRaw("{$dtExpr} as dt")
             ->selectRaw("SUM(CASE WHEN category IN ({$incomePlaceholders}) THEN amount ELSE 0 END) as income", $incomeCats)
             ->selectRaw("SUM(CASE WHEN category IN ({$expensePlaceholders}) THEN amount ELSE 0 END) as expense", $expenseCats)
-            ->groupByRaw("DATE(paid_at)")
+            ->groupBy('currency')
+            ->groupByRaw($dtExpr)
             ->orderBy('dt')
             ->get()
-            ->keyBy('dt');
+            ->groupBy('currency');
 
-        $chartData = [];
-        for ($i = 0; $i < $totalDays; $i++) {
-            $day = $from->copy()->addDays($i)->toDateString();
-            $r   = $rows->get($day);
-            $chartData[] = [
-                'date'    => $day,
-                'income'  => $r ? (float) $r->income : 0,
-                'expense' => $r ? (float) $r->expense : 0,
-                'mode'    => 'day',
-            ];
+        $out = [];
+        foreach ($rows as $currency => $curRows) {
+            $byDt = $curRows->keyBy('dt');
+
+            if ($monthly) {
+                $out[$currency] = $curRows->map(fn($r) => [
+                    'date' => $r->dt, 'income' => (float) $r->income, 'expense' => (float) $r->expense, 'mode' => 'month',
+                ])->values()->toArray();
+                continue;
+            }
+
+            $points = [];
+            for ($i = 0; $i < $totalDays; $i++) {
+                $day = $from->copy()->addDays($i)->toDateString();
+                $r   = $byDt->get($day);
+                $points[] = [
+                    'date'    => $day,
+                    'income'  => $r ? (float) $r->income : 0,
+                    'expense' => $r ? (float) $r->expense : 0,
+                    'mode'    => 'day',
+                ];
+            }
+            $out[$currency] = $points;
         }
 
-        return $chartData;
+        return $out;
     }
 
     // ── Expected balance per currency for a drawer session ────────────────
@@ -373,7 +380,7 @@ class CashController extends Controller
             'currency'               => $data['currency'],
             'payment_method'         => $data['payment_method'] ?? 'cash',
             'notes'                  => $data['notes'] ?? null,
-            'recorded_by_employee_id'=> Auth::guard('company')->id(),
+            'recorded_by_employee_id'=> null, // the company owner is not an employees row (FK)
             'paid_at'                => Carbon::parse($data['paid_at']),
         ]);
 
@@ -403,7 +410,7 @@ class CashController extends Controller
                     'notes'                  => $overpaymentTo === 'employee'
                         ? __('Overpayment — tip to employee')
                         : __('Overpayment — added to treasury'),
-                    'recorded_by_employee_id'=> Auth::guard('company')->id(),
+                    'recorded_by_employee_id'=> null, // the company owner is not an employees row (FK)
                     'paid_at'                => Carbon::parse($data['paid_at']),
                 ]);
             } elseif ($diff < 0 && !empty($data['appointment_id'])) {

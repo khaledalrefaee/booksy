@@ -13,17 +13,19 @@
         return 'grid';
     };
 
+    $ci = fn($cat) => str_starts_with((string) $cat->icon, 'cat-') ? $cat->icon : $catIcon($cat->slug);
+
     $reviews = [
         ['q_ar'=>'حجزت خلال دقيقة واحدة، ووجدت أقرب صالون لبيتي بسهولة. تجربة مريحة جدًا.','q_en'=>'Booked in a minute and found the closest salon to home. So smooth.','nm'=>$isAr?'لمى ح.':'Lama H.','rl'=>$isAr?'عميلة':'Client','in'=>$isAr?'ل':'L'],
-        ['q_ar'=>'التقييمات والآراء ساعدتني أختار المكان المناسب، والأسعار واضحة قبل الحجز.','q_en'=>'Ratings and reviews helped me pick the right place — prices are clear upfront.','nm'=>$isAr?'رهف م.':'Rahaf M.','rl'=>$isAr?'عميلة':'Client','in'=>$isAr?'ر':'R'],
+        ['q_ar'=>'التقييمات والآراء ساعدتني أختار المكان المناسب، والأسعار واضحة قبل الحجز.','q_en'=>'Ratings and reviews helped me pick the right place, prices are clear upfront.','nm'=>$isAr?'رهف م.':'Rahaf M.','rl'=>$isAr?'عميلة':'Client','in'=>$isAr?'ر':'R'],
         ['q_ar'=>'أفضل بكثير من الاتصال والانتظار. كل شيء واضح وسريع من الهاتف.','q_en'=>'Far better than calling and waiting. Everything is clear and fast on mobile.','nm'=>$isAr?'كنان أ.':'Kenan A.','rl'=>$isAr?'عميل':'Client','in'=>$isAr?'ك':'K'],
     ];
 
     $faqs = [
         ['q_ar'=>'هل استخدام GlowRez مجاني للعملاء؟','q_en'=>'Is GlowRez free for customers?','a_ar'=>'نعم تمامًا. البحث عن الأماكن والاطلاع على الأسعار والتقييمات والحجز كلها مجانية بالكامل.','a_en'=>'Completely. Searching, viewing prices and reviews, and booking are all free.'],
-        ['q_ar'=>'هل أحتاج حسابًا لأحجز؟','q_en'=>'Do I need an account to book?','a_ar'=>'تستطيع التصفّح بلا حساب. وعند تأكيد الحجز نتحقق من رقمك برمز سريع عبر الرسائل — بلا كلمات مرور.','a_en'=>'Browse without one. At booking we verify your number with a quick code — no passwords.'],
-        ['q_ar'=>'كيف أجد الأقرب إليّ؟','q_en'=>'How do I find places near me?','a_ar'=>'اضغط «فعّل موقعي» على الخريطة أو في قسم «الأقرب إليك»، فنحسب المسافة ونرتّب النتائج من الأقرب.','a_en'=>'Tap “Use my location” on the map or in the “Near you” section — we sort results by distance from you.'],
-        ['q_ar'=>'هل أستطيع تعديل موعدي أو إلغاؤه؟','q_en'=>'Can I reschedule or cancel?','a_ar'=>'نعم، من رابط التأكيد الذي يصلك عند الحجز يمكنك التعديل أو الإلغاء بسهولة.','a_en'=>'Yes — from the confirmation link you receive, you can reschedule or cancel in a tap.'],
+        ['q_ar'=>'هل أحتاج حسابًا لأحجز؟','q_en'=>'Do I need an account to book?','a_ar'=>'تستطيع التصفّح بلا حساب. وعند تأكيد الحجز نتحقق من رقمك برمز سريع عبر الرسائل، بلا كلمات مرور.','a_en'=>'Browse without one. At booking we verify your number with a quick code, no passwords.'],
+        ['q_ar'=>'كيف أجد الأقرب إليّ؟','q_en'=>'How do I find places near me?','a_ar'=>'اضغط «فعّل موقعي» على الخريطة أو في قسم «الأقرب إليك»، فنحسب المسافة ونرتّب النتائج من الأقرب.','a_en'=>'Tap “Use my location” on the map or in the “Near you” section, we sort results by distance from you.'],
+        ['q_ar'=>'هل أستطيع تعديل موعدي أو إلغاؤه؟','q_en'=>'Can I reschedule or cancel?','a_ar'=>'نعم، من رابط التأكيد الذي يصلك عند الحجز يمكنك التعديل أو الإلغاء بسهولة.','a_en'=>'Yes, from the confirmation link you receive, you can reschedule or cancel in a tap.'],
         ['q_ar'=>'كيف أعرف جودة المكان قبل الحجز؟','q_en'=>'How do I judge quality before booking?','a_ar'=>'كل مكان يعرض تقييمًا وعدد المراجعات وآراء عملاء حقيقيين وصورًا وأهم الخدمات وأسعارها.','a_en'=>'Every venue shows its rating, review count, real client reviews, photos, top services and prices.'],
     ];
 @endphp
@@ -32,9 +34,9 @@
     variant="customer"
     :mapFab="false"
     bodyClass="bkf-has-hero"
-    :title="$t('GlowRez — اكتشف واحجز في أفضل مراكز الجمال والعناية قربك', 'GlowRez — Discover & Book Top Beauty & Wellness Venues Near You')"
+    :title="$t('GlowRez | اكتشف واحجز في أفضل مراكز الجمال والعناية قربك', 'GlowRez, Discover & Book Top Beauty & Wellness Venues Near You')"
     :keywords="$t('حجز صالون, حجز مركز تجميل, حجز حلاقة, سبا, أظافر, عيادات تجميل, مواعيد الجمال, خريطة الأماكن, سوريا, دمشق', 'salon booking, beauty appointment, barber booking, spa, nails, beauty clinics, wellness map, Syria, Damascus')"
-    :description="$t('اكتشف واحجز في أفضل أماكن الجمال والعناية قربك: شعر، سبا، تجميل، حلاقة، أظافر وعيادات. استكشف على الخريطة، قارن التقييمات والأسعار، واحجز فورًا من هاتفك عبر GlowRez.', 'Discover and book the best beauty & wellness venues near you — explore them on a live map, compare ratings and prices, and book instantly from your phone with GlowRez.')">
+    :description="$t('اكتشف واحجز في أفضل أماكن الجمال والعناية قربك: شعر، سبا، تجميل، حلاقة، أظافر وعيادات. استكشف على الخريطة، قارن التقييمات والأسعار، واحجز فورًا من هاتفك عبر GlowRez.', 'Discover and book the best beauty & wellness venues near you, explore them on a live map, compare ratings and prices, and book instantly from your phone with GlowRez.')">
 
 {{-- ══════════════ 1 · HERO (auto-rotating: image + copy + alignment) ══════════════ --}}
 @php
@@ -45,7 +47,7 @@
       'eb'    => $t('منصّة اكتشاف وحجز الجمال', 'Beauty discovery & booking'),
       't1'    => $t('اكتشف مكانك المثالي', 'Discover your place,'),
       't2'    => $t('واحجز موعدك بسهولة', 'book your moment'),
-      'lead'  => $t('ابحث عن الصالونات ومراكز التجميل والسبا والحلاقين قربك — استكشف الخدمات والمواعيد المتاحة، وقارن التقييمات والأسعار، واحجز مباشرةً.', 'Find salons, beauty centers, spas and barbers near you — explore services and availability, compare ratings and prices, and book directly.'),
+      'lead'  => $t('ابحث عن الصالونات ومراكز التجميل والسبا والحلاقين قربك، استكشف الخدمات والمواعيد المتاحة، وقارن التقييمات والأسعار، واحجز مباشرةً.', 'Find salons, beauty centers, spas and barbers near you, explore services and availability, compare ratings and prices, and book directly.'),
     ],
     [
       'img'   => 'magnific/salon-wide.jpg',
@@ -61,7 +63,7 @@
       'eb'    => $t('وقتٌ لنفسك', 'Time for yourself'),
       't1'    => $t('سبا، بشرة، شعر ومكياج', 'Spa, skin, hair & makeup'),
       't2'    => $t('بين أيدٍ محترفة', 'by trusted pros'),
-      'lead'  => $t('احجز مع أفضل الاختصاصيين بأوقات تناسبك وأسعار واضحة — بلا مكالمات ولا انتظار.', 'Book with top specialists at times that suit you and clear prices — no calls, no waiting.'),
+      'lead'  => $t('احجز مع أفضل الاختصاصيين بأوقات تناسبك وأسعار واضحة، بلا مكالمات ولا انتظار.', 'Book with top specialists at times that suit you and clear prices, no calls, no waiting.'),
     ],
   ];
   $s0 = $heroSlides[0];
@@ -125,12 +127,12 @@
       <div class="bkf-hero-chips">
         <span class="bkf-hero-chips-lbl">{{ $t('رائج:', 'Popular:') }}</span>
         @foreach($categories->take(5) as $cat)
-          <a href="{{ route('front.category', $cat->slug) }}" class="bkf-chip"><x-icon name="{{ $catIcon($cat->slug) }}" :size="14"/>{{ $isAr ? $cat->name_ar : $cat->name_en }}</a>
+          <a href="{{ route('front.category', $cat->slug) }}" class="bkf-chip"><x-icon name="{{ $ci($cat) }}" :size="14"/>{{ $isAr ? $cat->name_ar : $cat->name_en }}</a>
         @endforeach
       </div>
 
       <div class="bkf-hero-proof">
-        <span class="bkf-hero-early"><span class="dot"></span>{{ $t('التسجيل المبكر مفتوح — الإطلاق الرسمي قريبًا', 'Early access is open — official launch soon') }}</span>
+        <span class="bkf-hero-early"><span class="dot"></span>{{ $t('التسجيل المبكر مفتوح، الإطلاق الرسمي قريبًا', 'Early access is open, official launch soon') }}</span>
       </div>
 
       {{-- slide dots (manual) --}}
@@ -180,14 +182,18 @@
       </div>
     </div>
     @if($categories->isNotEmpty())
-    <div class="bkf-rail bkf-reveal">
+    <div class="bkf-catgrid">
       @foreach($categories as $cat)
-        <a href="{{ route('front.category', $cat->slug) }}" class="bkf-cat-pill">
-          <span class="bkf-cat-pill-ic"><x-icon name="{{ $catIcon($cat->slug) }}" :size="18"/></span>
-          <span>
+        @php $cimg = $cat->image ? asset('storage/'.ltrim($cat->image, '/')) : null; @endphp
+        <a href="{{ route('front.category', $cat->slug) }}" class="bkf-cat-card {{ $cimg ? '' : 'is-noimg' }}">
+          @if($cimg)<img src="{{ $cimg }}" alt="" loading="lazy" class="bkf-cat-card-img">@endif
+          <span class="bkf-cat-card-shade"></span>
+          <span class="bkf-cat-card-ic"><x-icon name="{{ $ci($cat) }}" :size="22"/></span>
+          <span class="bkf-cat-card-body">
             <span class="n">{{ $isAr ? $cat->name_ar : $cat->name_en }}</span>
             @if($cat->companies_count)<span class="c">{{ $cat->companies_count }} {{ $t('مكان', 'places') }}</span>@endif
           </span>
+          <span class="bkf-cat-card-go"><x-icon name="arrow-right" :size="16"/></span>
         </a>
       @endforeach
     </div>
@@ -246,7 +252,7 @@
       <button type="button" class="bkf-mapchip is-on" data-mapfilter="">{{ $t('الكل', 'All') }}</button>
       @foreach($categories->take(8) as $cat)
         <button type="button" class="bkf-mapchip" data-mapfilter="{{ $cat->slug }}">
-          <x-icon name="{{ $catIcon($cat->slug) }}" :size="14"/>{{ $isAr ? $cat->name_ar : $cat->name_en }}
+          <x-icon name="{{ $ci($cat) }}" :size="14"/>{{ $isAr ? $cat->name_ar : $cat->name_en }}
         </button>
       @endforeach
       <button type="button" class="bkf-mapchip is-geo" data-map-locate><x-icon name="navigation" :size="14"/>{{ $t('قربي', 'Near me') }}</button>
@@ -281,6 +287,7 @@
       <p class="bkf-lead">{{ $t('من البحث إلى تأكيد الموعد في أربع خطوات فقط.', 'From search to a confirmed appointment in just four steps.') }}</p>
     </div>
     <div class="bkf-steps bkf-steps-4" style="margin-top:52px">
+      <div class="bkf-steps-line" aria-hidden="true"><i></i></div>
       <div class="bkf-step bkf-reveal">
         <div class="bkf-step-ic"><span class="bkf-step-n">01</span><x-icon name="search" :size="28"/></div>
         <h3>{{ $t('ابحث عن المكان', 'Find a place') }}</h3>
@@ -423,7 +430,39 @@
   </div>
 </section>
 
+<x-slot:styles>
+<style>
+/* category cards */
+.bkf-catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-top:8px}
+.bkf-cat-card{position:relative;display:block;aspect-ratio:4/5;border-radius:var(--bk-r-lg,20px);overflow:hidden;isolation:isolate;background:linear-gradient(145deg,var(--bk-accent),#2a3320);color:#fff;text-decoration:none;box-shadow:var(--bk-shadow-md,0 8px 24px rgba(0,0,0,.18));transition:transform .45s cubic-bezier(.2,.7,.2,1),box-shadow .45s}
+.bkf-cat-card-img{position:absolute;inset:0;width:100%!important;height:100%!important;max-width:none!important;object-fit:cover;z-index:-2;transition:transform .8s cubic-bezier(.2,.7,.2,1)}
+.bkf-cat-card-shade{position:absolute;inset:0;z-index:-1;background:linear-gradient(to top,rgba(14,18,8,.86) 0%,rgba(14,18,8,.35) 45%,rgba(14,18,8,.05) 100%)}
+.bkf-cat-card-ic{position:absolute;top:16px;inset-inline-start:16px;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(6px);color:var(--bk-gold,#e5c26b)}
+.bkf-cat-card-body{position:absolute;inset-inline:18px;bottom:18px;display:flex;flex-direction:column;gap:4px}
+.bkf-cat-card,.bkf-cat-card:hover,.bkf-cat-card-body .n,.bkf-cat-card-body .c{color:#fff!important}
+.bkf-cat-card-body .n{font-family:var(--bk-font-display,inherit);font-size:1.35rem;font-weight:700;line-height:1.2}
+.bkf-cat-card-body .c{font-family:var(--bk-font-ui);font-size:.85rem;opacity:.8}
+[dir=rtl] .bkf-cat-card-go svg{transform:scaleX(-1)}
+.bkf-cat-card-go{position:absolute;top:16px;inset-inline-end:16px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--bk-gold,#e5c26b);color:#1b2110;opacity:0;transform:translateY(-6px) scale(.85);transition:.35s}
+.bkf-cat-card:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(0,0,0,.28)}
+.bkf-cat-card:hover .bkf-cat-card-img{transform:scale(1.08)}
+.bkf-cat-card:hover .bkf-cat-card-go{opacity:1;transform:none}
+.bkf-cat-card.is-noimg .bkf-cat-card-ic{width:64px;height:64px;top:22px}
+@media (max-width:600px){.bkf-catgrid{grid-template-columns:repeat(2,1fr);gap:12px}.bkf-cat-card{aspect-ratio:1/1.1}.bkf-cat-card-body .n{font-size:1.1rem}}
+/* GSAP-enhanced "Book in minutes" */
+#how .bkf-steps{position:relative}
+#how .bkf-steps-line{position:absolute;top:45px;inset-inline:12.5%;height:2px;background:var(--bk-border,rgba(0,0,0,.1));border-radius:2px;overflow:hidden;z-index:0}
+#how .bkf-steps-line i{display:block;height:100%;width:100%;background:var(--bk-grad-gold,#c9a24a);transform-origin:var(--steps-origin,right) center;transform:scaleX(0)}
+#how .bkf-step{position:relative;z-index:1}
+#how .bkf-step-ic{transition:box-shadow .3s,background .3s,color .3s}
+#how .bkf-step.is-lit .bkf-step-ic{background:var(--bk-accent);color:#fff;box-shadow:var(--bk-shadow-accent)}
+@media (max-width:900px){#how .bkf-steps-line{display:none}}
+</style>
+</x-slot:styles>
+
 <x-slot:scripts>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script>
 window.BK_MAP = {
   url:      @json(route('front.map.branches')),
@@ -769,7 +808,7 @@ window.BK_HERO_SLIDES = @json($heroSlidesJs);
     });
   });
 
-  // "near me" — reuse shared geo, recolor distances, re-sort list by distance
+  // "near me" - reuse shared geo, recolor distances, re-sort list by distance
   if (locateBtn) locateBtn.addEventListener('click', function () {
     if (!window.__bkRequestGeo) return;
     initMap();
@@ -790,6 +829,77 @@ window.BK_HERO_SLIDES = @json($heroSlidesJs);
       }
     });
   });
+})();
+</script>
+
+{{-- GSAP motion layer (additive; skipped if blocked or reduced-motion) --}}
+<script>
+(function () {
+  'use strict';
+  if (!window.gsap || !window.ScrollTrigger) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var g = gsap, isRtl = document.documentElement.dir === 'rtl';
+  g.registerPlugin(ScrollTrigger);
+  var q = function (s, r) { return [].slice.call((r || document).querySelectorAll(s)); };
+
+  /* Hero: staged entrance + parallax */
+  var hero = document.querySelector('[data-hero-rotator]');
+  if (hero) {
+    g.timeline({ defaults: { ease: 'power3.out' } })
+      .from('.bkf-hero-eyebrow', { y: 24, opacity: 0, duration: .7 })
+      .from('.bkf-hero-title .l1', { y: 50, opacity: 0, duration: .9 }, '-=.45')
+      .from('.bkf-hero-title .l2', { y: 50, opacity: 0, duration: .9 }, '-=.7')
+      .from('.bkf-hero-lead', { y: 26, opacity: 0, duration: .8 }, '-=.6')
+      .from('.bkf-hsearch', { y: 34, opacity: 0, scale: .97, duration: .9 }, '-=.55')
+      .from('.bkf-hero-chips > *', { y: 14, opacity: 0, stagger: .07, duration: .5 }, '-=.5')
+      .from('.bkf-hero-early, .bkf-hero-dots, .bkf-hero-arrow', { opacity: 0, duration: .7 }, '-=.3');
+  }
+
+  g.from('.bkf-trust-item', { y: 20, opacity: 0, stagger: .08, duration: .7, ease: 'power2.out',
+    scrollTrigger: { trigger: '.bkf-trust', start: 'top 92%', once: true } });
+
+  /* Rails: staggered pop-in of pills / venue cards */
+  q('.bkf-rail, .bkf-catgrid').forEach(function (rail) {
+    var kids = q('.bkf-cat-card, [data-venue]', rail);
+    if (!kids.length || rail.offsetParent === null) return;
+    g.from(kids, { y: 36, opacity: 0, scale: .96, stagger: .06, duration: .7, ease: 'power3.out', clearProps: 'transform,opacity',
+      scrollTrigger: { trigger: rail, start: 'top 88%', once: true } });
+  });
+
+  /* Title accent word */
+  q('.bkf-title .em').forEach(function (el) {
+    g.from(el, { y: 26, opacity: 0, duration: .8, ease: 'power3.out', clearProps: 'transform,opacity',
+      scrollTrigger: { trigger: el, start: 'top 92%', once: true } });
+  });
+
+  /* Book in minutes: line draws on scroll, steps light up in order, icons pop */
+  var how = document.getElementById('how');
+  if (how) {
+    var wrap = how.querySelector('.bkf-steps'), steps = q('.bkf-step', how), line = how.querySelector('.bkf-steps-line i');
+    if (line) line.style.setProperty('--steps-origin', isRtl ? 'right' : 'left');
+    g.from(q('.bkf-step-ic', how), { scale: .4, rotate: -12, opacity: 0, stagger: .18, duration: .8, ease: 'back.out(1.8)', clearProps: 'transform,opacity',
+      scrollTrigger: { trigger: wrap, start: 'top 82%', once: true } });
+    ScrollTrigger.create({ trigger: wrap, start: 'top 75%', end: 'bottom 60%',
+      onUpdate: function (self) {
+        steps.forEach(function (el, i) { el.classList.toggle('is-lit', self.progress >= i / steps.length + .04); });
+      } });
+    if (line) g.to(line, { scaleX: 1, ease: 'none',
+      scrollTrigger: { trigger: wrap, start: 'top 75%', end: 'bottom 60%', scrub: true } });
+    steps.forEach(function (el) {
+      var ic = el.querySelector('.bkf-step-ic');
+      el.addEventListener('mouseenter', function () { g.to(ic, { y: -6, duration: .3, ease: 'power2.out' }); });
+      el.addEventListener('mouseleave', function () { g.to(ic, { y: 0, duration: .4, ease: 'power2.out' }); });
+    });
+  }
+
+  g.from('.bkf-review', { y: 40, opacity: 0, stagger: .14, duration: .9, ease: 'power3.out', clearProps: 'transform,opacity',
+    scrollTrigger: { trigger: '.bkf-review', start: 'top 88%', once: true } });
+  g.from('.bkf-faq-item', { x: isRtl ? 30 : -30, opacity: 0, stagger: .08, duration: .6, ease: 'power2.out', clearProps: 'transform,opacity',
+    scrollTrigger: { trigger: '.bkf-faq', start: 'top 88%', once: true } });
+  g.to('.bkf-cta-blob.a', { y: -30, x: 20, duration: 5, ease: 'sine.inOut', repeat: -1, yoyo: true });
+  g.to('.bkf-cta-blob.b', { y: 26, x: -24, duration: 6, ease: 'sine.inOut', repeat: -1, yoyo: true });
+
+  window.addEventListener('load', function () { ScrollTrigger.refresh(); });
 })();
 </script>
 </x-slot:scripts>

@@ -173,6 +173,13 @@ function _nextMoves(from) {
    requests AND its clock / time format / interval follow that branch from the
    first render — never a different "first branch". Empty = All Branches. */
 var activeBranch   = (document.getElementById('filter-branch') || {}).value || '';
+/* Branch multi-select: several (but not all) branches travel as a comma list in
+   `branch_id`; one branch keeps the old single-id behaviour; none/all = no filter. */
+var activeBranchIds = [];
+function _setBranchParam(p) {
+    if (activeBranchIds.length > 1) p.set('branch_id', activeBranchIds.join(','));
+    else if (activeBranch)          p.set('branch_id', activeBranch);
+}
 
 /* ════════════════════════════════
    FULLCALENDAR
@@ -312,7 +319,7 @@ var calendar = new FullCalendar.Calendar(calEl, {
     /* Fetch events */
     events: function (info, ok, fail) {
         var p = new URLSearchParams({ start: info.startStr, end: info.endStr });
-        if (activeBranch) p.set('branch_id', activeBranch);
+        _setBranchParam(p);
         /* server-side status filter (pills) + month view gets day counts, not events */
         p.set('statuses', activeStatuses.join(','));
         /* Detect the month grid by its span (≈35–42 days) rather than
@@ -561,41 +568,41 @@ function renderListRows() {
                         + '</div>';
                 }
 
-                /* Quick action buttons. The list comes from the server's state
-                   machine, so the UI can never offer a move the backend will
-                   reject — the old hand-written table drifted from it. */
-                var btns = _nextMoves(pr.status).map(function (to) {
-                    var d = STATUS_DEFS[to];
-                    /* data-* + one delegated listener, not inline onclick:
-                       _quickStatus lives inside this IIFE and was never on
-                       window, so the old onclick="_quickStatus(…)" threw a
-                       ReferenceError and these buttons silently did nothing. */
-                    return '<button data-quick-status="' + to + '" data-appt="' + ev.id + '" '
-                        + 'title="' + _esc(d.label) + '" '
-                        + 'style="border-radius:10px;padding:3px 10px;font-size:.68rem;font-weight:800;cursor:pointer;'
-                        + 'background:' + d.color + '1a;color:var(--cal-text);border:1px solid ' + d.color + '59;'
-                        + 'white-space:nowrap;transition:opacity .15s;">'
-                        + _esc(d.label) + '</button>';
-                }).join('');
+                /* Row actions: one clear "open / edit" button + a "⋯" menu for status changes.
+                   The move list comes from the server's state machine, so the UI can never
+                   offer a move the backend would reject. */
+                var hasMoves = _nextMoves(pr.status).length > 0;
+                var openTxt  = IS_RTL ? 'عرض / تعديل' : 'View / edit';
+                var moreTxt  = IS_RTL ? 'تغيير الحالة' : 'Change status';
+                var actions  = '<div class="bk-row-actions">'
+                    + '<a class="bk-act-btn bk-act-open" href="' + (pr.showUrl || '#') + '" onclick="event.stopPropagation();" title="' + openTxt + '" aria-label="' + openTxt + '">'
+                    +   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>'
+                    +   '<span class="bk-act-txt">' + openTxt + '</span></a>'
+                    + (hasMoves
+                        ? '<button type="button" class="bk-act-btn bk-act-more" data-more="' + ev.id + '" title="' + moreTxt + '" aria-label="' + moreTxt + '" aria-haspopup="true">'
+                        +   '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>'
+                        +   '<span class="bk-act-txt">' + moreTxt + '</span></button>'
+                        : '')
+                    + '</div>';
 
-                return '<tr id="appt-row-' + ev.id + '" style="cursor:pointer;" onclick="location.href=\'' + (pr.showUrl || '#') + '\'">'
+                return '<tr class="bk-lrow" id="appt-row-' + ev.id + '" style="cursor:pointer;" onclick="if(event.target.closest(\'a,button\'))return;location.href=\'' + (pr.showUrl || '#') + '\'">'
                     /* # */
-                    + '<td class="ps-4" style="color:var(--cal-text-muted);font-size:.76rem;font-weight:700;">#' + ev.id + '</td>'
+                    + '<td class="ps-4 c-id" style="color:var(--cal-text-muted);font-size:.76rem;font-weight:700;">#' + ev.id + '</td>'
                     /* Customer + phone */
-                    + '<td><div style="font-weight:800;font-size:.84rem;">' + cust + '</div>' + phoneBadge + '</td>'
+                    + '<td class="c-cust"><div style="font-weight:800;font-size:.84rem;">' + cust + '</div>' + phoneBadge + '</td>'
                     /* Service */
-                    + '<td style="color:var(--cal-text-soft);font-size:.82rem;">' + svc + '</td>'
+                    + '<td class="c-svc" style="color:var(--cal-text-soft);font-size:.82rem;">' + svc + '</td>'
                     /* Employee */
-                    + '<td><div style="display:flex;align-items:center;gap:7px;">'
+                    + '<td class="c-emp"><div style="display:flex;align-items:center;gap:7px;">'
                     +   (empImg
                         ? '<img src="' + empImg + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.3);" loading="lazy">'
                         : '<div style="width:28px;height:28px;border-radius:50%;background:' + empCol + ';display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 6px ' + empCol + '55;">' + _esc(init) + '</div>')
                     +   '<span style="font-size:.82rem;font-weight:600;">' + _esc(pr.employee || '—') + '</span>'
                     + '</div></td>'
                     /* Branch */
-                    + '<td style="color:var(--cal-text-soft);font-size:.82rem;">' + _esc(pr.branch || '—') + '</td>'
+                    + '<td class="c-branch" style="color:var(--cal-text-soft);font-size:.82rem;">' + _esc(pr.branch || '—') + '</td>'
                     /* Time + relative */
-                    + '<td style="font-size:.8rem;white-space:nowrap;">'
+                    + '<td class="c-time" style="font-size:.8rem;white-space:nowrap;">'
                     +   '<div style="font-weight:700;">' + dt + '</div>'
                     +   (endDt ? '<div style="color:var(--cal-text-muted);font-size:.72rem;">← ' + endDt + '</div>' : '')
                     +   '<div class="bk-rel-badge ' + rel.cls + '">'
@@ -604,14 +611,14 @@ function renderListRows() {
                     +   '</div>'
                     + '</td>'
                     /* Status */
-                    + '<td><span id="appt-status-' + ev.id + '" style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;background:' + col + '20;color:' + col + ';font-size:.7rem;font-weight:800;border:1px solid ' + col + '40;">'
+                    + '<td class="c-status"><span id="appt-status-' + ev.id + '" style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;background:' + col + '20;color:' + col + ';font-size:.7rem;font-weight:800;border:1px solid ' + col + '40;">'
                     +   '<span style="width:6px;height:6px;border-radius:50%;background:' + col + ';display:inline-block;"></span>'
                     +   (STATUS_LABELS[pr.status] || pr.status)
                     + '</span></td>'
                     /* Price */
-                    + '<td style="font-weight:800;font-size:.88rem;">' + (pr.price || '0.00') + ' ' + _esc(pr.currency || '') + '</td>'
+                    + '<td class="c-price" style="font-weight:800;font-size:.88rem;">' + (pr.price || '0.00') + ' ' + _esc(pr.currency || '') + '</td>'
                     /* Actions */
-                    + '<td class="pe-4"><div style="display:flex;gap:4px;flex-wrap:wrap;">' + btns + '</div></td>'
+                    + '<td class="pe-4 c-act">' + actions + '</td>'
                     + '</tr>';
             }).join('');
 }
@@ -623,7 +630,7 @@ function listReload(page) {
     tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5" style="color:var(--cal-text-muted);"><div class="spinner-border spinner-border-sm me-2"></div>' + BK.t.loading + '</td></tr>';
 
     var p = new URLSearchParams();
-    if (activeBranch)        p.set('branch_id', activeBranch);
+    _setBranchParam(p);
     if (listSearch.trim())   p.set('q', listSearch.trim());
     p.set('statuses', activeStatuses.join(','));
     p.set('sort', listSort);
@@ -733,6 +740,13 @@ function _quickStatus(id, newStatus, btn) {
    bound to the tbody — which renderListRows only ever refills — it survives
    every re-render and needs no re-binding. */
 document.getElementById('list-tbody').addEventListener('click', function (e) {
+    var more = e.target.closest('[data-more]');
+    if (more) {
+        e.stopPropagation();
+        e.preventDefault();
+        _openRowMenu(more);
+        return;
+    }
     var btn = e.target.closest('[data-quick-status]');
     if (!btn) return;
 
@@ -741,26 +755,126 @@ document.getElementById('list-tbody').addEventListener('click', function (e) {
     _quickStatus(btn.dataset.appt, btn.dataset.quickStatus, btn);
 });
 
+/* "⋯" status menu — one floating element, positioned from the button so the
+   table's overflow can't clip it (works the same on phones). */
+var _rowMenu = null;
+function _closeRowMenu() {
+    if (_rowMenu) { _rowMenu.remove(); _rowMenu = null; }
+}
+function _openRowMenu(btn) {
+    var wasOpenFor = _rowMenu && _rowMenu.dataset.for === btn.dataset.more;
+    _closeRowMenu();
+    if (wasOpenFor) return;
+
+    var id = btn.dataset.more;
+    var ev = listAllData.filter(function (x) { return String(x.id) === String(id); })[0];
+    if (!ev) return;
+    var moves = _nextMoves((ev.extendedProps || {}).status);
+    if (!moves.length) return;
+
+    var m = document.createElement('div');
+    m.className = 'bk-row-menu';
+    m.dataset.for = id;
+    m.setAttribute('role', 'menu');
+    m.innerHTML = '<div class="bk-row-menu-title">' + (IS_RTL ? 'تغيير الحالة إلى' : 'Change status to') + '</div>'
+        + moves.map(function (to) {
+            var d = STATUS_DEFS[to];
+            return '<button type="button" role="menuitem" data-to="' + to + '">'
+                + '<span class="dot" style="background:' + d.color + ';"></span>' + _esc(d.label) + '</button>';
+        }).join('');
+    document.body.appendChild(m);
+
+    var r = btn.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+    var left = IS_RTL ? r.left : r.right - w;
+    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+    var top = r.bottom + 6;
+    if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);   // flip up near the bottom
+    m.style.left = left + 'px';
+    m.style.top  = top + 'px';
+
+    m.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-to]');
+        if (!b) return;
+        e.stopPropagation();
+        _closeRowMenu();
+        _quickStatus(id, b.dataset.to, btn);
+    });
+    _rowMenu = m;
+}
+document.addEventListener('click', _closeRowMenu);
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') _closeRowMenu(); });
+window.addEventListener('scroll', _closeRowMenu, true);
+window.addEventListener('resize', _closeRowMenu);
+
 /* ════════════════════════════════
    FILTERS
 ════════════════════════════════ */
-document.querySelectorAll('.bk-st-pill').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-        var st = this.dataset.status;
-        if (activeStatuses.includes(st)) {
-            activeStatuses = activeStatuses.filter(s => s !== st);
-            this.classList.add('off');
-        } else {
-            activeStatuses.push(st);
-            this.classList.remove('off');
-        }
-        calRefetch();
-        if (!document.getElementById('view-list').classList.contains('d-none')) listReload(1);
+/* Checklist dropdowns (branches / statuses) */
+function bkMultiSelect(root, onChange, opts) {
+    opts = opts || {};
+    if (!root) return null;
+    var btn   = root.querySelector('.bk-ms-btn');
+    var menu  = root.querySelector('.bk-ms-menu');
+    var all   = menu.querySelector('[data-all]');
+    var items = [].slice.call(menu.querySelectorAll('.bk-ms-check'));
+    var label = root.querySelector('.bk-ms-label');
+
+    function checked() { return items.filter(function (i) { return i.checked; }); }
+    function sync() {
+        var sel = checked(), n = sel.length;
+        all.checked = n === items.length;
+        all.indeterminate = n > 0 && n < items.length;
+        root.classList.toggle('is-filtered', n !== items.length);
+        if (n === items.length)      label.textContent = root.dataset.allText;
+        else if (n === 0)            label.textContent = root.dataset.noneText || root.dataset.allText;
+        else if (n === 1)            label.textContent = sel[0].closest('.bk-ms-item').querySelector('span:last-child').textContent.trim();
+        else                         label.textContent = n + ' ' + root.dataset.manyText;
+    }
+    function toggle(open) {
+        menu.classList.toggle('d-none', !open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        root.classList.toggle('is-open', open);
+    }
+    btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        document.querySelectorAll('.bk-ms.is-open').forEach(function (o) { if (o !== root) { o.querySelector('.bk-ms-menu').classList.add('d-none'); o.classList.remove('is-open'); } });
+        toggle(menu.classList.contains('d-none'));
     });
+    menu.addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () { toggle(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') toggle(false); });
+
+    all.addEventListener('change', function () {
+        items.forEach(function (i) { i.checked = all.checked; });
+        if (opts.keepOne && !checked().length) items.forEach(function (i) { i.checked = true; });
+        sync(); onChange(checked());
+    });
+    items.forEach(function (i) {
+        i.addEventListener('change', function () {
+            if (opts.keepOne && !checked().length) i.checked = true;   // never leave zero branches
+            sync(); onChange(checked());
+        });
+    });
+    sync();
+    return { sync: sync, checked: checked, items: items };
+}
+
+var _msStatus = bkMultiSelect(document.getElementById('ms-status'), function (sel) {
+    activeStatuses = sel.map(function (i) { return i.dataset.status; });
+    calRefetch();
+    if (!document.getElementById('view-list').classList.contains('d-none')) listReload(1);
+    /* staff (team) grid filters its cached events client-side — re-render it too */
+    if (!document.getElementById('view-staff').classList.contains('d-none')) sfApplyTeamFilter();
 });
 
-document.getElementById('filter-branch').addEventListener('change', function () {
-    activeBranch = this.value;
+var _branchHidden = document.getElementById('filter-branch');
+function _branchChanged(sel) {
+    var total = _msBranch ? _msBranch.items.length : 0;
+    var ids = sel.map(function (i) { return i.value; });
+    var partial = ids.length > 0 && ids.length < total;
+    activeBranchIds = partial && ids.length > 1 ? ids : [];
+    activeBranch    = partial && ids.length === 1 ? ids[0] : '';
+    _branchHidden.value = partial ? ids.join(',') : '';
     _applyBranchClock();   // week start, snap interval, clock style follow the branch
     listLoaded   = false;
     listAllData  = [];
@@ -772,7 +886,9 @@ document.getElementById('filter-branch').addEventListener('change', function () 
     if (!document.getElementById('view-staff').classList.contains('d-none')) {
         loadStaffView();
     }
-});
+    _branchHidden.dispatchEvent(new Event('change', { bubbles: true }));   // lets the filter-dot logic react
+}
+var _msBranch = bkMultiSelect(document.getElementById('ms-branch'), _branchChanged, { keepOne: true });
 
 document.getElementById('filter-sort').addEventListener('change', function () {
     listSort = this.value;

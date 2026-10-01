@@ -3170,5 +3170,16 @@
     "Reminders & customer messages": "التذكيرات ورسائل العملاء",
     "Booking message, reminder, attendance confirmation and follow-up — all in one place.": "رسالة الحجز والتذكير وتأكيد الحضور والمتابعة — كلها في مكان واحد.",
     "Your text is used for both SMS and WhatsApp. Leave a message unchanged to keep the default. The counter shows how many SMS it will cost.": "نصّك يُستخدم للـ SMS والواتساب معاً. اترك الرسالة كما هي للإبقاء على النص الافتراضي. العدّاد يوضح كم رسالة SMS ستكلّف.",
-    "Your SMS balance, per branch. Customer messages to local numbers are paid from it.": "رصيد رسائل SMS لكل فرع. رسائل العملاء للأرقام المحلية تُخصم منه."
+    "Your SMS balance, per branch. Customer messages to local numbers are paid from it.": "رصيد رسائل SMS لكل فرع. رسائل العملاء للأرقام المحلية تُخصم منه.",
+    "Sent once before the visit. Keep the confirm and cancel links in it.": "تُرسل مرة واحدة قبل الزيارة. أبقِ رابطَي التأكيد والإلغاء فيها.",
+    "One set of customer messages for every company. Each customer gets the text in the system language. Keep them short: Arabic costs one SMS per 70 characters (67 when longer), and the counter shows the cost.": "مجموعة واحدة من رسائل العملاء لكل الشركات، وكل عميل يستلم النص بلغة النظام. اجعلها قصيرة: العربية تُحسب رسالة لكل 70 حرفاً (67 عند الزيادة)، والعدّاد يوضح التكلفة.",
+    "Sent once, at the time you choose, with confirm and cancel links.": "تُرسل مرة واحدة في الوقت الذي تختاره، مع رابطَي التأكيد والإلغاء.",
+    "Wrong email or phone number? Edit it": "الإيميل أو الرقم غلط؟ عدّله",
+    "Save and resend code": "حفظ وإعادة إرسال الرمز",
+    "Log out / use another account": "تسجيل الخروج / استخدام حساب آخر",
+    "Details updated — a new code has been sent.": "تم تحديث البيانات — أُرسل رمز جديد.",
+    "Edit Branch": "تعديل الفرع",
+    "Manage all": "إدارة الكل",
+    "Quick Links": "روابط سريعة",
+    "Share your branch with customers.": "شارك فرعك مع الزبائن."
 }

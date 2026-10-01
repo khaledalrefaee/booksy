@@ -80,16 +80,6 @@ class SmsService
         $template = $this->resolveTemplate($appointment->company_id, $appointment->branch_id, $type);
         $raw      = $template->body ?? SmsTemplate::defaultBody($type, $this->localeFor($appointment->company_id));
 
-        // "Ask the customer to confirm attendance" → the booking message and the
-        // reminder carry the confirm / cancel links (unless the template already
-        // places them itself).
-        if ($setting->ask_confirmation && in_array($type, ['confirmation', 'reminder'], true)
-            && ! str_contains($raw, 'confirm_link')) {
-            $raw .= $this->localeFor($appointment->company_id) === 'en'
-                ? "\nConfirm: {{confirm_link}}\nCancel: {{cancel_link}}"
-                : "\nللتأكيد: {{confirm_link}}\nللإلغاء: {{cancel_link}}";
-        }
-
         $body = $this->render($raw, $appointment);
         if (trim($body) === '') {
             return null;
@@ -190,22 +180,20 @@ class SmsService
         return SmsAutomationSetting::forBranch($companyId, $branchId);
     }
 
-    /** Most-specific-wins: branch → company → system default row. */
+    /**
+     * The owner's system template for this message, in the system language
+     * (Arabic when there is no row in it). Templates are owner-managed only.
+     */
     public function resolveTemplate(int $companyId, ?int $branchId, string $type, ?string $locale = null): ?SmsTemplate
     {
         $locale ??= $this->localeFor($companyId);
 
-        $query = SmsTemplate::where('key', $type)->where('is_active', true)
-            ->where(function ($q) use ($companyId, $branchId, $locale) {
-                $q->where('locale', $locale)->orWhere('locale', 'ar');
-            });
+        $candidates = SmsTemplate::whereNull('company_id')->whereNull('branch_id')
+            ->where('key', $type)->where('is_active', true)
+            ->whereIn('locale', [$locale, 'ar'])
+            ->get();
 
-        $candidates = $query->get();
-
-        return $candidates->first(fn ($t) => $t->company_id === $companyId && $t->branch_id === $branchId)
-            ?? $candidates->first(fn ($t) => $t->company_id === $companyId && $t->branch_id === null)
-            ?? $candidates->first(fn ($t) => $t->company_id === null)
-            ?? null;
+        return $candidates->firstWhere('locale', $locale) ?? $candidates->first();
     }
 
     public function render(string $body, Appointment $appointment): string
@@ -220,8 +208,8 @@ class SmsService
                 ? (Appointment::where('booking_group_id', $appointment->booking_group_id)->orderBy('start_time')->first() ?? $appointment)
                 : $appointment;
             $token = \App\Models\AppointmentConfirmation::activeFor($primary)->token;
-            $vars['confirm_link'] = route('appointment.confirm', ['token' => $token]);
-            $vars['cancel_link']  = route('appointment.cancel-form', ['token' => $token]);
+            $vars['confirm_link'] = route('appointment.c', ['token' => $token]);
+            $vars['cancel_link']  = route('appointment.x', ['token' => $token]);
         }
 
         return preg_replace_callback('/\{\{\s*(\w+)\s*\}\}/', function ($m) use ($vars) {
@@ -240,7 +228,7 @@ class SmsService
             'customer_name'    => $appointment->customer?->name ?: ($appointment->customer_name ?? ''),
             'branch_name'      => $appointment->branch?->localizedName() ?? '',
             'service_name'     => $appointment->service?->localizedName() ?? $appointment->service?->name ?? '',
-            'appointment_date' => $start->translatedFormat('l d M Y'),
+            'appointment_date' => $start->translatedFormat('l d/m'),
             'appointment_time' => $start->format('g:i A'),
         ];
     }

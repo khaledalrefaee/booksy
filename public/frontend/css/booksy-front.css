@@ -70,7 +70,7 @@
   --bk-fs-body:1rem;
   --bk-fs-sm:.875rem;
   --bk-fs-xs:.75rem;
-  --bk-eyebrow:.72rem;
+  --bk-eyebrow:1.05rem;
 
   /* Spacing (8pt) */
   --bk-s1:4px; --bk-s2:8px; --bk-s3:12px; --bk-s4:16px; --bk-s5:20px;
@@ -189,7 +189,6 @@ main [id]{ scroll-margin-top:calc(var(--bk-nav-h) + 20px); }
   letter-spacing:.16em; text-transform:uppercase; color:var(--bk-accent);
 }
 html[lang="ar"] .bkf-eyebrow{ letter-spacing:.06em; }
-.bkf-eyebrow::before{ content:""; width:26px; height:2px; border-radius:2px; background:var(--bk-accent); }
 .bkf-eyebrow.is-center{ justify-content:center; }
 .bkf-title{ font-size:var(--bk-fs-h2); margin-top:var(--bk-s4); }
 .bkf-title .em{ color:var(--bk-accent); font-style:normal; }
@@ -1263,3 +1262,7 @@ body.bkf-has-hero .bkf-nav:not(.is-scrolled):not(.is-open) .bkf-btn-ghost.bkf-na
 [data-bk-theme="dark"] .bkf-wavediv.is-tint .w1{ fill:var(--bk-accent-wash); opacity:.45; }
 [data-bk-theme="dark"] .bkf-wavediv.is-tint .w2{ fill:var(--bk-accent-soft); opacity:.6; }
 [data-bk-theme="dark"] .bkf-wavediv.is-tint .w3{ fill:var(--bk-surface-3); opacity:.85; }
+
+/* Hero eyebrow: pill badge instead of the leading dash */
+.bkf-hero-immersive .bkf-hero-eyebrow::before{ content:none; display:none; }
+.bkf-hero-immersive .bkf-hero-eyebrow{ display:inline-flex; align-items:center; padding:7px 16px; border-radius:999px; border:1px solid color-mix(in srgb,var(--bk-gold) 55%,transparent); background:color-mix(in srgb,var(--bk-gold) 14%,transparent); }

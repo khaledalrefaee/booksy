@@ -1275,12 +1275,28 @@ class AppointmentController extends Controller
     }
 
     /**
+     * `branch_id` carries one id or a comma list (the branch multi-select).
+     * Only ids of this company's branches survive; empty = no branch filter.
+     *
+     * @return list<int>
+     */
+    private function branchFilterIds(Request $request, $company): array
+    {
+        $ids = collect(explode(',', (string) $request->input('branch_id')))
+            ->map(fn ($v) => (int) trim($v))->filter()->unique()->values();
+
+        return $ids->isEmpty()
+            ? []
+            : $company->branches()->whereIn('id', $ids)->pluck('id')->map(fn ($i) => (int) $i)->all();
+    }
+
+    /**
      * Ajax: return appointments as FullCalendar events JSON + working hours as background events.
      */
     public function calendarEvents(Request $request): JsonResponse
     {
         $company  = $this->company();
-        $branchId = $request->input('branch_id');
+        $branchIdSel = $this->branchFilterIds($request, $company);
 
         /* ── appointments ── */
         $query = Appointment::query()
@@ -1293,8 +1309,8 @@ class AppointmentController extends Controller
         if ($request->filled('end')) {
             $query->where('start_time', '<=', $request->input('end'));
         }
-        if ($branchId) {
-            $query->where('branch_id', $branchId);
+        if ($branchIdSel) {
+            $query->whereIn('branch_id', $branchIdSel);
         }
 
         /* Status filtering — the UI sends its active pills as a comma list
@@ -1378,9 +1394,8 @@ class AppointmentController extends Controller
         $rangeEnd   = $request->filled('end')   ? \Carbon\Carbon::parse($request->input('end'))   : now()->endOfWeek();
 
         // Get branches to check
-        $branchIds = $branchId
-            ? [$branchId]
-            : $company->branches()->pluck('id')->toArray();
+        $branchIds = $branchIdSel
+            ?: $company->branches()->pluck('id')->toArray();
 
         $workingHours = \DB::table('branch_working_hours')
             ->whereIn('branch_id', $branchIds)
@@ -1440,7 +1455,7 @@ class AppointmentController extends Controller
         /* ── blocked-time windows as first-class (deletable) events ── */
         $blockedEvents = BlockedTime::query()
             ->where('company_id', $company->id)
-            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->when($branchIdSel, fn ($q) => $q->whereIn('branch_id', $branchIdSel))
             ->overlapping($rangeStart, $rangeEndD)
             ->with(['employee:id,name_en,name_ar', 'branch:id,name_en,name_ar'])
             ->get()
@@ -1521,15 +1536,15 @@ class AppointmentController extends Controller
     {
         $company  = $this->company();
         $perPage  = min(100, max(10, (int) $request->input('per_page', 25)));
-        $branchId = $request->input('branch_id');
+        $branchIdSel = $this->branchFilterIds($request, $company);
         $q        = trim((string) $request->input('q', ''));
 
         $query = Appointment::query()
             ->where('appointments.company_id', $company->id)
             ->whereNotNull('start_time');
 
-        if ($branchId) {
-            $query->where('appointments.branch_id', $branchId);
+        if ($branchIdSel) {
+            $query->whereIn('appointments.branch_id', $branchIdSel);
         }
 
         // Status pills arrive as a comma list; present-but-empty = none selected.
@@ -1662,7 +1677,7 @@ class AppointmentController extends Controller
 
         $rows = BlockedTime::query()
             ->where('company_id', $company->id)
-            ->when($request->filled('branch_id'), fn ($q) => $q->where('branch_id', $request->input('branch_id')))
+            ->when($this->branchFilterIds($request, $company), fn ($q, $ids) => $q->whereIn('branch_id', $ids))
             ->overlapping($date->copy()->startOfDay(), $date->copy()->endOfDay())
             ->with(['employee:id,name_en,name_ar', 'branch:id,name_en,name_ar'])
             ->orderBy('start_time')

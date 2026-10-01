@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class RegisterController extends Controller
@@ -29,11 +30,13 @@ class RegisterController extends Controller
             'name_en'               => ['required', 'string', 'max:255'],
             'name_ar'               => ['nullable', 'string', 'max:255'],
             'owner_name'            => ['required', 'string', 'max:255'],
-            'email'                 => ['required', 'email', 'unique:companies,email'],
+            // Only VERIFIED accounts block an email/phone; an abandoned sign-up
+            // (typo, never confirmed) is replaced below.
+            'email'                 => ['required', 'email', Rule::unique('companies', 'email')->whereNotNull('phone_verified_at')],
             // Phone arrives in E.164 (e.g. +9639...) from intl-tel-input; the
             // real per-country validity check happens client-side. This is a
             // format guard, not a length-only rule.
-            'phone'                 => ['required', 'string', 'max:20', 'regex:/^\+[1-9]\d{7,14}$/', 'unique:companies,phone'],
+            'phone'                 => ['required', 'string', 'max:20', 'regex:/^\+[1-9]\d{7,14}$/', Rule::unique('companies', 'phone')->whereNotNull('phone_verified_at')],
             'category_id'           => ['required', 'exists:categories,id'],
             'password'              => ['required', 'string', 'min:8'],
             'terms'                 => ['accepted'],
@@ -42,6 +45,8 @@ class RegisterController extends Controller
             'phone.unique'   => __('This phone number is already registered.'),
             'terms.accepted' => __('You must agree to the Terms of Service and Privacy Policy.'),
         ]);
+
+        CompanyVerificationService::purgeUnverified($data['email'], $data['phone']);
 
         $company = Company::query()->create([
             'name_en'     => $data['name_en'],

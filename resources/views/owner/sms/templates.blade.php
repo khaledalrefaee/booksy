@@ -1,12 +1,13 @@
-@extends('company.dashboard')
+@extends('owner.dashboard')
 @section('content')
 
 @php
     $meta = [
         'confirmation' => ['icon' => 'check-circle', 'title' => __('Booking message'),                 'desc' => __('Sent as soon as a booking is made, with its date and time.')],
-        'reminder'     => ['icon' => 'clock',        'title' => __('Reminder before the appointment'), 'desc' => __('Sent once, at the time you choose.')],
+        'reminder'     => ['icon' => 'clock',        'title' => __('Reminder before the appointment'), 'desc' => __('Sent once before the visit. Keep the confirm and cancel links in it.')],
         'followup'     => ['icon' => 'refresh-cw',   'title' => __('Follow-up after the visit'),       'desc' => __('Invites the customer back if they haven\'t booked again.')],
     ];
+    $langs = ['ar' => __('Arabic'), 'en' => __('English')];
     // Build "{{ var }}" without literal double-braces so Blade doesn't parse them.
     $wrap = fn ($v) => '{' . '{' . $v . '}' . '}';
 @endphp
@@ -16,18 +17,15 @@
     <header class="sx-head sx-reveal">
         <div>
             <div class="sx-eyebrow">
-                <a href="{{ route('company.sms.automations') }}">{{ __('Customer messages') }}</a>
+                <a href="{{ route('owner.sms.overview') }}">{{ __('SMS credits') }}</a>
                 <span aria-hidden="true">·</span> {{ __('Templates') }}
             </div>
             <h1 class="sx-title">{{ __('Message templates') }}</h1>
-            <p class="sx-subtitle">{{ __('Your text is used for both SMS and WhatsApp. Leave a message unchanged to keep the default. The counter shows how many SMS it will cost.') }}</p>
-        </div>
-        <div class="sx-head-actions">
-            <a href="{{ route('company.sms.automations') }}" class="sx-btn sx-btn-ghost"><i data-feather="bell"></i>{{ __('Customer messages') }}</a>
+            <p class="sx-subtitle">{{ __('One set of customer messages for every company. Each customer gets the text in the system language. Keep them short: Arabic costs one SMS per 70 characters (67 when longer), and the counter shows the cost.') }}</p>
         </div>
     </header>
 
-    @include('company.partials.flash')
+    @include('owner.partials.flash')
 
     {{-- Variable reference --}}
     <div class="sx-card sx-reveal" style="margin-bottom:18px;">
@@ -44,35 +42,39 @@
     <div style="display:flex; flex-direction:column; gap:16px;">
     @foreach($keys as $key)
         <div class="sx-card sx-reveal">
-            <form method="POST" action="{{ route('company.sms.templates.update') }}">
-                @csrf @method('PUT')
-                <input type="hidden" name="key" value="{{ $key }}">
-                <div class="sx-card-head">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <span class="sx-auto-ic"><i data-feather="{{ $meta[$key]['icon'] }}"></i></span>
-                        <div>
-                            <h2 class="sx-card-title" style="font-size:1.05rem;">{{ $meta[$key]['title'] }}</h2>
-                            <p class="sx-card-note">{{ $meta[$key]['desc'] }}</p>
-                        </div>
+            <div class="sx-card-head">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span class="sx-auto-ic"><i data-feather="{{ $meta[$key]['icon'] }}"></i></span>
+                    <div>
+                        <h2 class="sx-card-title" style="font-size:1.05rem;">{{ $meta[$key]['title'] }}</h2>
+                        <p class="sx-card-note">{{ $meta[$key]['desc'] }}</p>
                     </div>
-                    <button type="submit" class="sx-btn sx-btn-primary sx-btn-sm"><i data-feather="save"></i>{{ __('Save') }}</button>
                 </div>
-                <div class="sx-card-pad">
-                    <textarea name="body" class="sx-input sx-tpl" data-key="{{ $key }}" rows="4" maxlength="1000" dir="auto">{{ $templates[$key] }}</textarea>
-                    <div class="sx-counter" data-counter="{{ $key }}">
+            </div>
+            @foreach($langs as $loc => $label)
+                <form method="POST" action="{{ route('owner.sms.templates.update') }}" class="sx-card-pad" style="border-top:1px solid var(--bk-border);">
+                    @csrf @method('PUT')
+                    <input type="hidden" name="key" value="{{ $key }}">
+                    <input type="hidden" name="locale" value="{{ $loc }}">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <strong>{{ $label }}</strong>
+                        <button type="submit" class="sx-btn sx-btn-primary sx-btn-sm"><i data-feather="save"></i>{{ __('Save') }}</button>
+                    </div>
+                    <textarea name="body" class="sx-input sx-tpl" data-key="{{ $key }}-{{ $loc }}" rows="3" maxlength="1000" dir="{{ $loc === 'ar' ? 'rtl' : 'ltr' }}">{{ $templates[$loc][$key] }}</textarea>
+                    <div class="sx-counter" data-counter="{{ $key }}-{{ $loc }}">
                         <span>{{ __('Characters') }}: <strong class="c-len">0</strong></span>
                         <span>{{ __('Encoding') }}: <strong class="c-enc">—</strong></span>
                         <span>{{ __('SMS count') }}: <span class="seg-pill c-seg">1</span></span>
                     </div>
-                </div>
-            </form>
+                </form>
+            @endforeach
         </div>
     @endforeach
     </div>
 </div>
 
-@push('company-styles')
-    @include('company.sms.partials.styles')
+@push('owner-styles')
+    @include('owner.sms.partials.styles')
 @endpush
 
 @push('scripts')

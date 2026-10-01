@@ -66,6 +66,7 @@ Route::prefix('company')->name('company.')->group(function () {
         // Account verification (code sent after registration via WhatsApp + email)
         Route::get('/verify',         [VerificationController::class, 'showNotice'])->name('verify.notice');
         Route::post('/verify',        [VerificationController::class, 'verify'])->name('verify.attempt');
+        Route::post('/verify/contact', [VerificationController::class, 'updateContact'])->middleware('throttle:5,10')->name('verify.contact');
         Route::post('/verify/resend', [VerificationController::class, 'resend'])->name('verify.resend');
 
         // Branch context switcher (session-based; validates ownership)
@@ -88,9 +89,6 @@ Route::prefix('company')->name('company.')->group(function () {
             Route::get('/',            'overview')->name('overview');
             Route::get('automations',  'automations')->name('automations');
             Route::put('automations/{branch}', 'updateAutomations')->name('automations.update');
-            Route::get('templates',    'templates')->name('templates');
-            Route::put('templates',    'updateTemplate')->name('templates.update');
-            Route::post('templates/preview', 'previewSegments')->name('templates.preview');
             Route::get('history',      'history')->name('history');
             Route::get('purchase',     'purchase')->name('purchase');
             Route::post('purchase',    'requestPurchase')->name('purchase.request');

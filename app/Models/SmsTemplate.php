@@ -30,19 +30,28 @@ class SmsTemplate extends Model
         'cancel_link',
     ];
 
-    /** The built-in default bodies used to seed a company's templates. */
+    /** The customer messages that have a template, in display order. */
+    public const KEYS = ['confirmation', 'reminder', 'followup'];
+
+    /**
+     * The built-in texts: seeded as the owner's editable system templates and
+     * the fallback if a row is ever missing. Short on purpose — Arabic is
+     * Unicode (70 chars per SMS, 67 when it spans several), so every extra word
+     * and every long link costs credits. The reminder carries its own confirm /
+     * cancel links; the booking and follow-up messages carry none.
+     */
     public static function defaultBody(string $key, string $locale = 'ar'): string
     {
         $ar = [
-            'confirmation' => "مرحباً {{customer_name}} 👋\nتم تأكيد حجزك في {{branch_name}} بتاريخ {{appointment_date}} الساعة {{appointment_time}}.\nنتطلّع لرؤيتك! 💛",
-            'reminder'     => "تذكير: لديك موعد في {{branch_name}} بتاريخ {{appointment_date}} الساعة {{appointment_time}}.\nبانتظارك 💛",
-            'followup'     => "مرحباً {{customer_name}}، اشتقنا لك في {{branch_name}}!\nمرّ وقت على آخر زيارة — احجز موعدك القادم في أي وقت 💛",
+            'confirmation' => "تم حجز موعدك في {{branch_name}} 🎉\n{{appointment_date}} • {{appointment_time}}\nبانتظارك!",
+            'reminder'     => "⏰ موعدك في {{branch_name}}\n{{appointment_date}} • {{appointment_time}}\nتأكيد: {{confirm_link}}\nإلغاء: {{cancel_link}}",
+            'followup'     => "اشتقنا لك يا {{customer_name}} 💛\nاحجز موعدك القادم في {{branch_name}} متى شئت.",
         ];
 
         $en = [
-            'confirmation' => "Hi {{customer_name}} 👋\nYour appointment at {{branch_name}} on {{appointment_date}} at {{appointment_time}} is confirmed.\nSee you soon! 💛",
-            'reminder'     => "Reminder: you have an appointment at {{branch_name}} on {{appointment_date}} at {{appointment_time}}.\nSee you there 💛",
-            'followup'     => "Hi {{customer_name}}, we miss you at {{branch_name}}!\nIt's been a while since your last visit — book your next appointment anytime 💛",
+            'confirmation' => "Your appointment at {{branch_name}} is booked for {{appointment_date}} at {{appointment_time}}. See you soon!",
+            'reminder'     => "Reminder: your appointment at {{branch_name}} is {{appointment_date}} at {{appointment_time}}.\nConfirm: {{confirm_link}}\nCancel: {{cancel_link}}",
+            'followup'     => "Hi {{customer_name}}, we miss you at {{branch_name}}! Book your next visit anytime.",
         ];
 
         $set = $locale === 'en' ? $en : $ar;

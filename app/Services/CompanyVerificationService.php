@@ -140,6 +140,21 @@ class CompanyVerificationService
         return self::CODE_INVALID;
     }
 
+    /**
+     * Free an email/phone held by an abandoned (never-verified) sign-up so the
+     * person can simply register again after a typo. Verified accounts are
+     * never touched.
+     */
+    public static function purgeUnverified(?string $email, ?string $phone, ?int $exceptId = null): void
+    {
+        Company::withTrashed()
+            ->whereNull('phone_verified_at')
+            ->when($exceptId, fn ($q) => $q->where('id', '!=', $exceptId))
+            ->where(fn ($q) => $q->where('email', $email)->orWhere('phone', $phone))
+            ->get()
+            ->each->forceDelete();
+    }
+
     /** Mark the account confirmed and seed its head-office branch. */
     public function markVerified(Company $company): void
     {

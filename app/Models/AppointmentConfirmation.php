@@ -39,7 +39,7 @@ class AppointmentConfirmation extends Model
     {
         return self::create([
             'appointment_id' => $appointment->id,
-            'token'          => Str::random(48),
+            'token'          => Str::random(12),
             'expires_at'     => $appointment->start_time,
         ]);
     }

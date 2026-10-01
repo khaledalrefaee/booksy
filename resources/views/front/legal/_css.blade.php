@@ -10,10 +10,6 @@
 /* ── Header (editorial, calm — not a marketing hero) ───────────────── */
 .bkf-legaldoc-head{ padding-bottom:var(--bk-s8); margin-bottom:var(--bk-s10);
   border-bottom:1px solid var(--bk-border); }
-.bkf-legaldoc-eyebrow{ display:inline-flex; align-items:center; gap:8px;
-  font-family:var(--bk-font-ui); font-size:var(--bk-eyebrow); font-weight:700;
-  letter-spacing:.16em; text-transform:uppercase; color:var(--bk-gold-strong); margin-bottom:16px; }
-.bkf-legaldoc-eyebrow::before{ content:""; width:18px; height:1px; background:currentColor; opacity:.6; }
 .bkf-legaldoc-head h1{ font-family:var(--bk-font-display); font-weight:600;
   font-size:var(--bk-fs-h1); line-height:1.08; letter-spacing:-.01em;
   color:var(--bk-text); margin:0; text-wrap:balance; }
@@ -48,11 +44,11 @@ html[lang="ar"] .bkf-legaldoc-head h1{ font-weight:800; letter-spacing:0; line-h
   flex-direction:column; border-inline-start:1px solid var(--bk-border); }
 .bkf-legaldoc-aside a{ display:block; font-family:var(--bk-font-ui); font-size:.9rem;
   line-height:1.4; color:var(--bk-text-muted); text-decoration:none;
-  padding:8px 15px; margin-inline-start:-1px; border-inline-start:2px solid transparent;
-  transition:color var(--bk-t-fast) var(--bk-ease), border-color var(--bk-t-fast) var(--bk-ease); }
+  padding:8px 15px; margin-inline-start:-1px; border-radius:0 var(--bk-r-xs) var(--bk-r-xs) 0;
+  transition:color var(--bk-t-fast) var(--bk-ease), background-color var(--bk-t-fast) var(--bk-ease); }
+html[dir="rtl"] .bkf-legaldoc-aside a{ border-radius:var(--bk-r-xs) 0 0 var(--bk-r-xs); }
 .bkf-legaldoc-aside a:hover{ color:var(--bk-text); }
-.bkf-legaldoc-aside a.is-active{ color:var(--bk-accent); font-weight:600;
-  border-inline-start-color:var(--bk-accent); }
+.bkf-legaldoc-aside a.is-active{ color:var(--bk-accent-strong); font-weight:600; background:var(--bk-accent-wash); }
 .bkf-legaldoc-aside a:focus-visible{ outline:2px solid var(--bk-accent); outline-offset:2px; border-radius:4px; }
 
 /* ── Mobile “On this page” disclosure ─────────────────────────────── */
@@ -109,10 +105,24 @@ html[lang="ar"] .bkf-legaldoc-body h2{ font-weight:800; letter-spacing:0; line-h
 .bkf-legaldoc-body :target{ scroll-margin-top:calc(var(--bk-nav-h) + 24px); }
 
 /* Closing revision note — one restrained gold accent, not a card grid */
-.bkf-legaldoc-note{ margin-top:var(--bk-s10); padding:16px 20px;
-  border-inline-start:3px solid var(--bk-gold); background:var(--bk-gold-soft);
-  border-radius:var(--bk-r-xs); font-family:var(--bk-font-ui);
-  font-size:.94rem; line-height:1.7; color:var(--bk-text-soft); }
+.bkf-legaldoc-note{ margin-top:var(--bk-s10); padding:18px 22px;
+  border:1px solid color-mix(in srgb,var(--bk-gold) 35%,transparent); background:var(--bk-gold-soft);
+  border-radius:var(--bk-r-sm); font-family:var(--bk-font-ui);
+  font-size:.94rem; line-height:1.7; color:var(--bk-text-soft); text-wrap:pretty; }
+
+/* ── Related pages ────────────────────────────────────────────────── */
+.bkf-legaldoc-related{ display:flex; flex-wrap:wrap; gap:10px; margin-top:var(--bk-s8); }
+.bkf-legaldoc-related a{ display:inline-flex; align-items:center; min-height:44px; padding:0 18px;
+  border:1px solid var(--bk-border); border-radius:var(--bk-r-pill); background:var(--bk-surface);
+  font-family:var(--bk-font-ui); font-size:.92rem; font-weight:600; color:var(--bk-text-soft); text-decoration:none;
+  transition:color var(--bk-t-fast) var(--bk-ease), border-color var(--bk-t-fast) var(--bk-ease), background-color var(--bk-t-fast) var(--bk-ease); }
+.bkf-legaldoc-related a:hover{ color:var(--bk-accent-strong); border-color:var(--bk-accent); background:var(--bk-accent-wash); }
+.bkf-legaldoc-related a:focus-visible{ outline:2px solid var(--bk-accent); outline-offset:2px; }
+
+/* Browser surfaces */
+.bkf-legaldoc ::selection{ background:var(--bk-accent-soft); color:var(--bk-text); }
+.bkf-legaldoc{ scroll-behavior:smooth; }
+@media (prefers-reduced-motion:reduce){ .bkf-legaldoc{ scroll-behavior:auto; } }
 
 /* ── Back to top ──────────────────────────────────────────────────── */
 .bkf-legaldoc-top{ position:fixed; inset-block-end:var(--bk-s6); inset-inline-end:var(--bk-s6);

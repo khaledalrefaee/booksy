@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class VerificationController extends Controller
 {
@@ -48,6 +49,31 @@ class VerificationController extends Controller
 
         return redirect()->route('company.dashboard')
             ->with('status', __('Your account has been verified. Welcome aboard!'));
+    }
+
+    /** Fix a typo in the email/phone entered at sign-up, then send a fresh code. */
+    public function updateContact(Request $request, CompanyVerificationService $verification): RedirectResponse
+    {
+        $company = Auth::guard('company')->user();
+
+        if ($company->phone_verified_at) {
+            return redirect()->route('company.dashboard');
+        }
+
+        $data = $request->validate([
+            'email' => ['required', 'email', Rule::unique('companies', 'email')->ignore($company->id)->whereNotNull('phone_verified_at')],
+            'phone' => ['required', 'string', 'max:20', 'regex:/^\+[1-9]\d{7,14}$/', Rule::unique('companies', 'phone')->ignore($company->id)->whereNotNull('phone_verified_at')],
+        ], [
+            'phone.regex'  => __('Please enter a valid phone number.'),
+            'phone.unique' => __('This phone number is already registered.'),
+        ]);
+
+        CompanyVerificationService::purgeUnverified($data['email'], $data['phone'], $company->id);
+
+        $company->update($data);
+        $verification->send($company);
+
+        return back()->with('status', __('Details updated — a new code has been sent.'));
     }
 
     /** Re-send a fresh code (rate-limited). */

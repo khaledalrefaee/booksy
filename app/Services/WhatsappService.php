@@ -236,35 +236,12 @@ class WhatsappService
         $confirmUrl   = route('appointment.confirm', ['token' => $confirmation->token]);
         $cancelUrl    = route('appointment.cancel-form', ['token' => $confirmation->token]);
 
-        // The company's own text (Message templates page) for a single booking;
-        // grouped visits — or no custom text — use the built-in layout.
-        $message = $visit->count() === 1
-            ? $this->customText($primary, 'confirmation', (bool) $settings->ask_confirmation)
-            : null;
-        $message ??= $this->defaultBookedMessage($visit, (bool) $settings->ask_confirmation, $confirmUrl, $cancelUrl);
+        // WhatsApp keeps its richer built-in layout (the short owner templates
+        // are the SMS texts). The booking message carries no confirm links —
+        // those come with the reminder.
+        $message = $this->defaultBookedMessage($visit, false, $confirmUrl, $cancelUrl);
 
         return $this->send($phone, $message, $primary->company_id, $primary->id, 'appointment_booked', 'whatsapp');
-    }
-
-    /**
-     * The company's customised template for this message, rendered — or null
-     * when they kept the default (the WhatsApp default is the richer built-in
-     * layout, the SMS default is the short text).
-     */
-    private function customText(Appointment $appointment, string $key, bool $withLinks): ?string
-    {
-        $sms = app(\App\Services\Sms\SmsService::class);
-        $tpl = $sms->resolveTemplate($appointment->company_id, $appointment->branch_id, $key);
-        if (! $tpl || $tpl->company_id !== $appointment->company_id || trim((string) $tpl->body) === '') {
-            return null;
-        }
-
-        $raw = $tpl->body;
-        if ($withLinks && ! str_contains($raw, 'confirm_link')) {
-            $raw .= "\n\n✔ للتأكيد:\n{{confirm_link}}\n\n❌ للإلغاء:\n{{cancel_link}}";
-        }
-
-        return $sms->render($raw, $appointment);
     }
 
     /** Consolidated "booked" message: one branch, one date, every service line. */
@@ -503,13 +480,12 @@ class WhatsappService
             ->exists();
         if ($alreadySent) return false;
 
-        $ask          = (bool) $settings->ask_confirmation;
         $confirmation = AppointmentConfirmation::activeFor($primary);
-        $confirmUrl   = route('appointment.confirm', ['token' => $confirmation->token]);
-        $cancelUrl    = route('appointment.cancel-form', ['token' => $confirmation->token]);
+        $confirmUrl   = route('appointment.c', ['token' => $confirmation->token]);
+        $cancelUrl    = route('appointment.x', ['token' => $confirmation->token]);
 
-        $message = $visit->count() === 1 ? $this->customText($primary, 'reminder', $ask) : null;
-        $message ??= $this->defaultReminderMessage($visit, $ask, $confirmUrl, $cancelUrl);
+        // The reminder always offers confirm / cancel.
+        $message = $this->defaultReminderMessage($visit, true, $confirmUrl, $cancelUrl);
 
         return $this->send($phone, $message, $primary->company_id, $primary->id, $type, 'whatsapp');
     }

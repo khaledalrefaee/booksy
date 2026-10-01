@@ -4,7 +4,7 @@
 <style>
 /* ── Branch Show ── */
 .branch-hero {
-    background: linear-gradient(135deg, #1a1f3a 0%, #0d1b2a 100%);
+    background: linear-gradient(135deg, #5C7038 0%, #3C4B29 100%);
     border-radius: 20px;
     padding: 28px 32px;
     margin-bottom: 24px;
@@ -242,11 +242,11 @@
                     </ol>
                 </nav>
                 <div class="d-flex align-items-center gap-2 mb-1">
-                    <h3 class="fw-bold mb-0" style="font-family:'Poppins',sans-serif;">{{ $branch->localizedName() }}</h3>
+                    <h3 class="fw-bold mb-0" style="font-family:'Poppins',sans-serif;color:#fff;font-size:1.6rem;">{{ $branch->localizedName() }}</h3>
                     @if($branch->is_head_office)
-                        <span class="badge rounded-pill" style="background:rgba(75,93,52,.2);color:var(--bk-accent);font-size:10px;">{{ __('Head Office') }}</span>
+                        <span class="badge rounded-pill" style="background:#C9A961;color:#2B3520;font-size:12px;font-weight:800;padding:5px 12px;">{{ __('Head office') }}</span>
                     @endif
-                    <span class="badge rounded-pill bg-{{ $branch->statusColor() }}" style="font-size:10px;">{{ __($branch->statusLabel()) }}</span>
+                    <span class="badge rounded-pill bg-{{ $branch->statusColor() }}" style="font-size:12px;font-weight:800;padding:5px 12px;">{{ __($branch->statusLabel()) }}</span>
                 </div>
                 @if($branch->address)
                     <p class="mb-0" style="color:rgba(255,255,255,.55);font-size:13px;">
@@ -457,17 +457,17 @@
                         <tbody>
                             @foreach($recentAppointments as $appt)
                             @php $scolor = $appt->status->color(); @endphp
-                            <tr>
-                                <td style="font-weight:600;font-size:12px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                            <tr class="appt-row">
+                                <td class="a-cust" style="font-weight:600;font-size:12px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                                     {{ $appt->customer?->name ?? __('Guest') }}
                                 </td>
-                                <td style="font-size:12px;opacity:.7;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                <td class="a-svc" style="font-size:12px;opacity:.7;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                                     {{ $appt->service?->localizedName() ?? '—' }}
                                 </td>
-                                <td style="font-size:11px;opacity:.55;white-space:nowrap;">
+                                <td class="a-date" style="font-size:11px;opacity:.55;white-space:nowrap;">
                                     {{ $appt->start_time?->format('M d, H:i') }}
                                 </td>
-                                <td>
+                                <td class="a-status">
                                     <span class="status-pill" style="background:{{ $scolor }}26;color:{{ $scolor }};">
                                         {{ $appt->status->label() }}
                                     </span>
@@ -476,6 +476,24 @@
                             @endforeach
                         </tbody>
                     </table>
+                    <style>
+                        /* phones: each recent appointment is a card (no sideways scrolling needed) */
+                        @media (max-width: 575.98px) {
+                            .appt-table, .appt-table tbody { display:block; width:100%; }
+                            .appt-table thead { display:none; }
+                            .appt-table tr.appt-row {
+                                display:grid; grid-template-columns:1fr auto; gap:4px 10px;
+                                grid-template-areas:"cust status" "svc svc" "date date";
+                                padding:12px 14px; border-bottom:1px solid rgba(128,128,128,.18);
+                            }
+                            .appt-table tr.appt-row:last-child { border-bottom:0; }
+                            .appt-table tr.appt-row td { display:block; padding:0 !important; border:0 !important; max-width:none !important; white-space:normal !important; overflow:visible !important; }
+                            .appt-table .a-cust   { grid-area:cust; font-size:14px !important; font-weight:800 !important; }
+                            .appt-table .a-status { grid-area:status; align-self:center; }
+                            .appt-table .a-svc    { grid-area:svc; font-size:13px !important; opacity:.8 !important; }
+                            .appt-table .a-date   { grid-area:date; font-size:12px !important; opacity:.65 !important; }
+                        }
+                    </style>
                     @endif
                 </div>
             </div>

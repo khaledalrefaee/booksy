@@ -1,20 +1,20 @@
 @props([
     'title',                 // full <title> (incl. brand)
     'description' => null,    // meta description
-    'eyebrow',               // small label above H1
+    'eyebrow' => null,        // deprecated — headings carry themselves, no label above H1
     'heading',               // H1
     'subtitle' => null,      // editorial one-liner under H1
     'updatedLabel',          // "Last updated:" / "آخر تحديث:"
     'updated',               // pre-formatted date string
     'tocLabel',              // "On this page" / "في هذه الصفحة"
     'toc' => [],             // [ ['id'=>.., 'label'=>..], .. ]
+    'related' => true,        // cross-links to the other customer-facing pages
 ])
 <x-front.layout :title="$title" :description="$description" :mapFab="false">
   <x-slot:styles>@include('front.legal._css')</x-slot:styles>
 
   <article class="bkf-legaldoc" data-legaldoc>
     <header class="bkf-legaldoc-head">
-      <div class="bkf-legaldoc-eyebrow">{{ $eyebrow }}</div>
       <h1>{{ $heading }}</h1>
       @if($subtitle)<p class="bkf-legaldoc-sub">{{ $subtitle }}</p>@endif
       <p class="bkf-legaldoc-updated">{{ $updatedLabel }} <b>{{ $updated }}</b></p>
@@ -53,6 +53,16 @@
         <div class="bkf-legaldoc-body">
           {{ $slot }}
         </div>
+
+        @if($related)
+          @php($ar = app()->getLocale() === 'ar')
+          <nav class="bkf-legaldoc-related" aria-label="{{ $ar ? 'صفحات ذات صلة' : 'Related pages' }}">
+            <a href="{{ route('front.privacy') }}"><span>{{ $ar ? 'سياسة الخصوصية' : 'Privacy Policy' }}</span></a>
+            <a href="{{ route('front.terms') }}"><span>{{ $ar ? 'الشروط والأحكام' : 'Terms of Service' }}</span></a>
+            <a href="{{ route('front.help') }}"><span>{{ $ar ? 'مركز المساعدة' : 'Help Center' }}</span></a>
+            <a href="{{ route('front.contact') }}"><span>{{ $ar ? 'تواصل معنا' : 'Contact us' }}</span></a>
+          </nav>
+        @endif
       </div>
     </div>
 

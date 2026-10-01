@@ -53,7 +53,7 @@ if (fltBtn && fltBar) {
     var markFilters = function () {
         var active = (fltSearch && fltSearch.value.trim() !== '')
             || (fltBranch && fltBranch.value !== fltBranchDefault)
-            || !!fltBar.querySelector('.bk-st-pill.off');
+            || !!fltBar.querySelector('#ms-status .bk-ms-check:not(:checked)');
         fltBtn.classList.toggle('has-filters', active);
     };
     fltBar.addEventListener('click', function () { setTimeout(markFilters, 0); });

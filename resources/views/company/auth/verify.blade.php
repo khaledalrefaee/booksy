@@ -49,6 +49,29 @@
         </form>
     </div>
 
+    <hr class="my-4">
+
+    <details @if($errors->has('email') || $errors->has('phone')) open @endif>
+        <summary class="fw-semibold small" style="cursor:pointer">{{ __('Wrong email or phone number? Edit it') }}</summary>
+        <form method="POST" action="{{ route('company.verify.contact') }}" class="mt-3">
+            @csrf
+            <div class="mb-3">
+                <label class="form-label small fw-semibold">{{ __('Email') }}</label>
+                <input type="email" name="email" value="{{ old('email', $email) }}" class="form-control" dir="ltr" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-semibold">{{ __('Phone') }}</label>
+                <input type="tel" name="phone" value="{{ old('phone', $phone) }}" class="form-control" dir="ltr" placeholder="+9639xxxxxxxx" required>
+            </div>
+            <button type="submit" class="btn btn-outline-primary w-100 rounded-3">{{ __('Save and resend code') }}</button>
+        </form>
+    </details>
+
+    <form method="POST" action="{{ route('company.logout') }}" class="mt-3 text-center">
+        @csrf
+        <button type="submit" class="btn btn-link btn-sm text-muted text-decoration-none">{{ __('Log out / use another account') }}</button>
+    </form>
+
 @endsection
 
 @push('scripts')

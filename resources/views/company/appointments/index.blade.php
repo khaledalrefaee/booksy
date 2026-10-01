@@ -315,17 +315,24 @@
              sidebar already scopes to one branch; it stays pre-selected to that
              branch via the injected branch_id. --}}
         <div class="bk-filter-group" @if($branchContext ?? null) style="display:none;" @endif>
-            <div class="bk-filter-icon">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            @php $brSel = request('branch_id'); @endphp
+            <input type="hidden" id="filter-branch" value="{{ $brSel }}">
+            <div class="bk-ms" id="ms-branch" data-all-text="{{ __('All branches') }}" data-many-text="{{ $isRtl ? 'فروع' : 'branches' }}">
+                <button type="button" class="bk-ms-btn" aria-haspopup="true" aria-expanded="false">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span class="bk-ms-label">{{ __('All branches') }}</span>
+                    <svg class="bk-ms-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="bk-ms-menu d-none" role="group" aria-label="{{ __('Branches') }}">
+                    <label class="bk-ms-item bk-ms-all"><input type="checkbox" data-all> <span>{{ $isRtl ? 'تحديد الكل' : 'Select all' }}</span></label>
+                    @foreach ($branches as $b)
+                    <label class="bk-ms-item">
+                        <input type="checkbox" class="bk-ms-check" value="{{ $b->id }}" {{ (!$brSel || (string) $brSel === (string) $b->id) ? 'checked' : '' }}>
+                        <span>{{ $b->localizedName() }}</span>
+                    </label>
+                    @endforeach
+                </div>
             </div>
-            <select id="filter-branch">
-                <option value="">{{ __('All branches') }}</option>
-                @foreach ($branches as $b)
-                    <option value="{{ $b->id }}" {{ request('branch_id') == $b->id ? 'selected' : '' }}>
-                        {{ $b->localizedName() }}
-                    </option>
-                @endforeach
-            </select>
         </div>
 
         <div class="bk-divider d-none d-md-block"></div>
@@ -343,15 +350,22 @@
              old `color:#f59e0b` on a `#f59e0b22` background sat around 2:1
              contrast, well under the 4.5:1 WCAG AA floor. The dot carries the
              colour coding instead, where contrast does not apply. --}}
-        <div class="d-flex flex-wrap gap-1" id="status-filters" role="group"
-             aria-label="{{ $isRtl ? 'تصفية حسب الحالة' : 'Filter by status' }}">
-            @foreach($statusDefs as $st => $sc)
-                <button class="bk-st-pill" data-status="{{ $st }}" aria-pressed="false"
-                    style="background:{{ $sc['color'] }}1a;color:var(--cal-text);border-color:{{ $sc['color'] }}59;">
+        <div class="bk-ms" id="ms-status" data-all-text="{{ $isRtl ? 'كل الحالات' : 'All statuses' }}" data-many-text="{{ $isRtl ? 'حالات' : 'statuses' }}" data-none-text="{{ $isRtl ? 'بدون حالة' : 'No status' }}">
+            <button type="button" class="bk-ms-btn" aria-haspopup="true" aria-expanded="false">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                <span class="bk-ms-label">{{ $isRtl ? 'كل الحالات' : 'All statuses' }}</span>
+                <svg class="bk-ms-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="bk-ms-menu d-none" role="group" aria-label="{{ $isRtl ? 'تصفية حسب الحالة' : 'Filter by status' }}">
+                <label class="bk-ms-item bk-ms-all"><input type="checkbox" data-all> <span>{{ $isRtl ? 'تحديد الكل' : 'Select all' }}</span></label>
+                @foreach($statusDefs as $st => $sc)
+                <label class="bk-ms-item">
+                    <input type="checkbox" class="bk-ms-check" data-status="{{ $st }}" checked>
                     <span class="dot" style="background:{{ $sc['color'] }};"></span>
-                    {{ $sc['label'] }}
-                </button>
-            @endforeach
+                    <span>{{ $sc['label'] }}</span>
+                </label>
+                @endforeach
+            </div>
         </div>
 
         <div class="bk-divider d-none d-md-block"></div>

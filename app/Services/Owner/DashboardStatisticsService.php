@@ -44,15 +44,21 @@ final class DashboardStatisticsService
 
     public function forCompany(Company $company): array
     {
-        return Cache::remember("dash.company.{$company->id}.stats", self::CACHE_TTL, function () use ($company) {
+        return Cache::remember("dash.company.{$company->id}.stats.v2", self::CACHE_TTL, function () use ($company) {
             $branchIds = $company->branches()->pluck('id');
 
+            // one grouped query instead of a count() per status
+            $byStatus = Appointment::query()
+                ->where('company_id', $company->id)
+                ->selectRaw('status, COUNT(*) as c')
+                ->groupBy('status')
+                ->pluck('c', 'status');
+
             return [
-                'appointments_total' => Appointment::query()->where('company_id', $company->id)->count(),
-                'appointments_pending' => Appointment::query()
-                    ->where('company_id', $company->id)
-                    ->where('status', 'pending')
-                    ->count(),
+                'appointments_total' => (int) $byStatus->sum(),
+                'appointments_pending' => (int) ($byStatus['pending'] ?? 0),
+                'appointments_confirmed' => (int) ($byStatus['confirmed'] ?? 0),
+                'appointments_completed' => (int) ($byStatus['completed'] ?? 0),
                 'branches' => $company->branches()->count(),
                 'services' => Service::query()->whereIn('branch_id', $branchIds)->count(),
                 'waitlist_waiting' => WaitlistEntry::query()
@@ -61,6 +67,24 @@ final class DashboardStatisticsService
                     ->count(),
             ];
         });
+    }
+
+    /**
+     * Drop the cached dashboard numbers for one company so a new / changed
+     * appointment shows up immediately instead of after the 5-minute TTL.
+     */
+    public static function forgetCompany(int $companyId, $when = null): void
+    {
+        $keys = ["dash.company.{$companyId}.stats.v2", 'dash.platform.stats'];
+        foreach (['ar', 'en'] as $locale) {
+            $keys[] = "dash.company.{$companyId}.charts.{$locale}";
+        }
+        $when = $when ? Carbon::parse($when) : now();
+        $keys[] = "dash.company.{$companyId}.monthchart.{$when->year}.{$when->month}";
+
+        foreach ($keys as $key) {
+            Cache::forget($key);
+        }
     }
 
     public function chartDataForPlatform(): array

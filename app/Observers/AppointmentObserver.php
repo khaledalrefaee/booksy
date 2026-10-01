@@ -17,6 +17,8 @@ class AppointmentObserver
 {
     public function created(Appointment $appointment): void
     {
+        \App\Services\Owner\DashboardStatisticsService::forgetCompany($appointment->company_id, $appointment->start_time);
+
         // Opening entry of the timeline, so every appointment's history starts
         // at its birth rather than at its first status change.
         $actor = TransitionAppointment::currentActor();
@@ -69,8 +71,17 @@ class AppointmentObserver
         }
     }
 
+    public function deleted(Appointment $appointment): void
+    {
+        \App\Services\Owner\DashboardStatisticsService::forgetCompany($appointment->company_id, $appointment->start_time);
+    }
+
     public function updated(Appointment $appointment): void
     {
+        if ($appointment->wasChanged(['status', 'start_time'])) {
+            \App\Services\Owner\DashboardStatisticsService::forgetCompany($appointment->company_id, $appointment->start_time);
+        }
+
         if (!$appointment->wasChanged('status')) return;
 
         $newStatus = $appointment->status;

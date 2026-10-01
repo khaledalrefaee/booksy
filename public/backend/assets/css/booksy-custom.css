@@ -1892,3 +1892,37 @@ select option {
 /* ── Inputs / selects: softer rims ── */
 .bk-theme-dark .form-control:not(:focus),
 .bk-theme-dark .form-select:not(:focus) { border-color:rgba(255,255,255,.1) !important; }
+
+/* ── Dashboard: stat numbers must never crowd out their label; company name in hero reads clearly ── */
+.bk-stat { container-type: inline-size; }
+.bk-stat .bk-stat-num { font-size: clamp(1.6rem, 11cqw, 2.3rem) !important; }
+.bk-stat .bk-stat-icon { width: 48px !important; height: 48px !important; border-radius: 14px !important; }
+.bk-stat .bk-stat-left { gap: 12px; }
+.bk-stat .bk-stat-label { letter-spacing: .3px; }
+.bk-hero .bk-hero-sub { font-size: 1.15rem; font-weight: 700; color: rgba(255,255,255,.92); margin-top: 6px; }
+.bk-hero .bk-hero-sub svg, .bk-hero .bk-hero-sub i { width: 17px !important; height: 17px !important; }
+.bk-stat .bk-stat-num { font-size: clamp(1.4rem, 9cqw, 2rem) !important; }
+.bk-stat .bk-stat-sub { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
+.bk-stat .bk-stat-label { -webkit-line-clamp: 2; }
+
+/* Sidebar brand: the real logo (light/dark artwork follows the theme) */
+.sidebar-brand-logo { display:flex; align-items:center; justify-content:center; padding:4px 0; }
+.sidebar-brand-logo .bk-sb-logo { height:38px; width:auto; max-width:100%; display:block; }
+.sidebar-brand-logo .bk-sb-logo--dark { display:none; }
+.bk-theme-dark .sidebar-brand-logo .bk-sb-logo--light,
+[data-bk-theme="dark"] .sidebar-brand-logo .bk-sb-logo--light { display:none; }
+.bk-theme-dark .sidebar-brand-logo .bk-sb-logo--dark,
+[data-bk-theme="dark"] .sidebar-brand-logo .bk-sb-logo--dark { display:block; }
+
+/* Small phones: every stat card gets its own full-width row (readable numbers + labels).
+   Targets the grid column that wraps a stat card, on any company page. */
+@media (max-width: 575.98px) {
+    .row > [class*="col"]:has(> .bk-stat),
+    .row > [class*="col"]:has(> .stat-card),
+    .row > [class*="col"]:has(> .pay-stat-card),
+    .row > [class*="col"]:has(> .sx-stat) {
+        flex: 0 0 100%;
+        width: 100%;
+        max-width: 100%;
+    }
+}
