@@ -29,17 +29,13 @@ class SmsMessage extends Model
     }
 
     /**
-     * Map the GlowRez automation kind to a Rasel `messageType`:
-     * confirmation/reminder are transactional (utility); follow-ups are
-     * marketing. Ad-hoc manual sends stay free_text.
+     * Every message goes to Rasel as `free_text`. The `utility` / `marketing`
+     * types require a template registered with the provider (TEMPLATE_REQUIRED);
+     * local SMS accepts free text, which is what verification codes already use.
      */
     public function raselMessageType(): string
     {
-        return match ($this->message_type) {
-            'confirmation', 'reminder' => 'utility',
-            'followup'                 => 'marketing',
-            default                    => 'free_text',
-        };
+        return 'free_text';
     }
 
     /** True when this row carries any Rasel provider-side detail to show. */

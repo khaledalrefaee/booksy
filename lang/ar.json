@@ -3181,5 +3181,8 @@
     "Edit Branch": "تعديل الفرع",
     "Manage all": "إدارة الكل",
     "Quick Links": "روابط سريعة",
-    "Share your branch with customers.": "شارك فرعك مع الزبائن."
+    "Share your branch with customers.": "شارك فرعك مع الزبائن.",
+    "Password reset": "استعادة كلمة المرور",
+    "Booking approved message": "رسالة الموافقة على الحجز",
+    "Sent when you approve a pending booking.": "تُرسل عند موافقتك على حجز معلّق."
 }

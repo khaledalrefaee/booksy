@@ -15,6 +15,9 @@
         'reminder'     => ['icon' => 'clock',        'cls' => 'sx-type-reminder',     'label' => __('Reminder')],
         'followup'     => ['icon' => 'refresh-cw',   'cls' => 'sx-type-followup',     'label' => __('Follow-up')],
         'manual'       => ['icon' => 'edit-3',       'cls' => '',                     'label' => __('Manual')],
+        'otp'                  => ['icon' => 'shield',       'cls' => '',                     'label' => __('Verification code')],
+        'account_verification' => ['icon' => 'shield',       'cls' => '',                     'label' => __('Verification code')],
+        'password_reset'       => ['icon' => 'key',          'cls' => '',                     'label' => __('Password reset')],
     ];
     $statusLabels = ['sent' => __('Sent'), 'failed' => __('Failed'), 'skipped' => __('Skipped'), 'queued' => __('Queued')];
     $reasonLabels = ['insufficient_credits' => __('No credits'), 'provider timeout' => __('Provider timeout')];

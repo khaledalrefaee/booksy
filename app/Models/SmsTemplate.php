@@ -31,7 +31,7 @@ class SmsTemplate extends Model
     ];
 
     /** The customer messages that have a template, in display order. */
-    public const KEYS = ['confirmation', 'reminder', 'followup'];
+    public const KEYS = ['confirmation', 'approval', 'reminder', 'followup'];
 
     /**
      * The built-in texts: seeded as the owner's editable system templates and
@@ -44,12 +44,14 @@ class SmsTemplate extends Model
     {
         $ar = [
             'confirmation' => "تم حجز موعدك في {{branch_name}} 🎉\n{{appointment_date}} • {{appointment_time}}\nبانتظارك!",
+            'approval'     => "تمّ تأكيد موعدك ✨\n{{branch_name}} • {{appointment_date}} • {{appointment_time}}\nنراك قريباً، يومك سعيد 💛",
             'reminder'     => "⏰ موعدك في {{branch_name}}\n{{appointment_date}} • {{appointment_time}}\nتأكيد: {{confirm_link}}\nإلغاء: {{cancel_link}}",
             'followup'     => "اشتقنا لك يا {{customer_name}} 💛\nاحجز موعدك القادم في {{branch_name}} متى شئت.",
         ];
 
         $en = [
             'confirmation' => "Your appointment at {{branch_name}} is booked for {{appointment_date}} at {{appointment_time}}. See you soon!",
+            'approval'     => "Great news, it's confirmed! Your appointment at {{branch_name}} is set for {{appointment_date}} at {{appointment_time}}. See you soon!",
             'reminder'     => "Reminder: your appointment at {{branch_name}} is {{appointment_date}} at {{appointment_time}}.\nConfirm: {{confirm_link}}\nCancel: {{cancel_link}}",
             'followup'     => "Hi {{customer_name}}, we miss you at {{branch_name}}! Book your next visit anytime.",
         ];

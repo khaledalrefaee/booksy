@@ -299,7 +299,7 @@ class SmsController extends Controller
             ->latest('id')->paginate(25)->withQueryString();
 
         $statuses = ['sent', 'failed', 'skipped', 'queued'];
-        $types = ['confirmation', 'reminder', 'followup', 'manual'];
+        $types = SmsMessage::query()->distinct()->orderBy('message_type')->pluck('message_type')->all();
 
         return view('owner.sms.logs', compact('messages', 'statuses', 'types', 'status', 'type'));
     }

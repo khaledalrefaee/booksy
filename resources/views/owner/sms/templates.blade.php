@@ -4,6 +4,7 @@
 @php
     $meta = [
         'confirmation' => ['icon' => 'check-circle', 'title' => __('Booking message'),                 'desc' => __('Sent as soon as a booking is made, with its date and time.')],
+        'approval'     => ['icon' => 'check-circle', 'title' => __('Booking approved message'),        'desc' => __('Sent when you approve a pending booking.')],
         'reminder'     => ['icon' => 'clock',        'title' => __('Reminder before the appointment'), 'desc' => __('Sent once before the visit. Keep the confirm and cancel links in it.')],
         'followup'     => ['icon' => 'refresh-cw',   'title' => __('Follow-up after the visit'),       'desc' => __('Invites the customer back if they haven\'t booked again.')],
     ];

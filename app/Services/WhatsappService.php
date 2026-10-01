@@ -95,7 +95,8 @@ class WhatsappService
 
         try {
             if ($channel === 'sms') {
-                [$ok, $error] = $this->dispatchViaSms($phone, $message);
+                [$ok, $error, $result] = $this->dispatchViaSms($phone, $message);
+                $this->recordPlatformSms($phone, $message, $type, $companyId, $ok, $error, $result);
             } else {
                 [$ok, $error] = $this->driver === 'meta'
                     ? $this->dispatchViaMeta($phone, $message)
@@ -300,11 +301,46 @@ class WhatsappService
      */
     private function dispatchViaSms(string $phone, string $message): array
     {
-        // RasselClient::send() now returns a structured result; this legacy path
-        // only needs the accepted flag and a human-readable reason.
         $result = app(\App\Services\Sms\RasselClient::class)->send($phone, $message);
 
-        return [(bool) ($result['ok'] ?? false), $result['error'] ?? null];
+        return [(bool) ($result['ok'] ?? false), $result['error'] ?? null, $result];
+    }
+
+    /**
+     * Verification codes and other platform SMS go straight to the provider (no
+     * company wallet), yet the owner's SMS log must still show them — delivered
+     * or failed — so each one is recorded with no credits charged.
+     */
+    private function recordPlatformSms(string $phone, string $message, string $type, ?int $companyId, bool $ok, ?string $error, array $result): void
+    {
+        try {
+            $analysis = \App\Services\Sms\SmsSegment::analyze($message);
+
+            \App\Models\SmsMessage::create([
+                'company_id'          => $companyId,
+                'message_type'        => substr($type, 0, 24),
+                'phone'               => \App\Support\PhoneNumber::international($phone),
+                'body'                => $message,
+                'segments'            => $analysis['segments'],
+                'credits_used'        => 0,
+                'status'              => $ok ? (($result['provider_status'] ?? 'sent') === 'queued' ? 'queued' : 'sent') : 'failed',
+                'provider'            => 'rasel',
+                'provider_status'     => $result['provider_status'] ?? null,
+                'provider_message_id' => $result['message_id'] ?? null,
+                'request_id'          => $result['request_id'] ?? null,
+                'usage_id'            => $result['usage_id'] ?? null,
+                'queue_id'            => $result['queue_id'] ?? null,
+                'resolved_provider'   => $result['resolved_provider'] ?? null,
+                'sender_source'       => $result['sender_source'] ?? null,
+                'estimated_cost'      => $result['estimated_cost'] ?? null,
+                'cost_currency'       => $result['currency'] ?? null,
+                'error_code'          => $result['code'] ?? null,
+                'failure_reason'      => $ok ? null : \Illuminate\Support\Str::limit((string) $error, 500),
+                'sent_at'             => $ok ? now() : null,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning("Could not record platform SMS: {$e->getMessage()}");
+        }
     }
 
     public function sendAppointmentConfirmed(Appointment $appointment): bool
@@ -317,22 +353,13 @@ class WhatsappService
         $primary = $visit->first();
         if ($this->alreadySent($primary->id, 'appointment_confirmed')) return false;
 
-        $branch  = $primary->branch?->localizedName() ?? '';
-        $dayDate = $primary->start_time->translatedFormat('l') . ' ' . $primary->start_time->format('d/m');
-
-        $lines = [];
-        foreach ($visit as $a) {
-            $svc  = $a->service?->localizedName() ?? $a->service?->name ?? '';
-            $time = $this->timeLabel($a->start_time);
-            $emp  = ($a->employee_requested && $a->employee) ? " — 👤 " . $a->employee->localizedName() : '';
-            $lines[] = "🕐 {$time} • {$svc}{$emp}";
-        }
-
-        $message = "🎉 *تم تأكيد موعدك*\n\n"
-            . "📍 *{$branch}*\n"
-            . "📅 {$dayDate}\n\n"
-            . implode("\n", $lines) . "\n\n"
-            . "نراك قريباً! 💛";
+        // The owner's short "approval" template (SMS and WhatsApp alike); a
+        // multi-service visit is described by its first row's date and time.
+        $sms = app(\App\Services\Sms\SmsService::class);
+        $primary->loadMissing(['branch', 'service', 'customer']);
+        $tpl = $sms->resolveTemplate($primary->company_id, $primary->branch_id, 'approval');
+        $message = $sms->render($tpl->body ?? \App\Models\SmsTemplate::defaultBody('approval', app()->getLocale() === 'en' ? 'en' : 'ar'), $primary);
+        if (trim($message) === '') return false;
 
         return $this->send($phone, $message, $primary->company_id, $primary->id, 'appointment_confirmed', $this->channelFor($phone));
     }
