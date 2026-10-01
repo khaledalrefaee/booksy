@@ -4,6 +4,7 @@
     $ctx         = $branchContext ?? null;      // Branch|null  (null = All Branches)
     $ctxId       = $branchContextId ?? null;    // int|null
     $firstBranch = $branches->first();
+    $singleBranch = $branches->count() === 1;   // nothing to switch between or manage
     $feat        = fn (string $k) => $authCompany?->hasFeature($k) ?? false;
     $fromPath    = request()->path();
     $ctxUrl      = fn ($to) => route('company.context.switch', ['to' => $to, 'from' => $fromPath]);
@@ -36,18 +37,19 @@
 
         {{-- ══ Branch context selector ══ --}}
         <div class="bk-ctx" data-bk-ctx>
-            <button type="button" class="bk-ctx-btn" data-bk-ctx-toggle aria-expanded="false"
-                    data-tour="rail-branch" title="{{ __('Switch branch') }}">
+            <{{ $singleBranch ? 'div' : 'button type="button"' }} class="bk-ctx-btn" @unless($singleBranch) data-bk-ctx-toggle aria-expanded="false" title="{{ __('Switch branch') }}" @else style="cursor:default" @endunless
+                    data-tour="rail-branch">
                 <span class="bk-ctx-mark">
-                    <i data-feather="{{ $ctx ? 'map-pin' : 'grid' }}"></i>
+                    <i data-feather="{{ ($ctx || $singleBranch) ? 'map-pin' : 'grid' }}"></i>
                 </span>
                 <span class="bk-ctx-text">
                     <span class="bk-ctx-co">{{ $authCompany?->localizedName() }}</span>
-                    <span class="bk-ctx-cur">{{ $ctx?->localizedName() ?? __('All Branches') }}</span>
+                    <span class="bk-ctx-cur">{{ ($singleBranch ? $firstBranch : $ctx)?->localizedName() ?? __('All Branches') }}</span>
                 </span>
-                <i data-feather="chevron-down" class="bk-ctx-caret"></i>
-            </button>
+                @unless($singleBranch)<i data-feather="chevron-down" class="bk-ctx-caret"></i>@endunless
+            </{{ $singleBranch ? 'div' : 'button' }}>
 
+            @unless($singleBranch)
             <div class="bk-ctx-menu" data-bk-ctx-menu hidden>
                 @if($branches->count() > 6)
                 <div class="bk-ctx-search">
@@ -78,6 +80,7 @@
                     <i data-feather="settings"></i><span>{{ __('Manage branches') }}</span>
                 </a>
             </div>
+            @endunless
         </div>
 
         {{-- ══ Navigation ══ --}}
@@ -242,6 +245,7 @@
     var menu   = root.querySelector('[data-bk-ctx-menu]');
     var search = root.querySelector('[data-bk-ctx-search]');
     var empty  = root.querySelector('[data-bk-ctx-empty]');
+    if (!toggle || !menu) return;   // single branch: static label, no switcher
 
     function open()  { menu.hidden = false; toggle.setAttribute('aria-expanded', 'true');  root.classList.add('open'); if (search) setTimeout(function(){ search.focus(); }, 30); }
     function close() { menu.hidden = true;  toggle.setAttribute('aria-expanded', 'false'); root.classList.remove('open'); }
