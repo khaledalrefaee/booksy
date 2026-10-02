@@ -12,7 +12,8 @@ namespace App\Enums;
  *                          /branch/{slug}/{code} route), stored in the session
  *                          and read back in BookingController.
  *   • Reception         → any appointment created from inside the dashboard.
- *   • Other / null      → an online booking with no tracking link (direct).
+ *   • GlowRez           → an online booking with no tracking link: the customer
+ *                          found the branch on glowrez.com itself.
  *
  * This is NOT the same thing as {@see \App\Models\Customer::SOURCES}, which is a
  * manual, per-customer acquisition field. Booking source is per-appointment and
@@ -23,13 +24,13 @@ enum BookingSource: string
     case Instagram = 'instagram';
     case Facebook  = 'facebook';
     case Whatsapp  = 'whatsapp';
-    case Website   = 'website';
+    case Glowrez   = 'glowrez';
     case Reception = 'reception';
     case Other     = 'other';
 
     /**
      * Short tracking codes used in the shareable link
-     * (/branch/{slug}/IN). Reception & Other have no public link.
+     * (/branch/{slug}/IN). GlowRez, Reception & Other have no public link.
      */
     public function code(): ?string
     {
@@ -37,7 +38,6 @@ enum BookingSource: string
             self::Instagram => 'IN',
             self::Facebook  => 'FB',
             self::Whatsapp  => 'WA',
-            self::Website   => 'WEB',
             default         => null,
         };
     }
@@ -49,7 +49,6 @@ enum BookingSource: string
             'IN', 'INSTAGRAM' => self::Instagram,
             'FB', 'FACEBOOK'  => self::Facebook,
             'WA', 'WHATSAPP'  => self::Whatsapp,
-            'WEB', 'WEBSITE'  => self::Website,
             default           => null,
         };
     }
@@ -61,7 +60,7 @@ enum BookingSource: string
             self::Instagram => 'Instagram',
             self::Facebook  => 'Facebook',
             self::Whatsapp  => 'WhatsApp',
-            self::Website   => 'Website',
+            self::Glowrez   => 'GlowRez',
             self::Reception => 'Reception',
             self::Other     => 'Other',
         });
@@ -74,7 +73,7 @@ enum BookingSource: string
             self::Instagram => 'instagram',
             self::Facebook  => 'facebook',
             self::Whatsapp  => 'whatsapp',
-            self::Website   => 'website',
+            self::Glowrez   => 'glowrez',
             self::Reception => 'reception',
             self::Other     => 'other',
         };
@@ -87,7 +86,7 @@ enum BookingSource: string
             self::Instagram => '#E4405F',
             self::Facebook  => '#1877F2',
             self::Whatsapp  => '#25D366',
-            self::Website   => '#4B5D34',
+            self::Glowrez   => '#4B5D34',
             self::Reception => '#B08D57',
             self::Other     => '#64748b',
         };
@@ -95,12 +94,12 @@ enum BookingSource: string
 
     /**
      * Sources that get a shareable tracking link on the dashboard
-     * (everything except Reception, which is internal, and Other).
+     * (the social channels — GlowRez, Reception and Other have none).
      *
      * @return self[]
      */
     public static function linkable(): array
     {
-        return [self::Instagram, self::Facebook, self::Whatsapp, self::Website];
+        return [self::Instagram, self::Facebook, self::Whatsapp];
     }
 }

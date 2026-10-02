@@ -16,6 +16,7 @@
         'friend_referral' => 'users',
         'walk_in'         => 'log-in',
         'website'         => 'globe',
+        'glowrez'         => 'globe',
         'reception'       => 'phone',
         'other'           => 'more-horizontal',
     ];

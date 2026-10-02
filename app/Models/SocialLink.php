@@ -45,9 +45,38 @@ class SocialLink extends Model
 
         return match ($meta['input_type']) {
             'phone'  => $meta['base_url'] . self::internationalDigits($raw, $dialCode),
-            'handle' => $meta['base_url'] . ltrim(trim($raw), '@'),
+            'handle' => $meta['base_url'] . self::cleanHandle($platform, $raw),
             default  => trim($raw),
         };
+    }
+
+    /**
+     * A handle typed or pasted into a "username" box, made safe to append to
+     * the platform's base URL: a pasted profile link is cut down to its
+     * username (so it isn't doubled), and whitespace/@ are dropped — usernames
+     * never contain spaces, and a space would break the link.
+     */
+    private static function cleanHandle(string $platform, string $raw): string
+    {
+        $h = trim($raw);
+
+        if (preg_match('~^(?:https?:)?//|^(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}/~i', $h)) {
+            $parts    = parse_url('https://' . preg_replace('~^(?:https?:)?/*~i', '', $h)) ?: [];
+            $path     = $parts['path'] ?? '';
+            $basePath = parse_url(self::$platforms[$platform]['base_url'] ?? '', PHP_URL_PATH) ?: '';
+
+            if (strlen($basePath) > 1 && str_starts_with($path, $basePath)) {
+                $path = substr($path, strlen($basePath));
+            }
+            $h = trim($path, '/');
+
+            // Facebook profiles without a username live at profile.php?id=…
+            if ($h === 'profile.php' && ! empty($parts['query'])) {
+                $h .= '?' . $parts['query'];
+            }
+        }
+
+        return preg_replace('/\s+/', '', ltrim($h, '@'));
     }
 
     /**

@@ -114,13 +114,13 @@
                     @php $sv = $row['source']->value; @endphp
                     @if($sv === 'other') @continue @endif
 
-                    @if($sv === 'reception')
+                    @if(in_array($sv, ['reception', 'glowrez'], true))
                         <div class="mk-srcrow mk-reception">
                             <div class="mk-srchead">
                                 <span class="mk-srcic" style="background:{{ $row['color'] }}1a;">@include('company.partials.source-icon', ['source' => $row['iconKey'], 'size' => 20])</span>
                                 <div>
                                     <div class="mk-srcname">{{ $row['label'] }}</div>
-                                    <div class="mk-srchint">{{ __('Bookings created at reception — no link needed') }}</div>
+                                    <div class="mk-srchint">{{ $sv === 'glowrez' ? __('Bookings made by customers who found you on GlowRez — no link needed') : __('Bookings created at reception — no link needed') }}</div>
                                 </div>
                                 <div class="mk-chip">
                                     <div class="mk-chip-num">{{ number_format($row['count']) }}</div>
@@ -139,7 +139,6 @@
                                             @case('instagram') {{ __('Copy this link into your Instagram bio') }} @break
                                             @case('facebook')  {{ __('Add it to your Facebook page') }} @break
                                             @case('whatsapp')  {{ __('Send it to customers on WhatsApp') }} @break
-                                            @case('website')   {{ __('Add it to your website') }} @break
                                         @endswitch
                                     </div>
                                 </div>

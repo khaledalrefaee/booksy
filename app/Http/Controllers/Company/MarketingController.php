@@ -108,7 +108,7 @@ class MarketingController extends Controller
         // untracked / direct / legacy (null) bookings, and any stray value.
         // Derived by subtraction so a null key is never double-counted.
         $knownTotal = 0;
-        foreach ([BookingSource::Instagram, BookingSource::Facebook, BookingSource::Whatsapp, BookingSource::Website, BookingSource::Reception] as $known) {
+        foreach ([BookingSource::Instagram, BookingSource::Facebook, BookingSource::Whatsapp, BookingSource::Glowrez, BookingSource::Reception] as $known) {
             $knownTotal += (int) ($counts[$known->value] ?? 0);
         }
         $otherCount = max(0, $total - $knownTotal);
@@ -118,7 +118,7 @@ class MarketingController extends Controller
             BookingSource::Instagram,
             BookingSource::Facebook,
             BookingSource::Whatsapp,
-            BookingSource::Website,
+            BookingSource::Glowrez,
             BookingSource::Reception,
             BookingSource::Other,
         ];

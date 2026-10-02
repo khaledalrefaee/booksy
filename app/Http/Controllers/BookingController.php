@@ -769,13 +769,14 @@ class BookingController extends Controller
     /**
      * The booking source for an online booking at this branch: the source
      * captured from the tracking link the customer arrived through (kept in the
-     * session, scoped per branch), or null for a direct/untracked booking.
+     * session, scoped per branch). With no tracking link the customer came
+     * through glowrez.com itself, so the booking is credited to GlowRez.
      */
     private function resolveBookingSource(int $branchId): ?string
     {
         $stored = session('bkg_source.' . $branchId);
 
-        return \App\Enums\BookingSource::tryFrom((string) $stored)?->value;
+        return (\App\Enums\BookingSource::tryFrom((string) $stored) ?? \App\Enums\BookingSource::Glowrez)->value;
     }
 
     /**
