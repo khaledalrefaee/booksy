@@ -95,7 +95,7 @@
 .gb-day{ flex:0 0 auto; width:52px; text-align:center; padding:10px 0; border:1px solid var(--bk-border); border-radius:var(--bk-r); background:var(--bk-surface); cursor:pointer; }
 .gb-day.is-active{ background:var(--bk-accent); border-color:var(--bk-accent); color:var(--bk-accent-ink); }
 .gb-day .d{ font-family:var(--bk-font-display); font-weight:800; font-size:1.1rem; }
-.gb-day.is-off{ opacity:.38; cursor:not-allowed; }
+.gb-day.is-off{ opacity:.38; }
 .gb-day .w{ font-family:var(--bk-font-ui); font-size:.68rem; opacity:.75; }
 .gb-slots{ display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
 .gb-slot{ padding:10px 14px; border:1px solid var(--bk-border); border-radius:var(--bk-r-sm); background:var(--bk-surface); color:var(--bk-text); font-family:var(--bk-font-ui); font-weight:600; font-size:.85rem; cursor:pointer; }
@@ -295,7 +295,10 @@ window.GroupBookingModal = (function () {
   function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   function addDays(s,n){ const d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return ymd(d); }
   function isWorkday(ds){ return OPEN_DAYS.indexOf(new Date(ds+'T00:00:00').getDay()) > -1; }
-  function dayOpen(ds){ return ds <= RULES.last_date && (RULES.same_day || ds !== RULES.today) && isWorkday(ds); }
+  // Inside the booking window (and same-day allowed) — the day can be tapped.
+  function dayInWindow(ds){ return ds <= RULES.last_date && (RULES.same_day || ds !== RULES.today); }
+  function dayOpen(ds){ return dayInWindow(ds) && isWorkday(ds); }
+  const CLOSED_MSG = AR ? 'المكان مغلق في هذا اليوم. اختر يوماً آخر.' : 'The venue is closed on this day. Please pick another day.';
   // The first bookable day on/after `from` (default today) inside the booking window.
   function firstDay(from){ let ds = from || today(); while (ds <= RULES.last_date){ if (dayOpen(ds)) return ds; ds = addDays(ds, 1); } return from || today(); }
 
@@ -313,18 +316,20 @@ window.GroupBookingModal = (function () {
       <button class="gb-navb" ${addDays(today(), st.weekOffset+14) > RULES.last_date ? 'disabled' : ''} onclick="GroupBookingModal._week(7)">›</button></span></div><div class="gb-days">`;
     for (let i=0;i<14;i++){ const ds=addDays(today(), st.weekOffset+i); const d=new Date(ds+'T00:00:00');
       if (ds > RULES.last_date) break;   // beyond the branch's booking window
-      const on = dayOpen(ds);
+      const on = dayInWindow(ds);   // closed days stay tappable so the visitor is told WHY
       const closedTip = isWorkday(ds) ? '' : ` title="${AR?'مغلق':'Closed'}"`;
-      h += `<div class="gb-day ${ds===st.date?'is-active':''} ${on?'':'is-off'}"${closedTip} ${on ? `onclick="GroupBookingModal._pickDay('${ds}')"` : 'aria-disabled="true"'}><div class="d">${d.getDate()}</div><div class="w">${DAYS[d.getDay()]}</div></div>`; }
+      h += `<div class="gb-day ${ds===st.date?'is-active':''} ${dayOpen(ds)?'':'is-off'}"${closedTip} ${on ? `onclick="GroupBookingModal._pickDay('${ds}')"` : 'aria-disabled="true"'}><div class="d">${d.getDate()}</div><div class="w">${DAYS[d.getDay()]}</div></div>`; }
     h += '</div><div class="gb-slots" id="gb-slots"></div>';
     b.innerHTML = h;
     fetchSlots();
   }
-  function _week(n){ st.weekOffset=Math.max(0,st.weekOffset+n); if(st.date < addDays(today(),st.weekOffset)) st.date = addDays(today(),st.weekOffset); if(!dayOpen(st.date)) st.date = firstDay(st.date); render(); }
+  function _week(n){ st.weekOffset=Math.max(0,st.weekOffset+n); if(st.date < addDays(today(),st.weekOffset)) st.date = addDays(today(),st.weekOffset); if(!dayInWindow(st.date)) st.date = firstDay(st.date); render(); }
   function _pickDay(ds){ st.date=ds; st.slot=null; render(); }
 
   function fetchSlots() {
     const grid = el('gb-slots'); if(!grid) return;
+    // A weekday the venue doesn't open: no request needed — just say it's closed.
+    if (!isWorkday(st.date)) { st.slot = null; paintSlots({ available:false, slots:[], reason:'closed', message:CLOSED_MSG }); return; }
     if (st.cache[st.date]) { paintSlots(st.cache[st.date]); return; }
     grid.innerHTML = '<div class="gb-skel"></div><div class="gb-skel"></div><div class="gb-skel"></div>';
     const q = specToQuery(buildSpec(false));

@@ -43,7 +43,7 @@ class SendAppointmentReminders extends Command
             // denormalised customer_phone column — accept EITHER.
             $appointments = Appointment::query()
                 ->where('branch_id', $branch->id)
-                ->whereIn('status', [AppointmentStatus::Pending->value, AppointmentStatus::Confirmed->value])
+                ->whereIn('status', [AppointmentStatus::Pending->value, AppointmentStatus::Confirmed->value, AppointmentStatus::Upcoming->value])
                 ->whereBetween('start_time', [$now, $now->copy()->addMinutes($offset)])
                 ->where(function ($q) {
                     $q->whereNotNull('customer_phone')

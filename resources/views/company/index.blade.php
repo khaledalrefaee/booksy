@@ -221,7 +221,7 @@
 @include('company.partials.flash')
 
 {{-- ════ STAT CARDS — horizontal ════ --}}
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-4" data-live-block="stats">
 
     <div class="col-12 col-sm-6 col-lg-3 bk-a1">
         <div class="bk-stat" data-accent="gold">
@@ -400,7 +400,7 @@
 </div>
 
 {{-- ════ RECENT APPOINTMENTS ════ --}}
-<div class="row g-4 mt-0">
+<div class="row g-4 mt-0" data-live-block="recent">
     <div class="col-12 bk-a5">
         <div class="card shadow-sm">
             <div class="card-body">
@@ -416,8 +416,8 @@
                 @php
                     $byStatus = $recentAppointments->countBy('status');
                     $scColors = request()->cookie('company_theme', 'dark') === 'light'
-                        ? ['pending'=>'#f4a642','confirmed'=>'#2bcf7e','completed'=>'#3dbbd4','cancelled'=>'rgba(255,255,255,.08)','rejected'=>'rgba(255,255,255,.08)','no_show'=>'rgba(255,255,255,.08)']
-                        : ['pending'=>'#D4AA5E','confirmed'=>'#8FB27A','completed'=>'#8EA8C8','cancelled'=>'rgba(255,255,255,.08)','rejected'=>'rgba(255,255,255,.08)','no_show'=>'rgba(255,255,255,.08)'];
+                        ? ['pending'=>'#f4a642','confirmed'=>'#2bcf7e','upcoming'=>'#2bcf7e','completed'=>'#3dbbd4','cancelled'=>'rgba(255,255,255,.08)','rejected'=>'rgba(255,255,255,.08)','no_show'=>'rgba(255,255,255,.08)']
+                        : ['pending'=>'#D4AA5E','confirmed'=>'#8FB27A','upcoming'=>'#8FB27A','completed'=>'#8EA8C8','cancelled'=>'rgba(255,255,255,.08)','rejected'=>'rgba(255,255,255,.08)','no_show'=>'rgba(255,255,255,.08)'];
                 @endphp
                 <div class="bk-color-bar">
                     @foreach($byStatus as $st => $cnt)
@@ -686,7 +686,7 @@ function renderDonut(){
     if(!node || typeof ApexCharts === 'undefined') return;
     var st = charts.by_status || {};
     var pending   = st.pending   || 0;
-    var confirmed = st.confirmed || 0;
+    var confirmed = (st.confirmed || 0) + (st.upcoming || 0);
     var completed = st.completed || 0;
     var other     = (st.cancelled || 0) + (st.rejected || 0) + (st.no_show || 0);
     var realTotal = pending + confirmed + completed + other;

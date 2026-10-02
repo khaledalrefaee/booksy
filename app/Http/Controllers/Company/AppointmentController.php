@@ -314,6 +314,7 @@ class AppointmentController extends Controller
                 ->whereIn('status', [
                     AppointmentStatus::Pending->value,
                     AppointmentStatus::Confirmed->value,
+                    AppointmentStatus::Upcoming->value,
                     AppointmentStatus::Arrived->value,
                     AppointmentStatus::InProgress->value,
                     AppointmentStatus::Paused->value,
@@ -1706,6 +1707,61 @@ class AppointmentController extends Controller
     }
 
     /**
+     * GET — cheap "did anything change?" probe the open dashboard polls. Returns
+     * a stamp that moves whenever any appointment of the company is created,
+     * edited, status-changed or deleted, plus the newest ONLINE bookings (after
+     * `since`) so the page can announce them. Reception bookings are not
+     * announced to the person who made them.
+     */
+    public function pulse(Request $request): JsonResponse
+    {
+        $company = $this->company();
+
+        $agg = Appointment::query()
+            ->where('company_id', $company->id)
+            ->selectRaw('COUNT(*) as c, MAX(id) as max_id, MAX(updated_at) as last')
+            ->first();
+
+        $maxId = (int) ($agg->max_id ?? 0);
+        $since = $request->integer('since');
+        $new   = [];
+
+        if ($since > 0 && $maxId > $since) {
+            $new = Appointment::query()
+                ->where('company_id', $company->id)
+                ->where('id', '>', $since)
+                ->where('created_at', '>=', now()->subMinutes(15))
+                ->where(fn ($q) => $q->whereNull('booking_source')
+                    ->orWhere('booking_source', '!=', \App\Enums\BookingSource::Reception->value))
+                ->with(['service', 'employee', 'customer', 'branch'])
+                ->orderBy('id')->limit(5)->get()
+                ->map(fn (Appointment $a) => [
+                    'id'              => $a->id,
+                    'branch_id'       => $a->branch_id,
+                    'start_time'      => $a->start_time->toDateTimeString(),
+                    'end_time'        => $a->end_time->toDateTimeString(),
+                    'start_display'   => $a->start_time->format('D d M · H:i'),
+                    'service_name_ar' => $a->service?->name_ar,
+                    'service_name_en' => $a->service?->name_en,
+                    'price'           => $a->total_price,
+                    'customer_name'   => $a->customer?->name,
+                    'customer_phone'  => $a->customer?->phone,
+                    'employee_name_ar' => $a->employee?->name_ar,
+                    'employee_name_en' => $a->employee?->name_en,
+                    'branch_name_ar'  => $a->branch?->name_ar,
+                    'branch_name_en'  => $a->branch?->name_en,
+                    'status'          => $a->status instanceof \BackedEnum ? $a->status->value : $a->status,
+                ])->all();
+        }
+
+        return response()->json([
+            'stamp'  => ($agg->c ?? 0) . '|' . $maxId . '|' . ($agg->last ?? ''),
+            'max_id' => $maxId,
+            'new'    => $new,
+        ]);
+    }
+
+    /**
      * Ajax: live appointment statistics for the V2 stats deck.
      *
      * Buckets update with the chosen window (today | week | month | custom),
@@ -1767,10 +1823,10 @@ class AppointmentController extends Controller
         // cancellations and no-shows earn nothing
         $revenue = (float) $rows->whereIn('status', AppointmentStatus::blockingValues())->sum('revenue');
 
-        // upcoming = confirmed and still in the future, inside the window
+        // upcoming = accepted (confirmed / customer-confirmed) and still in the future, inside the window
         $upcoming = (int) $base()
             ->whereBetween('start_time', [$from, $to])
-            ->where('status', AppointmentStatus::Confirmed->value)
+            ->whereIn('status', [AppointmentStatus::Confirmed->value, AppointmentStatus::Upcoming->value])
             ->where('start_time', '>', $now)
             ->count();
 
@@ -1896,6 +1952,12 @@ class AppointmentController extends Controller
             ->get()
             ->groupBy('employee_id');
 
+        /* a schedule with no working day at all isn't a schedule → branch hours */
+        $scheduled = \DB::table('employee_working_hours')
+            ->whereIn('employee_id', $employeesRaw->pluck('id'))
+            ->where('is_working', 1)
+            ->distinct()->pluck('employee_id')->flip();
+
         /* approved leaves covering this date (full-day or hourly) */
         $leaves = \DB::table('employee_leaves')
             ->whereIn('employee_id', $employeesRaw->pluck('id'))
@@ -1920,9 +1982,9 @@ class AppointmentController extends Controller
             ->filter(fn ($r) => $r['to'] > $r['from'])
             ->values();
 
-        $employees = $employeesRaw->map(function ($emp) use ($closedSlots, $empHours, $leaves, $dayBlocks) {
+        $employees = $employeesRaw->map(function ($emp) use ($closedSlots, $empHours, $scheduled, $leaves, $dayBlocks) {
             $rows  = $empHours->get($emp->id);
-            $slots = $rows && $rows->count() ? $this->closedFromShifts($rows) : $closedSlots;
+            $slots = $rows && $rows->count() && $scheduled->has($emp->id) ? $this->closedFromShifts($rows) : $closedSlots;
 
             foreach ($leaves->get($emp->id, collect()) as $lv) {
                 if ($lv->is_hourly && $lv->start_hour && $lv->end_hour) {

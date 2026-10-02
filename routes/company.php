@@ -268,6 +268,7 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::get('appointments/list-data',      [AppointmentController::class, 'listData'])->name('appointments.list-data');
         Route::get('appointments/staff-events',   [AppointmentController::class, 'staffEvents'])->name('appointments.staff-events');
         Route::get('appointments/stats',          [AppointmentController::class, 'stats'])->name('appointments.stats');
+        Route::get('appointments/pulse',          [AppointmentController::class, 'pulse'])->name('appointments.pulse');
         Route::patch('appointments/{appointment}/tip', [AppointmentController::class, 'updateTip'])->name('appointments.tip');
         Route::patch('appointments/{appointment}/reschedule', [AppointmentController::class, 'reschedule'])->name('appointments.reschedule');
         Route::post('appointments/quick', [AppointmentController::class, 'quickStore'])->name('appointments.quick-store');

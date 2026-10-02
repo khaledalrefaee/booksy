@@ -37,6 +37,7 @@ class FlagNoShowAppointments extends Command
             ->whereIn('status', [
                 AppointmentStatus::Pending->value,
                 AppointmentStatus::Confirmed->value,
+                AppointmentStatus::Upcoming->value,
             ])
             // Coarse pre-filter wide enough for any timezone (±14h); the exact
             // check below uses each branch's own wall clock.

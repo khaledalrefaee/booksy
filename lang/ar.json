@@ -3184,5 +3184,9 @@
     "Share your branch with customers.": "شارك فرعك مع الزبائن.",
     "Password reset": "استعادة كلمة المرور",
     "Booking approved message": "رسالة الموافقة على الحجز",
-    "Sent when you approve a pending booking.": "تُرسل عند موافقتك على حجز معلّق."
+    "Sent when you approve a pending booking.": "تُرسل عند موافقتك على حجز معلّق.",
+    "Coming up": "قادم",
+    "Set Active": "تفعيل",
+    "Set Inactive": "إيقاف التفعيل",
+    "Set Maintenance": "وضع الصيانة"
 }

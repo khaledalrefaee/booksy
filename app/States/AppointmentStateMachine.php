@@ -41,17 +41,31 @@ class AppointmentStateMachine
 
             S::Pending->value => [
                 S::Confirmed->value           => ['actors' => [A::Company, A::Employee, A::Customer], 'auto' => false, 'requiresReason' => false],
+                // The customer answering the reminder before the salon has replied.
+                S::Upcoming->value            => ['actors' => [A::Company, A::Customer], 'auto' => false, 'requiresReason' => false],
                 S::CancelledBySalon->value    => ['actors' => [A::Company],              'auto' => false, 'requiresReason' => true],
                 S::CancelledByCustomer->value => ['actors' => [A::Customer, A::Company],  'auto' => false, 'requiresReason' => false],
                 S::NoShow->value              => ['actors' => [A::System, A::Company],    'auto' => true,  'requiresReason' => false],
             ],
 
+            // Confirmed, plus the customer's own confirmation from the reminder link.
             S::Confirmed->value => [
+                S::Upcoming->value            => ['actors' => [A::Company, A::Customer], 'auto' => false, 'requiresReason' => false],
                 S::Arrived->value             => ['actors' => [A::Company, A::Employee], 'auto' => false, 'requiresReason' => false],
                 S::CancelledBySalon->value    => ['actors' => [A::Company],              'auto' => false, 'requiresReason' => true],
                 S::CancelledByCustomer->value => ['actors' => [A::Customer, A::Company], 'auto' => false, 'requiresReason' => false],
                 S::NoShow->value              => ['actors' => [A::System, A::Company],   'auto' => true,  'requiresReason' => false],
                 // Express paths — see class docblock.
+                S::AwaitingPayment->value     => ['actors' => [A::Company, A::Employee], 'auto' => false, 'requiresReason' => false],
+                S::Completed->value           => ['actors' => [A::Company],              'auto' => false, 'requiresReason' => false],
+            ],
+
+            // "Upcoming" leads wherever Confirmed does.
+            S::Upcoming->value => [
+                S::Arrived->value             => ['actors' => [A::Company, A::Employee], 'auto' => false, 'requiresReason' => false],
+                S::CancelledBySalon->value    => ['actors' => [A::Company],              'auto' => false, 'requiresReason' => true],
+                S::CancelledByCustomer->value => ['actors' => [A::Customer, A::Company], 'auto' => false, 'requiresReason' => false],
+                S::NoShow->value              => ['actors' => [A::System, A::Company],   'auto' => true,  'requiresReason' => false],
                 S::AwaitingPayment->value     => ['actors' => [A::Company, A::Employee], 'auto' => false, 'requiresReason' => false],
                 S::Completed->value           => ['actors' => [A::Company],              'auto' => false, 'requiresReason' => false],
             ],

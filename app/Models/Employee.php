@@ -181,10 +181,16 @@ class Employee extends Authenticatable
      * that weekday follows them (a row marked "not working" = day off); one
      * with no row for that weekday works the BRANCH's opening hours. Online
      * booking and the staff calendar therefore always agree on availability.
+     *
+     * A schedule with NO working day at all (what saving the employee form
+     * without filling any hours leaves behind — seven "off" rows) is not a
+     * schedule: that employee simply follows the branch hours.
      */
     public function shiftsOn(int $dow, ?Branch $branch = null): \Illuminate\Support\Collection
     {
-        $own = $this->workingHours->where('day_of_week', $dow);
+        $own = $this->hasOwnSchedule()
+            ? $this->workingHours->where('day_of_week', $dow)
+            : collect();
 
         if ($own->isNotEmpty()) {
             return $own->where('is_working', true)
@@ -203,6 +209,12 @@ class Employee extends Authenticatable
                 ->map(fn ($h) => ['start' => $h->open_time, 'end' => $h->close_time])
                 ->values()
             : collect();
+    }
+
+    /** Has at least one real working day of their own (else the branch hours apply). */
+    public function hasOwnSchedule(): bool
+    {
+        return $this->workingHours->contains(fn ($h) => $h->is_working);
     }
 
     public function leaves(): HasMany

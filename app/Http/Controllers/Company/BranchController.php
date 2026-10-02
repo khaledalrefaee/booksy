@@ -57,7 +57,6 @@ class BranchController extends Controller
             'sort_order'      => ['nullable', 'integer', 'min:0', 'max:9999'],
             'is_head_office'  => ['boolean'],
             'status'          => ['required', 'in:active,inactive,maintenance'],
-            'booking_mode'    => ['required', 'in:marketplace,private'],
             'latitude'        => ['nullable', 'numeric', 'between:-90,90'],
             'longitude'       => ['nullable', 'numeric', 'between:-180,180'],
             'phones'          => ['nullable', 'array'],
@@ -68,14 +67,8 @@ class BranchController extends Controller
             'landline_codes'  => ['nullable', 'array'],
             'social_links'                    => ['nullable', 'array'],
             'social_links.*'                  => ['nullable', 'string', 'max:500'],
-            'loyalty_points_per_visit'         => ['nullable', 'integer', 'min:0', 'max:9999'],
-            'loyalty_points_per_extra_service' => ['nullable', 'integer', 'min:0', 'max:9999'],
-            'loyalty_points_per_currency_unit' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $data['loyalty_points_per_visit']         = $data['loyalty_points_per_visit'] ?? 10;
-        $data['loyalty_points_per_extra_service'] = $data['loyalty_points_per_extra_service'] ?? 5;
-        $data['loyalty_points_per_currency_unit'] = $data['loyalty_points_per_currency_unit'] ?? 10000;
 
         $this->validatePhoneDigits($request->input('phones', []), $request->input('phone_codes', []));
 
@@ -103,7 +96,7 @@ class BranchController extends Controller
             'landlines'      => count($landlines) > 1 ? array_slice($landlines, 1) : null,
             'is_head_office' => ! empty($data['is_head_office']),
             'status'         => $data['status'],
-            'booking_mode'   => $data['booking_mode'],
+            'booking_mode'   => 'marketplace', // public listing; loyalty is managed on the branch's Loyalty page
             'sort_order'     => $data['sort_order'] ?? $company->branches()->count(),
             'latitude'       => $data['latitude'] ?? null,
             'longitude'      => $data['longitude'] ?? null,
@@ -212,7 +205,6 @@ class BranchController extends Controller
             'sort_order'      => ['nullable', 'integer', 'min:0', 'max:9999'],
             'is_head_office'  => ['boolean'],
             'status'          => ['required', 'in:active,inactive,maintenance'],
-            'booking_mode'    => ['required', 'in:marketplace,private'],
             'latitude'        => ['nullable', 'numeric', 'between:-90,90'],
             'longitude'       => ['nullable', 'numeric', 'between:-180,180'],
             'phones'          => ['nullable', 'array'],
@@ -223,14 +215,8 @@ class BranchController extends Controller
             'landline_codes'  => ['nullable', 'array'],
             'social_links'                    => ['nullable', 'array'],
             'social_links.*'                  => ['nullable', 'string', 'max:500'],
-            'loyalty_points_per_visit'         => ['nullable', 'integer', 'min:0', 'max:9999'],
-            'loyalty_points_per_extra_service' => ['nullable', 'integer', 'min:0', 'max:9999'],
-            'loyalty_points_per_currency_unit' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $data['loyalty_points_per_visit']         = $data['loyalty_points_per_visit'] ?? 0;
-        $data['loyalty_points_per_extra_service'] = $data['loyalty_points_per_extra_service'] ?? 0;
-        $data['loyalty_points_per_currency_unit'] = $data['loyalty_points_per_currency_unit'] ?? 0;
 
         $this->validatePhoneDigits($request->input('phones', []), $request->input('phone_codes', []));
 
@@ -257,12 +243,8 @@ class BranchController extends Controller
             'landlines'      => count($landlines) > 1 ? array_slice($landlines, 1) : null,
             'is_head_office' => ! empty($data['is_head_office']),
             'status'         => $data['status'],
-            'booking_mode'   => $data['booking_mode'],
             'latitude'       => $data['latitude'] ?? null,
             'longitude'      => $data['longitude'] ?? null,
-            'loyalty_points_per_visit'         => $data['loyalty_points_per_visit'],
-            'loyalty_points_per_extra_service' => $data['loyalty_points_per_extra_service'],
-            'loyalty_points_per_currency_unit' => $data['loyalty_points_per_currency_unit'],
         ]);
 
         // Sync social links

@@ -23,6 +23,14 @@ enum AppointmentStatus: string
     /** The salon accepted (or branch policy auto-accepts). */
     case Confirmed = 'confirmed';
 
+    /**
+     * The customer answered the reminder and confirmed they are coming.
+     * Set from the reminder's confirm link: "salon accepted" (Confirmed) and
+     * "customer is coming" are different facts. Behaves like Confirmed from
+     * here on (check-in, no-show, cancellation, checkout).
+     */
+    case Upcoming = 'upcoming';
+
     /** Customer physically checked in at reception. */
     case Arrived = 'arrived';
 
@@ -62,6 +70,7 @@ enum AppointmentStatus: string
             self::Draft               => 'Draft',
             self::Pending             => 'Pending confirmation',
             self::Confirmed           => 'Confirmed',
+            self::Upcoming            => 'Coming up',
             self::Arrived             => 'Arrived',
             self::InProgress          => 'In progress',
             self::Paused              => 'Paused',
@@ -79,6 +88,7 @@ enum AppointmentStatus: string
             self::Draft               => '#94a3b8',
             self::Pending             => '#f59e0b',
             self::Confirmed           => '#10b981',
+            self::Upcoming            => '#14b8a6',
             self::Arrived             => '#06b6d4',
             self::InProgress          => '#3b82f6',
             self::Paused              => '#a855f7',
@@ -97,6 +107,7 @@ enum AppointmentStatus: string
             self::Draft               => 'edit-3',
             self::Pending             => 'clock',
             self::Confirmed           => 'check-circle',
+            self::Upcoming            => 'calendar',
             self::Arrived             => 'log-in',
             self::InProgress          => 'play-circle',
             self::Paused              => 'pause-circle',
@@ -138,6 +149,7 @@ enum AppointmentStatus: string
         return [
             self::Pending,
             self::Confirmed,
+            self::Upcoming,
             self::Arrived,
             self::InProgress,
             self::Paused,

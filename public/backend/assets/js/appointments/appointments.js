@@ -4248,6 +4248,7 @@ window.switchView = switchView;
 window.bkRefreshViews = function () {
     calRefetch();
     if (!document.getElementById('view-staff').classList.contains('d-none')) loadStaffView();
+    if (!document.getElementById('view-list').classList.contains('d-none')) loadListView();
 };
 
 /* ════════════════════════════════

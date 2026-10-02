@@ -416,14 +416,9 @@ class BookingController extends Controller
         $status = $branch->onlineBookingStatus($customer);
 
         try {
-            $created = DB::transaction(function () use ($data, $guestBlocks, $employees, $empById, $date, $start, $allocator, $customer, $idemKey, $status) {
+            $created = DB::transaction(function () use ($data, $branch, $guestBlocks, $employees, $empById, $date, $start, $allocator, $customer, $idemKey, $status) {
                 // Fresh booked map under lock
-                $lockedBooked = Appointment::whereIn('employee_id', $employees->pluck('id'))
-                    ->whereDate('start_time', $date->toDateString())
-                    ->whereIn('status', AppointmentStatus::blockingValues())
-                    ->lockForUpdate()
-                    ->get(['employee_id', 'start_time', 'end_time'])
-                    ->groupBy('employee_id');
+                $lockedBooked = $this->bookedByLane($employees, $branch, $date, true);
 
                 $plan = $this->resolveAssignment($data['mode'], $guestBlocks, $employees, $empById, $lockedBooked, $date, $start, $allocator);
                 if ($plan === null) {
@@ -533,16 +528,18 @@ class BookingController extends Controller
         // Staff without their own schedule fall back to the branch hours
         // (Employee::shiftsOn) — hand them the loaded branch, no per-row query.
         $employees->each(fn ($e) => $e->setRelation('branch', $branch));
+
+        // A branch with no active staff still takes bookings: one shared
+        // "reception" lane that follows the branch hours, saved without an employee.
+        if ($employees->isEmpty()) {
+            $employees = collect([$this->receptionLane($branch)]);
+        }
         $empById = $employees->keyBy('id');
 
         $svcIds   = collect($data['guests'])->flatMap(fn ($g) => $g['service_ids'])->unique()->values();
         $services = Service::with('branch')->whereIn('id', $svcIds)->get()->keyBy('id');
 
-        $booked = Appointment::whereIn('employee_id', $employees->pluck('id'))
-            ->whereDate('start_time', $date->toDateString())
-            ->whereIn('status', AppointmentStatus::blockingValues())
-            ->get(['employee_id', 'start_time', 'end_time'])
-            ->groupBy('employee_id');
+        $booked = $this->bookedByLane($employees, $branch, $date);
 
         $dow = (int) $date->dayOfWeek;
         $gridStart = null; $gridEnd = null;
@@ -566,6 +563,45 @@ class BookingController extends Controller
         }
 
         return [$employees, $empById, $services, $booked, $gridStart, $gridEnd, $guestBlocks];
+    }
+
+    /**
+     * The stand-in "employee" for a branch with no active staff: id 0, no own
+     * schedule (so it follows the branch hours), no leaves, qualified for anything.
+     * Never persisted — its jobs are saved with employee_id = null.
+     */
+    private function receptionLane(Branch $branch): Employee
+    {
+        $lane = new Employee();
+        $lane->forceFill(['id' => 0, 'branch_id' => $branch->id]);
+        foreach (['workingHours', 'serviceCategories', 'leaves'] as $rel) {
+            $lane->setRelation($rel, collect());
+        }
+        $lane->setRelation('branch', $branch);
+
+        return $lane;
+    }
+
+    /**
+     * The day's blocking appointments keyed by lane id: per employee, or — for
+     * the reception lane (id 0) — the branch's appointments with no employee.
+     * $lock = true when called inside the booking transaction.
+     */
+    private function bookedByLane($employees, Branch $branch, Carbon $date, bool $lock = false)
+    {
+        $base = fn () => Appointment::whereDate('start_time', $date->toDateString())
+            ->whereIn('status', AppointmentStatus::blockingValues())
+            ->when($lock, fn ($q) => $q->lockForUpdate());
+
+        if ($employees->contains(fn ($e) => ! $e->id)) {
+            return collect([0 => $base()
+                ->where('branch_id', $branch->id)->whereNull('employee_id')
+                ->get(['employee_id', 'start_time', 'end_time'])]);
+        }
+
+        return $base()->whereIn('employee_id', $employees->pluck('id'))
+            ->get(['employee_id', 'start_time', 'end_time'])
+            ->groupBy('employee_id');
     }
 
     /**
@@ -661,7 +697,7 @@ class BookingController extends Controller
             if ($allocator->requiresResource($svc) && $allocator->findFree($svc, $cursor, $end, null, false) === null) {
                 return null;
             }
-            $jobs[] = ['employee_id' => $emp->id, 'service' => $svc, 'start' => $cursor->clone(), 'end' => $end->clone(), 'requested' => $requested, 'guest' => $it['guest']];
+            $jobs[] = ['employee_id' => $emp->id ?: null, 'service' => $svc, 'start' => $cursor->clone(), 'end' => $end->clone(), 'requested' => $requested, 'guest' => $it['guest']];
             $cursor = $end;
         }
         return $jobs;

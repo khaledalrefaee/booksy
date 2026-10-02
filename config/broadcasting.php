@@ -44,6 +44,14 @@ return [
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
             ],
+            // Where the BROWSER connects (not where Laravel posts events to).
+            // Production: the site's own domain over wss/443, proxied to Reverb.
+            // Unset = same host as the page, 8080 on plain http (local dev).
+            'client' => [
+                'host' => env('REVERB_CLIENT_HOST'),
+                'port' => env('REVERB_CLIENT_PORT'),
+                'tls'  => env('REVERB_CLIENT_TLS'),
+            ],
         ],
 
         'pusher' => [

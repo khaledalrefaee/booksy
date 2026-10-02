@@ -710,7 +710,7 @@ function renderDonut(){
     if(!node || typeof ApexCharts==='undefined') return;
     var st        = charts.by_status || {};
     var pending   = st.pending   || 0;
-    var confirmed = st.confirmed || 0;
+    var confirmed = (st.confirmed || 0) + (st.upcoming || 0);
     var completed = st.completed || 0;
     var other     = (st.cancelled_total||0)+(st.no_show||0);
     var realTotal = pending + confirmed + completed + other;

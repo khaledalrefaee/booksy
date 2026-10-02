@@ -33,11 +33,12 @@ class AppointmentConfirmController extends Controller
         if (!$appointment) return $this->page('error', '❌', __('Not found'), __('Appointment not found.'));
 
         foreach ($this->visit($appointment) as $appt) {
-            // The state machine only allows confirm from pending, so no status
-            // check to duplicate here — illegal transitions are simply ignored.
+            // The customer's answer to the reminder makes the visit "Upcoming".
+            // The state machine decides which statuses may move there, so no
+            // status check to duplicate here — illegal transitions are ignored.
             $this->transition->attempt(
                 $appt,
-                AppointmentStatus::Confirmed,
+                AppointmentStatus::Upcoming,
                 TransitionActor::Customer,
                 ['meta' => ['source' => 'reminder_link']],
             );

@@ -24,6 +24,7 @@ class RescheduleAppointment
     private const MOVABLE = [
         AppointmentStatus::Pending,
         AppointmentStatus::Confirmed,
+        AppointmentStatus::Upcoming,
     ];
 
     public function __invoke(Appointment $primary, Carbon $newStart, ?string $actorType = null, array $meta = []): array

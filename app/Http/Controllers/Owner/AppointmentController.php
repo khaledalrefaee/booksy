@@ -286,6 +286,7 @@ class AppointmentController extends Controller
             ->whereIn('status', [
                 AppointmentStatus::Pending->value,
                 AppointmentStatus::Confirmed->value,
+                AppointmentStatus::Upcoming->value,
             ])
             ->count();
 

@@ -31,7 +31,6 @@
                 <button class="nav-link px-4" type="button" data-tab="tab-social">🔗 {{ __('Social') }}</button>
             </li>
             <li class="nav-item">
-                <button class="nav-link px-4" type="button" data-tab="tab-loyalty">⭐ {{ __('Loyalty') }}</button>
             </li>
         </ul>
 
@@ -125,48 +124,6 @@
                     @endforeach
                 </div>
 
-                {{-- Booking Mode --}}
-                <h6 class="fw-semibold text-muted text-uppercase small mb-2">{{ __('Booking mode') }}</h6>
-                <p class="text-muted small mb-3">{{ __('Choose how customers discover and book this branch') }}</p>
-                <div class="d-flex gap-3 flex-wrap mb-3">
-                    <label class="d-flex align-items-start gap-3 p-3 rounded-4 border flex-fill bk-mode-card"
-                           style="cursor:pointer;min-width:200px;" id="mode-lbl-marketplace">
-                        <input type="radio" name="booking_mode" value="marketplace" class="form-check-input mt-0 flex-shrink-0"
-                               {{ old('booking_mode', $branch->booking_mode) === 'marketplace' ? 'checked' : '' }} onchange="highlightMode()">
-                        <div>
-                            <span class="fw-bold d-flex align-items-center gap-2" style="color:#10b981;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                                {{ __('Marketplace') }}
-                            </span>
-                            <small class="text-muted">{{ __('Branch appears in public directory.') }}</small>
-                        </div>
-                    </label>
-                    <label class="d-flex align-items-start gap-3 p-3 rounded-4 border flex-fill bk-mode-card"
-                           style="cursor:pointer;min-width:200px;" id="mode-lbl-private">
-                        <input type="radio" name="booking_mode" value="private" class="form-check-input mt-0 flex-shrink-0"
-                               {{ old('booking_mode', $branch->booking_mode) === 'private' ? 'checked' : '' }} onchange="highlightMode()">
-                        <div>
-                            <span class="fw-bold d-flex align-items-center gap-2" style="color:#7c3aed;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                                {{ __('Private') }}
-                            </span>
-                            <small class="text-muted">{{ __('Hidden from directory. Private link only.') }}</small>
-                        </div>
-                    </label>
-                </div>
-
-                @if($branch->slug)
-                <div class="alert alert-light border rounded-3 mb-4 d-flex align-items-center gap-2" style="font-size:.82rem;">
-                    <i data-feather="link" style="width:14px;height:14px;color:#7c3aed;"></i>
-                    <span>{{ __('Private booking link') }}:</span>
-                    <code class="ms-1 user-select-all" style="color:#7c3aed;">{{ $branch->privateBookingUrl() }}</code>
-                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill ms-auto" style="font-size:.7rem;"
-                            onclick="navigator.clipboard.writeText('{{ $branch->privateBookingUrl() }}');this.textContent='{{ __('Copied!') }}';">
-                        {{ __('Copy') }}
-                    </button>
-                </div>
-                @endif
-
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" name="is_head_office" id="is_head_office"
                            value="1" @checked(old('is_head_office', $branch->is_head_office))>
@@ -185,40 +142,6 @@
                         'inputPrefix'      => 'social_links',
                         'allowedPlatforms' => ['whatsapp', 'facebook', 'instagram', 'linkedin'],
                     ])
-                </div>
-            </div>
-        </div>
-
-        {{-- Tab: Loyalty --}}
-        <div class="tab-pane-bk d-none" id="tab-loyalty">
-            <div class="card border-0 shadow-sm rounded-4 p-4 mb-3">
-                <h6 class="fw-bold mb-1">⭐ {{ __('Loyalty Points') }}</h6>
-                <p class="text-muted small mb-4">{{ __('Points awarded to customers automatically when an appointment is completed at this branch.') }}</p>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">{{ __('Points per visit') }}</label>
-                        <input type="number" name="loyalty_points_per_visit" min="0" max="9999" class="form-control rounded-3"
-                            value="{{ old('loyalty_points_per_visit', $branch->loyalty_points_per_visit ?? 10) }}">
-                        <small class="text-muted">{{ __('Fixed points for every completed appointment') }}</small>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">{{ __('Points per extra service') }}</label>
-                        <input type="number" name="loyalty_points_per_extra_service" min="0" max="9999" class="form-control rounded-3"
-                            value="{{ old('loyalty_points_per_extra_service', $branch->loyalty_points_per_extra_service ?? 5) }}">
-                        <small class="text-muted">{{ __('Added for each service beyond the first') }}</small>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">{{ __('Spend amount per point') }}</label>
-                        <input type="number" name="loyalty_points_per_currency_unit" min="0" class="form-control rounded-3"
-                            value="{{ old('loyalty_points_per_currency_unit', $branch->loyalty_points_per_currency_unit ?? 10000) }}">
-                        <small class="text-muted">{{ __('Amount a customer spends to earn 1 point (e.g. 10,000 → spending 55,000 = 5 points). 0 = disabled.') }}</small>
-                    </div>
-                </div>
-
-                {{-- Preview --}}
-                <div class="mt-4 p-3 rounded-3" style="background:var(--bs-tertiary-bg);">
-                    <div class="fw-semibold mb-2" style="font-size:13px;">{{ __('Example') }}</div>
-                    <div class="text-muted" style="font-size:12px;" id="loyaltyPreview"></div>
                 </div>
             </div>
         </div>
@@ -335,35 +258,6 @@ function highlightStatus() {
     });
 }
 
-// ── Booking mode highlight ────────────────────────────────────────
-const modeColors = { marketplace: '#10b981', private: '#7c3aed' };
-function highlightMode() {
-    document.querySelectorAll('[name="booking_mode"]').forEach(function(radio) {
-        var lbl = document.getElementById('mode-lbl-' + radio.value);
-        if (!lbl) return;
-        if (radio.checked) { lbl.style.borderColor = modeColors[radio.value]; lbl.style.background = modeColors[radio.value] + '0a'; }
-        else { lbl.style.borderColor = ''; lbl.style.background = ''; }
-    });
-}
-highlightMode();
-
-// ── Loyalty preview ───────────────────────────────────────────────
-function updateLoyaltyPreview() {
-    var perVisit   = parseInt(document.querySelector('[name="loyalty_points_per_visit"]').value) || 0;
-    var perExtra   = parseInt(document.querySelector('[name="loyalty_points_per_extra_service"]').value) || 0;
-    var perUnit    = parseInt(document.querySelector('[name="loyalty_points_per_currency_unit"]').value) || 0;
-    var total3svcs = perVisit + (2 * perExtra);
-    var unitPts    = perUnit > 0 ? Math.floor(30000 / perUnit) : 0;
-    var el = document.getElementById('loyaltyPreview');
-    if (el) {
-        el.innerHTML = '{{ __("3 services, 30,000 spent") }} → <strong>' + (total3svcs + unitPts) + ' {{ __("pts") }}</strong>'
-            + ' <span style="opacity:.6">(' + perVisit + ' + ' + (2*perExtra) + ' + ' + unitPts + ')</span>';
-    }
-}
-document.querySelectorAll('[name^="loyalty_"]').forEach(function(inp) {
-    inp.addEventListener('input', updateLoyaltyPreview);
-});
-updateLoyaltyPreview();
 
 // ── Deactivate = sign out immediately (no refresh) + notify by email ──
 (function () {

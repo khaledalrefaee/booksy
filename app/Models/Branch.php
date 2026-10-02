@@ -394,7 +394,8 @@ class Branch extends Model
      * Weekdays (0=Sun … 6=Sat) on which at least one active staff member
      * works — their own schedule, or the branch hours when they have none for
      * that day (Employee::shiftsOn). Drives which days the booking calendar
-     * offers at all. Empty = the branch hasn't set any hours yet.
+     * offers at all. With no active staff, the branch's own open days.
+     * Empty = the branch hasn't set any hours yet.
      *
      * @return array<int, int>
      */
@@ -408,6 +409,20 @@ class Branch extends Model
         $staff = $this->employees()->where('is_active', true)->with('workingHours')->get();
 
         $open = [];
+
+        // No active staff at all: bookings land on the reception lane, so the
+        // venue is open whenever the branch itself is.
+        if ($staff->isEmpty()) {
+            foreach (range(0, 6) as $dow) {
+                $isOpen = $this->workingHours
+                    ->where('day_of_week', $dow)->where('is_open', true)
+                    ->contains(fn ($h) => $h->open_time && $h->close_time);
+                if ($isOpen) $open[] = $dow;
+            }
+
+            return $this->resolvedOpenWeekdays = $open;
+        }
+
         foreach (range(0, 6) as $dow) {
             foreach ($staff as $emp) {
                 if ($emp->shiftsOn($dow, $this)->isNotEmpty()) {

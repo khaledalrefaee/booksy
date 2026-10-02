@@ -57,7 +57,7 @@ final class DashboardStatisticsService
             return [
                 'appointments_total' => (int) $byStatus->sum(),
                 'appointments_pending' => (int) ($byStatus['pending'] ?? 0),
-                'appointments_confirmed' => (int) ($byStatus['confirmed'] ?? 0),
+                'appointments_confirmed' => (int) (($byStatus['confirmed'] ?? 0) + ($byStatus['upcoming'] ?? 0)),
                 'appointments_completed' => (int) ($byStatus['completed'] ?? 0),
                 'branches' => $company->branches()->count(),
                 'services' => Service::query()->whereIn('branch_id', $branchIds)->count(),
@@ -303,7 +303,7 @@ final class DashboardStatisticsService
 
         $query = Appointment::query()
             ->whereBetween('start_time', [$from, $to])
-            ->whereIn('status', ['completed', 'confirmed'])
+            ->whereIn('status', ['completed', 'confirmed', 'upcoming'])
             ->whereNotNull('total_price')
             ->selectRaw("DATE_FORMAT(start_time, '%Y-%m') as k")
             ->selectRaw('SUM(total_price) as revenue')

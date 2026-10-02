@@ -33,6 +33,7 @@ final class DailyBusinessSummaryService
     /** Confirmed → completed: bookings that actually count as business. */
     private const REAL_STATUSES = [
         'confirmed',
+        'upcoming',
         'arrived',
         'in_progress',
         'paused',

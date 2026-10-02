@@ -8,6 +8,14 @@
     $isAr        = app()->getLocale() === 'ar';
     $authCompany = Auth::guard('company')->user();
     $branchIds   = $authCompany?->branches()->pluck('id')->toArray() ?? [];
+
+    // Browser-side WebSocket target (see config/broadcasting.php → reverb.client).
+    $wsCfg  = config('broadcasting.connections.reverb.client', []);
+    $wsTls  = isset($wsCfg['tls']) && $wsCfg['tls'] !== null
+        ? filter_var($wsCfg['tls'], FILTER_VALIDATE_BOOLEAN)
+        : request()->isSecure();
+    $wsHost = $wsCfg['host'] ?: request()->getHost();
+    $wsPort = (int) ($wsCfg['port'] ?: ($wsTls ? 443 : config('broadcasting.connections.reverb.options.port', 8080)));
 @endphp
 
 @if(!empty($branchIds))
@@ -553,7 +561,12 @@
     /* ────────────────────────────────────
        Main handler — called for each booking event
     ──────────────────────────────────── */
+    var seenBookings = {};
     function _onBooking(data) {
+        if (data && data.id) {            // Reverb and the poller may both report it
+            if (seenBookings[data.id]) return;
+            seenBookings[data.id] = true;
+        }
         _playDing();
         _addToPanel(data);
         _showToast(data);
@@ -563,6 +576,76 @@
         unreadCount++;
         _updateBadge();
     }
+
+    /* ────────────────────────────────────
+       Live refresh in place. Normally pushed over the WebSocket; if the
+       socket is down it falls back to polling a tiny "did anything change?"
+       endpoint every 30s (never while the tab is hidden). A new online booking is announced (ding +
+       toast + bell); any change refreshes the open calendar / lists and the
+       blocks marked data-live-block, all in place — no page reload.
+       Works wherever Reverb is not reachable (e.g. production).
+    ──────────────────────────────────── */
+    var wsConnected = false, wsDown = false, refreshTimer = null;
+
+    /* Several events can land together (a group booking = several rows):
+       coalesce them into one refresh. */
+    function _liveRefreshSoon() {
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(_liveRefresh, 400);
+    }
+
+    function _liveRefresh() {
+        document.dispatchEvent(new CustomEvent('bk:appointments-changed'));
+
+        if (typeof window.bkRefreshViews === 'function' && !document.body.classList.contains('modal-open')) {
+            try { window.bkRefreshViews(); } catch (e) {}
+        }
+
+        var blocks = document.querySelectorAll('[data-live-block]');
+        if (!blocks.length) return;
+        fetch(location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.text() : null; })
+            .then(function (html) {
+                if (!html) return;
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                blocks.forEach(function (b) {
+                    var fresh = doc.querySelector('[data-live-block="' + b.getAttribute('data-live-block') + '"]');
+                    if (fresh) b.innerHTML = fresh.innerHTML;
+                });
+                if (window.feather) window.feather.replace();
+                document.dispatchEvent(new CustomEvent('bk:live-replaced'));
+            })
+            .catch(function () {});
+    }
+
+    (function startPulse() {
+        var PULSE_URL = '{{ route('company.appointments.pulse') }}';
+        var stamp = null, lastId = 0, busy = false;
+
+        function tick() {
+            if (document.hidden || busy || wsConnected) return;   // socket up = no polling
+            busy = true;
+            fetch(PULSE_URL + (lastId ? '?since=' + lastId : ''), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                credentials: 'same-origin',
+            })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (d) {
+                    if (!d) return;
+                    var first = stamp === null;
+                    (d.new || []).forEach(_onBooking);
+                    lastId = Math.max(lastId, d.max_id || 0);
+                    if (!first && d.stamp !== stamp) _liveRefresh();
+                    stamp = d.stamp;
+                })
+                .catch(function () {})
+                .then(function () { busy = false; });
+        }
+
+        setInterval(tick, 30000);   // fallback only; the socket does the real work
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) tick(); });
+        tick();
+    })();
 
     /* ────────────────────────────────────
        Connect to Reverb via Echo
@@ -575,12 +658,24 @@
         var echo = new Echo({
             broadcaster:       'reverb',
             key:               '{{ config('broadcasting.connections.reverb.key', env('REVERB_APP_KEY', 'booksy-key-123')) }}',
-            wsHost:            '{{ env('REVERB_HOST', 'localhost') }}',
-            wsPort:            {{ env('REVERB_PORT', 8080) }},
-            wssPort:           {{ env('REVERB_PORT', 8080) }},
-            forceTLS:          false,
+            wsHost:            '{{ $wsHost }}',
+            wsPort:            {{ $wsPort }},
+            wssPort:           {{ $wsPort }},
+            forceTLS:          {{ $wsTls ? 'true' : 'false' }},
             enabledTransports: ['ws', 'wss'],
             authEndpoint:      '/broadcasting/auth',
+        });
+
+        // Connection state drives the fallback poll: it only runs while the
+        // socket is down. After a drop, one refresh catches up on missed changes.
+        var conn = echo.connector.pusher.connection;
+        conn.bind('connected', function () {
+            var wasDown = wsDown;
+            wsConnected = true; wsDown = false;
+            if (wasDown) _liveRefreshSoon();
+        });
+        ['disconnected', 'unavailable', 'failed', 'error'].forEach(function (ev) {
+            conn.bind(ev, function () { wsConnected = false; wsDown = true; });
         });
 
         BRANCH_IDS.forEach(function (branchId) {
@@ -588,7 +683,9 @@
                 .listen('.appointment.booked', function (data) {
                     console.log('[Reverb] appointment.booked on branch.' + branchId, data);
                     _onBooking(data);
-                });
+                })
+                // Any create / edit / status change / delete: refresh in place.
+                .listen('.appointments.changed', function () { _liveRefreshSoon(); });
         });
 
         console.log('[Reverb] Listening on branches:', BRANCH_IDS);

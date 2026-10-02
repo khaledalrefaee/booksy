@@ -113,6 +113,7 @@ class CustomerAccountController extends Controller
         $isOpenBooking = in_array($appointment->status, [
             AppointmentStatus::Pending,
             AppointmentStatus::Confirmed,
+            AppointmentStatus::Upcoming,
         ], true);
         $branch        = $appointment->branch;
         $canCancel     = $isOpenBooking && $branch->customerCanCancel($appointment->start_time);
@@ -170,6 +171,7 @@ class CustomerAccountController extends Controller
         }
         return match ($t->to_status) {
             AppointmentStatus::Confirmed           => $isAr ? 'أكّد المركز الموعد' : 'Confirmed by venue',
+            AppointmentStatus::Upcoming            => $isAr ? 'أكّدت حضورك' : 'You confirmed you are coming',
             AppointmentStatus::Arrived             => $isAr ? 'تم تسجيل الوصول' : 'Checked in',
             AppointmentStatus::InProgress          => $isAr ? 'بدأت الخدمة' : 'Service started',
             AppointmentStatus::Completed           => $isAr ? 'اكتملت الزيارة' : 'Visit completed',
@@ -221,7 +223,7 @@ class CustomerAccountController extends Controller
 
         $label = match (true) {
             $isRejection                                        => $isAr ? 'مرفوض' : 'Rejected',
-            $status === AppointmentStatus::Confirmed && $future => $isAr ? 'قادم' : 'Coming',
+            $status === AppointmentStatus::Upcoming  && $future => $isAr ? 'قادم' : 'Upcoming',
             $status === AppointmentStatus::Pending   && $future => $isAr ? 'بانتظار التأكيد' : 'Pending confirmation',
             default => $status->label(),
         };

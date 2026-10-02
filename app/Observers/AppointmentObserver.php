@@ -18,6 +18,7 @@ class AppointmentObserver
     public function created(Appointment $appointment): void
     {
         \App\Services\Owner\DashboardStatisticsService::forgetCompany($appointment->company_id, $appointment->start_time);
+        $this->announceChange($appointment, 'created');
 
         // Opening entry of the timeline, so every appointment's history starts
         // at its birth rather than at its first status change.
@@ -74,10 +75,35 @@ class AppointmentObserver
     public function deleted(Appointment $appointment): void
     {
         \App\Services\Owner\DashboardStatisticsService::forgetCompany($appointment->company_id, $appointment->start_time);
+        $this->announceChange($appointment, 'deleted');
+    }
+
+    /**
+     * Tell open dashboards / calendars of this branch to refresh in place (over
+     * WebSocket). Sent after the response so a slow or absent Reverb can never
+     * delay or break the write.
+     */
+    private function announceChange(Appointment $appointment, string $change): void
+    {
+        $branchId = (int) $appointment->branch_id;
+        $id       = (int) $appointment->id;
+        if (! $branchId) return;
+
+        dispatch(function () use ($branchId, $id, $change) {
+            try {
+                broadcast(new \App\Events\AppointmentsChanged($branchId, $id, $change));
+            } catch (\Throwable $e) {
+                // Realtime is optional; the page's slow fallback poll catches up.
+            }
+        })->afterResponse();
     }
 
     public function updated(Appointment $appointment): void
     {
+        if ($appointment->wasChanged() && array_keys($appointment->getChanges()) !== ['updated_at']) {
+            $this->announceChange($appointment, 'updated');
+        }
+
         if ($appointment->wasChanged(['status', 'start_time'])) {
             \App\Services\Owner\DashboardStatisticsService::forgetCompany($appointment->company_id, $appointment->start_time);
         }
