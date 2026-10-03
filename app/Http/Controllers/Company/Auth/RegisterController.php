@@ -38,12 +38,13 @@ class RegisterController extends Controller
             // format guard, not a length-only rule.
             'phone'                 => ['required', 'string', 'max:20', 'regex:/^\+[1-9]\d{7,14}$/', Rule::unique('companies', 'phone')->whereNotNull('phone_verified_at')],
             'category_id'           => ['required', 'exists:categories,id'],
-            'password'              => ['required', 'string', 'min:8'],
+            'password'              => ['required', 'string', 'min:8', 'confirmed'],
             'terms'                 => ['accepted'],
         ], [
             'phone.regex'    => __('Please enter a valid phone number.'),
             'phone.unique'   => __('This phone number is already registered.'),
             'terms.accepted' => __('You must agree to the Terms of Service and Privacy Policy.'),
+            'password.confirmed' => __('The passwords do not match.'),
         ]);
 
         CompanyVerificationService::purgeUnverified($data['email'], $data['phone']);

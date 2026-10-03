@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Companies\AppointmentController as CompanyAppointmentController;
 use App\Http\Controllers\Api\Companies\AuthController as CompanyAuthController;
 use App\Http\Controllers\Api\Companies\CategoryController;
 use App\Http\Controllers\Api\Customers\AuthController;
@@ -69,6 +70,16 @@ Route::middleware('api.locale')->group(function () {
             Route::post('logo',    [CompanyAuthController::class, 'uploadLogo'])->name('logo');
             Route::delete('logo',  [CompanyAuthController::class, 'deleteLogo'])->name('logo.delete');
             Route::post('logout', [CompanyAuthController::class, 'logout'])->name('logout');
+
+            // Calendar booking (drag & drop) — delegates to the web booking rules.
+            Route::prefix('appointments')->name('appointments.')->controller(CompanyAppointmentController::class)->group(function () {
+                Route::get('staff-events', 'staffEvents')->name('staff-events');
+                Route::get('branch-data',  'branchData')->name('branch-data');
+                Route::get('customers',    'customers')->name('customers');
+                Route::post('/',           'store')->name('store');
+                Route::post('group',       'storeGroup')->name('store-group');
+                Route::patch('{appointment}/reschedule', 'reschedule')->name('reschedule');
+            });
         });
     });
 

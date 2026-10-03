@@ -17,11 +17,11 @@
     $ver = fn ($f) => asset('images/'.$f).'?v='.(@filemtime(public_path('images/'.$f)) ?: '1');
 @endphp
 @if($variant === 'icon')
-  <img src="{{ $ver('logo-mark.png') }}" width="319" height="205"
+  <img src="{{ $ver('logo-mark.png') }}" width="640" height="499"
        {{ $attributes->class('bkf-logo '.$size) }} alt="GlowRez">
 @else
-  <img src="{{ $ver('glowrez-logo-light_1.webp') }}" width="794" height="254"
+  <img src="{{ $ver('glowrez-logo-light_1.webp') }}" width="1500" height="424"
        {{ $attributes->class('bkf-logo '.$size.' bkf-logo--light') }} alt="GlowRez غلوريز">
-  <img src="{{ $ver('glowrez-logo-dark_1.webp') }}" width="444" height="162" aria-hidden="true"
+  <img src="{{ $ver('glowrez-logo-dark_1.webp') }}" width="1500" height="424" aria-hidden="true"
        {{ $attributes->class('bkf-logo '.$size.' bkf-logo--dark') }} alt="">
 @endif

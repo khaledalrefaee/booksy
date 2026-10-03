@@ -2,7 +2,7 @@
    Strategy: network-first for page navigations (with an offline fallback),
    cache-first for same-origin static assets. Keeps the app fast and usable on
    flaky connections — important for the target market. */
-const VERSION = 'booksy-v1';
+const VERSION = 'booksy-v2';
 const BASE = new URL(self.registration.scope).pathname; // e.g. "/booksy/public/" or "/"
 const OFFLINE_URL = BASE + 'offline';
 

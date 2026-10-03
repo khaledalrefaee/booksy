@@ -1,103 +1,97 @@
 @php($title = __('Verify your account'))
 @extends('company.auth.layout')
 
-@section('hero-icon')<i data-feather="check-circle"></i>@endsection
 @section('hero-title'){{ __('One last step') }}@endsection
 @section('hero-sub'){{ __('Confirm your account with the code we just sent — and you\'re all set to start taking bookings.') }}@endsection
 
 @section('content')
-    <h4 class="fw-bold mb-1">{{ __('Verify your account') }}</h4>
-    <p class="text-muted mb-4">
+    <h1>{{ __('Verify your account') }}</h1>
+    <p class="ga-sent">
         {{ __('We sent a 4-digit code to your phone') }}
-        @if($phone)<strong dir="ltr">{{ $phone }}</strong>@endif
+        @if($phone)<b>{{ $phone }}</b>@endif
         {{ __('and email') }}
-        @if($email)<strong dir="ltr">{{ $email }}</strong>@endif.
+        @if($email)<b>{{ $email }}</b>@endif.
     </p>
 
     @if (session('status'))
-        <div class="alert alert-success py-2 px-3 mb-3" role="alert" aria-live="polite">{{ session('status') }}</div>
+        <div class="ga-alert ga-alert--ok" role="status" aria-live="polite">
+            <x-auth.icon name="ok" />
+            <span>{{ session('status') }}</span>
+        </div>
     @endif
     @if ($errors->any())
-        <div class="alert alert-danger py-2 px-3 mb-3" role="alert" aria-live="assertive">
-            <ul class="mb-0 ps-3">
-                @foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach
-            </ul>
+        <div class="ga-alert" role="alert">
+            <x-auth.icon name="alert" />
+            <div>
+                @if ($errors->count() > 1)
+                    <ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+                @else
+                    {{ $errors->first() }}
+                @endif
+            </div>
         </div>
     @endif
 
-    <form method="POST" action="{{ route('company.verify.attempt') }}" id="verifyForm" novalidate>
+    <form method="POST" action="{{ route('company.verify.attempt') }}" id="verifyForm" data-busy="{{ __('Verifying…') }}" novalidate>
         @csrf
-        <label class="form-label fw-semibold">{{ __('Verification code') }}</label>
-        <div class="bk-otp-row">
-            <input class="bk-otp-box" type="tel" inputmode="numeric" maxlength="1" id="otp0" autocomplete="one-time-code" autofocus>
-            <input class="bk-otp-box" type="tel" inputmode="numeric" maxlength="1" id="otp1">
-            <input class="bk-otp-box" type="tel" inputmode="numeric" maxlength="1" id="otp2">
-            <input class="bk-otp-box" type="tel" inputmode="numeric" maxlength="1" id="otp3">
+        <div class="ga-field" style="margin-bottom:1.75rem">
+            <label id="otpLabel">{{ __('Verification code') }}</label>
+            <div class="ga-otp @if($errors->has('code') || ($errors->any() && ! $errors->has('email') && ! $errors->has('phone'))) is-error @endif"
+                 role="group" aria-labelledby="otpLabel" data-otp data-target="#code" data-autosubmit>
+                <input type="tel" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="1" autofocus>
+                <input type="tel" inputmode="numeric" maxlength="1" aria-label="2">
+                <input type="tel" inputmode="numeric" maxlength="1" aria-label="3">
+                <input type="tel" inputmode="numeric" maxlength="1" aria-label="4">
+            </div>
+            <input type="hidden" name="code" id="code">
         </div>
-        <input type="hidden" name="code" id="code">
 
-        <div class="d-grid mt-4">
-            <button type="submit" class="btn btn-primary btn-lg rounded-3">{{ __('Verify') }}</button>
-        </div>
+        <button type="submit" class="ga-submit">
+            <span class="ga-submit-label">{{ __('Verify') }}</span>
+            <x-auth.icon name="arrow" class="i-arrow" stroke-width="2" />
+            <x-auth.icon name="spin" class="i-spin" stroke-width="2.4" />
+        </button>
     </form>
 
-    <div class="mt-3 text-center">
-        <span class="text-muted small">{{ __("Didn't get the code?") }}</span>
-        <form method="POST" action="{{ route('company.verify.resend') }}" class="d-inline">
+    <div class="ga-resend">
+        <span>{{ __("Didn't get the code?") }}</span>
+        <form method="POST" action="{{ route('company.verify.resend') }}">
             @csrf
-            <button type="submit" class="btn btn-link btn-sm p-0 ms-1 fw-semibold text-decoration-none align-baseline">{{ __('Resend code') }}</button>
+            <button type="submit" class="ga-link" data-cooldown="30" data-cooldown-key="company-verify" data-wait="{{ __('Resend in') }}">{{ __('Resend code') }}</button>
         </form>
     </div>
 
-    <hr class="my-4">
-
-    <details @if($errors->has('email') || $errors->has('phone')) open @endif>
-        <summary class="fw-semibold small" style="cursor:pointer">{{ __('Wrong email or phone number? Edit it') }}</summary>
-        <form method="POST" action="{{ route('company.verify.contact') }}" class="mt-3">
-            @csrf
-            <div class="mb-3">
-                <label class="form-label small fw-semibold">{{ __('Email') }}</label>
-                <input type="email" name="email" value="{{ old('email', $email) }}" class="form-control" dir="ltr" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label small fw-semibold">{{ __('Phone') }}</label>
-                <input type="tel" name="phone" value="{{ old('phone', $phone) }}" class="form-control" dir="ltr" placeholder="+9639xxxxxxxx" required>
-            </div>
-            <button type="submit" class="btn btn-outline-primary w-100 rounded-3">{{ __('Save and resend code') }}</button>
-        </form>
+    <details class="ga-details" @if($errors->has('email') || $errors->has('phone')) open @endif>
+        <summary>
+            <span>{{ __('Wrong email or phone number? Edit it') }}</span>
+            <x-auth.icon name="chevron" />
+        </summary>
+        <div class="ga-details-body">
+            <form method="POST" action="{{ route('company.verify.contact') }}" data-busy="{{ __('Saving…') }}" novalidate>
+                @csrf
+                <div class="ga-field @error('email') has-error @enderror">
+                    <label for="c_email">{{ __('Email') }}</label>
+                    <div class="ga-input">
+                        <span class="ga-ico"><x-auth.icon name="mail" /></span>
+                        <input type="email" id="c_email" name="email" value="{{ old('email', $email) }}" autocomplete="email" inputmode="email" required>
+                    </div>
+                </div>
+                <div class="ga-field @error('phone') has-error @enderror">
+                    <label for="c_phone">{{ __('Phone') }}</label>
+                    <div class="ga-input">
+                        <span class="ga-ico"><x-auth.icon name="phone" /></span>
+                        <input type="tel" id="c_phone" name="phone" dir="ltr" value="{{ old('phone', $phone) }}" placeholder="+9639xxxxxxxx" autocomplete="tel" inputmode="tel" required>
+                    </div>
+                </div>
+                <button type="submit" class="ga-ghost">
+                    <span class="ga-submit-label">{{ __('Save and resend code') }}</span>
+                </button>
+            </form>
+        </div>
     </details>
 
-    <form method="POST" action="{{ route('company.logout') }}" class="mt-3 text-center">
+    <form method="POST" action="{{ route('company.logout') }}">
         @csrf
-        <button type="submit" class="btn btn-link btn-sm text-muted text-decoration-none">{{ __('Log out / use another account') }}</button>
+        <button type="submit" class="ga-link ga-quiet" style="color:var(--muted);font-weight:500">{{ __('Log out / use another account') }}</button>
     </form>
-
 @endsection
-
-@push('scripts')
-<script>
-    (function () {
-        const boxes = [0,1,2,3].map(i => document.getElementById('otp' + i));
-        const code  = document.getElementById('code');
-        function collect() { code.value = boxes.map(b => b.value).join(''); }
-        boxes.forEach((box, i) => {
-            box.addEventListener('input', function () {
-                this.value = this.value.replace(/\D/g, '').slice(0, 1);
-                if (this.value && i < 3) boxes[i + 1].focus();
-                collect();
-            });
-            box.addEventListener('keydown', function (e) {
-                if (e.key === 'Backspace' && !this.value && i > 0) boxes[i - 1].focus();
-                if (e.key === 'Enter') { e.preventDefault(); document.getElementById('verifyForm').requestSubmit(); }
-            });
-            box.addEventListener('paste', function (e) {
-                const t = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 4);
-                for (let j = 0; j < t.length; j++) if (boxes[j]) boxes[j].value = t[j];
-                collect();
-                (boxes[Math.min(t.length, 3)] || boxes[3]).focus();
-                e.preventDefault();
-            });
-        });
-    })();
-</script>
-@endpush

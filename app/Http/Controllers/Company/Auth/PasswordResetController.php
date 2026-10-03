@@ -82,7 +82,9 @@ class PasswordResetController extends Controller
     {
         $data = $request->validate([
             'code'     => ['required', 'string', 'size:4'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'password.confirmed' => __('The passwords do not match.'),
         ]);
 
         $phone   = session('pw_reset_phone');

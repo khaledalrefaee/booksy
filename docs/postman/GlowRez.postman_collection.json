@@ -1,7 +1,7 @@
 {
     "info": {
         "name": "GlowRez",
-        "description": "GlowRez Mobile API.\n\n📁 Customer — تسجيل دخول العميل (هاتف + كود) والملف الشخصي.\n📁 Company → Auth — تسجيل/تحقق/دخول/استعادة كلمة مرور الشركة.\n\nكل الردود بشكل موحّد:\n{ \"status\": true|false, \"message\": \"...\", \"data\": {...}, \"errors\": {...} }\n(errors تظهر فقط مع أخطاء التحقق 422).\n\nاللغة: هيدر Accept-Language (ar/en) أو lang=ar — المتغيّر {{lang}}.\nعدّل base_url من تبويب Variables.",
+        "description": "GlowRez Mobile API.\n\n📁 Customer — تسجيل دخول العميل (هاتف + كود) والملف الشخصي.\n📁 Company → Appointments — حجز/نقل المواعيد (دراغ ودروب).\n📁 Company → Auth — تسجيل/تحقق/دخول/استعادة كلمة مرور الشركة.\n\nكل الردود بشكل موحّد:\n{ \"status\": true|false, \"message\": \"...\", \"data\": {...}, \"errors\": {...} }\n(errors تظهر فقط مع أخطاء التحقق 422).\n\nاللغة: هيدر Accept-Language (ar/en) أو lang=ar — المتغيّر {{lang}}.\nعدّل base_url من تبويب Variables.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
@@ -72,6 +72,81 @@
         },
         {
             "key": "token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "branch_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "date",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "employee_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "employee_id_2",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "service_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "service_id_2",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "service_price",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "service_price_2",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "service_duration",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "service_duration_2",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "customer_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "customer_query",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "appointment_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "appointment_id_2",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "appointment_id_3",
             "value": "",
             "type": "string"
         }
@@ -1174,6 +1249,663 @@
                                     ]
                                 },
                                 "description": "حذف الشعار الحالي. data.company.logo يصبح null."
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Appointments",
+                    "description": "حجز المواعيد من الكاليندر (الدراغ والدروب) — نفس قواعد الويب بالضبط لأنه بينادي نفس الكنترولر.\nيتطلب Authorization: Bearer {{company_token}}.\nرتّبهم بالترتيب: 1 → 2 (بيحفظوا الموظفين والخدمات) → 3 → 4..9. الوقت بتوقيت الفرع المحلي.\nمتغيّرات: branch_id (املأه)، date (افتراضياً بكرا) — الباقي بيتعبّى لحاله.",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (!pm.collectionVariables.get('date')) {",
+                                    "  const d = new Date(); d.setDate(d.getDate() + 1);",
+                                    "  const p = n => String(n).padStart(2, '0');",
+                                    "  pm.collectionVariables.set('date', d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()));",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "item": [
+                        {
+                            "name": "1. Staff Events — لوحة الدراغ والدروب",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json(); const d = res.data || {};",
+                                            "pm.test('status 200 + envelope', () => { pm.response.to.have.status(200); pm.expect(res.status).to.be.true; });",
+                                            "pm.test('has staff + appointments', () => { pm.expect(d.staff).to.be.an('array'); pm.expect(d.appointments).to.be.an('array'); });",
+                                            "const real = (d.staff || []).filter(s => s.id !== 0);",
+                                            "if (real[0]) pm.collectionVariables.set('employee_id', real[0].id);",
+                                            "if (real[1]) pm.collectionVariables.set('employee_id_2', real[1].id);",
+                                            "console.log('employees: ' + real.length + ', appointments: ' + d.appointments.length);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments/staff-events?date={{date}}&branch_id={{branch_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments",
+                                        "staff-events"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "date",
+                                            "value": "{{date}}",
+                                            "description": "اختياري — YYYY-MM-DD (الافتراضي اليوم)"
+                                        },
+                                        {
+                                            "key": "branch_id",
+                                            "value": "{{branch_id}}",
+                                            "description": "اختياري — فرع واحد (يجب أن يتبع الشركة وإلا 403). بدونه: كل الفروع"
+                                        }
+                                    ]
+                                },
+                                "description": "اللوحة اللي بتنرسم عليها الأعمدة (موظفين) + المواعيد.\n- staff[]: id, name, initials, image, branchId, closedSlots[{from,to}] بالدقائق من منتصف الليل (دوام/إجازة/وقت محظور = ممنوع الإسقاط عليه). العنصر id=0 هو Walk-in.\n- appointments[]: id, employeeId (0 = Walk-in), customer, service, branch, employee, status, color, price, startIso, endIso, startLabel, endLabel, changedBy.\n- defaultBranchId.\nيحفظ employee_id و employee_id_2 تلقائياً."
+                            }
+                        },
+                        {
+                            "name": "2. Branch Data — خدمات وموظفين الفرع",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json(); const d = res.data || {};",
+                                            "pm.test('status 200', () => { pm.response.to.have.status(200); pm.expect(res.status).to.be.true; });",
+                                            "pm.test('services + employees', () => { pm.expect(d.services).to.be.an('array').that.is.not.empty; pm.expect(d.employees).to.be.an('array'); });",
+                                            "if (d.services[0]) { pm.collectionVariables.set('service_id', d.services[0].id); pm.collectionVariables.set('service_duration', d.services[0].duration); pm.collectionVariables.set('service_price', d.services[0].price); }",
+                                            "if (d.services[1]) { pm.collectionVariables.set('service_id_2', d.services[1].id); pm.collectionVariables.set('service_duration_2', d.services[1].duration); pm.collectionVariables.set('service_price_2', d.services[1].price); }"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments/branch-data?branch_id={{branch_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments",
+                                        "branch-data"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "branch_id",
+                                            "value": "{{branch_id}}",
+                                            "description": "مطلوب — فرع تابع للشركة (غير ذلك 404)"
+                                        }
+                                    ]
+                                },
+                                "description": "شاشة الحجز: services[] (id, name, price, duration, category, currency) و employees[] (id, name, service_ids = الخدمات اللي بيقدّمها). فلتر الموظفين حسب الخدمة المختارة من service_ids.\nيحفظ service_id / service_id_2 تلقائياً."
+                            }
+                        },
+                        {
+                            "name": "3. Customers Search — بحث زبون",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "pm.test('status 200', () => { pm.response.to.have.status(200); pm.expect(res.data.customers).to.be.an('array'); });",
+                                            "if (res.data.customers[0]) pm.collectionVariables.set('customer_id', res.data.customers[0].id);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments/customers?q={{customer_query}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments",
+                                        "customers"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "q",
+                                            "value": "{{customer_query}}",
+                                            "description": "اختياري — جزء من الاسم أو الرقم (أقصى 15 نتيجة)"
+                                        }
+                                    ]
+                                },
+                                "description": "منتقي الزبائن. كل عنصر: id, text, name, phone, visits, tier{value,label,...}. يحفظ customer_id (أول نتيجة)."
+                            }
+                        },
+                        {
+                            "name": "4. Add Appointment — كل الحقول (خدمتين)",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "pm.test('201 created', () => { pm.response.to.have.status(201); pm.expect(res.status).to.be.true; pm.expect(res.data.id).to.be.a('number'); });",
+                                            "if (res.data && res.data.id) { pm.collectionVariables.set('appointment_id', res.data.id); console.log('appointment_id=' + res.data.id); }"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"branch_id\": \"{{branch_id}}\",\n    \"service_ids\": [\n        \"{{service_id}}\",\n        \"{{service_id_2}}\"\n    ],\n    \"prices\": [\n        \"{{service_price}}\",\n        \"{{service_price_2}}\"\n    ],\n    \"durations\": [\n        \"{{service_duration}}\",\n        \"{{service_duration_2}}\"\n    ],\n    \"employee_ids\": [\n        \"{{employee_id}}\",\n        \"{{employee_id_2}}\"\n    ],\n    \"employee_id\": \"{{employee_id}}\",\n    \"customer_name\": \"Postman Test\",\n    \"customer_phone\": \"0999000111\",\n    \"start_time\": \"{{date}}T09:30:00\",\n    \"idempotency_key\": \"{{$guid}}\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "description": "نفس quickStore بالويب (أي سحب على خانة فاضية).\n\nحقول:\n- branch_id (مطلوب) — فرع الشركة\n- service_ids[] (مطلوب، ≥1) — بالترتيب، ممكن تتكرر؛ بتنفّذ ورا بعض\n- prices[] (اختياري) — تعديل سعر لكل خدمة بنفس الترتيب\n- durations[] (اختياري، 5–1440 د) — تعديل مدة لكل خدمة\n- employee_ids[] (اختياري) — موظف لكل خدمة؛ employee_id = الافتراضي لأي خدمة بلا موظف\n- customer_id (اختياري) — زبون موجود؛ وإلا customer_name + customer_phone ينشئ/يربط زبون؛ وبلا الاتنين = Walk-in\n- start_time (مطلوب) — وقت الفرع المحلي، مثل 2026-10-03T09:30:00\n- idempotency_key (اختياري) — نفس المفتاح مرتين يرجّع نفس الموعد مع duplicate=true (للشبكة المتقطعة)\n\nأخطاء: 422 مع data.code=employee_busy إذا الموظف مشغول، أو رسالة وقت محظور / غرفة-جهاز غير متاح.\nيحفظ appointment_id."
+                            }
+                        },
+                        {
+                            "name": "5. Add Appointment — زبون موجود (customer_id)",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "pm.test('201 created', () => { pm.response.to.have.status(201); pm.expect(res.status).to.be.true; });",
+                                            "if (res.data && res.data.id) pm.collectionVariables.set('appointment_id_2', res.data.id);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"branch_id\": \"{{branch_id}}\",\n    \"service_ids\": [\n        \"{{service_id}}\"\n    ],\n    \"employee_id\": \"{{employee_id}}\",\n    \"customer_id\": \"{{customer_id}}\",\n    \"start_time\": \"{{date}}T12:00:00\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "description": "حجز لزبون موجود (customer_id من Customers Search). السعر والمدة من الخدمة."
+                            }
+                        },
+                        {
+                            "name": "6. Add Appointment — Walk-in (أقل حقول)",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "pm.test('201 created', () => { pm.response.to.have.status(201); pm.expect(res.status).to.be.true; });",
+                                            "if (res.data && res.data.id) pm.collectionVariables.set('appointment_id_3', res.data.id);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"branch_id\": \"{{branch_id}}\",\n    \"service_ids\": [\n        \"{{service_id}}\"\n    ],\n    \"start_time\": \"{{date}}T14:00:00\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "description": "الحد الأدنى: فرع + خدمة + وقت. بدون موظف وبدون زبون (Walk-in)."
+                            }
+                        },
+                        {
+                            "name": "7. Add Group — حجز مجموعة",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "pm.test('201 created', () => { pm.response.to.have.status(201); pm.expect(res.data.ids).to.be.an('array'); pm.expect(res.data.count).to.eql(2); });",
+                                            "console.log(JSON.stringify(res.data.guests));"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments/group",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments",
+                                        "group"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"branch_id\": \"{{branch_id}}\",\n    \"start_time\": \"{{date}}T15:30:00\",\n    \"idempotency_key\": \"{{$guid}}\",\n    \"guests\": [\n        {\n            \"customer_id\": \"{{customer_id}}\",\n            \"name\": \"Guest One\",\n            \"phone\": \"0999000222\",\n            \"services\": [\n                {\n                    \"service_id\": \"{{service_id}}\",\n                    \"employee_id\": \"{{employee_id}}\",\n                    \"price\": \"{{service_price}}\",\n                    \"duration\": \"{{service_duration}}\"\n                }\n            ]\n        },\n        {\n            \"name\": \"Guest Two\",\n            \"phone\": \"0999000333\",\n            \"services\": [\n                {\n                    \"service_id\": \"{{service_id_2}}\",\n                    \"employee_id\": \"{{employee_id}}\"\n                }\n            ]\n        }\n    ]\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "description": "حجز عدة أشخاص دفعة وحدة (نفس quickGroupStore).\n- guests[] (1–12): customer_id أو name/phone، و services[] فيها service_id (مطلوب), employee_id, price, duration.\n- الضيف الأول يملك وقت البداية (إذا مشغول = رفض)، والباقي إذا تعارضوا على نفس الموظف بيتأخروا لأول وقت فاضي (guests[].moved=true).\nالرد: ids[], guests[{id,name,start,end,moved}], groupId, count."
+                            }
+                        },
+                        {
+                            "name": "8. Reschedule — سحب (نقل وقت/موظف)",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "pm.test('200 moved', () => { pm.response.to.have.status(200); pm.expect(res.status).to.be.true; pm.expect(res.data.start).to.include('T11:00:00'); });"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments/{{appointment_id}}/reschedule",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments",
+                                        "{{appointment_id}}",
+                                        "reschedule"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"employee_id\": \"{{employee_id_2}}\",\n    \"start_time\": \"{{date}}T11:00:00\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "description": "الدراغ والدروب: ينقل الموعد لعمود موظف آخر و/أو وقت آخر (الخدمات الداخلية بتتحرك معه).\n- employee_id (اختياري) — الموظف الجديد؛ فاضي/0 = Walk-in\n- start_time (مطلوب)\n- duration (اختياري) — لو أُرسل بيغيّر المدة\nملاحظة: الويب والـ API ما بيفحصوا تعارض موعد ثاني لنفس الموظف عند النقل (فقط الوقت المحظور والغرف/الأجهزة)."
+                            }
+                        },
+                        {
+                            "name": "9. Reschedule — تمديد (resize duration)",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "pm.test('200 resized', () => { pm.response.to.have.status(200); pm.expect(res.status).to.be.true; });",
+                                            "console.log('start=' + res.data.start + ' end=' + res.data.end);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments/{{appointment_id_2}}/reschedule",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments",
+                                        "{{appointment_id_2}}",
+                                        "reschedule"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"employee_id\": \"{{employee_id}}\",\n    \"start_time\": \"{{date}}T12:00:00\",\n    \"duration\": 90\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "description": "سحب حافة الموعد لتغيير مدته: نفس الوقت والموظف + duration (5–1440 دقيقة)."
+                            }
+                        },
+                        {
+                            "name": "10. Negative — تعارض موظف (لازم 422 employee_busy)",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "pm.test('422 employee_busy', () => { pm.response.to.have.status(422); pm.expect(res.status).to.be.false; pm.expect(res.data.code).to.eql('employee_busy'); });"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"branch_id\": \"{{branch_id}}\",\n    \"service_ids\": [\n        \"{{service_id}}\"\n    ],\n    \"employee_id\": \"{{employee_id}}\",\n    \"start_time\": \"{{date}}T12:15:00\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "description": "يحجز فوق موعد #5 (بعد التمديد 12:00–13:30 للموظف الأول) فلازم يرفض."
+                            }
+                        },
+                        {
+                            "name": "11. Negative — حقول ناقصة (لازم 422 + errors)",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json();",
+                                            "pm.test('422 validation', () => { pm.response.to.have.status(422); pm.expect(res.errors).to.have.property('service_ids'); pm.expect(res.errors).to.have.property('start_time'); });"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments"
+                                    ]
+                                },
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"branch_id\": \"{{branch_id}}\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "description": "يتأكد إن أخطاء التحقق بترجع بالـ envelope الموحّد مع errors."
                             }
                         }
                     ]

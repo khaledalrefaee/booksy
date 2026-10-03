@@ -281,6 +281,7 @@ class AuthController extends ApiController
         $data = $request->validate([
             'name_en' => ['sometimes', 'required', 'string', 'max:255'],
             'name_ar' => ['sometimes', 'required', 'string', 'max:255'],
+            'owner_name' => ['sometimes', 'required', 'string', 'max:255'],
             'email'   => ['sometimes', 'required', 'email', 'max:255', Rule::unique('companies', 'email')->ignore($company->id)],
             'phone'   => ['sometimes', 'required', 'string', 'max:20', 'regex:/^\+[1-9]\d{7,14}$/', Rule::unique('companies', 'phone')->ignore($company->id)],
             'logo'    => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'], // 2 MB, as on the web
@@ -289,7 +290,7 @@ class AuthController extends ApiController
             'phone.unique' => __('This phone number is already registered.'),
         ]);
 
-        $company->fill(Arr::only($data, ['name_en', 'name_ar', 'email', 'phone']));
+        $company->fill(Arr::only($data, ['name_en', 'name_ar', 'email', 'phone','owner_name']));
 
         if ($request->hasFile('logo')) {
             $this->storeLogo($company, $request->file('logo'));

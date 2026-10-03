@@ -1,77 +1,73 @@
 @php($title = __('Sign in'))
 @extends('company.auth.layout')
 
-@section('hero-icon')<i data-feather="log-in"></i>@endsection
 @section('hero-title'){{ __('Welcome back') }}@endsection
 @section('hero-sub'){{ __('Sign in to manage your bookings, staff and calendar — all in one place.') }}@endsection
 
 @section('content')
-    <h4 class="fw-bold mb-1">{{ __('Sign in to your account') }}</h4>
-    <p class="text-muted mb-4">{{ __('Welcome back! Enter your details to continue.') }}</p>
+    <h1>{{ __('Sign in to your account') }}</h1>
+    <p class="ga-sub">{{ __('Welcome back! Enter your details to continue.') }}</p>
 
     @if (session('status'))
-        <div class="alert alert-success py-2 px-3 mb-3" role="alert" aria-live="polite">{{ session('status') }}</div>
+        <div class="ga-alert ga-alert--ok" role="status" aria-live="polite">
+            <x-auth.icon name="ok" />
+            <span>{{ session('status') }}</span>
+        </div>
     @endif
 
     @if ($errors->any())
-        <div class="alert alert-danger py-2 px-3 mb-3" role="alert" aria-live="assertive">{{ $errors->first() }}</div>
+        <div class="ga-alert" role="alert">
+            <x-auth.icon name="alert" />
+            <span>{{ $errors->first() }}</span>
+        </div>
     @endif
 
-    <form method="POST" action="{{ route('company.login.attempt') }}" class="forms-sample">
+    <form method="POST" action="{{ route('company.login.attempt') }}" id="loginForm" data-busy="{{ __('Signing in…') }}" novalidate>
         @csrf
-        <div class="mb-3">
-            <label for="email" class="form-label fw-semibold">{{ __('Email') }}</label>
-            <div class="input-group">
-                <span class="input-group-text"><i data-feather="mail"></i></span>
-                <input type="email" id="email" name="email" dir="ltr"
-                    class="form-control @error('email') is-invalid @enderror"
-                    value="{{ old('email') }}" placeholder="business@example.com" autofocus autocomplete="email">
-                @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+
+        <div class="ga-field @error('email') has-error @enderror">
+            <label for="email">{{ __('Email') }}</label>
+            <div class="ga-input">
+                <span class="ga-ico"><x-auth.icon name="mail" /></span>
+                <input type="email" id="email" name="email" value="{{ old('email') }}"
+                       placeholder="business@example.com" autocomplete="email" inputmode="email" required autofocus
+                       @error('email') aria-invalid="true" @enderror>
             </div>
+            @error('email')@if($message !== $errors->first())<p class="ga-err">{{ $message }}</p>@endif @enderror
         </div>
 
-        <div class="mb-3">
-            <label for="password" class="form-label fw-semibold">{{ __('Password') }}</label>
-            <div class="input-group">
-                <span class="input-group-text"><i data-feather="lock"></i></span>
-                <input type="password" id="password" name="password"
-                    class="form-control @error('password') is-invalid @enderror"
-                    placeholder="••••••••" autocomplete="current-password">
-                <button class="btn btn-outline-secondary js-toggle-pw" type="button" data-target="#password" tabindex="-1" aria-label="{{ __('Show password') }}">
-                    <i data-feather="eye" style="width:15px;height:15px;"></i>
+        <div class="ga-field @error('password') has-error @enderror">
+            <div class="ga-label-row">
+                <label for="password">{{ __('Password') }}</label>
+                <a href="{{ route('company.password.forgot') }}" class="ga-link" style="font-size:.875rem">{{ __('Forgot password?') }}</a>
+            </div>
+            <div class="ga-input ga-input--pw">
+                <span class="ga-ico"><x-auth.icon name="lock" /></span>
+                <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required
+                       @error('password') aria-invalid="true" @enderror>
+                <button type="button" class="ga-eye" aria-pressed="false" aria-controls="password"
+                        aria-label="{{ __('Show password') }}" data-show="{{ __('Show password') }}" data-hide="{{ __('Hide password') }}">
+                    <x-auth.icon name="eye" class="i-on" />
+                    <x-auth.icon name="eye-off" class="i-off" />
                 </button>
             </div>
+            @error('password')@if($message !== $errors->first())<p class="ga-err">{{ $message }}</p>@endif @enderror
         </div>
 
-        <div class="d-flex align-items-center justify-content-between mb-4">
-            <div class="form-check mb-0">
-                <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                <label class="form-check-label text-muted" for="remember">{{ __('Remember me') }}</label>
-            </div>
-            <a href="{{ route('company.password.forgot') }}" class="small fw-semibold text-decoration-none">{{ __('Forgot password?') }}</a>
-        </div>
+        <label class="ga-check">
+            <input type="checkbox" id="remember" name="remember" value="1" @checked(old('remember'))>
+            <span>{{ __('Remember me') }}</span>
+        </label>
 
-        <div class="d-grid">
-            <button type="submit" class="btn btn-primary btn-lg rounded-3">{{ __('Sign in') }}</button>
-        </div>
+        <button type="submit" class="ga-submit">
+            <span class="ga-submit-label">{{ __('Sign in') }}</span>
+            <x-auth.icon name="arrow" class="i-arrow" stroke-width="2" />
+            <x-auth.icon name="spin" class="i-spin" stroke-width="2.4" />
+        </button>
 
-        <div class="mt-3 text-center">
-            <span class="text-muted small">{{ __("Don't have an account?") }}</span>
-            <a href="{{ route('company.register') }}" class="small ms-1 fw-semibold">{{ __('Register') }}</a>
-        </div>
+        <p class="ga-switch">
+            {{ __("Don't have an account?") }}
+            <a href="{{ route('company.register') }}" class="ga-link">{{ __('Register') }}</a>
+        </p>
     </form>
 @endsection
-
-@push('scripts')
-<script>
-    document.querySelectorAll('.js-toggle-pw').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const input = document.querySelector(this.dataset.target);
-            input.type = input.type === 'password' ? 'text' : 'password';
-            const icon = this.querySelector('[data-feather]');
-            icon.setAttribute('data-feather', input.type === 'password' ? 'eye' : 'eye-off');
-            feather.replace();
-        });
-    });
-</script>
-@endpush
