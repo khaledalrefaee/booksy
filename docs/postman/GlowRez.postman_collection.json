@@ -1254,8 +1254,54 @@
                     ]
                 },
                 {
+                    "name": "Branches — فروع الشركة",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "const res = pm.response.json(); const d = res.data || {};",
+                                    "pm.test('status 200', () => { pm.response.to.have.status(200); pm.expect(res.status).to.be.true; });",
+                                    "pm.test('has branches', () => pm.expect(d.branches).to.be.an('array').that.is.not.empty);",
+                                    "if (d.default_branch_id) { pm.collectionVariables.set('branch_id', d.default_branch_id); console.log('branch_id=' + d.default_branch_id); }"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept-Language",
+                                "value": "{{lang}}"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{company_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/company/branches",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "company",
+                                "branches"
+                            ]
+                        },
+                        "description": "فروع الشركة المسجّلة (من التوكن) بنفس ترتيب قائمة الفروع بالويب. ما بياخد أي باراميتر.\nيرجّع data.default_branch_id (الفرع الرئيسي أو أول فرع) + data.branches[]: id, name, name_en, name_ar, slug, status, is_head_office, phone, address, timezone, time_format (12h/24h), interval (دقائق الخانة), first_day.\nاستخدم id الفرع المختار كـ branch_id بباقي طلبات المواعيد. يحفظ branch_id تلقائياً."
+                    }
+                },
+                {
                     "name": "Appointments",
-                    "description": "حجز المواعيد من الكاليندر (الدراغ والدروب) — نفس قواعد الويب بالضبط لأنه بينادي نفس الكنترولر.\nيتطلب Authorization: Bearer {{company_token}}.\nرتّبهم بالترتيب: 1 → 2 (بيحفظوا الموظفين والخدمات) → 3 → 4..9. الوقت بتوقيت الفرع المحلي.\nمتغيّرات: branch_id (املأه)، date (افتراضياً بكرا) — الباقي بيتعبّى لحاله.",
+                    "description": "حجز المواعيد من الكاليندر (الدراغ والدروب) — نفس قواعد الويب بالضبط لأنه بينادي نفس الكنترولر.\nيتطلب Authorization: Bearer {{company_token}}.\nابدأ بـ Company → Branches (بيحفظ branch_id). بعدها رتّبهم بالترتيب: 1 → 2 (بيحفظوا الموظفين والخدمات) → 3 → 4..9. الوقت بتوقيت الفرع المحلي.\nمتغيّرات: branch_id (من Branches)، date (افتراضياً بكرا) — الباقي بيتعبّى لحاله.",
                     "event": [
                         {
                             "listen": "prerequest",
@@ -1332,6 +1378,220 @@
                                     ]
                                 },
                                 "description": "اللوحة اللي بتنرسم عليها الأعمدة (موظفين) + المواعيد.\n- staff[]: id, name, initials, image, branchId, closedSlots[{from,to}] بالدقائق من منتصف الليل (دوام/إجازة/وقت محظور = ممنوع الإسقاط عليه). العنصر id=0 هو Walk-in.\n- appointments[]: id, employeeId (0 = Walk-in), customer, service, branch, employee, status, color, price, startIso, endIso, startLabel, endLabel, changedBy.\n- defaultBranchId.\nيحفظ employee_id و employee_id_2 تلقائياً."
+                            }
+                        },
+                        {
+                            "name": "Calendar — يوم/أسبوع (نفس كاليندر الويب)",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json(); const d = res.data || {};",
+                                            "pm.test('200 + appointments with date/time', () => { pm.response.to.have.status(200); pm.expect(d.appointments).to.be.an('array'); d.appointments.forEach(a => { pm.expect(a.date).to.match(/^\\d{4}-\\d{2}-\\d{2}$/); pm.expect(a.start_time).to.match(/^\\d{2}:\\d{2}$/); }); });",
+                                            "console.log('appointments: ' + d.appointments.length);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments/calendar?start={{date}}&end={{date}}&branch_id={{branch_id}}&statuses=",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments",
+                                        "calendar"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "start",
+                                            "value": "{{date}}",
+                                            "description": "مطلوب — YYYY-MM-DD (بداية المدى)"
+                                        },
+                                        {
+                                            "key": "end",
+                                            "value": "{{date}}",
+                                            "description": "مطلوب — YYYY-MM-DD شاملة. لليوم أرسل نفس التاريخ مرتين. للأسبوع +6 أيام"
+                                        },
+                                        {
+                                            "key": "branch_id",
+                                            "value": "{{branch_id}}",
+                                            "description": "اختياري — فرع واحد أو عدة فروع مفصولة بفاصلة. بدونه: كل الفروع"
+                                        },
+                                        {
+                                            "key": "statuses",
+                                            "value": "",
+                                            "description": "اختياري — حالات مفصولة بفاصلة: confirmed,pending,completed,cancelled,... فاضي = الكل",
+                                            "disabled": true
+                                        }
+                                    ]
+                                },
+                                "description": "مواعيد مدى تواريخ بنفس بيانات كاليندر الويب (/company/appointments).\nappointments[]: id, date, start/end (ISO), start_time/end_time (HH:mm), status, color, customer, customer_phone, service, employee_id/employee (null = Walk-in), branch_id/branch, resource, price, currency, is_group.\nblocked[]: أوقات محظورة. closed[]: خارج الدوام / يوم مغلق (للتظليل). days[]: فاضي بهالوضع.\nالمواعيد اللي بتبدأ ضمن المدى بتظهر (حتى لو انتهت بيوم بعده)."
+                            }
+                        },
+                        {
+                            "name": "Calendar — شهر (عدد المواعيد لكل يوم)",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json(); const d = res.data || {};",
+                                            "pm.test('200 + day counts', () => { pm.response.to.have.status(200); pm.expect(d.days).to.be.an('array'); });"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments/calendar?start=2026-10-01&end=2026-10-31&aggregate=1&branch_id={{branch_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments",
+                                        "calendar"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "start",
+                                            "value": "2026-10-01",
+                                            "description": "مطلوب — أول الشهر"
+                                        },
+                                        {
+                                            "key": "end",
+                                            "value": "2026-10-31",
+                                            "description": "مطلوب — آخر الشهر"
+                                        },
+                                        {
+                                            "key": "aggregate",
+                                            "value": "1",
+                                            "description": "1 = عدّاد لكل يوم بدل المواعيد الفردية (عرض الشهر)"
+                                        },
+                                        {
+                                            "key": "branch_id",
+                                            "value": "{{branch_id}}",
+                                            "description": "اختياري"
+                                        }
+                                    ]
+                                },
+                                "description": "عرض الشهر: data.days[] = {date, count, by_status{status: count}}. المواعيد نفسها ما بترجع هون (اطلب Calendar يوم لما المستخدم يفتح يوم)."
+                            }
+                        },
+                        {
+                            "name": "List — قائمة المواعيد (بحث + صفحات)",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "const res = pm.response.json(); const d = res.data || {};",
+                                            "pm.test('200 + list + meta', () => { pm.response.to.have.status(200); pm.expect(d.appointments).to.be.an('array'); pm.expect(d.meta).to.have.property('total'); });"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept-Language",
+                                        "value": "{{lang}}"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{company_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/company/appointments?q=&statuses=&branch_id={{branch_id}}&sort=closest&per_page=25&page=1",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "company",
+                                        "appointments"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "q",
+                                            "value": "",
+                                            "description": "اختياري — بحث: اسم/رقم زبون، خدمة، موظف، رقم الموعد",
+                                            "disabled": true
+                                        },
+                                        {
+                                            "key": "statuses",
+                                            "value": "",
+                                            "description": "اختياري — حالات مفصولة بفاصلة",
+                                            "disabled": true
+                                        },
+                                        {
+                                            "key": "branch_id",
+                                            "value": "{{branch_id}}",
+                                            "description": "اختياري"
+                                        },
+                                        {
+                                            "key": "sort",
+                                            "value": "closest",
+                                            "description": "closest (الأقرب لهلأ) | farthest | newest | price-high | price-low"
+                                        },
+                                        {
+                                            "key": "per_page",
+                                            "value": "25",
+                                            "description": "اختياري — 1..100 (الافتراضي 25)"
+                                        },
+                                        {
+                                            "key": "page",
+                                            "value": "1",
+                                            "description": "اختياري"
+                                        }
+                                    ]
+                                },
+                                "description": "تبويب القائمة بالويب: كل المواعيد مع صفحات. الرد: data.appointments[] (نفس شكل Calendar) + data.meta{current_page,last_page,per_page,total,from,to}."
                             }
                         },
                         {

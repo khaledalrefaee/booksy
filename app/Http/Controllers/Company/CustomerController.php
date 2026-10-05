@@ -35,8 +35,7 @@ class CustomerController extends Controller
         $q         = trim((string) $request->input('q', ''));
 
         $customers = Customer::query()
-            ->where(fn ($w) => $w->whereHas('appointments', fn ($a) => $a->whereIn('branch_id', $branchIds))
-                ->orWhereDoesntHave('appointments'))
+            ->ofBranches($branchIds)
             ->when($q !== '', fn ($w) => $w->where(fn ($inner) => $inner
                 ->where('name', 'like', "%{$q}%")
                 ->orWhere('phone', 'like', "%{$q}%")))
@@ -76,11 +75,7 @@ class CustomerController extends Controller
 
         $branchScope = fn($q) => $q->whereIn('branch_id', $branchIds);
 
-        $baseQuery = Customer::query()
-            ->where(fn($q) => $q
-                ->whereHas('appointments', $branchScope)
-                ->orWhereDoesntHave('appointments')
-            );
+        $baseQuery = Customer::query()->ofBranches($branchIds);
 
         // Total count before any filters
         $totalCustomers = (clone $baseQuery)->count();
@@ -193,6 +188,13 @@ class CustomerController extends Controller
         ]);
 
         $data['phone'] = $this->buildPhone($request);
+
+        /* a customer you add always belongs to you — with no branch picked, link
+           every branch of the company, otherwise nothing would tie them to it and
+           they would never show up in your own list */
+        $data['branch_ids'] = ! empty($data['branch_ids'])
+            ? $data['branch_ids']
+            : $this->company()->branches()->pluck('id')->all();
 
         $customer = Customer::where('phone', $data['phone'])->first();
 
@@ -349,10 +351,7 @@ class CustomerController extends Controller
         $branchScope = fn($q) => $q->whereIn('branch_id', $branchIds);
 
         $customers = Customer::query()
-            ->where(fn($q) => $q
-                ->whereHas('appointments', $branchScope)
-                ->orWhereDoesntHave('appointments')
-            )
+            ->ofBranches($branchIds)
             ->withCount(['appointments as total_visits' => $branchScope])
             ->withMax(['appointments as last_visit' => $branchScope], 'start_time')
             ->withSum(['appointments as total_spent' => fn($q) => $q->whereIn('branch_id', $branchIds)->where('status', 'completed')], 'total_price')

@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\Companies;
 
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Company\AppointmentController as WebAppointmentController;
-use App\Http\Controllers\Company\CustomerController as WebCustomerController;
 use App\Models\Appointment;
+use App\Models\Customer;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,7 +33,6 @@ class AppointmentController extends ApiController
 {
     public function __construct(
         private WebAppointmentController $web,
-        private WebCustomerController $customers,
     ) {}
 
     /** GET — staff columns + closed zones + the day's appointments (the drag & drop board). */
@@ -50,6 +49,128 @@ class AppointmentController extends ApiController
         return $this->wrap(fn () => $this->web->staffEvents($request), strip: ['showUrl']);
     }
 
+    /**
+     * GET — the calendar for a date range (day / week / month), same data as the
+     * web calendar. `start` and `end` are dates (YYYY-MM-DD, inclusive); for a
+     * day view send the same date twice. `aggregate=1` returns per-day counts
+     * (month view) instead of individual appointments.
+     */
+    public function calendar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'start'     => ['required', 'date_format:Y-m-d'],
+            'end'       => ['required', 'date_format:Y-m-d', 'after_or_equal:start'],
+            'branch_id' => ['nullable', 'string'],
+            'statuses'  => ['nullable', 'string'],
+            'aggregate' => ['nullable', 'boolean'],
+        ]);
+
+        $this->actAsCompany($request);
+        $this->dropEmptyStatuses($request);
+
+        // The web filter is `start_time <= end`, so a bare date would stop at 00:00.
+        $request->merge([
+            'start' => $request->input('start') . ' 00:00:00',
+            'end'   => $request->input('end') . ' 23:59:59',
+        ]);
+
+        $events = $this->web->calendarEvents($request)->getData(true);
+
+        $out = [
+            'start'        => substr($request->input('start'), 0, 10),
+            'end'          => substr($request->input('end'), 0, 10),
+            'appointments' => [],
+            'blocked'      => [],
+            'closed'       => [],
+            'days'         => [],
+        ];
+
+        foreach ($events as $e) {
+            $type = $e['extendedProps']['type'] ?? null;
+
+            match ($type) {
+                'appointment' => $out['appointments'][] = $this->presentAppointment($e),
+                'blocked'     => $out['blocked'][] = [
+                    'id'       => $e['extendedProps']['blockId'],
+                    'date'     => substr($e['start'], 0, 10),
+                    'start'    => $e['start'],
+                    'end'      => $e['end'],
+                    'reason'   => $e['extendedProps']['reason'],
+                    'employee' => $e['extendedProps']['employee'],
+                    'branch'   => $e['extendedProps']['branch'],
+                ],
+                'closed', 'outside-hours' => $out['closed'][] = [
+                    'type'  => $type,
+                    'start' => $e['start'],
+                    'end'   => $e['end'],
+                ],
+                'day-count' => $out['days'][] = [
+                    'date'      => $e['extendedProps']['day'],
+                    'count'     => $e['extendedProps']['count'],
+                    'by_status' => $e['extendedProps']['byStatus'],
+                ],
+                default => null,
+            };
+        }
+
+        // Month view: per-day counts, plus only the days the branch is closed all
+        // day (e.g. Sundays) — the per-day opening-hours stripes are noise there.
+        if ($request->boolean('aggregate')) {
+            $out['closed'] = array_values(array_filter($out['closed'], fn ($c) => $c['type'] === 'closed'));
+        }
+
+        return $this->success($out);
+    }
+
+    /**
+     * GET — appointments list, newest/closest first, searchable and paginated
+     * (the web list tab). Filters: q, statuses, branch_id, sort
+     * (closest|farthest|newest|price-high|price-low), per_page, page.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $request->validate([
+            'q'        => ['nullable', 'string', 'max:100'],
+            'sort'     => ['nullable', 'in:closest,farthest,newest,price-high,price-low'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'page'     => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $this->actAsCompany($request);
+        $this->dropEmptyStatuses($request);
+
+        $body = $this->web->listData($request)->getData(true);
+
+        return $this->success([
+            'appointments' => array_map(fn ($e) => $this->presentAppointment($e), $body['data']),
+            'meta'         => $body['meta'],
+        ]);
+    }
+
+    /**
+     * GET — the bookable services of a branch, each with the employees who
+     * perform it: pick a service, then offer exactly those employees.
+     */
+    public function services(Request $request): JsonResponse
+    {
+        $request->validate(['branch_id' => ['required', 'integer']]);
+
+        $this->actAsCompany($request);
+
+        $body = $this->web->branchData($request)->getData(true);
+
+        $services = array_map(function ($svc) use ($body) {
+            $svc['employees'] = array_values(array_map(
+                fn ($e) => ['id' => $e['id'], 'name' => $e['name']],
+                array_filter($body['employees'], fn ($e) => in_array($svc['id'], $e['service_ids'], true)),
+            ));
+
+            return $svc;
+        }, $body['services']);
+
+        return $this->success(['services' => $services]);
+    }
+
     /** GET — services (with price/duration) and bookable employees of one branch. */
     public function branchData(Request $request): JsonResponse
     {
@@ -60,19 +181,79 @@ class AppointmentController extends ApiController
         return $this->wrap(fn () => $this->web->branchData($request));
     }
 
-    /** GET — customer picker (name/phone search, max 15). */
+    /**
+     * GET — the company's OWN customers (name/phone search, newest visit first).
+     * Only people who booked at one of its branches, or that it added itself.
+     * Params: q, limit (1..50, default 20).
+     */
     public function customers(Request $request): JsonResponse
     {
-        $this->actAsCompany($request);
+        $request->validate([
+            'q'     => ['nullable', 'string', 'max:100'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
 
-        $response = $this->customers->searchJson($request);
+        $company   = $request->attributes->get('company');
+        $branchIds = $company->branches()->pluck('id');
+        $q         = trim((string) $request->input('q', ''));
 
-        return $this->success(['customers' => $response->getData(true)]);
+        $customers = Customer::query()
+            ->ofBranches($branchIds)
+            ->when($q !== '', fn ($w) => $w->where(fn ($inner) => $inner
+                ->where('name', 'like', "%{$q}%")
+                ->orWhere('phone', 'like', "%{$q}%")))
+            ->withCount(['appointments as visits_count' => fn ($a) => $a
+                ->whereIn('branch_id', $branchIds)
+                ->where('status', \App\Enums\AppointmentStatus::Completed->value)])
+            ->withMax(['appointments as last_visit' => fn ($a) => $a->whereIn('branch_id', $branchIds)], 'start_time')
+            ->orderByDesc('last_visit')
+            ->orderBy('name')
+            ->limit((int) $request->input('limit', 20))
+            ->get(['id', 'name', 'phone', 'tag']);
+
+        return $this->success(['customers' => $customers->map(function (Customer $c) {
+            $tier = $c->tier();
+
+            return [
+                'id'         => $c->id,
+                'name'       => $c->name,
+                'phone'      => $c->phone,
+                'visits'     => (int) $c->visits_count,
+                'last_visit' => $c->last_visit ? substr((string) $c->last_visit, 0, 10) : null,
+                'tier'       => ['value' => $tier->value, 'label' => $tier->label(), 'color' => $tier->color()],
+            ];
+        })->values()]);
     }
 
-    /** POST — book one appointment (one or more services) at a picked slot. */
+    /**
+     * POST — book one appointment (one or more services) at a picked slot.
+     *
+     * Simple form (recommended):
+     *   { branch_id, start_time, customer_id | customer_name + customer_phone,
+     *     services: [ { service_id, employee_id?, price?, duration? } ] }
+     * The older parallel arrays (service_ids / prices / durations / employee_ids)
+     * still work; `services` is just turned into them.
+     */
     public function store(Request $request): JsonResponse
     {
+        if ($request->has('services')) {
+            $request->validate([
+                'services'               => ['required', 'array', 'min:1'],
+                'services.*.service_id'  => ['required', 'integer'],
+                'services.*.employee_id' => ['nullable', 'integer'],
+                'services.*.price'       => ['nullable', 'numeric', 'min:0'],
+                'services.*.duration'    => ['nullable', 'integer', 'min:5', 'max:1440'],
+            ]);
+
+            $rows = array_values($request->input('services'));
+            $request->merge([
+                'service_ids'  => array_column($rows, 'service_id'),
+                'employee_ids' => array_map(fn ($r) => $r['employee_id'] ?? null, $rows),
+                'prices'       => array_map(fn ($r) => $r['price'] ?? null, $rows),
+                'durations'    => array_map(fn ($r) => $r['duration'] ?? null, $rows),
+            ]);
+        }
+
         $this->actAsCompany($request);
 
         return $this->wrap(
@@ -107,6 +288,15 @@ class AppointmentController extends ApiController
     }
 
     // ── internals ─────────────────────────────────────────────────────────
+
+    /** The web filters treat a present-but-empty `statuses` as "none selected" — for the app, empty means "all". */
+    private function dropEmptyStatuses(Request $request): void
+    {
+        if (! $request->filled('statuses')) {
+            $request->query->remove('statuses');
+            $request->request->remove('statuses');
+        }
+    }
 
     /** The web booking code reads the company from the `company` guard — hand it ours. */
     private function actAsCompany(Request $request): void
@@ -153,6 +343,35 @@ class AppointmentController extends ApiController
         $body = $this->stripKeys($body, $strip);
 
         return $this->success($body, $message, $status);
+    }
+
+    /** One FullCalendar-style appointment event → the flat shape the app uses. */
+    private function presentAppointment(array $e): array
+    {
+        $p = $e['extendedProps'];
+
+        return [
+            'id'           => $e['id'],
+            'date'         => substr($e['start'], 0, 10),
+            'start'        => $e['start'],
+            'end'          => $e['end'],
+            'start_time'   => substr($e['start'], 11, 5),
+            'end_time'     => $e['end'] ? substr($e['end'], 11, 5) : null,
+            'status'       => $p['status'],
+            'color'        => $e['backgroundColor'],
+            'customer'     => $p['customer'],
+            'customer_phone' => $p['customerPhone'],
+            'service'      => $p['service'],
+            'employee_id'  => $p['employeeId'],
+            'employee'     => $p['employeeId'] ? $p['employee'] : null,
+            'employee_image' => $p['employeeImage'],
+            'branch_id'    => $p['branchId'],
+            'branch'       => $p['branch'],
+            'resource'     => $p['resource'],
+            'price'        => $p['price'],
+            'currency'     => $p['currency'],
+            'is_group'     => $p['group'],
+        ];
     }
 
     /** Remove web-only keys at any depth. */

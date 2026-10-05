@@ -84,6 +84,26 @@ class Customer extends Model
     public function appointments(): HasMany     { return $this->hasMany(Appointment::class); }
 
     /**
+     * Customers that belong to a company: they have booked at one of its
+     * branches, or the company added them and linked them to a branch.
+     *
+     * customers is a platform-wide table (no company_id), so this is the ONLY
+     * thing that keeps one salon from seeing another salon's — or the public
+     * website's — customers. Never widen it to "or has no appointments".
+     *
+     * @param  iterable<int>  $branchIds  the company's branch ids
+     */
+    public function scopeOfBranches($query, $branchIds)
+    {
+        $ids = collect($branchIds)->all();
+
+        return $query->where(fn ($w) => $w
+            ->whereHas('appointments', fn ($a) => $a->whereIn('branch_id', $ids))
+            ->orWhereHas('linkedBranches', fn ($b) => $b->whereIn('branches.id', $ids))
+        );
+    }
+
+    /**
      * The badge reception sees: VIP / Loyal / Regular / New.
      *
      * Reads `visits_count` when the query loaded it — callers listing customers

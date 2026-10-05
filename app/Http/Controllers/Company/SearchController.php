@@ -35,8 +35,7 @@ class SearchController extends Controller
         if ($q !== '') {
             $results['customers'] = Customer::query()
                 ->where(fn ($w) => $w->where('name', 'like', "%{$q}%")->orWhere('phone', 'like', "%{$q}%"))
-                ->where(fn ($w) => $w->whereHas('appointments', fn ($a) => $a->whereIn('branch_id', $branchIds))
-                    ->orWhereDoesntHave('appointments'))
+                ->ofBranches($branchIds)
                 ->limit(10)->get();
 
             $results['appointments'] = Appointment::query()

@@ -1343,7 +1343,10 @@ class AppointmentController extends Controller
                     'extendedProps'   => [
                         'type'     => 'day-count',
                         'count'    => (int) $group->sum('total'),
-                        'byStatus' => $group->pluck('total', 'status')->map(fn ($v) => (int) $v),
+                        /* status is cast to an enum — it can't be used as an array key as-is */
+                        'byStatus' => $group->mapWithKeys(fn ($r) => [
+                            ($r->status instanceof \BackedEnum ? $r->status->value : (string) $r->status) => (int) $r->total,
+                        ]),
                         'day'      => $day,
                     ],
                 ];
@@ -1368,7 +1371,7 @@ class AppointmentController extends Controller
         }
 
         $query->select([
-                'id', 'branch_id', 'customer_id', 'employee_id', 'service_id', 'resource_id',
+                'id', 'branch_id', 'customer_id', 'customer_name', 'employee_id', 'service_id', 'resource_id',
                 'start_time', 'end_time', 'status', 'total_price', 'booking_group_id',
                 'status_changed_by_name', 'status_changed_at', 'status_previous',
             ])
@@ -1507,6 +1510,8 @@ class AppointmentController extends Controller
                 'type'       => 'appointment',
                 'group'      => (bool) $appt->booking_group_id,
                 'status'     => $appt->status,
+                'customer'   => $appt->displayName(),
+                'branchId'   => $appt->branch_id,
                 'branch'     => $appt->branch?->localizedName() ?? '—',
                 'service'    => $appt->service?->localizedName() ?? '—',
                 'employee'   => $appt->employee?->localizedName() ?? '—',
