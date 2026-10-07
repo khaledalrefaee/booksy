@@ -3,20 +3,16 @@
 @section('content')
 <div class="page-content">
 
-    <div class="d-flex align-items-center justify-content-between gap-2 mb-4 flex-wrap">
-        <div class="d-flex align-items-center gap-2">
-            <a href="{{ route('company.inventory.index') }}" class="btn btn-sm btn-outline-secondary">←</a>
-            <h4 class="fw-bold mb-0">📋 {{ __('Stock Movements') }}</h4>
-        </div>
-        <div class="d-flex gap-2">
-            <button type="button" id="btnDeleteSelected" class="btn btn-sm btn-outline-danger d-none" onclick="submitDelete(false)">
-                🗑️ {{ __('Delete Selected') }} (<span id="selectedCount">0</span>)
+    <x-inventory.head :title="__('Stock Movements')" active="movements">
+        <x-slot:actions>
+            <button type="button" id="btnDeleteSelected" class="ivh-btn ivh-btn-ghost d-none" onclick="submitDelete(false)">
+                <i data-feather="trash-2" aria-hidden="true"></i>{{ __('Delete Selected') }} (<span id="selectedCount">0</span>)
             </button>
-            <button type="button" class="btn btn-sm btn-danger" onclick="submitDelete(true)">
-                🗑️ {{ __('Delete All') }}
+            <button type="button" class="ivh-btn ivh-btn-ghost" onclick="submitDelete(true)">
+                <i data-feather="trash-2" aria-hidden="true"></i>{{ __('Delete All') }}
             </button>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-inventory.head>
 
     <form method="GET" class="d-flex gap-2 mb-3 flex-wrap">
         @if(! ($branchContext ?? null))

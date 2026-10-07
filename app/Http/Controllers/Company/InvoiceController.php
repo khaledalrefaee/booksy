@@ -24,30 +24,53 @@ class InvoiceController extends Controller
     {
         $company = $this->company();
 
-        $query = Invoice::query()
-            ->where('company_id', $company->id)
-            ->with('branch')
-            ->orderByDesc('created_at');
+        // Branch + search narrow every number on the page; the status filter
+        // only narrows the list, so the status tabs and the money summary keep
+        // showing the whole picture for the current scope.
+        $scoped = Invoice::query()->where('company_id', $company->id);
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
-        }
         if ($request->filled('branch_id')) {
-            $query->where('branch_id', $request->input('branch_id'));
+            $scoped->where('branch_id', $request->input('branch_id'));
         }
         if ($request->filled('search')) {
             $s = $request->input('search');
-            $query->where(fn($q) => $q
+            $scoped->where(fn($q) => $q
                 ->where('invoice_number', 'like', "%$s%")
                 ->orWhere('customer_name', 'like', "%$s%")
                 ->orWhere('customer_phone', 'like', "%$s%")
             );
         }
 
+        $rows = (clone $scoped)
+            ->selectRaw('status, currency, COUNT(*) as n, SUM(total) as total_sum, SUM(amount_paid) as paid_sum')
+            ->groupBy('status', 'currency')
+            ->get();
+
+        $statusCounts = $rows->groupBy('status')->map(fn($g) => (int) $g->sum('n'));
+
+        // Money is only summed in the dominant currency so mixed-currency
+        // histories never produce a meaningless total.
+        $currency = $rows->groupBy('currency')->sortByDesc(fn($g) => $g->sum('n'))->keys()->first();
+        $money = $rows->where('currency', $currency)->keyBy('status');
+        $partialTotal = (float) ($money['partial']->total_sum ?? 0);
+        $partialPaid  = (float) ($money['partial']->paid_sum ?? 0);
+
+        $summary = [
+            'currency'    => $currency,
+            'collected'   => (float) ($money['paid']->total_sum ?? 0) + $partialPaid,
+            'outstanding' => (float) ($money['issued']->total_sum ?? 0) + max($partialTotal - $partialPaid, 0),
+        ];
+
+        $query = (clone $scoped)->with('branch')->orderByDesc('created_at');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
         $invoices = $query->paginate(20)->withQueryString();
         $branches = $company->branches()->orderBy('sort_order')->get();
 
-        return view('company.invoices.index', compact('invoices', 'branches'));
+        return view('company.invoices.index', compact('invoices', 'branches', 'statusCounts', 'summary'));
     }
 
     public function show(Invoice $invoice): View

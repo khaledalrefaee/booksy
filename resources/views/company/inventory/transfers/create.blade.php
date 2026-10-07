@@ -42,6 +42,10 @@
 
         <h6 class="fw-bold mt-4 mb-2">📦 {{ __('Items to Transfer') }}</h6>
 
+        @error('items')
+            <div class="alert alert-danger py-2 px-3 mb-2" role="alert">{{ $message }}</div>
+        @enderror
+
         <div id="itemsContainer">
             <div class="row g-2 mb-2 item-row">
                 <div class="col-md-7">
@@ -99,6 +103,28 @@ document.addEventListener('DOMContentLoaded', function() {
             updateRemoveButtons();
         }
     });
+
+    // Instant feedback: flag a quantity the source branch cannot cover.
+    // The server re-checks, so this is only a convenience.
+    const lowMsg = @json(__('Insufficient stock. Available: :qty'));
+    const fromSel = document.getElementById('fromBranch');
+    function checkRow(row) {
+        const sel = row.querySelector('select');
+        const qty = row.querySelector('input[type=number]');
+        const opt = sel.options[sel.selectedIndex];
+        let msg = '';
+        if (opt && opt.dataset.stocks && fromSel.value && qty.value) {
+            const have = parseInt((JSON.parse(opt.dataset.stocks) || {})[fromSel.value] || 0, 10);
+            if (parseInt(qty.value, 10) > have) msg = lowMsg.replace(':qty', have);
+        }
+        qty.setCustomValidity(msg);
+    }
+    function checkAll() { container.querySelectorAll('.item-row').forEach(checkRow); }
+    container.addEventListener('input', checkAll);
+    container.addEventListener('change', checkAll);
+    fromSel.addEventListener('change', checkAll);
+    document.getElementById('addItem').addEventListener('click', checkAll);
+    checkAll();
 
     function updateRemoveButtons() {
         const rows = container.querySelectorAll('.item-row');

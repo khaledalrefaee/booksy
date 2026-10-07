@@ -13,17 +13,13 @@
     // Read the chosen locale straight from the session. A route-model-binding
     // 404 (e.g. /branch/{branch}) throws before the SetLocale middleware runs,
     // which would otherwise leave the app on the default locale (ar).
+    // No session yet (unmatched-route 404s skip the web group) → keep the app default, Arabic.
     $loc = app()->getLocale();
     try {
         if (request()->hasSession() && request()->session()->has('locale')) {
             // Matched-route 404s (e.g. /branch/{branch}) went through the web group.
             $s = request()->session()->get('locale');
             if (in_array($s, ['ar', 'en'], true)) { $loc = $s; }
-        } else {
-            // Unmatched-route 404s skip the web group (no session); fall back to the
-            // browser's preferred language rather than forcing the app default.
-            $p = request()->getPreferredLanguage(['en', 'ar']);
-            if (in_array($p, ['ar', 'en'], true)) { $loc = $p; }
         }
     } catch (\Throwable $e) { /* keep current locale */ }
     if (in_array($loc, ['ar', 'en'], true)) { app()->setLocale($loc); }

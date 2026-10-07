@@ -2,34 +2,20 @@
 
 @push('company-styles')
 <style>
-.transfer-hero {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    border-radius:20px; padding:26px 30px; margin-bottom:24px;
-    color:#fff; position:relative; overflow:hidden;
-}
-.transfer-hero::before {
-    content:''; position:absolute; top:-50px; right:-50px;
-    width:180px; height:180px; border-radius:50%;
-    background:rgba(255,255,255,.08); pointer-events:none;
-}
 </style>
 @endpush
 
 @section('content')
 <div class="page-content">
 
-    <div class="transfer-hero">
-        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 position-relative" style="z-index:1;">
-            <div>
-                <h3 class="fw-bold mb-1">🔄 {{ __('Stock Transfers') }}</h3>
-                <p class="mb-0" style="opacity:.75;font-size:13px;">{{ __('Transfer products between branches') }}</p>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{{ route('company.inventory.index') }}" class="btn btn-sm btn-outline-light">← {{ __('Inventory') }}</a>
-                <a href="{{ route('company.inventory.transfers.create') }}" class="btn btn-sm btn-light fw-semibold">➕ {{ __('New Transfer') }}</a>
-            </div>
-        </div>
-    </div>
+    <x-inventory.head :title="__('Stock Transfers')" active="transfers"
+        :subtitle="__('Transfer products between branches')">
+        <x-slot:actions>
+            <a href="{{ route('company.inventory.transfers.create') }}" class="ivh-btn ivh-btn-primary">
+                <i data-feather="plus" aria-hidden="true"></i>{{ __('New Transfer') }}
+            </a>
+        </x-slot:actions>
+    </x-inventory.head>
 
     <form method="GET" class="mb-3">
         <select name="status" class="form-select form-select-sm" style="max-width:180px;" onchange="this.form.submit()">

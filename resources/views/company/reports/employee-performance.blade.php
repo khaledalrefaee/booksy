@@ -1,86 +1,62 @@
 @extends('company.dashboard')
 
-@push('company-styles')
-<style>
-.perf-hero {
-    background: linear-gradient(135deg, #5C7038 0%, #3C4B29 100%);
-    border-radius:20px; padding:26px 30px; margin-bottom:24px;
-    color:#fff; position:relative; overflow:hidden;
-}
-.perf-hero::before {
-    content:''; position:absolute; top:-50px; right:-50px;
-    width:180px; height:180px; border-radius:50%;
-    background:rgba(255,255,255,.08); pointer-events:none;
-}
-</style>
-@endpush
-
 @section('content')
+@php
+    $period = \Carbon\Carbon::create($year, $month, 1);
+    $maxRev = max(1, (float) ($employees->max('revenue') ?: 1));
+    $totalRev  = (float) $employees->sum('revenue');
+    $totalAppt = (int) $employees->sum('appointments');
+@endphp
+
 <div class="page-content">
 
-    <div class="perf-hero">
-        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 position-relative" style="z-index:1;">
-            <div>
-                <h3 class="fw-bold mb-1">👥 {{ __('Employee Performance') }}</h3>
-                <p class="mb-0" style="opacity:.75;font-size:13px;">
-                    {{ Carbon\Carbon::create($year, $month)->translatedFormat('F Y') }}
-                </p>
-            </div>
-            <a href="{{ route('company.reports.profit-loss', ['month' => $month, 'year' => $year]) }}" class="btn btn-sm btn-outline-light">
-                📊 {{ __('Profit & Loss') }}
-            </a>
-        </div>
-    </div>
+    <x-reports.head :title="__('Employee Performance')" active="employee-performance" :subtitle="$period->translatedFormat('F Y')" />
 
-    <form method="GET" class="d-flex gap-2 mb-4 flex-wrap" data-filter-sheet="{{ __('Filters') }}">
-        <select name="month" class="form-select form-select-sm" style="max-width:130px;">
-            @for($m = 1; $m <= 12; $m++)
-                <option value="{{ $m }}" @selected($month == $m)>{{ Carbon\Carbon::create(null, $m)->translatedFormat('F') }}</option>
-            @endfor
-        </select>
-        <input type="number" name="year" value="{{ $year }}" class="form-control form-control-sm" style="max-width:90px;">
-        @if(! ($branchContext ?? null))
-        <select name="branch_id" class="form-select form-select-sm" style="max-width:180px;">
-            <option value="">{{ __('All Branches') }}</option>
-            @foreach($branches as $b)
-                <option value="{{ $b->id }}" @selected($branchId == $b->id)>{{ $b->localizedName() }}</option>
-            @endforeach
-        </select>
-        @endif
-        <button class="btn btn-sm btn-primary">{{ __('View') }}</button>
-    </form>
+    @include('company.reports.partials.period')
 
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>{{ __('Employee') }}</th>
-                    <th>{{ __('Branch') }}</th>
-                    <th class="text-center">{{ __('Appointments') }}</th>
-                    <th class="text-end">{{ __('Revenue') }}</th>
-                    <th class="text-end">{{ __('Avg per Appointment') }}</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($employees as $i => $emp)
+    <div class="rp-panel" style="height:auto;">
+        <div class="table-responsive">
+            <table class="rp-table">
+                <thead>
                     <tr>
-                        <td class="fw-bold text-muted">{{ $i + 1 }}</td>
-                        <td>
-                            <strong>{{ $emp['name'] }}</strong>
-                        </td>
-                        <td class="small text-muted">{{ $emp['branch'] }}</td>
-                        <td class="text-center">
-                            <span class="badge bg-primary">{{ $emp['appointments'] }}</span>
-                        </td>
-                        <td class="text-end fw-bold text-success">{{ number_format($emp['revenue'], 0) }}</td>
-                        <td class="text-end text-muted">{{ number_format($emp['avg'], 0) }}</td>
+                        <th scope="col" style="width:52px;">#</th>
+                        <th scope="col">{{ __('Employee') }}</th>
+                        <th scope="col">{{ __('Branch') }}</th>
+                        <th scope="col" class="num">{{ __('Appointments') }}</th>
+                        <th scope="col" class="num">{{ __('Revenue') }}</th>
+                        <th scope="col" class="num">{{ __('Avg per Appointment') }}</th>
                     </tr>
-                @empty
-                    <tr><td colspan="6" class="text-center text-muted py-4">{{ __('No data') }}</td></tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @forelse($employees as $i => $emp)
+                        <tr>
+                            <td class="rp-muted fw-bold">{{ $i + 1 }}</td>
+                            <td style="min-width:180px;">
+                                <div class="fw-semibold">{{ $emp['name'] }}</div>
+                                <div class="rp-bar-track" style="margin-inline-start:0;max-width:220px;">
+                                    <div class="rp-bar-fill" style="width:{{ max(2, round($emp['revenue'] / $maxRev * 100)) }}%"></div>
+                                </div>
+                            </td>
+                            <td class="rp-muted">{{ $emp['branch'] }}</td>
+                            <td class="num"><span class="rp-pill">{{ $emp['appointments'] }}</span></td>
+                            <td class="num fw-bold">{{ number_format($emp['revenue'], 0) }}</td>
+                            <td class="num rp-muted">{{ number_format($emp['avg'], 0) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="rp-empty">{{ __('No data') }}</td></tr>
+                    @endforelse
+                    @if($employees->count() > 1)
+                        <tr class="is-total">
+                            <td></td>
+                            <td colspan="2">{{ __('Total') }}</td>
+                            <td class="num">{{ $totalAppt }}</td>
+                            <td class="num">{{ number_format($totalRev, 0) }}</td>
+                            <td class="num">{{ $totalAppt > 0 ? number_format($totalRev / $totalAppt, 0) : '—' }}</td>
+                        </tr>
+                    @endif
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 @endsection

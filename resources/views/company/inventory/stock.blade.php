@@ -2,16 +2,6 @@
 
 @push('company-styles')
 <style>
-.stock-hero {
-    background: linear-gradient(135deg, #5C7038 0%, #3C4B29 100%);
-    border-radius:20px; padding:26px 30px; margin-bottom:24px;
-    color:#fff; position:relative; overflow:hidden;
-}
-.stock-hero::before {
-    content:''; position:absolute; top:-50px; right:-50px;
-    width:180px; height:180px; border-radius:50%;
-    background:rgba(255,255,255,.08); pointer-events:none;
-}
 .stock-card {
     border-radius:14px; border:1px solid var(--bs-border-color);
     padding:16px; transition: transform .15s, box-shadow .15s;
@@ -50,22 +40,14 @@
 @section('content')
 <div class="page-content">
 
-    <div class="stock-hero">
-        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 position-relative" style="z-index:1;">
-            <div>
-                <h3 class="fw-bold mb-1">📊 {{ __('Stock Levels') }}</h3>
-                @if($lowStockCount > 0)
-                    <p class="mb-0" style="opacity:.9;font-size:13px;">
-                        ⚠️ <strong>{{ $lowStockCount }}</strong> {{ __('products with low stock') }}
-                    </p>
-                @endif
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{{ route('company.inventory.index') }}" class="btn btn-sm btn-light fw-semibold">← {{ __('Products') }}</a>
-                <a href="{{ route('company.inventory.transfers.create') }}" class="btn btn-sm btn-outline-light fw-semibold">🔄 {{ __('New Transfer') }}</a>
-            </div>
-        </div>
-    </div>
+    <x-inventory.head :title="__('Stock Levels')" active="stock"
+        :subtitle="$lowStockCount > 0 ? $lowStockCount . ' ' . __('products with low stock') : null">
+        <x-slot:actions>
+            <a href="{{ route('company.inventory.transfers.create') }}" class="ivh-btn ivh-btn-primary">
+                <i data-feather="shuffle" aria-hidden="true"></i>{{ __('New Transfer') }}
+            </a>
+        </x-slot:actions>
+    </x-inventory.head>
 
     {{-- Branch selector — hidden when the sidebar already scopes to one branch --}}
     @if(! ($branchContext ?? null))

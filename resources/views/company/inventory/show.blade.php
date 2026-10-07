@@ -69,7 +69,7 @@
                             ← {{ __('Inventory') }}
                         </a>
                     </div>
-                    <h3 class="fw-bold mb-1" style="font-family:'Poppins',sans-serif;">{{ $product->localizedName() }}</h3>
+                    <h3 class="fw-bold mb-1" style="font-family:var(--bk-serif);color:#fff;">{{ $product->localizedName() }}</h3>
                     <div class="d-flex gap-2 flex-wrap align-items-center">
                         @if($product->category)
                             <span style="background:rgba(255,255,255,.2); padding:2px 10px; border-radius:20px; font-size:12px;">

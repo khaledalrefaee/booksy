@@ -47,6 +47,8 @@ class FrontController extends Controller
         // small "Featured" set (best composite score) and hand the long tail off
         // to the dedicated /venues explore page.
         $featured    = $cards->sortByDesc('score')->take(8)->values();
+        // wider, score-ordered pool: the "by section" featured layout slices it per venue type
+        $featuredPool = $cards->sortByDesc('score')->take(36)->values();
 
         $ratingAvg = $cards->whereNotNull('rating')->avg('rating');
 
@@ -64,7 +66,7 @@ class FrontController extends Controller
         $venuesUrl = route('front.venues');
 
         return view('front.home', compact(
-            'categories', 'featured', 'topRated', 'newest', 'recommended',
+            'categories', 'featured', 'featuredPool', 'topRated', 'newest', 'recommended',
             'nearby', 'stats', 'currency', 'isAr', 'cities', 'venuesUrl'
         ));
     }
@@ -514,6 +516,8 @@ class FrontController extends Controller
                 'image'        => $img ? asset('storage/'.$img->path) : null,
                 'category'     => $company->category ? ($isAr ? $company->category->name_ar : $company->category->name_en) : null,
                 'cat_slug'     => $company->category?->slug,
+                'cat_image'    => \App\Support\VenueTypes::url($company->category?->image),
+                'cat_icon'     => \App\Support\VenueTypes::url($company->category?->icon, true),
                 'city'         => $b->governorate?->localizedName() ?? $b->area?->localizedName(),
                 'address'      => $b->address,
                 'avg_rating'   => $avg,

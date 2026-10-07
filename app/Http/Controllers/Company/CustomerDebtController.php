@@ -76,6 +76,10 @@ class CustomerDebtController extends Controller
 
         $company = $this->company();
         abort_unless($company->branches()->where('id', $data['branch_id'])->exists(), 403);
+        abort_unless(
+            \App\Models\Customer::ofBranches($company->branches()->pluck('id'))->whereKey($data['customer_id'])->exists(),
+            422
+        );
 
         $debt = CustomerDebt::create([
             'company_id' => $company->id,

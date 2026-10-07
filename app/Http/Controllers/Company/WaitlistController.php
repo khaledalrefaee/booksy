@@ -127,7 +127,8 @@ class WaitlistController extends Controller
         $customer = null;
 
         if (! empty($data['customer_id'])) {
-            $customer = Customer::find($data['customer_id']);
+            $customer = Customer::ofBranches($company->branches()->pluck('id'))->find($data['customer_id']);
+            abort_if(! $customer, 422, __('Customer not found.'));
         } elseif (! empty($data['customer_phone'])) {
             /* Quick-add: reception types a name and phone and moves on. Matching
                on phone keeps the CRM from filling up with duplicates of the same

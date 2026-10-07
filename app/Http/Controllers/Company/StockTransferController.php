@@ -73,6 +73,37 @@ class StockTransferController extends Controller
         abort_unless($company->branches()->where('id', $data['from_branch_id'])->exists(), 403);
         abort_unless($company->branches()->where('id', $data['to_branch_id'])->exists(), 403);
 
+        // Refuse up front, with a normal validation error, anything the source
+        // branch cannot cover. Left to InventoryService this surfaced as a raw
+        // 422/404 error page. Quantities are summed per product so the same
+        // product listed on two rows is checked against its combined total.
+        $wanted = collect($data['items'])
+            ->groupBy('product_id')
+            ->map(fn ($rows) => (int) $rows->sum('quantity'));
+
+        $products = Product::where('company_id', $company->id)
+            ->whereIn('id', $wanted->keys())
+            ->get()
+            ->keyBy('id');
+
+        $available = \App\Models\BranchStock::where('branch_id', $data['from_branch_id'])
+            ->whereIn('product_id', $wanted->keys())
+            ->pluck('quantity', 'product_id');
+
+        foreach ($wanted as $productId => $qty) {
+            abort_unless($products->has($productId), 403);
+
+            $have = (int) ($available[$productId] ?? 0);
+            if ($have < $qty) {
+                return back()->withInput()->withErrors([
+                    'items' => __('Insufficient stock for ":name" — available: :qty', [
+                        'name' => $products[$productId]->localizedName(),
+                        'qty'  => $have,
+                    ]),
+                ]);
+            }
+        }
+
         $transfer = DB::transaction(function () use ($data, $company) {
             $transfer = StockTransfer::create([
                 'company_id' => $company->id,

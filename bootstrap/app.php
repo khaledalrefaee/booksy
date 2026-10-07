@@ -147,6 +147,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 $e instanceof \Illuminate\Http\Exceptions\ThrottleRequestsException =>
                     [429, __('Too many attempts. Please try again in a few minutes.'), null],
 
+                // abort(403) with no text — e.g. an id that belongs to another company.
+                $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface && $e->getStatusCode() === 403 =>
+                    [403, $e->getMessage() ?: __('You are not allowed to do this.'), null],
+
                 $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface =>
                     [$e->getStatusCode(), $e->getMessage() ?: __('Something went wrong.'), null],
 

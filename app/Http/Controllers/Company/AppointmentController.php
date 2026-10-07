@@ -612,7 +612,7 @@ class AppointmentController extends Controller
         // Resolve customer: by id, or create from name/phone, or walk-in (null)
         $customer = null;
         if (! empty($data['customer_id'])) {
-            $customer = Customer::find($data['customer_id']);
+            $customer = $this->ownCustomer((int) $data['customer_id'], $company);
         } elseif (! empty($data['customer_phone'])) {
             $customer = Customer::firstOrCreate(
                 ['phone' => $data['customer_phone']],
@@ -752,6 +752,22 @@ class AppointmentController extends Controller
         return $this->idempotent($request->input('idempotency_key'), fn () => $this->quickGroupStoreInner($request));
     }
 
+    /**
+     * A customer id posted from the booking panel, restricted to this company's
+     * own customers. customers is platform-wide, so `exists:customers,id` alone
+     * would let a crafted request attach another salon's customer.
+     */
+    private function ownCustomer(int $id, $company): Customer
+    {
+        $customer = Customer::query()
+            ->ofBranches($company->branches()->pluck('id'))
+            ->find($id);
+
+        abort_if(! $customer, 422, __('Customer not found.'));
+
+        return $customer;
+    }
+
     private function quickGroupStoreInner(Request $request): JsonResponse
     {
         $company = $this->company();
@@ -859,7 +875,7 @@ class AppointmentController extends Controller
                     /* resolve / create the CRM customer */
                     $customer = null;
                     if (! empty($guest['customer_id'])) {
-                        $customer = Customer::find($guest['customer_id']);
+                        $customer = $this->ownCustomer((int) $guest['customer_id'], $company);
                     } elseif (! empty($guest['phone'])) {
                         $customer = Customer::firstOrCreate(
                             ['phone' => $guest['phone']],

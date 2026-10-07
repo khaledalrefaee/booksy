@@ -1,6 +1,8 @@
 @php
     $isAr = app()->getLocale() === 'ar';
     $t = fn($ar, $en) => $isAr ? $ar : $en;
+    // hero look (initial; the on-page switcher can flip it): a = immersive photo · b = light + photo tiles · c = olive poster
+    $heroVariant = in_array(request()->query('hero'), ['a', 'b', 'c'], true) ? request()->query('hero') : 'a';
 
     // category slug → x-icon name
     $catIcon = function ($slug) {
@@ -33,117 +35,12 @@
 <x-front.layout
     variant="customer"
     :mapFab="false"
-    bodyClass="bkf-has-hero"
+    :bodyClass="$heroVariant === 'b' ? '' : 'bkf-has-hero'"
     :title="$t('GlowRez | اكتشف واحجز في أفضل مراكز الجمال والعناية قربك', 'GlowRez, Discover & Book Top Beauty & Wellness Venues Near You')"
     :keywords="$t('حجز صالون, حجز مركز تجميل, حجز حلاقة, سبا, أظافر, عيادات تجميل, مواعيد الجمال, خريطة الأماكن, سوريا, دمشق', 'salon booking, beauty appointment, barber booking, spa, nails, beauty clinics, wellness map, Syria, Damascus')"
     :description="$t('اكتشف واحجز في أفضل أماكن الجمال والعناية قربك: شعر، سبا، تجميل، حلاقة، أظافر وعيادات. استكشف على الخريطة، قارن التقييمات والأسعار، واحجز فورًا من هاتفك عبر GlowRez.', 'Discover and book the best beauty & wellness venues near you, explore them on a live map, compare ratings and prices, and book instantly from your phone with GlowRez.')">
 
-{{-- ══════════════ 1 · HERO (auto-rotating: image + copy + alignment) ══════════════ --}}
-@php
-  $heroSlides = [
-    [
-      'img'   => 'magnific/Behind the scenes.jpg',
-      'align' => 'start',
-      'eb'    => $t('منصّة اكتشاف وحجز الجمال', 'Beauty discovery & booking'),
-      't1'    => $t('اكتشف مكانك المثالي', 'Discover your place,'),
-      't2'    => $t('واحجز موعدك بسهولة', 'book your moment'),
-      'lead'  => $t('ابحث عن الصالونات ومراكز التجميل والسبا والحلاقين قربك، استكشف الخدمات والمواعيد المتاحة، وقارن التقييمات والأسعار، واحجز مباشرةً.', 'Find salons, beauty centers, spas and barbers near you, explore services and availability, compare ratings and prices, and book directly.'),
-    ],
-    [
-      'img'   => 'magnific/salon-wide.jpg',
-      'align' => 'center',
-      'eb'    => $t('كل الأماكن على خريطة واحدة', 'Every venue, on one map'),
-      't1'    => $t('استكشف الأماكن', 'Explore the places'),
-      't2'    => $t('من حولك', 'around you'),
-      'lead'  => $t('تصفّح المراكز على الخريطة، قارن التقييمات والأسعار والخدمات، واختر الأنسب لك في ثوانٍ.', 'Browse venues on the map, compare ratings, prices and services, and choose what fits you in seconds.'),
-    ],
-    [
-      'img'   => 'magnific/7740630607013162.jpg',
-      'align' => 'start',
-      'eb'    => $t('وقتٌ لنفسك', 'Time for yourself'),
-      't1'    => $t('سبا، بشرة، شعر ومكياج', 'Spa, skin, hair & makeup'),
-      't2'    => $t('بين أيدٍ محترفة', 'by trusted pros'),
-      'lead'  => $t('احجز مع أفضل الاختصاصيين بأوقات تناسبك وأسعار واضحة، بلا مكالمات ولا انتظار.', 'Book with top specialists at times that suit you and clear prices, no calls, no waiting.'),
-    ],
-  ];
-  $s0 = $heroSlides[0];
-  $heroSlidesJs = array_map(fn($s) => [
-      'align' => $s['align'], 'eb' => $s['eb'], 't1' => $s['t1'], 't2' => $s['t2'], 'lead' => $s['lead'],
-  ], $heroSlides);
-@endphp
-<section class="bkf-hero bkf-hero-immersive" id="top" data-hero-rotator>
-  <div class="bkf-hero-bg" aria-hidden="true">
-    @foreach($heroSlides as $i => $s)
-      <img src="{{ asset($s['img']) }}" alt="" class="bkf-hero-slide {{ $i === 0 ? 'is-active' : '' }}"
-           @if($i === 0) fetchpriority="high" @else loading="lazy" @endif data-slide="{{ $i }}">
-    @endforeach
-  </div>
-  <div class="bkf-hero-scrim" aria-hidden="true"></div>
-
-  {{-- side arrows (manual control, easy to spot) --}}
-  <button type="button" class="bkf-hero-arrow is-prev" data-hero-prev aria-label="{{ $t('السابق', 'Previous') }}"><x-icon name="{{ $isAr ? 'chevron-right' : 'chevron-left' }}" :size="24"/></button>
-  <button type="button" class="bkf-hero-arrow is-next" data-hero-next aria-label="{{ $t('التالي', 'Next') }}"><x-icon name="{{ $isAr ? 'chevron-left' : 'chevron-right' }}" :size="24"/></button>
-
-  <div class="bkf-container-wide bkf-hero-i-inner {{ $s0['align'] === 'center' ? 'is-center' : '' }}" data-hero-inner>
-    <div class="bkf-hero-text bkf-hero-i-text">
-      <div class="bkf-hero-copy" data-hero-copy>
-        <span class="bkf-eyebrow bkf-hero-eyebrow" data-hero-eyebrow>{{ $s0['eb'] }}</span>
-        <h1 class="bkf-hero-title" data-hero-title>
-          <span class="l1">{{ $s0['t1'] }}</span><br>
-          <span class="em l2">{{ $s0['t2'] }}</span>
-        </h1>
-        <p class="bkf-hero-lead" data-hero-lead>{{ $s0['lead'] }}</p>
-      </div>
-
-      {{-- ── premium 3-field search / booking bar (constant) ── --}}
-      <form class="bkf-hsearch" id="bkf-hero-search" action="{{ $venuesUrl }}" method="GET" role="search">
-        <div class="bkf-hsearch-field">
-          <x-icon name="search" :size="18"/>
-          <input type="text" name="search" id="bkf-q" placeholder="{{ $t('صالون، سبا، خدمة…', 'Salon, spa, service…') }}" autocomplete="off" aria-label="{{ $t('ابحث عن خدمة أو مكان', 'Search service or venue') }}">
-        </div>
-        <span class="bkf-hsearch-div"></span>
-        <div class="bkf-hsearch-field">
-          <x-icon name="grid" :size="18"/>
-          <select name="category" id="bkf-cat" aria-label="{{ $t('نوع المكان', 'Venue type') }}">
-            <option value="">{{ $t('كل الأنواع', 'All types') }}</option>
-            @foreach($categories as $cat)
-              <option value="{{ $cat->slug }}">{{ $isAr ? $cat->name_ar : $cat->name_en }}</option>
-            @endforeach
-          </select>
-        </div>
-        <span class="bkf-hsearch-div"></span>
-        <div class="bkf-hsearch-field">
-          <x-icon name="map-pin" :size="18"/>
-          <input type="text" name="city" id="bkf-city" list="bkf-cities" placeholder="{{ $t('أين؟ المدينة', 'Where? City') }}" autocomplete="off" aria-label="{{ $t('اختر المدينة', 'Choose city') }}">
-          <datalist id="bkf-cities">
-            @foreach($cities as $city)<option value="{{ $city }}"></option>@endforeach
-          </datalist>
-        </div>
-        <button type="submit" class="bkf-btn bkf-btn-primary bkf-hsearch-go">
-          <x-icon name="search" :size="18"/><span>{{ $t('اكتشف', 'Discover') }}</span>
-        </button>
-      </form>
-
-      <div class="bkf-hero-chips">
-        <span class="bkf-hero-chips-lbl">{{ $t('رائج:', 'Popular:') }}</span>
-        @foreach($categories->take(5) as $cat)
-          <a href="{{ route('front.category', $cat->slug) }}" class="bkf-chip"><x-icon name="{{ $ci($cat) }}" :size="14"/>{{ $isAr ? $cat->name_ar : $cat->name_en }}</a>
-        @endforeach
-      </div>
-
-      <div class="bkf-hero-proof">
-        <span class="bkf-hero-early"><span class="dot"></span>{{ $t('التسجيل المبكر مفتوح، الإطلاق الرسمي قريبًا', 'Early access is open, official launch soon') }}</span>
-      </div>
-
-      {{-- slide dots (manual) --}}
-      <div class="bkf-hero-dots">
-        @foreach($heroSlides as $i => $s)
-          <button type="button" class="bkf-hero-dot {{ $i === 0 ? 'is-on' : '' }}" data-hero-dot="{{ $i }}" aria-label="{{ $t('شريحة', 'Slide') }} {{ $i + 1 }}"></button>
-        @endforeach
-      </div>
-    </div>
-  </div>
-</section>
+@include('front.partials.hero-hub')
 
 {{-- ══════════════ 2 · VALUE BAR (qualitative — no counts pre-launch) ══════════════ --}}
 @php
@@ -172,111 +69,11 @@
   </div>
 </div>
 
-{{-- ══════════════ 3 · CATEGORIES ══════════════ --}}
-<section class="bkf-section" id="categories">
-  <div class="bkf-container-wide">
-    <div class="bkf-railhead bkf-reveal">
-      <div>
-        <span class="bkf-eyebrow">{{ $t('تصفّح حسب النوع', 'Browse by type') }}</span>
-        <h2 class="bkf-title bkf-mt-0">{{ $t('ماذا تريد', 'What are you') }} <span class="em">{{ $t('اليوم؟', 'looking for?') }}</span></h2>
-      </div>
-    </div>
-    @if($categories->isNotEmpty())
-    <div class="bkf-catgrid">
-      @foreach($categories as $cat)
-        @php $cimg = $cat->image ? asset('storage/'.ltrim($cat->image, '/')) : null; @endphp
-        <a href="{{ route('front.category', $cat->slug) }}" class="bkf-cat-card {{ $cimg ? '' : 'is-noimg' }}">
-          @if($cimg)<img src="{{ $cimg }}" alt="" loading="lazy" class="bkf-cat-card-img">@endif
-          <span class="bkf-cat-card-shade"></span>
-          <span class="bkf-cat-card-ic"><x-icon name="{{ $ci($cat) }}" :size="22"/></span>
-          <span class="bkf-cat-card-body">
-            <span class="n">{{ $isAr ? $cat->name_ar : $cat->name_en }}</span>
-            @if($cat->companies_count)<span class="c">{{ $cat->companies_count }} {{ $t('مكان', 'places') }}</span>@endif
-          </span>
-          <span class="bkf-cat-card-go"><x-icon name="arrow-right" :size="16"/></span>
-        </a>
-      @endforeach
-    </div>
-    @endif
-  </div>
-</section>
+@include('front.partials.categories-hub')
 
-{{-- ══════════════ 4 · FEATURED (curated grid → hands off to /venues) ══════════════ --}}
-<section class="bkf-section" id="discover" style="padding-top:0">
-  <div class="bkf-container-wide">
-    <div class="bkf-railhead bkf-reveal">
-      <div>
-        <span class="bkf-eyebrow">{{ $t('مختارة بعناية', 'Handpicked') }}</span>
-        <h2 class="bkf-title bkf-mt-0">{{ $t('أماكن', 'Featured') }} <span class="em">{{ $t('مميّزة', 'venues') }}</span></h2>
-      </div>
-      <a href="{{ $venuesUrl }}" class="bkf-seeall" data-venues-cta>{{ $t('عرض جميع الأماكن', 'View all venues') }}<x-icon name="arrow-right" :size="16"/></a>
-    </div>
+@include('front.partials.featured-hub')
 
-    <div class="bkf-railwrap" data-railwrap>
-      <button type="button" class="bkf-rail-arrow is-prev" data-rail-prev aria-label="{{ $t('السابق', 'Previous') }}">
-        <x-icon name="chevron-right" :size="22"/>
-      </button>
-      <div class="bkf-rail is-compact" id="bkf-grid" data-rail>
-        @foreach($featured as $c)
-          @include('front.partials.venue-card', ['c' => $c, 'currency' => $currency, 'isAr' => $isAr])
-        @endforeach
-      </div>
-      <button type="button" class="bkf-rail-arrow is-next" data-rail-next aria-label="{{ $t('التالي', 'Next') }}">
-        <x-icon name="chevron-left" :size="22"/>
-      </button>
-    </div>
-
-    <div class="bkf-center" style="margin-top:44px">
-      <a href="{{ $venuesUrl }}" class="bkf-btn bkf-btn-soft bkf-btn-lg" data-venues-cta>
-        {{ $t('عرض جميع الأماكن', 'View all venues') }}<x-icon name="arrow-right" :size="18"/>
-      </a>
-    </div>
-  </div>
-</section>
-
-{{-- ══════════════ 5 · MAP DISCOVERY — core discovery experience ══════════════
-     Sits on the page background; the map's own bordered card gives the separation
-     (no surface band / waves → seamless colour harmony in light + dark). --}}
-<section class="bkf-section bkf-mapsec" id="explore" style="padding-top:clamp(24px,4vw,56px)">
-  <div class="bkf-container-wide">
-    <div class="bkf-railhead bkf-reveal">
-      <div>
-        <span class="bkf-eyebrow">{{ $t('على الخريطة', 'On the map') }}</span>
-        <h2 class="bkf-title bkf-mt-0">{{ $t('اكتشف الأماكن', 'Discover places') }} <span class="em">{{ $t('من حولك', 'around you') }}</span></h2>
-        <p class="bkf-lead" style="margin-top:10px">{{ $t('تصفّح المراكز على الخريطة، اضغط أي علامة لرؤية التفاصيل، واحجز مباشرةً.', 'Browse venues on the map, tap any pin for details, and book right away.') }}</p>
-      </div>
-    </div>
-
-    {{-- category filter chips (client-side) --}}
-    <div class="bkf-mapfilters bkf-reveal" role="tablist" aria-label="{{ $t('تصفية حسب النوع', 'Filter by type') }}">
-      <button type="button" class="bkf-mapchip is-on" data-mapfilter="">{{ $t('الكل', 'All') }}</button>
-      @foreach($categories->take(8) as $cat)
-        <button type="button" class="bkf-mapchip" data-mapfilter="{{ $cat->slug }}">
-          <x-icon name="{{ $ci($cat) }}" :size="14"/>{{ $isAr ? $cat->name_ar : $cat->name_en }}
-        </button>
-      @endforeach
-      <button type="button" class="bkf-mapchip is-geo" data-map-locate><x-icon name="navigation" :size="14"/>{{ $t('قربي', 'Near me') }}</button>
-    </div>
-
-    <div class="bkf-mapdisco bkf-reveal" data-mapdisco>
-      {{-- venue list (desktop: side column · mobile: bottom horizontal rail) --}}
-      <div class="bkf-mapdisco-list" data-map-list>
-        <div class="bkf-mapdisco-count" data-map-count></div>
-        <div class="bkf-mapdisco-scroll" data-map-scroll>
-          {{-- skeletons until data loads --}}
-          @for($i=0;$i<4;$i++)<div class="bkf-mapcard is-skeleton"><div class="sk-img"></div><div class="sk-body"><span class="sk-l"></span><span class="sk-l sm"></span></div></div>@endfor
-        </div>
-      </div>
-      {{-- map canvas --}}
-      <div class="bkf-mapdisco-canvas">
-        <div id="bkf-disco-map" data-disco-map></div>
-        <div class="bkf-mapdisco-loading" data-map-loading>
-          <span class="bkf-spin"></span>{{ $t('جارٍ تحميل الخريطة…', 'Loading map…') }}
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+@include('front.partials.map-discovery')
 
 {{-- ══════════════ 6 · HOW IT WORKS — 4-step customer journey ══════════════ --}}
 <section class="bkf-section bkf-3d" id="how" style="padding-top:clamp(20px,3vw,44px);background:var(--bk-bg)">
@@ -432,23 +229,76 @@
 
 <x-slot:styles>
 <style>
-/* category cards */
-.bkf-catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-top:8px}
-.bkf-cat-card{position:relative;display:block;aspect-ratio:4/5;border-radius:var(--bk-r-lg,20px);overflow:hidden;isolation:isolate;background:linear-gradient(145deg,var(--bk-accent),#2a3320);color:#fff;text-decoration:none;box-shadow:var(--bk-shadow-md,0 8px 24px rgba(0,0,0,.18));transition:transform .45s cubic-bezier(.2,.7,.2,1),box-shadow .45s}
-.bkf-cat-card-img{position:absolute;inset:0;width:100%!important;height:100%!important;max-width:none!important;object-fit:cover;z-index:-2;transition:transform .8s cubic-bezier(.2,.7,.2,1)}
-.bkf-cat-card-shade{position:absolute;inset:0;z-index:-1;background:linear-gradient(to top,rgba(14,18,8,.86) 0%,rgba(14,18,8,.35) 45%,rgba(14,18,8,.05) 100%)}
-.bkf-cat-card-ic{position:absolute;top:16px;inset-inline-start:16px;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(6px);color:var(--bk-gold,#e5c26b)}
-.bkf-cat-card-body{position:absolute;inset-inline:18px;bottom:18px;display:flex;flex-direction:column;gap:4px}
-.bkf-cat-card,.bkf-cat-card:hover,.bkf-cat-card-body .n,.bkf-cat-card-body .c{color:#fff!important}
-.bkf-cat-card-body .n{font-family:var(--bk-font-display,inherit);font-size:1.35rem;font-weight:700;line-height:1.2}
-.bkf-cat-card-body .c{font-family:var(--bk-font-ui);font-size:.85rem;opacity:.8}
-[dir=rtl] .bkf-cat-card-go svg{transform:scaleX(-1)}
-.bkf-cat-card-go{position:absolute;top:16px;inset-inline-end:16px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--bk-gold,#e5c26b);color:#1b2110;opacity:0;transform:translateY(-6px) scale(.85);transition:.35s}
-.bkf-cat-card:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(0,0,0,.28)}
-.bkf-cat-card:hover .bkf-cat-card-img{transform:scale(1.08)}
-.bkf-cat-card:hover .bkf-cat-card-go{opacity:1;transform:none}
-.bkf-cat-card.is-noimg .bkf-cat-card-ic{width:64px;height:64px;top:22px}
-@media (max-width:600px){.bkf-catgrid{grid-template-columns:repeat(2,1fr);gap:12px}.bkf-cat-card{aspect-ratio:1/1.1}.bkf-cat-card-body .n{font-size:1.1rem}}
+/* ═══ Hero · first-screen flow ═══
+   Desktop keeps the immersive hero. On phones the headline, ONE search field and the category
+   quick-picks all land in the lower half of the first screen (thumb zone), over the photo. */
+.hq{display:none}
+@media (max-width:720px){
+  .bkf-hero-immersive{min-height:min(640px,84svh);align-items:flex-end;padding-block:calc(var(--bk-nav-h) + 10px) 22px}
+  .bkf-hero-immersive .bkf-hero-slide{object-position:50% 24%}
+  .bkf-hero-immersive .bkf-hero-scrim,html[dir="rtl"] .bkf-hero-immersive .bkf-hero-scrim,
+  .bkf-hero-immersive.align-center .bkf-hero-scrim{background:linear-gradient(180deg,rgba(12,16,7,.62) 0%,rgba(12,16,7,.1) 24%,rgba(12,16,7,.5) 50%,rgba(12,16,7,.92) 100%)}
+  .bkf-hero-immersive .bkf-hero-eyebrow,.bkf-hero-immersive .bkf-hero-lead,.bkf-hero-immersive .bkf-hero-chips,
+  .bkf-hero-immersive .bkf-hero-proof,.bkf-hero-immersive .bkf-hero-dots{display:none}
+  .bkf-hero-immersive .bkf-hero-i-text{max-width:none;align-items:stretch}
+  html[lang="ar"] .bkf-hero-immersive .bkf-hero-title{font-size:clamp(1.75rem,7.4vw,2.2rem);line-height:1.3;margin-bottom:16px;text-align:start}
+  /* one field + one round button */
+  .bkf-hero-immersive .bkf-hsearch{flex-direction:row;align-items:center;gap:0;margin-top:0;padding:6px 6px 6px 8px;padding-inline:16px 6px;border-radius:var(--bk-r-pill);
+    background:rgba(255,255,255,.96);border-color:transparent;box-shadow:0 18px 36px -14px rgba(0,0,0,.65)}
+  .bkf-hero-immersive .bkf-hsearch-div,.bkf-hero-immersive .bkf-hsearch-field:nth-of-type(n+2){display:none}
+  .bkf-hero-immersive .bkf-hsearch-field{padding-inline:0}
+  .bkf-hero-immersive .bkf-hsearch-field input{font-size:1rem;padding-block:15px;color:#22251D}
+  .bkf-hero-immersive .bkf-hsearch-field input::placeholder{color:#6C6D5E}
+  .bkf-hero-immersive .bkf-hsearch-go{flex:0 0 52px;width:52px;height:52px;padding:0;margin:0;justify-content:center}
+  .bkf-hero-immersive .bkf-hsearch-go span{display:none}
+  .bkf-hero-immersive .bkf-hsearch-go svg{width:22px;height:22px}
+
+  /* category quick-picks */
+  .hq{display:flex;gap:14px;margin-top:22px;margin-inline:calc(var(--bk-gutter) * -1);padding:2px var(--bk-gutter) 4px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch;width:auto!important}
+  .hq::-webkit-scrollbar{display:none}
+  .hq-item{flex:0 0 auto;width:76px;display:flex;flex-direction:column;align-items:center;gap:8px;color:#fff;text-decoration:none;scroll-snap-align:start;-webkit-tap-highlight-color:transparent}
+  .hq-ic{position:relative;width:66px;height:66px;border-radius:50%;overflow:hidden;display:grid;place-items:center;color:#fff;background:rgba(255,255,255,.16);border:2px solid rgba(255,255,255,.7);
+    box-shadow:0 10px 20px -10px rgba(0,0,0,.7);transition:transform .25s var(--bk-ease)}
+  .hq-item:active .hq-ic{transform:scale(.92)}
+  .hq-ic img{width:100%!important;height:100%!important;max-width:none!important;object-fit:cover}
+  .hq-ic b{width:100%;height:100%;display:grid;place-items:center;font-family:'Tajawal',var(--bk-font-ui);font-weight:800;font-size:1.5rem}
+  .hq-n{font-family:'Tajawal',var(--bk-font-ui);font-weight:800;font-size:.82rem;line-height:1.25;text-align:center;color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.7)}
+  .hq-item.is-near .hq-ic{background:var(--bk-grad-gold);border-color:rgba(255,255,255,.9);color:var(--bk-gold-ink)}
+  .hq-item.is-all .hq-ic{background:rgba(255,255,255,.96);color:var(--bk-accent-strong);border-color:transparent}
+}
+
+/* ═══ Categories · grouped directory ═══ */
+.ct{padding-top:clamp(36px,5vw,72px)}
+.ct-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,300px));gap:clamp(14px,1.8vw,22px);justify-content:start;margin-top:clamp(20px,2.6vw,32px)}
+.ct-card{display:flex;flex-direction:column;overflow:hidden;background:var(--bk-surface);border:1px solid var(--bk-border);border-radius:28px;box-shadow:var(--bk-shadow-sm)}
+.ct-head{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:104px;padding:20px 22px;color:#fff;overflow:hidden;
+  background:radial-gradient(120% 140% at 0% 0%,color-mix(in srgb,var(--g) 70%,#fff) 0,transparent 60%),var(--g)}
+.ct-head::before{content:"";position:absolute;inset:0;z-index:-1;background:currentColor;opacity:.09;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.2'%3E%3Crect x='14' y='14' width='36' height='36'/%3E%3Crect x='14' y='14' width='36' height='36' transform='rotate(45 32 32)'/%3E%3Ccircle cx='32' cy='32' r='5'/%3E%3C/g%3E%3C/svg%3E") 0 0/64px 64px;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.2'%3E%3Crect x='14' y='14' width='36' height='36'/%3E%3Crect x='14' y='14' width='36' height='36' transform='rotate(45 32 32)'/%3E%3Ccircle cx='32' cy='32' r='5'/%3E%3C/g%3E%3C/svg%3E") 0 0/64px 64px}
+.ct-card .ct-head h3{font-family:'Tajawal',var(--bk-font-ui);font-weight:800;font-size:1.5rem;line-height:1.2;color:#fff}
+.ct-head p{margin:6px 0 0;font-family:var(--bk-font-ui);font-size:.88rem;font-weight:700;color:rgba(255,255,255,.88)}
+.ct-thumb{flex:0 0 auto;width:68px;height:68px;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,.9);box-shadow:0 12px 22px -10px rgba(0,0,0,.55);background:#fff}
+.ct-thumb img{width:100%!important;height:100%!important;max-width:none!important;object-fit:cover;display:block}
+.ct-thumb b,.ct-ic b{width:100%;height:100%;display:grid;place-items:center;color:#fff;font-family:'Tajawal',var(--bk-font-ui);font-weight:800;font-size:1.6rem}
+.ct-list{list-style:none;margin:0;padding:8px}
+.ct-row{display:flex;align-items:center;gap:14px;min-height:60px;padding:8px 12px;border-radius:18px;color:var(--bk-text);text-decoration:none;transition:background .25s,transform .25s var(--bk-ease)}
+.ct-row:hover,.ct-row:focus-visible{background:var(--bk-accent-wash)}
+.ct-row:active{transform:scale(.985)}
+.ct-ic{flex:0 0 auto;width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--bk-surface-2);border:1px solid var(--bk-border)}
+.ct-ic img{width:100%!important;height:100%!important;max-width:none!important;object-fit:cover;display:block}
+.ct-ic b{font-size:1.2rem}
+.ct-n{flex:1;min-width:0;font-family:'Tajawal',var(--bk-font-ui);font-weight:800;font-size:1.08rem;line-height:1.3}
+.ct-c{min-width:28px;height:28px;padding:0 9px;border-radius:14px;display:grid;place-items:center;font-family:var(--bk-font-ui);font-size:.8rem;font-weight:800;background:var(--bk-surface-2);color:var(--bk-text-muted)}
+.ct-go{color:var(--bk-text-muted);display:grid;transition:transform .3s var(--bk-ease),color .2s}
+[dir=rtl] .ct-go svg{transform:scaleX(-1)}
+.ct-row:hover .ct-go{color:var(--bk-accent);transform:translateX(4px)}
+[dir=rtl] .ct-row:hover .ct-go{transform:translateX(-4px)}
+@media (max-width:719px){
+  .ct-grid{grid-template-columns:minmax(0,1fr)}
+  .ct-head{min-height:88px;padding:16px 18px}
+  .ct-thumb{width:58px;height:58px}
+}
 /* GSAP-enhanced "Book in minutes" */
 #how .bkf-steps{position:relative}
 #how .bkf-steps-line{position:absolute;top:45px;inset-inline:12.5%;height:2px;background:var(--bk-border,rgba(0,0,0,.1));border-radius:2px;overflow:hidden;z-index:0}
@@ -457,6 +307,169 @@
 #how .bkf-step-ic{transition:box-shadow .3s,background .3s,color .3s}
 #how .bkf-step.is-lit .bkf-step-ic{background:var(--bk-accent);color:#fff;box-shadow:var(--bk-shadow-accent)}
 @media (max-width:900px){#how .bkf-steps-line{display:none}}
+/* ═══ Featured · gallery arch + menu-style index ═══ */
+.fp{--fp-t:5.6s;--fp-ease:cubic-bezier(.22,1,.36,1);--fp-ox:22px;--fp-arch:170px 36px 36px 36px}
+[dir=rtl] .fp{--fp-ox:-22px}
+.fp-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(32px,5vw,52px)}
+.fp-side{min-width:0}
+.fp-title{font-size:clamp(2.2rem,1.5rem + 3vw,3.7rem);line-height:1.1}
+.fp-lead{margin-top:14px;max-width:38ch;font-family:var(--bk-font-ui);font-size:var(--bk-fs-lead);line-height:1.75;color:var(--bk-text-soft)}
+.fp-empty{margin-top:24px;color:var(--bk-text-muted)}
+
+/* index — reads like a menu: name ····· price */
+.fp-index{list-style:none;margin:0;padding:0;border-top:1px solid var(--bk-border)}
+.fp-row{position:relative;display:flex;align-items:flex-start;gap:14px;padding:17px 2px 18px;border-bottom:1px solid var(--bk-border);
+  color:var(--bk-text-muted);text-decoration:none;transition:color .4s var(--fp-ease),opacity .7s var(--fp-ease) calc(.25s + var(--i,0)*.07s),transform .8s var(--fp-ease) calc(.25s + var(--i,0)*.07s)}
+.fp-row::after{content:"";position:absolute;inset-inline:0;bottom:-1px;height:2px;background:var(--bk-grad-gold);transform:scaleX(0);transform-origin:left center;pointer-events:none}
+[dir=rtl] .fp-row::after{transform-origin:right center}
+.fp.is-playing .fp-row.is-on::after{animation:fp-prog var(--fp-t) linear forwards}
+.fp:not(.is-playing) .fp-row.is-on::after{transform:scaleX(1)}
+@keyframes fp-prog{to{transform:scaleX(1)}}
+
+/* the mark: two squares, one turned 45° (the khatam star), grows in on the active row */
+.fp-mark{position:relative;flex:0 0 16px;width:16px;height:16px;margin-top:12px}
+.fp-mark::before,.fp-mark::after{content:"";position:absolute;inset:3px;background:var(--bk-gold);transform:scale(0) rotate(-45deg);transition:transform .55s var(--bk-spring)}
+.fp-mark::after{transform:scale(0) rotate(0deg)}
+.fp-row.is-on .fp-mark::before{transform:scale(1) rotate(0deg)}
+.fp-row.is-on .fp-mark::after{transform:scale(1) rotate(45deg)}
+
+.fp-row-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.fp-row-line{display:flex;align-items:baseline;gap:12px;min-width:0}
+.fp-row-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'Tajawal',var(--bk-font-ui);font-weight:800;font-size:clamp(1.45rem,1.1rem + 1.2vw,2.1rem);line-height:1.3;color:inherit}
+.fp-leader{flex:1 1 20px;min-width:16px;height:0;border-bottom:1.5px dotted color-mix(in srgb,currentColor 45%,transparent)}
+.fp-row-price{flex:0 0 auto;font-family:var(--bk-font-display);font-weight:700;font-size:1.05rem;white-space:nowrap;transition:color .4s}
+.fp-row.is-on{color:var(--bk-text)}
+.fp-row.is-on .fp-row-price{color:var(--bk-gold-strong)}
+.fp-row-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;font-family:var(--bk-font-ui);font-size:.86rem;color:var(--bk-text-muted)}
+.fp-row.is-on .fp-row-meta{color:var(--bk-text-soft)}
+.fp-row-meta > span,.fp-sub > span{display:inline-flex;align-items:center;gap:5px}
+.fp-row-meta svg{color:var(--bk-gold-strong)}
+.fp-open i{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 20%,transparent)}
+.fp-open.on{color:var(--bk-success)}
+.fp-open.off{color:var(--bk-danger)}
+.fp-dist{display:none!important;color:var(--bk-accent)}
+.fp-row[data-has-distance] .fp-dist{display:inline-flex!important}
+
+/* hand-off link */
+.fp-all{margin-top:30px;display:inline-flex;align-items:center;gap:14px;padding:6px 22px 6px 6px;padding-inline:22px 6px;border-radius:var(--bk-r-pill);border:1px solid var(--bk-border-strong);
+  font-family:var(--bk-font-ui);font-weight:700;font-size:.95rem;color:var(--bk-text);text-decoration:none;transition:background .3s,border-color .3s}
+.fp-all-ic{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--bk-accent-fill);color:var(--bk-accent-ink);transition:transform .4s var(--fp-ease),background .3s,color .3s}
+[dir=rtl] .fp-all-ic svg{transform:scaleX(-1)}
+.fp-all:hover{background:var(--bk-accent-wash);border-color:var(--bk-accent)}
+.fp-all:hover .fp-all-ic{background:var(--bk-grad-gold);color:var(--bk-gold-ink);transform:translateX(4px)}
+[dir=rtl] .fp-all:hover .fp-all-ic{transform:translateX(-4px)}
+
+/* stage — an arch, with a second gold arch standing behind it */
+.fp-stagebox{position:relative;isolation:isolate;width:100%;min-width:0;max-width:500px;margin-inline:auto}
+.fp-stagebox::before,.fp-stagebox::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:var(--fp-arch);
+  transition:translate 1.2s var(--fp-ease) .45s,opacity .8s ease .45s}
+.fp-stagebox::before{border:1.5px solid color-mix(in srgb,var(--bk-gold) 75%,transparent);translate:var(--fp-ox) 22px}
+.fp-stagebox::after{z-index:-2;background:var(--bk-accent-wash);translate:calc(var(--fp-ox) * -.55) 14px}
+.fp-stage{position:relative;aspect-ratio:4/5.15;border-radius:var(--fp-arch);overflow:hidden;background:#2a3320;
+  box-shadow:0 34px 60px -30px rgba(28,36,14,.55),0 10px 24px -12px rgba(28,36,14,.3)}
+
+.fp-panel{position:absolute;inset:0;visibility:hidden;color:#fff}
+.fp-panel.is-on,.fp-panel.is-leaving{visibility:visible}
+.fp-panel.is-leaving{z-index:1}
+.fp-panel.is-on{z-index:2}
+.fp.is-seen .fp-panel.is-on{animation:fp-wipe 1.05s var(--fp-ease) both}
+@keyframes fp-wipe{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}
+.fp-art{position:absolute;inset:0}
+.fp-art .fa-img{transform:scale(1.12);transition:transform 2s var(--fp-ease)}
+.fp-panel.is-on .fp-art .fa-img{transform:scale(1)}
+.fp-shade{position:absolute;inset:0;background:linear-gradient(to top,rgba(14,18,8,.9) 0%,rgba(14,18,8,.6) 30%,rgba(14,18,8,.06) 60%,rgba(14,18,8,0) 100%)}
+.fp-cover{position:absolute;inset:0;z-index:1}
+
+/* no photo yet → a deep family tone with the lattice pattern, never a grey box */
+/* artwork shared by every featured design: photo, or a per-venue colour field (no category icons) */
+.fa-img{display:block;position:absolute;inset:0;width:100%!important;height:100%!important;max-width:none!important;object-fit:cover}
+.fa-ph{position:absolute;inset:0;overflow:hidden;color:#FBF3DC;
+  background:radial-gradient(120% 85% at 12% 8%,var(--b) 0,transparent 58%),radial-gradient(95% 80% at 92% 78%,var(--c) 0,transparent 62%),var(--a)}
+.fa-ph::before{content:"";position:absolute;inset:0;background:currentColor;opacity:.08;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.2'%3E%3Crect x='14' y='14' width='36' height='36'/%3E%3Crect x='14' y='14' width='36' height='36' transform='rotate(45 32 32)'/%3E%3Ccircle cx='32' cy='32' r='5'/%3E%3C/g%3E%3C/svg%3E") 0 0/64px 64px;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.2'%3E%3Crect x='14' y='14' width='36' height='36'/%3E%3Crect x='14' y='14' width='36' height='36' transform='rotate(45 32 32)'/%3E%3Ccircle cx='32' cy='32' r='5'/%3E%3C/g%3E%3C/svg%3E") 0 0/64px 64px}
+.fa-ph-l{position:absolute;inset-inline-end:-4%;bottom:-16%;font-family:var(--bk-font-display);font-weight:800;font-size:24rem;line-height:1;color:currentColor;opacity:.14;pointer-events:none;user-select:none}
+.fa-seal{position:relative;flex:0 0 auto;display:grid;place-items:center;border-radius:50%;overflow:hidden;background:#FBF8F0;border:2px solid var(--bk-gold);box-shadow:0 10px 22px -10px rgba(0,0,0,.55)}
+.fa-seal img{width:84%!important;height:84%!important;max-width:none!important;object-fit:contain}
+.fa-seal b{font-family:var(--bk-font-display);font-weight:800;line-height:1;color:var(--bk-accent-strong)}
+.fa-seal--xl{width:88px;height:88px;border-width:3px}.fa-seal--xl b{font-size:2.4rem}
+.fa-seal--md{width:84px;height:84px;border-width:3px}.fa-seal--md b{font-size:2.3rem}
+.fa-seal--sm{width:52px;height:52px}.fa-seal--sm b{font-size:1.5rem}
+.fa-seal--lg{width:112px;height:112px;border-width:3px;box-shadow:0 0 0 9px rgba(255,255,255,.14),0 18px 34px -12px rgba(0,0,0,.5)}.fa-seal--lg b{font-size:2.8rem}
+.fp-stage .fa-ph{display:grid;place-items:start center;padding-top:27%}
+.fp-stage .fa-ph-l{display:none}
+.fp-logo{align-self:flex-start;margin-top:calc(-42px - clamp(18px,2.4vw,26px))}
+.fp-logo .fa-seal{border-color:#fff;box-shadow:0 10px 22px -8px rgba(0,0,0,.6),0 0 0 1.5px var(--bk-gold)}
+.fp-typerow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.fp-badge{position:absolute;z-index:2;top:30px;inset-inline:0;margin-inline:auto;width:max-content;pointer-events:none;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--bk-r-pill);
+  font-family:var(--bk-font-ui);font-size:.78rem;font-weight:800;background:var(--bk-grad-gold);color:var(--bk-gold-ink);box-shadow:0 6px 16px rgba(0,0,0,.28)}
+.fp-badge-top{background:var(--bk-accent-fill);color:var(--bk-accent-ink)}
+.fp-badge-rec,.fp-badge-new{background:var(--bk-gold-soft);color:var(--bk-gold-strong)}
+
+.fp-info{position:absolute;inset-inline:0;bottom:0;z-index:2;display:flex;flex-direction:column;gap:10px;padding:clamp(18px,2.4vw,26px) clamp(22px,3vw,32px) clamp(22px,3vw,28px);background:rgba(14,18,8,.94);border-radius:30px 30px 0 0;pointer-events:none}
+.fp-info a,.fp-info button{pointer-events:auto}
+.fp-info > *{opacity:0;translate:0 16px;transition:opacity .25s ease,translate .25s ease}
+.fp-panel.is-on .fp-info > *{opacity:1;translate:0 0;transition:opacity .7s var(--fp-ease) calc(.4s + var(--k,0)*.08s),translate .9s var(--fp-ease) calc(.4s + var(--k,0)*.08s)}
+.fp-namerow{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.fp-panel .fp-name{font-size:clamp(1.8rem,1.3rem + 1.4vw,2.5rem);line-height:1.2;color:#fff;text-wrap:balance}
+.fp-fav{flex:0 0 auto;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.14);color:#fff;cursor:pointer;
+  transition:transform .3s var(--bk-spring),background .3s,color .3s;position:relative;z-index:3}
+.fp-fav:hover{transform:scale(1.08);background:rgba(255,255,255,.26)}
+.fp-fav .heart-on{display:none}
+.fp-fav.is-on{color:#ff9aa5}
+.fp-fav.is-on .heart-off{display:none}
+.fp-fav.is-on .heart-on{display:block}
+.fp-sub{display:flex;flex-wrap:wrap;gap:4px 16px;margin:0;font-family:var(--bk-font-ui);font-size:.92rem;color:rgba(255,255,255,.88)}
+.fp-sub svg{color:var(--bk-gold)}
+.fp-panel .fp-open.on{color:#BDE6A3}
+.fp-panel .fp-open.off{color:#FFB8B0}
+.fp-svcs{margin:0;font-family:var(--bk-font-ui);font-size:.88rem;color:rgba(255,255,255,.78);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.fp-offer{align-self:flex-start;position:relative;z-index:3}
+.fp-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-top:6px;padding-top:16px;border-top:1px solid rgba(255,255,255,.24)}
+.fp-price{display:flex;flex-direction:column;line-height:1.25;font-family:var(--bk-font-ui)}
+.fp-price small{font-size:.78rem;color:rgba(255,255,255,.72)}
+.fp-price b{font-family:var(--bk-font-display);font-weight:700;font-size:1.55rem;color:#E9CD8E;white-space:nowrap}
+.fp-price b.is-text{font-family:'Tajawal',var(--bk-font-ui);font-size:1.15rem}
+.fp-book{position:relative;z-index:3;padding:13px 24px}
+
+/* first-view reveal: the arch rises, the gold arch slides out, rows settle in */
+.fp-js:not(.is-seen) .fp-stagebox{visibility:hidden}
+.fp-js:not(.is-seen) .fp-stagebox::before,.fp-js:not(.is-seen) .fp-stagebox::after{translate:0 0;opacity:0}
+.fp-js:not(.is-seen) .fp-row{opacity:0;transform:translateY(14px)}
+
+/* ≤1023px: the index steps aside; the arches become a snap carousel */
+@media (max-width:1023px){
+  .fp-side{display:contents}
+  .fp-head{order:1}
+  .fp-stagebox{order:2;max-width:none;margin-inline:calc(var(--bk-gutter) * -1);width:auto}
+  .fp-all{order:3;justify-self:start}
+  .fp-index{display:none}
+  .fp-stagebox::before,.fp-stagebox::after{display:none}
+  .fp-stage{--fp-arch:110px 28px 28px 28px;display:flex;gap:14px;aspect-ratio:auto;border-radius:0;box-shadow:none;background:none;overflow-x:auto;overflow-y:hidden;
+    scroll-snap-type:x mandatory;scroll-padding-inline:var(--bk-gutter);padding:6px var(--bk-gutter) 26px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .fp-stage::-webkit-scrollbar{display:none}
+  .fp-panel{position:relative;inset:auto;visibility:visible;flex:0 0 min(78vw,340px);aspect-ratio:4/5.7;border-radius:var(--fp-arch);overflow:hidden;scroll-snap-align:start;
+    box-shadow:0 22px 40px -24px rgba(28,36,14,.55);background:#2a3320}
+  .fp.is-seen .fp-panel.is-on{animation:none}
+  .fp-art .fa-img{transform:none}
+  .fp-info > *{opacity:1;translate:none;transition:none}
+  .fp-panel .fp-name{font-size:1.6rem}
+  .fp-stage .fa-ph{padding-top:19%}
+  .fp-stage .fa-seal--lg{width:80px;height:80px;border-width:2px;box-shadow:0 0 0 6px rgba(255,255,255,.14),0 14px 26px -10px rgba(0,0,0,.5)}
+  .fp-stage .fa-seal--lg b{font-size:2rem}
+  .fp-badge{top:22px}
+  .fp-book{padding:12px 20px}
+  .fp-price b{font-size:1.35rem}
+}
+@media (min-width:1024px){
+  .fp-grid{grid-template-columns:minmax(0,1fr) minmax(360px,500px);gap:clamp(56px,7vw,116px);align-items:center}
+}
+@media (prefers-reduced-motion:reduce){
+  .fp *,.fp *::before,.fp *::after{animation:none!important;transition:none!important}
+  .fp-js:not(.is-seen) .fp-stagebox{visibility:visible}
+  .fp-js:not(.is-seen) .fp-row{opacity:1;transform:none}
+  .fp-info > *{opacity:1;translate:none}
+}
 </style>
 </x-slot:styles>
 
@@ -471,7 +484,6 @@ window.BK_MAP = {
   currency: @json($currency),
   ar:       @json($isAr)
 };
-window.BK_HERO_SLIDES = @json($heroSlidesJs);
 </script>
 
 {{-- ── Hero slider: MANUAL control only (dots + arrows) · no auto-advance, no motion ── --}}
@@ -606,227 +618,6 @@ window.BK_HERO_SLIDES = @json($heroSlidesJs);
       var open = item.classList.toggle('is-open');
       q.setAttribute('aria-expanded', open);
       a.style.maxHeight = open ? a.scrollHeight + 'px' : '0';
-    });
-  });
-})();
-</script>
-
-{{-- ── Map Discovery: lazy leaflet + branded popups + two-way list linking ── --}}
-<script>
-(function () {
-  'use strict';
-  var CFG = window.BK_MAP, AR = CFG.ar, CUR = CFG.currency;
-  var section = document.getElementById('explore');
-  var mapEl   = document.querySelector('[data-disco-map]');
-  var listEl  = document.querySelector('[data-map-scroll]');
-  var countEl = document.querySelector('[data-map-count]');
-  var loadEl  = document.querySelector('[data-map-loading]');
-  var filterBtns = document.querySelectorAll('[data-mapfilter]');
-  var locateBtn  = document.querySelector('[data-map-locate]');
-  if (!mapEl || !listEl) return;
-
-  var DAMASCUS = [33.5138, 36.2765];
-  var esc = function (s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; };
-  var catFamily = function (slug) {
-    slug = (slug || '').toLowerCase();
-    var r = { hair:'hair', salon:'hair', barber:'barber', men:'barber', spa:'spa', massage:'spa', wellness:'spa',
-              nail:'nail', lash:'lash', brow:'lash', makeup:'beauty', beauty:'beauty', skin:'skin', laser:'skin',
-              clinic:'skin', dental:'skin' };
-    for (var k in r) { if (slug.indexOf(k) > -1) return r[k]; }
-    return 'default';
-  };
-
-  var map, L, data = [], markers = {}, cards = {}, activeId = null, activeFilter = '', inited = false, loaded = false;
-
-  function loadLeaflet(cb) {
-    if (window.L) { cb(window.L); return; }
-    if (!document.querySelector('link[data-leaflet]')) {
-      var l = document.createElement('link');
-      l.rel = 'stylesheet'; l.href = CFG.css; l.setAttribute('data-leaflet', '');
-      document.head.appendChild(l);
-    }
-    var ex = document.querySelector('script[data-leaflet]');
-    if (ex) { ex.addEventListener('load', function () { cb(window.L); }); return; }
-    var s = document.createElement('script');
-    s.src = CFG.js; s.defer = true; s.setAttribute('data-leaflet', '');
-    s.addEventListener('load', function () { cb(window.L); });
-    document.body.appendChild(s);
-  }
-
-  function pinIcon(fam, active) {
-    return L.divIcon({
-      className: 'bkf-pin-wrap',
-      html: '<span class="bkf-pin' + (active ? ' is-active' : '') + '" data-fam="' + fam + '"></span>',
-      iconSize: [30, 38], iconAnchor: [15, 36], popupAnchor: [0, -34]
-    });
-  }
-
-  function distText(b) {
-    var up = window.__bkUserPos && window.__bkUserPos();
-    if (!up || b.lat == null) return '';
-    var R = 6371, p = Math.PI / 180;
-    var dLa = (b.lat - up.lat) * p, dLo = (b.lng - up.lng) * p;
-    var s = Math.sin(dLa / 2) ** 2 + Math.cos(up.lat * p) * Math.cos(b.lat * p) * Math.sin(dLo / 2) ** 2;
-    var d = R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
-    return window.__bkKm(d);
-  }
-
-  function popupHTML(b) {
-    var fam = catFamily(b.cat_slug);
-    var img = b.image
-      ? '<div class="bkf-pop-media"><img src="' + esc(b.image) + '" alt="' + esc(b.name) + '" loading="lazy"></div>'
-      : '<div class="bkf-pop-media bkf-pop-ph" data-fam="' + fam + '"></div>';
-    var rating = b.avg_rating
-      ? '<span class="bkf-pop-rate">★ ' + b.avg_rating + ' <i>(' + b.review_count + ')</i></span>'
-      : '<span class="bkf-pop-rate none">' + (AR ? 'جديد' : 'New') + '</span>';
-    var open = b.open_now === true ? '<span class="bkf-pop-open is-open">' + (AR ? 'مفتوح الآن' : 'Open now') + '</span>'
-             : b.open_now === false ? '<span class="bkf-pop-open is-closed">' + (AR ? 'مغلق الآن' : 'Closed') + '</span>' : '';
-    var dt = distText(b);
-    var meta = [];
-    if (b.category) meta.push(esc(b.category));
-    if (b.city) meta.push(esc(b.city));
-    if (dt) meta.push(dt);
-    var svcs = (b.services || []).map(function (s) { return '<span class="bkf-pop-svc">' + esc(s) + '</span>'; }).join('');
-    var price = b.min_price
-      ? '<span class="bkf-pop-price">' + (AR ? 'يبدأ من ' : 'From ') + '<b>' + Math.round(b.min_price).toLocaleString() + ' ' + CUR + '</b></span>'
-      : '';
-    return '<div class="bkf-pop" data-fam="' + fam + '">' + img +
-      '<div class="bkf-pop-body">' +
-        '<div class="bkf-pop-top"><h4>' + esc(b.name) + '</h4>' + rating + '</div>' +
-        '<div class="bkf-pop-meta">' + meta.join('<span class="dot"></span>') + ' ' + open + '</div>' +
-        (svcs ? '<div class="bkf-pop-svcs">' + svcs + '</div>' : '') +
-        '<div class="bkf-pop-foot">' + price +
-          '<div class="bkf-pop-actions">' +
-            '<a href="' + esc(b.url) + '" class="bkf-btn bkf-btn-ghost bkf-btn-sm">' + (AR ? 'عرض' : 'View') + '</a>' +
-            '<a href="' + esc(b.book_url) + '" class="bkf-btn bkf-btn-primary bkf-btn-sm">' + (AR ? 'احجز' : 'Book') + '</a>' +
-          '</div>' +
-        '</div>' +
-      '</div></div>';
-  }
-
-  function cardHTML(b) {
-    var fam = catFamily(b.cat_slug);
-    var img = b.image
-      ? '<img src="' + esc(b.image) + '" alt="' + esc(b.name) + '" loading="lazy">'
-      : '<span class="bkf-mapcard-ph" data-fam="' + fam + '"></span>';
-    var rating = b.avg_rating ? '<span class="r">★ ' + b.avg_rating + '</span>' : '<span class="r none">' + (AR ? 'جديد' : 'New') + '</span>';
-    var dt = distText(b);
-    var meta = [b.category, b.city].filter(Boolean).map(esc).join(' · ');
-    var price = b.min_price ? (AR ? 'من ' : 'From ') + Math.round(b.min_price).toLocaleString() + ' ' + CUR : (AR ? 'أسعار متنوعة' : 'Varied');
-    return '<article class="bkf-mapcard" data-mapcard="' + b.id + '" data-fam="' + fam + '" tabindex="0">' +
-      '<div class="bkf-mapcard-media">' + img + rating + (dt ? '<span class="d">' + dt + '</span>' : '') + '</div>' +
-      '<div class="bkf-mapcard-body">' +
-        '<h4>' + esc(b.name) + '</h4>' +
-        '<div class="bkf-mapcard-meta">' + meta + '</div>' +
-        '<div class="bkf-mapcard-foot"><span class="p">' + price + '</span>' +
-          '<a href="' + esc(b.book_url) + '" class="bkf-btn bkf-btn-primary bkf-btn-xs">' + (AR ? 'احجز' : 'Book') + '</a>' +
-        '</div>' +
-      '</div></article>';
-  }
-
-  function setActive(id, fly) {
-    if (activeId != null && cards[activeId]) cards[activeId].classList.remove('is-active');
-    activeId = id;
-    var b = data.find(function (x) { return x.id === id; });
-    if (!b) return;
-    if (cards[id]) {
-      cards[id].classList.add('is-active');
-      cards[id].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
-    if (markers[id]) {
-      Object.keys(markers).forEach(function (k) { markers[k].setIcon(pinIcon(markers[k].__fam, +k === id)); });
-      if (fly) map.setView([b.lat, b.lng], Math.max(map.getZoom(), 14), { animate: true });
-      markers[id].openPopup();
-    }
-  }
-
-  function render() {
-    var shown = data.filter(function (b) { return !activeFilter || catFamily(b.cat_slug) === activeFilter || b.cat_slug === activeFilter; });
-    // list
-    listEl.innerHTML = shown.map(cardHTML).join('') || '<div class="bkf-mapcard-empty">' + (AR ? 'لا توجد أماكن مطابقة' : 'No matching places') + '</div>';
-    cards = {};
-    shown.forEach(function (b) {
-      var el = listEl.querySelector('[data-mapcard="' + b.id + '"]');
-      if (!el) return;
-      cards[b.id] = el;
-      el.addEventListener('click', function (e) { if (e.target.closest('a')) return; setActive(b.id, true); });
-      el.addEventListener('keydown', function (e) { if (e.key === 'Enter') setActive(b.id, true); });
-    });
-    if (countEl) countEl.textContent = shown.length + ' ' + (AR ? 'مكان' : 'places');
-    // markers
-    Object.keys(markers).forEach(function (k) { map.removeLayer(markers[k]); });
-    markers = {};
-    var pts = [];
-    shown.forEach(function (b) {
-      if (b.lat == null) return;
-      var fam = catFamily(b.cat_slug);
-      var mk = L.marker([b.lat, b.lng], { icon: pinIcon(fam, false) }).addTo(map);
-      mk.__fam = fam;
-      mk.bindPopup(popupHTML(b), { className: 'bkf-pop-shell', maxWidth: 300, minWidth: 260, closeButton: true, autoPanPadding: [24, 24] });
-      mk.on('click', function () { setActive(b.id, false); });
-      markers[b.id] = mk;
-      pts.push([b.lat, b.lng]);
-    });
-    if (pts.length) map.fitBounds(pts, { padding: [50, 50], maxZoom: 14 });
-  }
-
-  function initMap() {
-    if (inited) return; inited = true;
-    loadLeaflet(function (Lref) {
-      L = Lref;
-      map = L.map(mapEl, { scrollWheelZoom: false, zoomControl: true }).setView(DAMASCUS, 12);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
-      fetch(CFG.url).then(function (r) { return r.json(); }).then(function (list) {
-        data = list.filter(function (b) { return b.lat != null && b.lng != null; });
-        loaded = true;
-        if (loadEl) loadEl.style.display = 'none';
-        render();
-        setTimeout(function () { map.invalidateSize(); }, 200);
-      }).catch(function () {
-        if (loadEl) loadEl.innerHTML = AR ? 'تعذّر تحميل الخريطة' : 'Couldn’t load the map';
-      });
-    });
-  }
-
-  // Lazy-init when the section approaches the viewport (perf: nothing loads early).
-  if ('IntersectionObserver' in window) {
-    var io = new IntersectionObserver(function (ents) {
-      ents.forEach(function (e) { if (e.isIntersecting) { initMap(); io.disconnect(); } });
-    }, { rootMargin: '300px 0px' });
-    io.observe(section);
-  } else {
-    initMap();
-  }
-
-  // category filters
-  filterBtns.forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      filterBtns.forEach(function (b) { b.classList.remove('is-on'); });
-      btn.classList.add('is-on');
-      activeFilter = btn.getAttribute('data-mapfilter') || '';
-      if (loaded) render();
-    });
-  });
-
-  // "near me" - reuse shared geo, recolor distances, re-sort list by distance
-  if (locateBtn) locateBtn.addEventListener('click', function () {
-    if (!window.__bkRequestGeo) return;
-    initMap();
-    window.__bkRequestGeo(function (ok) {
-      if (!ok || !loaded) return;
-      data.sort(function (a, b) {
-        var up = window.__bkUserPos();
-        function dd(x) { var p = Math.PI / 180, dLa = (x.lat - up.lat) * p, dLo = (x.lng - up.lng) * p;
-          var s = Math.sin(dLa / 2) ** 2 + Math.cos(up.lat * p) * Math.cos(x.lat * p) * Math.sin(dLo / 2) ** 2;
-          return 6371 * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s)); }
-        return dd(a) - dd(b);
-      });
-      render();
-      var up = window.__bkUserPos();
-      if (up && map) {
-        if (L) L.circleMarker([up.lat, up.lng], { radius: 8, color: '#4B5D34', fillColor: '#4B5D34', fillOpacity: .6, weight: 3 }).addTo(map);
-        map.setView([up.lat, up.lng], 13, { animate: true });
-      }
     });
   });
 })();

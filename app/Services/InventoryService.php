@@ -66,9 +66,11 @@ class InventoryService
             $stock = BranchStock::lockForUpdate()
                 ->where('branch_id', $branchId)
                 ->where('product_id', $product->id)
-                ->firstOrFail();
+                ->first();
 
-            abort_if($stock->quantity < $quantity, 422, __('Insufficient stock. Available: :qty', ['qty' => $stock->quantity]));
+            // A branch that never held the product has no stock row: that is
+            // "0 available", not a missing page.
+            abort_if(! $stock || $stock->quantity < $quantity, 422, __('Insufficient stock. Available: :qty', ['qty' => $stock->quantity ?? 0]));
 
             $before = $stock->quantity;
             $stock->decrement('quantity', $quantity);

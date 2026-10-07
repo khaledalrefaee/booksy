@@ -381,6 +381,8 @@ Route::prefix('company')->name('company.')->group(function () {
         Route::post('product-categories',                    [ProductCategoryController::class, 'store'])->name('product-categories.store');
         Route::put('product-categories/{productCategory}',   [ProductCategoryController::class, 'update'])->name('product-categories.update');
         Route::delete('product-categories/{productCategory}',[ProductCategoryController::class, 'destroy'])->name('product-categories.destroy');
+        Route::get('product-categories/{productCategory}/products',  [ProductCategoryController::class, 'assignable'])->name('product-categories.products');
+        Route::post('product-categories/{productCategory}/products', [ProductCategoryController::class, 'assign'])->name('product-categories.products.assign');
 
         }); // end feature:inventory
 

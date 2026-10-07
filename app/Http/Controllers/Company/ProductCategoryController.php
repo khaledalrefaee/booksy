@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Company;
 
 use App\Http\Controllers\Controller;
+use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Support\Auditor;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -91,6 +93,56 @@ class ProductCategoryController extends Controller
         Auditor::log("Updated product category: {$productCategory->localizedName()}", $productCategory);
 
         return back()->with('success', __('Category updated.'));
+    }
+
+    /**
+     * Products that can be moved into this category (everything the company
+     * owns that isn't already in it), for the "assign products" picker.
+     */
+    public function assignable(ProductCategory $productCategory): JsonResponse
+    {
+        abort_unless($productCategory->company_id === $this->company()->id, 403);
+
+        $products = Product::where('company_id', $this->company()->id)
+            ->where(fn ($q) => $q->whereNull('product_category_id')
+                ->orWhere('product_category_id', '!=', $productCategory->id))
+            ->with('category:id,name_en,name_ar')
+            ->orderBy('name_en')
+            ->get()
+            ->map(fn (Product $p) => [
+                'id'       => $p->id,
+                'name'     => $p->localizedName(),
+                'category' => $p->category?->localizedName(),
+                'image'    => $p->image ? asset('storage/' . $p->image) : null,
+            ]);
+
+        return response()->json(['products' => $products]);
+    }
+
+    /**
+     * Put the chosen existing products into this category in one go.
+     */
+    public function assign(Request $request, ProductCategory $productCategory): RedirectResponse
+    {
+        abort_unless($productCategory->company_id === $this->company()->id, 403);
+
+        $data = $request->validate([
+            'product_ids'   => ['required', 'array', 'min:1'],
+            'product_ids.*' => ['integer'],
+        ], [
+            'product_ids.required' => __('Select at least one product.'),
+            'product_ids.min'      => __('Select at least one product.'),
+        ]);
+
+        // Company-scoped: ids from another company are silently ignored.
+        $moved = Product::where('company_id', $this->company()->id)
+            ->whereIn('id', $data['product_ids'])
+            ->update(['product_category_id' => $productCategory->id]);
+
+        Auditor::log("Assigned {$moved} products to category: {$productCategory->localizedName()}", $productCategory);
+
+        return redirect()->route('company.product-categories.index')
+            ->with('success', trans_choice('{1} :count product added to the category.|[2,*] :count products added to the category.', $moved, ['count' => $moved]));
     }
 
     public function destroy(ProductCategory $productCategory): RedirectResponse
