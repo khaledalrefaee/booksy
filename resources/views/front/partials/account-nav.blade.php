@@ -21,9 +21,11 @@ window.BK_FAV = {
 
 @if(! $customer)
     <a href="{{ route('front.business') }}" class="bkf-btn bkf-btn-ghost bkf-nav-btn">{{ $isAr ? 'لأصحاب الأعمال' : 'For business' }}</a>
+    @unless(config('leads.browse_only'))
     <button type="button" class="bkf-btn bkf-btn-primary bkf-nav-btn" onclick="CustomerAuthModal.open(()=>location.reload())">
         {{ $isAr ? 'تسجيل الدخول' : 'Log in' }}<x-icon name="user" :size="18"/>
     </button>
+    @endunless
 @else
     <div class="bkf-acct" data-acct>
         <button type="button" class="bkf-acct-btn" data-acct-toggle aria-expanded="false" aria-haspopup="menu">

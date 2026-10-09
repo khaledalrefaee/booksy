@@ -433,9 +433,15 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
                 @else
                     <a href="{{ route('locale.switch','ar') }}" class="bk-lang">عربي</a>
                 @endif
+                @if(config('leads.browse_only'))
+                <a href="{{ route('leads.join') }}" class="bk-register-btn">
+                    <i class="fas fa-store"></i> {{ $isAr ? 'سجّل اهتمامك' : 'Register interest' }}
+                </a>
+                @else
                 <a href="{{ route('company.register') }}" class="bk-register-btn">
                     <i class="fas fa-store"></i> {{ $isAr ? 'سجّل نشاطك' : 'List Business' }}
                 </a>
+                @endif
             </div>
         </div>
     </div>

@@ -1,5 +1,5 @@
 <meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 	<meta name="referrer" content="strict-origin-when-cross-origin">
 	<meta http-equiv="X-UA-Compatible" content="ie=edge">
   <meta name="description" content="Responsive HTML Admin Dashboard Template based on Bootstrap 5">
@@ -47,6 +47,9 @@
   @if(app()->getLocale() === 'ar')
     <link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-arabic.css') }}">
   @endif
+
+  {{-- Owner shell: sidebar, header, phone tab bar (must load after booksy-custom) --}}
+  @include('owner.partials.shell-styles')
 
   {{-- DataTables 1.13 + Buttons + Responsive (local) --}}
   <link rel="stylesheet" href="{{ asset('vendor/datatables/dataTables.bootstrap5.min.css') }}">

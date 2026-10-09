@@ -75,6 +75,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'customer.api'  => \App\Http\Middleware\AuthenticateCustomerApi::class,
             'company.api'   => \App\Http\Middleware\AuthenticateCompanyApi::class,
             'api.locale'    => \App\Http\Middleware\SetApiLocale::class,
+            'lead.track'       => \App\Http\Middleware\TrackLeadAttribution::class,
             'staff.auth'       => AuthenticateStaff::class,
             'staff.mustchange' => EnsureStaffPasswordChanged::class,
         ]);

@@ -1,201 +1,194 @@
 @php
     $authOwner     = Auth::guard('owner')->user();
     $currentLocale = app()->getLocale();
-    $hour          = now()->hour;
-    $greeting      = $hour < 12 ? __('Good morning') : ($hour < 18 ? __('Good afternoon') : __('Good evening'));
     $isAr          = $currentLocale === 'ar';
+    $navTheme      = request()->cookie('owner_theme', 'dark');
+    $ownerName     = $authOwner?->name ?: 'Admin';
+    // Initials avatar rendered locally (no third-party image request on every page).
+    $ownerInitials = \Illuminate\Support\Str::of($ownerName)->trim()->explode(' ')->filter()->take(2)
+        ->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('') ?: 'A';
+    $ownerRole     = $authOwner ? $authOwner->roleLabel() : __('Platform Owner');
+
+    try {
+        $bkNotifUnread = (int) \App\Models\OwnerNotification::whereNull('read_at')->count();
+        $bkNotifRecent = \App\Models\OwnerNotification::with('company:id,name_en,name_ar')
+            ->latest()->limit(6)->get();
+    } catch (\Throwable $e) { $bkNotifUnread = 0; $bkNotifRecent = collect(); }
 @endphp
 
-<nav class="navbar">
+<a href="#bkMain" class="bk-skip">{{ __('Skip to content') }}</a>
 
-    <a href="#" class="sidebar-toggler">
-        <i data-feather="menu"></i>
-    </a>
+<nav class="navbar bk-hd" id="bkHeader" aria-label="{{ __('Top bar') }}">
+    <div class="bk-hd-in">
 
-    <div class="navbar-content">
-
-        {{-- Greeting --}}
-        <div class="me-auto d-none d-xl-flex flex-column justify-content-center" style="line-height:1.3;">
-            <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.4;">
-                {{ $greeting }} 👋
-            </div>
-            <div style="font-size:.88rem;font-weight:700;color:var(--bk-accent);">
-                {{ $authOwner?->name ?? 'Admin' }}
-            </div>
-        </div>
-
-        {{-- Global search --}}
-        <form method="GET" action="{{ route('owner.search.index') }}"
-              class="d-none d-md-flex align-items-center me-2" style="min-width:200px;max-width:260px;">
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-transparent border-end-0">
-                    <i data-feather="search" style="width:13px;height:13px;opacity:.5;"></i>
-                </span>
-                <input type="text" name="q" class="form-control border-start-0"
-                       placeholder="{{ __('Search') }}…" style="font-size:.8rem;">
-            </div>
-        </form>
-        <a href="{{ route('owner.search.index') }}" class="nav-link d-md-none" style="padding:0 8px;">
-            <i data-feather="search" style="width:18px;height:18px;"></i>
+        {{-- Menu: folds the sidebar on desktop, opens the drawer on mobile --}}
+        <a href="#" class="sidebar-toggler bk-hd-btn bk-hd-menu" role="button"
+           aria-controls="bkSidebar" aria-expanded="false" aria-label="{{ __('Menu') }}">
+            <i data-feather="menu"></i>
         </a>
 
-        {{-- Action Buttons --}}
-        <div class="d-none d-lg-flex align-items-center gap-2 me-2">
-            <a href="{{ route('owner.companies.index') }}"
-               class="btn btn-primary btn-sm rounded-pill d-flex align-items-center gap-1 px-3">
-                <i class="feather icon-briefcase" style="font-size:12px;line-height:1;"></i>
-                {{ __('Companies') }}
-            </a>
-            <a href="{{ route('owner.appointments.index') }}"
-               class="btn btn-outline-secondary btn-sm rounded-pill d-flex align-items-center gap-1 px-3">
-                <i class="feather icon-calendar" style="font-size:12px;line-height:1;"></i>
-                {{ __('Appointments') }}
-            </a>
-        </div>
+        {{-- Brand: the sidebar carries it on desktop --}}
+        <a href="{{ route('owner.dashboard') }}" class="bk-hd-brand" aria-label="GlowRez">
+            <img class="bk-sb-logo bk-sb-logo--light" src="{{ asset('images/glowrez-logo-light_1.webp') }}" alt="GlowRez">
+            <img class="bk-sb-logo bk-sb-logo--dark"  src="{{ asset('images/glowrez-logo-dark_1.webp') }}"  alt="" aria-hidden="true">
+        </a>
 
-        <ul class="navbar-nav">
+        {{-- Global search --}}
+        <form method="GET" action="{{ route('owner.search.index') }}" class="bk-hd-search" role="search" id="bkSearch">
+            <i data-feather="search" class="bk-hd-search-ic"></i>
+            <input type="search" name="q" id="bkSearchInput" autocomplete="off" enterkeyhint="search"
+                   placeholder="{{ __('Search companies, branches, customers…') }}"
+                   aria-label="{{ __('Search') }}">
+            <kbd class="bk-hd-kbd" aria-hidden="true">/</kbd>
+            <button type="button" class="bk-hd-btn bk-hd-search-x" data-bk-search-close aria-label="{{ __('Close') }}">
+                <i data-feather="x"></i>
+            </button>
+        </form>
 
-            {{-- Notifications bell --}}
-            @php
-                try {
-                    $bkNotifUnread = (int) \App\Models\OwnerNotification::whereNull('read_at')->count();
-                    $bkNotifRecent = \App\Models\OwnerNotification::with('company:id,name_en,name_ar')
-                        ->latest()->limit(6)->get();
-                } catch (\Throwable $e) { $bkNotifUnread = 0; $bkNotifRecent = collect(); }
-            @endphp
-            <li class="nav-item dropdown">
-                <a class="nav-link position-relative" href="#" data-bs-toggle="dropdown"
-                   style="padding:0 8px;" aria-label="{{ __('Notifications') }}">
-                    <i data-feather="bell" style="width:18px;height:18px;"></i>
+        <div class="bk-hd-end">
+
+            {{-- Search (phones only: opens the full-width search bar) --}}
+            <button type="button" class="bk-hd-btn bk-hd-search-open" data-bk-search-open aria-label="{{ __('Search') }}">
+                <i data-feather="search"></i>
+            </button>
+
+            {{-- Notifications --}}
+            <div class="dropdown">
+                <button type="button" class="bk-hd-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                        aria-expanded="false" aria-label="{{ __('Notifications') }}{{ $bkNotifUnread > 0 ? ' ('.$bkNotifUnread.')' : '' }}">
+                    <i data-feather="bell"></i>
                     @if($bkNotifUnread > 0)
-                        <span class="badge rounded-pill position-absolute"
-                              style="top:-3px;inset-inline-end:-2px;background:var(--bk-danger);color:#fff;font-size:.58rem;font-weight:700;padding:2px 5px;min-width:16px;">
-                            {{ $bkNotifUnread > 9 ? '9+' : $bkNotifUnread }}
-                        </span>
+                        <span class="bk-hd-badge" aria-hidden="true">{{ $bkNotifUnread > 9 ? '9+' : $bkNotifUnread }}</span>
                     @endif
-                </a>
-                <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:320px;border-radius:12px;overflow:hidden;">
-                    <div class="px-3 py-2 border-bottom d-flex align-items-center justify-content-between" style="background:var(--bk-accent-wash);">
-                        <span style="font-size:.8rem;font-weight:700;">{{ __('Notifications') }}</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end bk-menu bk-menu-notif">
+                    <div class="bk-menu-head">
+                        <span class="bk-menu-title">{{ __('Notifications') }}</span>
                         @if($bkNotifUnread > 0)
                             <form method="POST" action="{{ route('owner.notifications.read-all') }}" class="m-0">
                                 @csrf
-                                <button type="submit" class="btn btn-link p-0 border-0" style="font-size:.68rem;color:var(--bk-accent);text-decoration:none;">
-                                    {{ __('Mark all read') }}
-                                </button>
+                                <button type="submit" class="bk-menu-link">{{ __('Mark all read') }}</button>
                             </form>
                         @endif
                     </div>
-                    <div style="max-height:340px;overflow-y:auto;">
+                    <div class="bk-notif-list">
                         @forelse($bkNotifRecent as $n)
                             <a href="{{ route('owner.notifications.read', $n->id) }}"
-                               class="dropdown-item d-flex align-items-start gap-2 py-2 px-3 {{ $n->read_at ? '' : 'bk-notif-unread' }}"
-                               style="white-space:normal;border-bottom:1px solid var(--bk-border);{{ $n->read_at ? '' : 'background:color-mix(in srgb,var(--bk-accent) 7%,transparent);' }}">
-                                <span style="font-size:1.05rem;line-height:1;">{{ $n->icon }}</span>
-                                <span style="min-width:0;flex:1;">
-                                    <span style="display:block;font-size:.76rem;font-weight:{{ $n->read_at ? '500' : '700' }};">{{ $n->title }}</span>
-                                    <span style="display:block;font-size:.7rem;color:var(--bk-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $n->body }}</span>
-                                    <span style="display:block;font-size:.62rem;color:var(--bk-text-muted);margin-top:2px;">{{ $n->created_at?->diffForHumans() }}</span>
+                               class="bk-notif {{ $n->read_at ? '' : 'is-unread' }}">
+                                <span class="bk-notif-ic" aria-hidden="true">{{ $n->icon }}</span>
+                                <span class="bk-notif-tx">
+                                    <span class="bk-notif-t">{{ $n->title }}</span>
+                                    <span class="bk-notif-b">{{ $n->body }}</span>
+                                    <span class="bk-notif-d">{{ $n->created_at?->diffForHumans() }}</span>
                                 </span>
+                                @unless($n->read_at)<span class="bk-notif-dot" aria-hidden="true"></span>@endunless
                             </a>
                         @empty
-                            <div class="text-center py-4" style="font-size:.76rem;color:var(--bk-text-muted);">
-                                {{ __('No notifications yet') }}
+                            <div class="bk-notif-empty">
+                                <i data-feather="bell-off"></i>
+                                <span>{{ __('No notifications yet') }}</span>
                             </div>
                         @endforelse
                     </div>
-                    <a href="{{ route('owner.notifications.index') }}" class="dropdown-item text-center py-2" style="font-size:.72rem;font-weight:600;color:var(--bk-accent);">
-                        {{ __('View all') }}
-                    </a>
+                    <a href="{{ route('owner.notifications.index') }}" class="bk-menu-foot">{{ __('View all') }}</a>
                 </div>
-            </li>
+            </div>
 
-            {{-- Language --}}
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle d-flex align-items-center gap-1" href="#"
-                   data-bs-toggle="dropdown" style="font-size:.78rem;font-weight:600;padding:0 8px;">
-                    @if($isAr)
-                        <i class="flag-icon flag-icon-sa" style="border-radius:2px;font-size:14px;"></i>
-                        <span class="d-none d-md-inline">AR</span>
-                    @else
-                        <i class="flag-icon flag-icon-us" style="border-radius:2px;font-size:14px;"></i>
-                        <span class="d-none d-md-inline">EN</span>
-                    @endif
-                </a>
-                <div class="dropdown-menu dropdown-menu-end">
-                    <a href="{{ route('locale.switch','en') }}" class="dropdown-item {{ $currentLocale==='en'?'active':'' }}">
-                        <i class="flag-icon flag-icon-us me-2" style="border-radius:2px;"></i> English
-                    </a>
-                    <a href="{{ route('locale.switch','ar') }}" class="dropdown-item {{ $currentLocale==='ar'?'active':'' }}">
-                        <i class="flag-icon flag-icon-sa me-2" style="border-radius:2px;"></i> العربية
-                    </a>
-                </div>
-            </li>
+            {{-- Account: profile · appearance · language · sign out --}}
+            <div class="dropdown">
+                <button type="button" class="bk-hd-user" data-bs-toggle="dropdown" aria-expanded="false"
+                        aria-label="{{ __('Account') }}: {{ $ownerName }}">
+                    <span class="bk-av" aria-hidden="true">{{ $ownerInitials }}</span>
+                    <span class="bk-hd-user-tx">
+                        <span class="bk-hd-user-name">{{ $ownerName }}</span>
+                        <span class="bk-hd-user-role">{{ $ownerRole }}</span>
+                    </span>
+                    <i data-feather="chevron-down" class="bk-hd-user-caret"></i>
+                </button>
 
-            {{-- Profile --}}
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
-                    <img src="https://ui-avatars.com/api/?name={{ urlencode($authOwner?->name ?? 'Owner') }}&size=32&background=4B5D34&color=FFFFFF&bold=true"
-                         class="wd-32 ht-32 rounded-circle" style="border:2px solid rgba(12,110,116,.3);" alt="">
-                    <div class="d-none d-md-block" style="line-height:1.2;text-align:{{ $isAr?'right':'left' }};">
-                        <div style="font-size:.78rem;font-weight:700;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                            {{ $authOwner?->name ?? 'Admin' }}
-                        </div>
-                        <div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.6px;opacity:.4;">Platform Owner</div>
+                <div class="dropdown-menu dropdown-menu-end bk-menu bk-menu-user">
+                    <div class="bk-menu-id">
+                        <span class="bk-av bk-av-lg" aria-hidden="true">{{ $ownerInitials }}</span>
+                        <span class="bk-menu-id-tx">
+                            <span class="bk-menu-id-name">{{ $ownerName }}</span>
+                            <span class="bk-menu-id-role">{{ $ownerRole }}</span>
+                        </span>
                     </div>
-                </a>
 
-                <div class="dropdown-menu dropdown-menu-end p-0" style="min-width:220px;border-radius:12px;overflow:hidden;">
-                    <div class="px-4 py-3 border-bottom" style="background:rgba(12,110,116,.07);">
-                        <div class="d-flex align-items-center gap-3">
-                            <img src="https://ui-avatars.com/api/?name={{ urlencode($authOwner?->name ?? 'Owner') }}&size=42&background=4B5D34&color=FFFFFF&bold=true"
-                                 style="width:42px;height:42px;border-radius:50%;flex-shrink:0;" alt="">
-                            <div style="min-width:0;">
-                                <div style="font-size:.84rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $authOwner?->name }}</div>
-                                <div style="font-size:.7rem;margin-top:3px;">
-                                    <span style="background:var(--bk-accent);color:#000;border-radius:20px;padding:1px 8px;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">
-                                        Platform Owner
-                                    </span>
-                                </div>
-                            </div>
+                    <div class="bk-menu-sec">
+                        <a href="{{ route('owner.profile') }}" class="bk-mi"><i data-feather="user"></i><span>{{ __('Profile') }}</span></a>
+                        <a href="{{ route('front.index') }}" target="_blank" rel="noopener" class="bk-mi"><i data-feather="external-link"></i><span>{{ __('View website') }}</span></a>
+                    </div>
+
+                    <div class="bk-menu-sec">
+                        <div class="bk-seg-row">
+                            <span class="bk-seg-lbl"><i data-feather="{{ $navTheme === 'dark' ? 'moon' : 'sun' }}"></i>{{ __('Appearance') }}</span>
+                            <span class="bk-seg" role="group" aria-label="{{ __('Appearance') }}">
+                                <a href="{{ route('owner.theme', ['mode' => 'light']) }}" class="{{ $navTheme === 'light' ? 'is-on' : '' }}" @if($navTheme === 'light') aria-current="true" @endif>{{ __('Light') }}</a>
+                                <a href="{{ route('owner.theme', ['mode' => 'dark']) }}"  class="{{ $navTheme !== 'light' ? 'is-on' : '' }}" @if($navTheme !== 'light') aria-current="true" @endif>{{ __('Dark') }}</a>
+                            </span>
+                        </div>
+                        <div class="bk-seg-row">
+                            <span class="bk-seg-lbl"><i data-feather="globe"></i>{{ __('Language') }}</span>
+                            <span class="bk-seg" role="group" aria-label="{{ __('Language') }}">
+                                <a href="{{ route('locale.switch', 'ar') }}" class="{{ $isAr ? 'is-on' : '' }}" lang="ar" hreflang="ar" @if($isAr) aria-current="true" @endif>العربية</a>
+                                <a href="{{ route('locale.switch', 'en') }}" class="{{ !$isAr ? 'is-on' : '' }}" lang="en" hreflang="en" @if(!$isAr) aria-current="true" @endif>English</a>
+                            </span>
                         </div>
                     </div>
-                    <ul class="list-unstyled p-2 mb-0">
-                        <li>
-                            <a href="{{ route('owner.profile') }}"
-                               class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
-                                <i class="icon-sm feather icon-user"></i> {{ __('Profile') }}
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('front.index') }}" target="_blank"
-                               class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
-                                <i class="icon-sm feather icon-globe"></i> {{ __('View website') }}
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider my-1"></li>
-                        <li>
-                            @php($navTheme = request()->cookie('owner_theme', 'dark'))
-                            <a href="{{ route('owner.theme', ['mode' => $navTheme === 'dark' ? 'light' : 'dark']) }}"
-                               class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
-                                <i class="icon-sm feather icon-{{ $navTheme === 'dark' ? 'sun' : 'moon' }}"></i>
-                                {{ $navTheme === 'dark' ? __('Light mode') : __('Dark mode') }}
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider my-1"></li>
-                        <li>
-                            <form method="POST" action="{{ route('owner.logout') }}">
-                                @csrf
-                                <button type="submit"
-                                    class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2 text-danger w-100 border-0 bg-transparent">
-                                    <i class="icon-sm feather icon-log-out"></i> {{ __('Sign out') }}
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
-            </li>
 
-        </ul>
+                    <div class="bk-menu-sec">
+                        <form method="POST" action="{{ route('owner.logout') }}" class="m-0">
+                            @csrf
+                            <button type="submit" class="bk-mi bk-mi-danger"><i data-feather="log-out"></i><span>{{ __('Sign out') }}</span></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
     </div>
 </nav>
+
+<script>
+(function () {
+    'use strict';
+    var hd     = document.getElementById('bkHeader');
+    var form   = document.getElementById('bkSearch');
+    var input  = document.getElementById('bkSearchInput');
+    if (!hd || !form || !input) return;
+
+    /* Soft shadow only once the page has scrolled under the bar. */
+    var ticking = false;
+    function onScroll() {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            hd.classList.toggle('is-scrolled', (window.scrollY || document.documentElement.scrollTop) > 4);
+            ticking = false;
+        });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    /* Phones: the search icon swaps the bar for a full-width search field. */
+    function openSearch()  { hd.classList.add('is-searching'); setTimeout(function () { input.focus(); }, 30); }
+    function closeSearch() { hd.classList.remove('is-searching'); input.blur(); }
+    var openBtn  = hd.querySelector('[data-bk-search-open]');
+    var closeBtn = hd.querySelector('[data-bk-search-close]');
+    if (openBtn)  openBtn.addEventListener('click', openSearch);
+    if (closeBtn) closeBtn.addEventListener('click', closeSearch);
+
+    /* "/" jumps to search from anywhere that is not a text field. */
+    document.addEventListener('keydown', function (e) {
+        var t = e.target, tag = t && t.tagName;
+        if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey
+            && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !(t && t.isContentEditable)) {
+            e.preventDefault();
+            if (window.matchMedia('(max-width: 767.98px)').matches) openSearch(); else input.focus();
+        } else if (e.key === 'Escape' && document.activeElement === input) {
+            closeSearch();
+        }
+    });
+})();
+</script>

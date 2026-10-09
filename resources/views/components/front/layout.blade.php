@@ -190,10 +190,16 @@
           <x-icon name="moon" :size="18" class="bkf-ic-moon"/>
         </button>
         @if($variant === 'business')
-          <a href="{{ route('company.login') }}" class="bkf-btn bkf-btn-ghost bkf-nav-btn">{{ $isAr ? 'تسجيل الدخول' : 'Log in' }}</a>
-          <a href="{{ route('company.register') }}" class="bkf-btn bkf-btn-primary bkf-nav-btn">
-            {{ $isAr ? 'ابدأ الآن' : 'Get started' }}<x-icon name="arrow-right" :size="18"/>
-          </a>
+          @if(config('leads.browse_only'))
+            <a href="{{ route('leads.join') }}" class="bkf-btn bkf-btn-primary bkf-nav-btn">
+              {{ $isAr ? 'سجّل اهتمامك' : 'Register your interest' }}<x-icon name="arrow-right" :size="18"/>
+            </a>
+          @else
+            <a href="{{ route('company.login') }}" class="bkf-btn bkf-btn-ghost bkf-nav-btn">{{ $isAr ? 'تسجيل الدخول' : 'Log in' }}</a>
+            <a href="{{ route('company.register') }}" class="bkf-btn bkf-btn-primary bkf-nav-btn">
+              {{ $isAr ? 'ابدأ الآن' : 'Get started' }}<x-icon name="arrow-right" :size="18"/>
+            </a>
+          @endif
         @else
           @include('front.partials.account-nav')
         @endif
@@ -247,13 +253,19 @@
         <h4>{{ $isAr ? 'للأعمال' : 'For business' }}</h4>
         <a href="{{ route('front.business') }}#features">{{ $isAr ? 'المزايا' : 'Features' }}</a>
         <a href="{{ route('front.business') }}#free">{{ $isAr ? 'مجاني' : 'Free' }}</a>
-        <a href="{{ route('company.register') }}">{{ $isAr ? 'سجّل نشاطك' : 'List your business' }}</a>
+        @if(config('leads.browse_only'))
+          <a href="{{ route('leads.join') }}">{{ $isAr ? 'سجّل اهتمامك' : 'Register your interest' }}</a>
+        @else
+          <a href="{{ route('company.register') }}">{{ $isAr ? 'سجّل نشاطك' : 'List your business' }}</a>
+        @endif
       </div>
       <div class="bkf-footer-col">
         <h4>{{ $isAr ? 'الشركة' : 'Company' }}</h4>
         <a href="{{ route('front.about') }}">{{ $isAr ? 'من نحن' : 'About' }}</a>
         <a href="{{ route('front.contact') }}">{{ $isAr ? 'تواصل معنا' : 'Contact' }}</a>
-        <a href="{{ route('company.login') }}">{{ $isAr ? 'دخول الشركات' : 'Business login' }}</a>
+        @unless(config('leads.browse_only'))
+          <a href="{{ route('company.login') }}">{{ $isAr ? 'دخول الشركات' : 'Business login' }}</a>
+        @endunless
       </div>
     </div>
     <div class="bkf-footer-bar">

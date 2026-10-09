@@ -62,6 +62,27 @@ class AppServiceProvider extends ServiceProvider
             return $query->findOrFail($value);
         });
 
+        // Every leads.* view (welcome / join / thanks / layout) gets the locale helpers
+        // and GlowRez's own contact links, so each page stays free of boilerplate.
+        \Illuminate\Support\Facades\View::composer('leads.*', function ($view) {
+            $isAr = app()->getLocale() === 'ar';
+            $view->with([
+                'isAr'  => $isAr,
+                't'     => fn ($ar, $en) => $isAr ? $ar : $en,
+                'waUrl' => \App\Support\LeadContact::whatsappUrl(),
+                'igUrl' => \App\Support\LeadContact::instagramUrl(),
+            ]);
+        });
+
+        // Pre-launch lead form: a person fills it once or twice, a script fills it
+        // thousands of times. Cap per IP over 10 minutes AND per day.
+        \Illuminate\Support\Facades\RateLimiter::for('lead-submit', function (\Illuminate\Http\Request $request) {
+            return [
+                \Illuminate\Cache\RateLimiting\Limit::perMinutes(10, (int) config('leads.rate_limit.per_ten_minutes', 5))->by('lead10:'.$request->ip()),
+                \Illuminate\Cache\RateLimiting\Limit::perDay((int) config('leads.rate_limit.per_day', 30))->by('lead1d:'.$request->ip()),
+            ];
+        });
+
           // URL::forceScheme('https');
     }
 }

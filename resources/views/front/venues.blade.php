@@ -74,7 +74,7 @@
       <div class="bkf-sb-field">
         <x-icon name="map-pin" :size="18"/>
         <input type="text" name="city" value="{{ $city }}" list="bkf-cities" placeholder="{{ $t('المدينة', 'City') }}" autocomplete="off" aria-label="{{ $t('المدينة', 'City') }}">
-        <datalist id="bkf-cities">@foreach($cities as $c)<option value="{{ $c }}"></option>@endforeach</datalist>
+        <datalist id="bkf-cities">@foreach($cities as $c)<option value="{{ $c['name'] }}"></option>@endforeach</datalist>
       </div>
       <button type="submit" class="bkf-btn bkf-btn-primary"><x-icon name="search" :size="18"/>{{ $t('ابحث', 'Search') }}</button>
     </form>

@@ -1,7 +1,6 @@
-{{-- ══════════════ 4 · FEATURED VENUES — one section, three ways to look, one shared filter ══════════════
-     • Filter (top): الكل / صالونات / سبا … — each type has its own colour, reused on every chip.
-     • View switcher: بطاقات (cards) · رفّ (shelf) · معرض (gallery). The choice is remembered.
-     Each (view × type) pair is rendered server-side, so switching never reloads or re-queries.
+{{-- ══════════════ 4 · FEATURED VENUES — shelf view with a type filter ══════════════
+     Filter (top): الكل / صالونات / سبا … — each type has its own colour, reused on every chip.
+     Each type is rendered server-side, so switching never reloads or re-queries.
      Expects from the page: $featured, $featuredPool, $categories, $venuesUrl, $t, $isAr. --}}
 @php
   $fpBadge = [
@@ -34,7 +33,6 @@
       $fgTabs[] = ['key' => $key, 'label' => $isAr ? $g['ar'] : $g['en'], 'count' => $inGroup->count(), 'items' => $inGroup->take(6), 'note' => $names];
   }
   $fgShowTabs = count($fgTabs) > 2;
-  $fgViews = ['c' => $t('بطاقات', 'Cards'), 'b' => $t('رفّ', 'Shelf'), 'a' => $t('معرض', 'Gallery')];
 @endphp
 <section class="bkf-section fh" id="discover" style="padding-top:0" data-fh>
   <div class="bkf-container-wide">
@@ -43,12 +41,6 @@
       <div>
         <h2 class="bkf-title fp-title bkf-mt-0">{{ $t('أماكن', 'Featured') }} <span class="em">{{ $t('مميّزة', 'venues') }}</span></h2>
         <p class="fp-lead">{{ $t('مختارة بعناية من الأماكن الأكثر حجزاً وتقييماً. اختر النوع لترى ما يهمّك فقط.', 'Handpicked from the most booked and best rated. Pick a type to see only what you need.') }}</p>
-      </div>
-      <div class="fh-views" role="group" aria-label="{{ $t('طريقة العرض', 'View as') }}">
-        <span class="fh-views-l">{{ $t('عرض:', 'View:') }}</span>
-        @foreach($fgViews as $vk => $vl)
-          <button type="button" class="fh-view-btn" data-fh-view="{{ $vk }}" aria-pressed="{{ $vk === 'c' ? 'true' : 'false' }}">{{ $vl }}</button>
-        @endforeach
       </div>
     </header>
 
@@ -75,13 +67,9 @@
       @endforeach
 
       <div class="fh-stage">
-        @foreach(array_keys($fgViews) as $v)
-          <div class="fh-view" data-fh-pane="{{ $v }}" @if($v !== 'c') hidden @endif>
-            @foreach($fgTabs as $k => $tab)
-              <div class="fh-group" data-fh-group="{{ $tab['key'] }}" @if($k > 0) hidden @endif>
-                @include('front.partials.featured-'.$v, ['items' => $tab['items'], 'eager' => ($v === 'c' && $k === 0)])
-              </div>
-            @endforeach
+        @foreach($fgTabs as $k => $tab)
+          <div class="fh-group" data-fh-group="{{ $tab['key'] }}" @if($k > 0) hidden @endif>
+            @include('front.partials.featured-b', ['items' => $tab['items'], 'eager' => $k === 0])
           </div>
         @endforeach
       </div>
@@ -90,17 +78,12 @@
 </section>
 
 <style>
-/* ── hub: view switcher + type filter ── */
+/* ── type filter ── */
 .is-g-salons{--g:#8A6317}.is-g-spa{--g:#1F6B66}.is-g-beauty{--g:#9C3A68}.is-g-clinics{--g:#34559A}.is-g-other,.is-g-all{--g:#4B5D34}
 .ft-chip{display:inline-flex;align-items:center;gap:7px;align-self:flex-start;padding:5px 12px;border-radius:var(--bk-r-pill);background:var(--g,#4B5D34);color:#fff;
   font-family:'Tajawal',var(--bk-font-ui);font-weight:800;font-size:.82rem;line-height:1.3;white-space:nowrap}
 .ft-chip::before{content:"";width:7px;height:7px;background:currentColor;opacity:.85;transform:rotate(45deg)}
 .fh-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:clamp(18px,2.4vw,26px)}
-.fh-views{display:inline-flex;align-items:center;gap:4px;padding:5px;background:var(--bk-surface-2);border:1px solid var(--bk-border);border-radius:var(--bk-r-pill)}
-.fh-views-l{padding-inline:12px 6px;font-family:var(--bk-font-ui);font-size:.82rem;font-weight:700;color:var(--bk-text-muted)}
-.fh-view-btn{min-height:40px;padding:0 18px;border:0;border-radius:var(--bk-r-pill);background:transparent;cursor:pointer;font-family:'Tajawal',var(--bk-font-ui);font-weight:800;font-size:.95rem;color:var(--bk-text-soft);transition:background .25s,color .25s,box-shadow .25s}
-.fh-view-btn:hover{color:var(--bk-text)}
-.fh-view-btn[aria-pressed="true"]{background:var(--bk-surface);color:var(--bk-text);box-shadow:var(--bk-shadow-xs),inset 0 0 0 1.5px var(--bk-gold)}
 .fh-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:clamp(14px,2vw,20px)}
 .fh-all{margin-top:0}
 .fh-tabs{display:flex;gap:6px;width:max-content;max-width:100%;padding:6px;overflow-x:auto;scrollbar-width:none;background:var(--bk-surface-2);border:1px solid var(--bk-border);border-radius:var(--bk-r-pill)}
@@ -115,8 +98,8 @@
 .fh-tab[aria-pressed="true"]::before{box-shadow:0 0 0 2px rgba(255,255,255,.9)}
 .fh-tab[aria-pressed="true"] .n{background:var(--bk-gold);color:var(--bk-gold-ink)}
 .fh-note{margin:0 0 clamp(14px,2vw,22px);font-family:var(--bk-font-ui);font-size:.95rem;color:var(--bk-text-muted)}
-.fh-view[hidden],.fh-group[hidden],.fh-note[hidden]{display:none}
-@media (max-width:719px){ .fh-views-l{display:none} .fh-view-btn{padding:0 14px} .fh-all{display:none} }
+.fh-group[hidden],.fh-note[hidden]{display:none}
+@media (max-width:719px){ .fh-all{display:none} }
 
 /* ── view B: shelf ── */
 .fb{--fb-ease:cubic-bezier(.22,1,.36,1)}
@@ -177,62 +160,8 @@
   .fb-body{padding:16px;border-radius:24px}
 }
 
-/* ── view C: cards (photo beside the details, never under them) ── */
-.fc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(14px,1.8vw,22px)}
-.fc-card{position:relative;display:grid;grid-template-columns:minmax(150px,38%) minmax(0,1fr);overflow:hidden;background:var(--bk-surface);border:1px solid var(--bk-border);border-radius:26px;box-shadow:var(--bk-shadow-sm);
-  transition:transform .4s var(--bk-ease),box-shadow .4s,border-color .3s;animation:fc-in .6s var(--bk-ease) both;animation-delay:calc(var(--i,0)*60ms)}
-.fc-card:hover{transform:translateY(-4px);box-shadow:var(--bk-shadow-lg);border-color:color-mix(in srgb,var(--bk-accent) 35%,var(--bk-border))}
-@keyframes fc-in{from{opacity:0;transform:translateY(16px)}}
-.fc-cover{position:absolute;inset:0;z-index:1}
-.fc-media{position:relative;min-height:220px;background:var(--bk-surface-3);overflow:hidden}
-.fc-media .fa-img{transition:transform .9s var(--bk-ease)}
-.fc-card:hover .fc-media .fa-img{transform:scale(1.05)}
-.fc-media .fa-ph{display:grid;place-items:center}
-.fc-media .fa-ph-l{display:none}
-.fc-media .fa-seal--lg{width:88px;height:88px;box-shadow:0 0 0 7px rgba(255,255,255,.16),0 16px 28px -12px rgba(0,0,0,.5)}
-.fc-media .fa-seal--lg b{font-size:2.2rem}
-.fc-badge{position:absolute;z-index:2;top:12px;inset-inline-start:12px;pointer-events:none;display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:var(--bk-r-pill);
-  font-family:var(--bk-font-ui);font-size:.76rem;font-weight:800;background:var(--bk-grad-gold);color:var(--bk-gold-ink);box-shadow:0 6px 14px -4px rgba(0,0,0,.4)}
-.fc-badge-top{background:var(--bk-accent-fill);color:var(--bk-accent-ink)}
-.fc-badge-rec,.fc-badge-new{background:var(--bk-gold-soft);color:var(--bk-gold-strong)}
-.fc-logo{position:absolute;z-index:2;bottom:12px;inset-inline-start:12px;pointer-events:none}
-.fc-logo .fa-seal--xl{width:76px;height:76px;border:3px solid #fff;box-shadow:0 10px 22px -8px rgba(0,0,0,.55),0 0 0 1.5px var(--bk-gold)}
-.fc-body{display:flex;flex-direction:column;gap:7px;padding:16px 18px 18px;min-width:0}
-.fc-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.fc-fav{position:relative;z-index:3;flex:0 0 auto;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--bk-border);cursor:pointer;background:var(--bk-surface);color:var(--bk-text-soft);transition:transform .3s var(--bk-spring),color .2s}
-.fc-fav:hover{transform:scale(1.08);color:var(--bk-danger)}
-.fc-fav .heart-on{display:none}
-.fc-fav.is-on{color:var(--bk-danger)}
-.fc-fav.is-on .heart-off{display:none}
-.fc-fav.is-on .heart-on{display:block}
-.fc-card .fc-name{font-family:'Tajawal',var(--bk-font-ui);font-weight:800;font-size:1.35rem;line-height:1.3;color:var(--bk-text);overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}
-.fc-meta,.fc-status{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:3px 14px;font-family:var(--bk-font-ui);font-size:.88rem;color:var(--bk-text-muted)}
-.fc-meta > span,.fc-status > span{display:inline-flex;align-items:center;gap:5px}
-.fc-meta svg{color:var(--bk-accent)}
-.fc-dist{display:none!important;color:var(--bk-accent);font-weight:700}
-.fc-card[data-has-distance] .fc-dist{display:inline-flex!important}
-.fc-rate{font-weight:800;color:var(--bk-text)}
-.fc-rate svg{color:var(--bk-star)}
-.fc-rate small{font-weight:500;color:var(--bk-text-muted)}
-.fc-new{font-weight:700;color:var(--bk-text-soft)}
-.fc-svcs{margin:0;font-family:var(--bk-font-ui);font-size:.88rem;color:var(--bk-text-soft);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
-.fc-offer{align-self:flex-start;position:relative;z-index:3}
-.fc-foot{margin-top:auto;padding-top:12px;border-top:1px solid var(--bk-border);display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
-.fc-price{display:flex;flex-direction:column;line-height:1.25;font-family:var(--bk-font-ui)}
-.fc-price small{font-size:.78rem;color:var(--bk-text-muted)}
-.fc-price b{font-family:var(--bk-font-display);font-weight:700;font-size:1.3rem;color:var(--bk-gold-strong);white-space:nowrap}
-.fc-price b.is-text{font-family:'Tajawal',var(--bk-font-ui);font-size:1.05rem;color:var(--bk-text)}
-.fc-book{position:relative;z-index:3;padding:12px 20px}
-@media (max-width:1023px){ .fc-grid{grid-template-columns:minmax(0,1fr)} }
-@media (max-width:719px){
-  .fc-grid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;margin-inline:calc(var(--bk-gutter) * -1);padding:4px var(--bk-gutter) 22px;scroll-padding-inline:var(--bk-gutter);scrollbar-width:none}
-  .fc-grid::-webkit-scrollbar{display:none}
-  .fc-card{flex:0 0 min(84vw,340px);scroll-snap-align:start;display:flex;flex-direction:column}
-  .fc-media{min-height:0;aspect-ratio:16/10}
-}
 @media (prefers-reduced-motion:reduce){
-  .fc-card{animation:none}
-  .fb *,.fb *::before,.fb *::after,.fc *{transition:none!important;animation:none!important}
+  .fb *,.fb *::before,.fb *::after{transition:none!important;animation:none!important}
   .fb-js:not(.is-seen) .fb-slat{opacity:1;transform:none}
   .fb-body > *,.fb-open > .fp-badge,.fb-open > .fp-fav{opacity:1;translate:none}
 }
@@ -246,49 +175,6 @@
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var rtl = getComputedStyle(hub).direction === 'rtl';
   var all = function (s, r) { return [].slice.call((r || hub).querySelectorAll(s)); };
-
-  /* ── view A · gallery: index ⇄ stage sync + autoplay (desktop only; pauses on hover/focus/off-screen) ── */
-  function initA(root) {
-    var rows = all('[data-fp-row]', root), panels = all('[data-fp-panel]', root), stage = root.querySelector('[data-fp-stage]');
-    root.classList.add('fp-js');
-    if (!rows.length || !stage) { root.classList.add('is-seen'); return; }
-    var desk = window.matchMedia('(min-width: 1024px)');
-    var cur = 0, held = false, inView = false, leaveT = {};
-    function sync() { root.classList.toggle('is-playing', !reduce && desk.matches && inView && !held && rows.length > 1); }
-    function show(n) {
-      n = (n + rows.length) % rows.length;
-      if (n === cur) return;
-      var from = cur;
-      panels[from].classList.remove('is-on'); panels[from].classList.add('is-leaving'); rows[from].classList.remove('is-on');
-      clearTimeout(leaveT[from]);
-      leaveT[from] = setTimeout(function () { panels[from].classList.remove('is-leaving'); }, 1200);
-      clearTimeout(leaveT[n]);
-      panels[n].classList.remove('is-leaving'); panels[n].classList.add('is-on'); rows[n].classList.add('is-on');
-      cur = n;
-      root.classList.remove('is-playing'); void root.offsetWidth; sync();
-    }
-    rows.forEach(function (row, i) {
-      row.addEventListener('mouseenter', function () { if (desk.matches) show(i); });
-      row.addEventListener('focus', function () { if (desk.matches) show(i); });
-      row.addEventListener('animationend', function (e) {
-        if (e.animationName === 'fp-prog' && root.classList.contains('is-playing')) show(cur + 1);
-      });
-    });
-    [root.querySelector('[data-fp-index]'), stage].forEach(function (el) {
-      if (!el) return;
-      el.addEventListener('mouseenter', function () { held = true; sync(); });
-      el.addEventListener('mouseleave', function () { held = false; sync(); });
-    });
-    root.addEventListener('focusin', function () { held = true; sync(); });
-    root.addEventListener('focusout', function () { held = false; sync(); });
-    if (desk.addEventListener) desk.addEventListener('change', sync);
-    if ('IntersectionObserver' in window) {
-      new IntersectionObserver(function (ents) {
-        ents.forEach(function (e) { inView = e.isIntersecting; if (inView) root.classList.add('is-seen'); sync(); });
-      }, { threshold: 0.35 }).observe(stage);
-    } else { inView = true; root.classList.add('is-seen'); sync(); }
-    if (reduce) root.classList.add('is-seen');
-  }
 
   /* ── view B · shelf: point / tap / Tab to open a spine ── */
   function initB(root) {
@@ -321,36 +207,18 @@
       ents.forEach(function (e) { if (e.isIntersecting) { root.classList.add('is-seen'); io.disconnect(); } });
     }, { threshold: 0.25 }).observe(row);
   }
-  all('[data-fp]').forEach(initA);
   all('[data-fb]').forEach(initB);
 
-  /* ── hub: shared type filter + view switcher ── */
-  var panes = all('[data-fh-pane]'), tabs = all('[data-fh-tab]'), vbtns = all('[data-fh-view]'), notes = all('[data-fh-note]');
-  var KEY = 'bkf_featured_view', view = 'c', group = 'all';
-
-  function paint() {
-    panes.forEach(function (p) {
-      var on = p.getAttribute('data-fh-pane') === view;
-      p.hidden = !on;
-      all('[data-fh-group]', p).forEach(function (g) { g.hidden = g.getAttribute('data-fh-group') !== group; });
-    });
-    vbtns.forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-fh-view') === view ? 'true' : 'false'); });
-    tabs.forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-fh-tab') === group ? 'true' : 'false'); });
-    notes.forEach(function (n) { n.hidden = n.getAttribute('data-fh-note') !== group; });
-  }
-  vbtns.forEach(function (b) {
-    b.addEventListener('click', function () {
-      view = b.getAttribute('data-fh-view'); paint();
-      try { localStorage.setItem(KEY, view); } catch (e) {}
-    });
-  });
+  /* ── type filter ── */
+  var tabs = all('[data-fh-tab]'), notes = all('[data-fh-note]'), groups = all('[data-fh-group]');
   tabs.forEach(function (b) {
     b.addEventListener('click', function () {
-      group = b.getAttribute('data-fh-tab'); paint();
+      var group = b.getAttribute('data-fh-tab');
+      groups.forEach(function (g) { g.hidden = g.getAttribute('data-fh-group') !== group; });
+      tabs.forEach(function (t) { t.setAttribute('aria-pressed', t === b ? 'true' : 'false'); });
+      notes.forEach(function (n) { n.hidden = n.getAttribute('data-fh-note') !== group; });
       if (b.scrollIntoView) b.scrollIntoView({ block: 'nearest', inline: 'center' });
     });
   });
-  try { var saved = localStorage.getItem(KEY); if (saved && /^[abc]$/.test(saved)) view = saved; } catch (e) {}
-  paint();
 })();
 </script>

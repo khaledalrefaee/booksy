@@ -52,6 +52,8 @@ return [
             'locations.manage',
             'field-visits.view.all',
             'field-visits.review',
+            'leads.view',
+            'leads.manage',
         ],
 
         'sales_manager' => [
@@ -63,6 +65,8 @@ return [
             'employees.manage',
             'reports.view',
             'operations.view',
+            'leads.view',
+            'leads.manage',
         ],
 
         // Field reps live in the /employee area only — no owner-dashboard.view.
@@ -77,6 +81,7 @@ return [
             'reviews.moderate',
             'photos.review',
             'reports.view',
+            'leads.view',
         ],
 
         'support' => [
@@ -131,6 +136,14 @@ return [
                 'field-visits.view.own' => 'See own field visits',
                 'field-visits.view.all' => 'See all reps’ visits & reports',
                 'field-visits.review'   => 'Review & approve flagged visits',
+            ],
+        ],
+
+        'leads' => [
+            'label' => 'Pre-launch leads',
+            'permissions' => [
+                'leads.view'   => 'See interested businesses (leads)',
+                'leads.manage' => 'Change lead status & add notes',
             ],
         ],
 

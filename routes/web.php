@@ -26,6 +26,7 @@ Route::get('/robots.txt', function () {
         'Disallow: /customer/',
         'Disallow: /company/',
         'Disallow: /owner/',
+        'Disallow: /join/thanks',
         'Disallow: /api/',
         'Disallow: /appointment/',
         'Disallow: /s/',
@@ -58,7 +59,13 @@ Route::get('/branch/{slug}/{source}', [FrontController::class, 'branchSource'])
     ->where('source', 'IN|FB|WA|WEB|in|fb|wa|web|instagram|facebook|whatsapp|website')
     ->name('front.branch.source');
 Route::get('/s/{slug}', [FrontController::class, 'privateBooking'])->name('front.private-booking');
-Route::get('/for-business', [FrontController::class, 'business'])->name('front.business');
+Route::get('/for-business', [FrontController::class, 'business'])->middleware(['throttle:120,1', 'lead.track:business'])->name('front.business');
+
+/* ── Pre-launch funnel: /welcome (3 paths) → /for-business → /join (interest form). No login. ── */
+Route::get('/welcome', [\App\Http\Controllers\LeadPageController::class, 'welcome'])->middleware(['throttle:120,1', 'lead.track:welcome'])->name('leads.welcome');
+Route::get('/join', [\App\Http\Controllers\LeadPageController::class, 'join'])->middleware(['throttle:120,1', 'lead.track:join'])->name('leads.join');
+Route::post('/join', [\App\Http\Controllers\LeadPageController::class, 'store'])->middleware('throttle:lead-submit')->name('leads.store');
+Route::get('/join/thanks', [\App\Http\Controllers\LeadPageController::class, 'thanks'])->name('leads.thanks');
 Route::get('/about', [FrontController::class, 'about'])->name('front.about');
 Route::get('/appointment/{token}/confirm', [AppointmentConfirmController::class, 'confirm'])->name('appointment.confirm');
 Route::get('/appointment/{token}/cancel',  [AppointmentConfirmController::class, 'cancelForm'])->name('appointment.cancel-form');

@@ -52,12 +52,12 @@
         ],
     ];
 
-    // Coming soon (teasers, blurred previews)
+    // Coming soon (modules after bookings)
     $soon = [
-        ['icon' => 'wallet', 'ar' => 'المالية والأرباح', 'en' => 'Finance & profit', 'dar' => 'دخل ومصاريف وعمولات الموظفين في تقرير واضح.', 'den' => 'Income, expenses and staff commissions in one clear report.', 'prev' => 'donut'],
-        ['icon' => 'shield', 'ar' => 'الصلاحيات والفريق', 'en' => 'Roles & permissions', 'dar' => 'أدوار دقيقة لكل موظف وما يمكنه رؤيته وفعله.', 'den' => 'Granular roles for who sees and does what.', 'prev' => 'staff'],
-        ['icon' => 'box',   'ar' => 'المخزون', 'en' => 'Inventory', 'dar' => 'تتبّع المنتجات والتنبيه قبل نفادها.', 'den' => 'Track products and get low-stock alerts.', 'prev' => 'inv'],
-        ['icon' => 'chart', 'ar' => 'التحليلات', 'en' => 'Analytics', 'dar' => 'أكثر الخدمات ربحًا وأوقات الذروة ونمو الحجوزات.', 'den' => 'Top services, peak hours and booking growth.', 'prev' => 'bars'],
+        ['icon' => 'wallet', 'ar' => 'المالية والأرباح', 'en' => 'Finance & profit', 'dar' => 'دخل ومصاريف وعمولات الموظفين في تقرير واضح.', 'den' => 'Income, expenses and staff commissions in one clear report.'],
+        ['icon' => 'shield', 'ar' => 'الصلاحيات والفريق', 'en' => 'Roles & permissions', 'dar' => 'أدوار دقيقة لكل موظف وما يمكنه رؤيته وفعله.', 'den' => 'Granular roles for who sees and does what.'],
+        ['icon' => 'box',   'ar' => 'المخزون', 'en' => 'Inventory', 'dar' => 'تتبّع المنتجات والتنبيه قبل نفادها.', 'den' => 'Track products and get low-stock alerts.'],
+        ['icon' => 'chart', 'ar' => 'التحليلات', 'en' => 'Analytics', 'dar' => 'أكثر الخدمات ربحًا وأوقات الذروة ونمو الحجوزات.', 'den' => 'Top services, peak hours and booking growth.'],
     ];
 
     $whySwitch = [
@@ -416,37 +416,84 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
 /* ══════════════  MOBILE STRIP  ══════════════ */
 .biz-mobile{ display:grid; grid-template-columns:1.1fr 1fr; gap:clamp(28px,4vw,64px); align-items:center; }
 
-/* ══════════════  COMING SOON  ══════════════ */
-.biz-soon-wrap{ position:relative; }
-.biz-soon-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:var(--bk-s5); margin-top:var(--bk-s12); }
-.biz-soon{ position:relative; border-radius:var(--bk-r-lg); background:var(--bk-surface); border:1px solid var(--bk-border); overflow:hidden; transition:transform var(--bk-t) var(--bk-ease),box-shadow var(--bk-t) ease; }
-.biz-soon:hover{ transform:translateY(-5px); box-shadow:var(--bk-shadow); }
-.biz-soon-prev{ height:96px; padding:14px; overflow:hidden; position:relative; filter:blur(.6px) saturate(.85); opacity:.7; -webkit-mask-image:linear-gradient(180deg,#000,transparent); mask-image:linear-gradient(180deg,#000,transparent); }
-.biz-soon-body{ padding:18px 20px 22px; }
-.biz-soon-ic{ width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background:var(--bk-accent-wash); color:var(--bk-accent); margin:-34px 0 12px; position:relative; z-index:2; border:3px solid var(--bk-surface); }
-.biz-soon-ic svg{ width:21px; height:21px; }
-.biz-soon h3{ font-family:var(--bk-font-ui); font-size:1rem; font-weight:700; color:var(--bk-text); margin-bottom:6px; }
-.biz-soon p{ font-family:var(--bk-font-ui); font-size:.85rem; color:var(--bk-text-muted); line-height:1.6; }
-.biz-soon-badge{ position:absolute; z-index:3; inset-block-start:12px; inset-inline-end:12px; display:inline-flex; align-items:center; gap:6px; font-family:var(--bk-font-ui); font-size:.62rem; font-weight:700; color:var(--bk-gold-ink); background:var(--bk-gold); padding:4px 10px; border-radius:var(--bk-r-pill); box-shadow:var(--bk-shadow-sm); }
-.biz-soon-badge svg{ width:12px; height:12px; }
-.biz-soon-badge::before{ content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.6) 50%,transparent 70%); background-size:220% 100%; animation:biz-shine 2.6s ease-in-out infinite; }
-@keyframes biz-shine{ 0%{ background-position:120% 0; } 60%,100%{ background-position:-120% 0; } }
-/* mini previews reuse */
-.biz-donut{ width:70px; height:70px; border-radius:50%; background:conic-gradient(var(--bk-gold) 0 42%,var(--bk-accent) 42% 72%,var(--bk-accent-soft) 72% 100%); position:relative; }
-.biz-donut::after{ content:""; position:absolute; inset:11px; border-radius:50%; background:var(--bk-surface); }
-.biz-inv{ display:flex; flex-direction:column; gap:10px; }
-.biz-invrow .il{ display:flex; justify-content:space-between; font-family:var(--bk-font-ui); font-size:.64rem; color:var(--bk-text-soft); margin-bottom:5px; }
-.biz-invtrack{ height:6px; border-radius:4px; background:var(--bk-surface-2); overflow:hidden; }
-.biz-invfill{ height:100%; border-radius:4px; background:var(--bk-grad-accent); }
-.biz-invfill.low{ background:var(--bk-grad-gold); }
-.biz-staff{ display:flex; flex-direction:column; gap:7px; }
-.biz-staffrow{ display:flex; align-items:center; gap:9px; padding:7px 9px; background:var(--bk-surface-2); border:1px solid var(--bk-border); border-radius:var(--bk-r-sm); }
-.biz-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-.biz-dot.on{ background:var(--bk-success); } .biz-dot.off{ background:var(--bk-border-strong); }
-.biz-staffrow .sn{ font-family:var(--bk-font-ui); font-weight:600; font-size:.66rem; color:var(--bk-text); }
-.biz-bars{ display:flex; align-items:flex-end; gap:6px; height:64px; }
-.biz-bar{ flex:1; border-radius:4px 4px 0 0; background:var(--bk-grad-accent); opacity:.55; }
-.biz-bar.hi{ opacity:1; background:var(--bk-grad-gold); }
+/* ══════════════  COMING SOON — the street  ══════════════
+   Shopfronts on one pavement. Bookings is open and lit; the rest wait behind roller shutters (point, tap or Tab to peek).
+   Phones: the street scrolls sideways, one big shopfront at a time. */
+.st-street{ --st-gap:clamp(12px,1.8vw,28px); list-style:none; margin:clamp(40px,5.5vw,72px) 0 0; padding:0; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:clamp(30px,4vw,44px) var(--st-gap); align-items:start; }
+.st-shop{ --aw:#A9A38D; --sign:#454A39; --wall:#E3DCC9; --frame:#868270; --glass:linear-gradient(180deg,#C9D0BC,#AEB8A0); --ink:#6B6F5C; display:flex; flex-direction:column; outline:none; }
+.st-shop.is-live{ --aw:#47592F; --sign:#1D2614; --wall:#F7EED5; --frame:#2D381F; --glass:radial-gradient(90% 80% at 50% 78%,#FFEBB3,#EBC76B 58%,#C99A3E); --ink:#2B3519; }
+.st-front{ position:relative; isolation:isolate; }
+.st-shop.is-live .st-front::before{ content:""; position:absolute; z-index:-1; inset:6% -16% -6%; background:radial-gradient(58% 52% at 50% 62%,rgba(238,202,110,.34),transparent 72%); pointer-events:none; }
+
+#soon{ padding-bottom:clamp(40px,5vw,72px); }
+/* canopy: a shallow arch of plain pleated cloth with gold piping and a string of bulbs.
+   Lit on the open shop; dark on the others until their shutter is lifted. */
+.st-awning{ position:relative; z-index:2; height:clamp(40px,4.8vw,56px); border-radius:50% 50% 4px 4px / 80% 80% 4px 4px;
+  background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 46%,rgba(0,0,0,.22)),repeating-linear-gradient(90deg,rgba(255,255,255,.09) 0 7px,rgba(0,0,0,.05) 7px 14px),var(--aw);
+  box-shadow:inset 0 0 0 2px rgba(230,201,135,.55),inset 0 -4px 0 -1px rgba(230,201,135,.95);
+  filter:drop-shadow(0 9px 6px rgba(24,30,14,.26)); }
+.st-awning::before,.st-awning::after{ content:""; position:absolute; inset-inline:12px; bottom:-9px; height:16px; background-size:26px 16px; background-repeat:space no-repeat; background-position:center; pointer-events:none; }
+.st-awning::before{ background-image:radial-gradient(circle,#DDD6C0 0 3px,#8E886F 3px 4.6px,transparent 5.2px); }
+.st-awning::after{ background-image:radial-gradient(circle,#FFF7D4 0 3px,#F4C95F 3px 5px,transparent 6px); filter:drop-shadow(0 0 6px rgba(255,205,105,.95)); opacity:0; transition:opacity .7s ease; }
+.st-shop.is-live .st-awning::after,.st-shop:not(.is-live):hover .st-awning::after,.st-shop:not(.is-live):focus .st-awning::after{ opacity:1; }
+.st-sign{ position:relative; z-index:1; margin:-2px 8px 0; padding:20px 8px 10px; font-size:clamp(1rem,.82rem + .55vw,1.3rem); min-height:calc(2.5em + 24px); display:grid; place-items:center; text-align:center;
+  background:linear-gradient(180deg,rgba(255,255,255,.07),transparent 50%),var(--sign); border-radius:0 0 6px 6px; box-shadow:inset 0 0 0 1px rgba(230,201,135,.5),inset 0 0 0 4px var(--sign),inset 0 0 0 5px rgba(230,201,135,.22); }
+.st-shop.is-live .st-sign{ box-shadow:inset 0 0 0 1px rgba(230,201,135,.6),inset 0 0 0 4px var(--sign),inset 0 0 0 5px rgba(230,201,135,.3),0 12px 26px -10px rgba(238,202,110,.55); }
+.bkf .st-sign h3{ margin:0; font-size:1em; font-weight:800; line-height:1.25; color:#F6EFD9; text-wrap:balance; }
+
+/* the shop body: window, door, plant, shutter */
+.st-body{ position:relative; overflow:hidden; display:grid; grid-template-columns:1.45fr 1fr; gap:clamp(8px,1vw,12px); align-items:end; margin:0 8px; padding:clamp(10px,1.2vw,14px) clamp(10px,1.2vw,14px) 0; aspect-ratio:1/1.04;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.035) 0 1px,transparent 1px 9px),var(--wall); }
+.st-win{ position:relative; align-self:stretch; margin-bottom:clamp(28px,3.2vw,42px); display:grid; place-items:center; color:var(--ink); background:var(--glass); border-radius:6px; overflow:hidden;
+  box-shadow:inset 0 0 0 4px var(--frame),inset 0 0 0 5px rgba(255,255,255,.18),0 5px 0 -1px var(--frame); transition:background .7s ease; }
+.st-win::before{ content:""; position:absolute; inset:0; background:linear-gradient(118deg,rgba(255,255,255,.42) 0 14%,transparent 14% 24%,rgba(255,255,255,.2) 24% 29%,transparent 29%); pointer-events:none; }
+.st-win svg{ position:relative; z-index:1; }
+.st-door{ position:relative; height:80%; background:linear-gradient(90deg,rgba(255,255,255,.07),transparent 40%),var(--frame); border-radius:6px 6px 0 0; }
+.st-door::before{ content:""; position:absolute; inset:9px 9px 44%; border-radius:3px 3px 0 0; background:var(--glass); box-shadow:inset 0 0 0 2px rgba(0,0,0,.18); }
+.st-door::after{ content:""; position:absolute; inset-block-start:60%; inset-inline-end:9px; width:6px; height:6px; border-radius:50%; background:#E6C987; box-shadow:0 0 0 2px rgba(0,0,0,.18); }
+.st-pot{ position:absolute; z-index:1; inset-block-end:0; inset-inline-start:clamp(2px,.6vw,8px); width:clamp(20px,2.6vw,30px); height:clamp(30px,3.8vw,44px); pointer-events:none; }
+.st-pot::before{ content:""; position:absolute; inset:0 0 38%; border-radius:50% 50% 46% 46%; background:radial-gradient(circle at 35% 30%,#8FAE62,#4F6A33 70%); }
+.st-pot::after{ content:""; position:absolute; inset:58% 14% 0; background:linear-gradient(90deg,#B6704B,#9A5A3B); clip-path:polygon(0 0,100% 0,84% 100%,16% 100%); }
+.st-shop:nth-child(even) .st-pot{ inset-inline-start:auto; inset-inline-end:clamp(2px,.6vw,8px); }
+.st-tag{ position:absolute; z-index:3; font-family:'Tajawal',var(--bk-font-ui); font-weight:800; font-size:.88rem; line-height:1; white-space:nowrap; padding:8px 15px; border-radius:6px; color:#2A2310; background:#FBF6E6; box-shadow:0 8px 14px -8px rgba(0,0,0,.5),inset 0 0 0 1px rgba(75,93,52,.28); }
+.st-tag.is-open{ inset-inline:0; margin-inline:auto; width:max-content; inset-block-end:clamp(38px,4.2vw,54px); color:#27331A; display:inline-flex; align-items:center; gap:8px; }
+.st-tag.is-open::before{ content:""; width:8px; height:8px; border-radius:50%; background:#4B5D34; box-shadow:0 0 0 3px rgba(75,93,52,.2); }
+
+/* roller shutter */
+.st-shutter{ position:absolute; inset:0; z-index:2; display:grid; place-items:center; background:linear-gradient(90deg,rgba(0,0,0,.14),transparent 9%,transparent 91%,rgba(0,0,0,.14)),repeating-linear-gradient(180deg,#C6BEA8 0 7px,#B1A993 7px 8px);
+  box-shadow:inset 0 -12px 0 -2px #98917B,inset 0 0 24px rgba(60,56,40,.24); transition:transform .8s cubic-bezier(.22,1,.36,1); }
+.st-shutter::after{ content:""; position:absolute; inset-inline:0; margin-inline:auto; inset-block-end:16px; width:30px; height:7px; border-radius:4px; background:#7E775F; box-shadow:0 1px 0 rgba(255,255,255,.35); }
+.st-shutter .st-tag{ position:relative; transform:rotate(-3deg); }
+.st-shutter .st-tag::before{ content:""; position:absolute; inset-block-start:-6px; inset-inline:0; margin-inline:auto; width:7px; height:7px; border-radius:50%; background:#8B8470; box-shadow:0 1px 0 rgba(255,255,255,.4); }
+.st-shop:not(.is-live):hover .st-shutter,.st-shop:not(.is-live):focus .st-shutter{ transform:translateY(-40%); }
+.st-shop:not(.is-live):hover .st-win,.st-shop:not(.is-live):focus .st-win{ background:radial-gradient(90% 80% at 50% 78%,#FFF0C9,#E8CD8A 60%,#C9A458); }
+.bkf .st-shop:focus-visible{ outline:none; }
+.st-shop:focus-visible .st-front{ outline:3px solid var(--bk-accent); outline-offset:6px; border-radius:6px; }
+
+/* pavement, with a pool of light under the open shop */
+.st-ground{ position:relative; height:14px; margin-inline:calc(var(--st-gap) / -2); background:repeating-linear-gradient(90deg,transparent 0 31px,rgba(0,0,0,.13) 31px 32px),linear-gradient(180deg,#BDB59E,#A39B84); border-top:3px solid #928B73; }
+.st-shop.is-live .st-ground::before{ content:""; position:absolute; inset-block-start:-3px; inset-inline:14%; height:16px; background:radial-gradient(ellipse 50% 100% at 50% 0,rgba(255,232,160,.95),transparent 72%); filter:blur(2px); }
+.st-desc{ margin:18px 6px 0; text-align:center; font-family:var(--bk-font-ui); font-size:.96rem; line-height:1.75; color:var(--bk-text-soft); text-wrap:pretty; }
+.st-sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+.st-hint{ display:none; }
+.st-foot{ margin-top:clamp(22px,2.6vw,32px); display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center; }
+.st-foot p{ max-width:46ch; font-family:var(--bk-font-ui); font-size:.95rem; line-height:1.7; color:var(--bk-text-muted); }
+
+/* the one authored moment: the open shop's lights come on as the street scrolls in */
+.st-shop.is-live .st-win::after{ content:""; position:absolute; inset:0; background:radial-gradient(110% 90% at 50% 100%,rgba(255,244,205,.9),transparent 70%); mix-blend-mode:soft-light; }
+.st-street.is-in .st-shop.is-live .st-front{ animation:st-on 1.5s .5s both; }
+@keyframes st-on{ 0%{ filter:brightness(.6) saturate(.6); } 14%{ filter:brightness(1.12); } 22%{ filter:brightness(.65) saturate(.7); } 38%,100%{ filter:none; } }
+
+@media (max-width:1000px) and (min-width:761px){ .st-street{ grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width:760px){
+  .st-street{ display:flex; gap:var(--st-gap); margin-inline:calc(var(--bk-gutter,16px) * -1); padding:10px var(--bk-gutter,16px) 8px; overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x mandatory; scroll-padding-inline:var(--bk-gutter,16px); scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .st-street::-webkit-scrollbar{ display:none; }
+  .st-shop{ flex:0 0 min(76vw,280px); scroll-snap-align:start; }
+  .st-desc{ font-size:1rem; }
+  .st-hint{ display:flex; align-items:center; justify-content:center; gap:8px; margin:10px 0 0; font-family:var(--bk-font-ui); font-size:.88rem; font-weight:700; color:var(--bk-text-muted); }
+  [dir=rtl] .st-hint svg{ transform:scaleX(-1); }
+}
+@media (prefers-reduced-motion:reduce){ .st-shutter,.st-win,.st-awning::after{ transition:none !important; } .st-street.is-in .st-shop.is-live .st-front{ animation:none !important; } }
 
 /* ══════════════  WHY SWITCH  ══════════════ */
 .biz-why{ background:var(--bk-surface); }
@@ -561,7 +608,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
 
 /* ══════════════  RESPONSIVE  ══════════════ */
 @media (max-width:1024px){
-  .biz-problem-grid,.biz-why-grid,.biz-soon-grid{ grid-template-columns:repeat(2,1fr); }
+  .biz-problem-grid,.biz-why-grid{ grid-template-columns:repeat(2,1fr); }
   .biz-bento{ grid-template-columns:repeat(2,1fr); } .biz-cell.wide{ grid-column:span 2; }
 }
 @media (max-width:900px){
@@ -591,11 +638,11 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
   .biz-feature:not(.rev) .biz-collage-photo,.biz-feature.rev .biz-collage-photo{ inset-inline:auto; }
 }
 @media (max-width:560px){
-  .biz-problem-grid,.biz-why-grid,.biz-bento,.biz-soon-grid{ grid-template-columns:1fr; } .biz-cell.wide{ grid-column:auto; }
+  .biz-problem-grid,.biz-why-grid,.biz-bento{ grid-template-columns:1fr; } .biz-cell.wide{ grid-column:auto; }
   .biz-hero-note{ gap:6px 12px; }
 }
 @media (prefers-reduced-motion:reduce){
-  .biz-aurora,.biz-float,.biz-marquee-track,.biz-soon-badge::before,.biz-spark,.biz-stack,.biz-stack-bg img,.biz-shot-blob,.biz-shot-ring,.biz-motif{ animation:none !important; }
+  .biz-aurora,.biz-float,.biz-marquee-track,.biz-spark,.biz-stack,.biz-stack-bg img,.biz-shot-blob,.biz-shot-ring,.biz-motif{ animation:none !important; }
   .biz-word,.biz-slot,.biz-bubble,.biz-stack{ opacity:1 !important; transform:none !important; filter:none !important; animation:none !important; }
   .biz-stack-bg img{ transform:rotate(var(--rot)) !important; }
   .biz-hero h1 .gold::after{ animation:none !important; transform:scaleX(1) !important; }
@@ -629,7 +676,8 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
         </h1>
         <p class="biz-hero-sub">{{ $t('استقبل الحجوزات على مدار الساعة عبر صفحة حجز ورمز QR خاصّين بمنشأتك، وذكّر عملائك تلقائيًا بواتساب فيقلّ الغياب. ودّع الدفاتر والمكالمات.', 'Take bookings around the clock through your own booking page and QR code, and auto-remind clients on WhatsApp so no-shows drop. Say goodbye to notebooks and phone calls.') }}</p>
         <div class="biz-hero-cta">
-          <a href="{{ route('company.register') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg">{{ $t('ابدأ مجانًا الآن','Start free now') }}<x-icon name="arrow-right" :size="19"/></a>
+          @if(config('leads.browse_only'))<a href="{{ route('leads.join') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg" data-join-cta>{{ $t('سجّل اهتمامك','Register your interest') }}<x-icon name="arrow-right" :size="19"/></a>@else<a href="{{ route('company.register') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg">{{ $t('ابدأ مجانًا الآن','Start free now') }}<x-icon name="arrow-right" :size="19"/></a>@endif
+          @unless(config('leads.browse_only'))<a href="{{ route('leads.join') }}" class="bkf-btn bkf-btn-soft bkf-btn-lg" data-join-cta="hero">{{ $t('مهتم بـ GlowRez؟ سجّل اهتمامك','Interested in GlowRez? Register your interest') }}</a>@endunless
           {{-- <a href="#solution" class="bkf-btn bkf-btn-soft bkf-btn-lg"><x-icon name="play" :size="18"/>{{ $t('شاهد كيف يعمل','See how it works') }}</a> --}}
         </div>
         <div class="biz-hero-note">
@@ -716,36 +764,49 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
   </div>
 </section>
 
-{{-- ═══════════════  7 · COMING SOON  ═══════════════ --}}
+{{-- ═══════════════  7 · COMING SOON — the street  ═══════════════
+     One shop is open (bookings); the others are about to open behind their shutters. --}}
+@php
+  $mods = array_merge([[
+      'ar' => 'المواعيد والحجز', 'en' => 'Bookings', 'icon' => 'calendar', 'live' => true,
+      'dar' => 'صفحة حجز عامة، رمز QR، تقويم بلا تعارض، وتذكير واتساب تلقائي.',
+      'den' => 'A public booking page, QR code, conflict-free calendar and automatic WhatsApp reminders.',
+  ]], $soon);
+@endphp
 <section class="bkf-section" id="soon">
-  <div class="bkf-container-wide biz-soon-wrap">
+  <div class="bkf-container-wide">
     <div class="bkf-head-center bkf-reveal">
-      <span class="bkf-eyebrow is-center">{{ $t('قريبًا جدًا','Coming very soon') }}</span>
-      <h2 class="bkf-title">{{ $t('نبدأ بالمواعيد','We start with bookings') }} <span class="em">{{ $t('والباقي في الطريق','the rest is on the way') }}</span></h2>
-      <p class="bkf-lead">{{ $t('نطلق غلوريز ميزة تلو الأخرى لنتقن كل واحدة. هذه الوحدات قادمة قريبًا — ومن ينضمّ الآن يحصل عليها أولًا ومجانًا.','We release GlowRez one feature at a time to perfect each one. These modules are coming soon — join now and get them first, free.') }}</p>
+      <h2 class="bkf-title bkf-mt-0">{{ $t('نبدأ بالمواعيد','We start with bookings') }} <span class="em">{{ $t('والباقي في الطريق','the rest is on the way') }}</span></h2>
+      <p class="bkf-lead">{{ $t('قريبًا جدًا: نطلق غلوريز ميزة تلو الأخرى لنتقن كل واحدة.','Very soon: we release GlowRez one feature at a time, to perfect each one.') }}</p>
     </div>
-    <div class="biz-soon-grid">
-      @foreach($soon as $i => $s)
-      <div class="biz-soon bkf-reveal bkf-reveal-d{{ $i+1 }}">
-        <span class="biz-soon-badge"><x-icon name="clock" :size="12"/>{{ $t('قريبًا','Soon') }}</span>
-        <div class="biz-soon-prev">
-          @if($s['prev'] === 'donut')
-            <div style="display:flex;justify-content:center"><div class="biz-donut"></div></div>
-          @elseif($s['prev'] === 'staff')
-            <div class="biz-staff"><div class="biz-staffrow"><span class="biz-dot on"></span><span class="sn">رهف</span></div><div class="biz-staffrow"><span class="biz-dot on"></span><span class="sn">مها</span></div><div class="biz-staffrow"><span class="biz-dot off"></span><span class="sn">لينا</span></div></div>
-          @elseif($s['prev'] === 'inv')
-            <div class="biz-inv"><div class="biz-invrow"><div class="il"><b>{{ $t('صبغة','Colour') }}</b><span>68%</span></div><div class="biz-invtrack"><div class="biz-invfill" style="width:68%"></div></div></div><div class="biz-invrow"><div class="il"><b>{{ $t('طلاء أظافر','Polish') }}</b><span>12%</span></div><div class="biz-invtrack"><div class="biz-invfill low" style="width:12%"></div></div></div></div>
-          @else
-            <div class="biz-bars"><div class="biz-bar" style="height:40%"></div><div class="biz-bar" style="height:62%"></div><div class="biz-bar hi" style="height:88%"></div><div class="biz-bar" style="height:54%"></div><div class="biz-bar" style="height:72%"></div></div>
-          @endif
+
+    <ul class="st-street bkf-reveal">
+      @foreach($mods as $i => $m)
+      <li class="st-shop{{ !empty($m['live']) ? ' is-live' : '' }}" @if(empty($m['live'])) tabindex="0" @endif>
+        <div class="st-front">
+          <div class="st-awning" aria-hidden="true"></div>
+          <div class="st-sign"><h3>{{ $t($m['ar'], $m['en']) }}</h3></div>
+          <div class="st-body" aria-hidden="true">
+            <div class="st-win"><x-icon :name="$m['icon']" :size="42" :stroke="1.5"/></div>
+            <div class="st-door"></div>
+            <span class="st-pot"></span>
+            @if(!empty($m['live']))
+              <span class="st-tag is-open">{{ $t('متاح الآن','Open now') }}</span>
+            @else
+              <div class="st-shutter"><span class="st-tag">{{ $t('قريبًا','Soon') }}</span></div>
+            @endif
+          </div>
+          <div class="st-ground" aria-hidden="true"></div>
         </div>
-        <div class="biz-soon-body">
-          <div class="biz-soon-ic"><x-icon :name="$s['icon']" :size="21"/></div>
-          <h3>{{ $t($s['ar'], $s['en']) }}</h3>
-          <p>{{ $t($s['dar'], $s['den']) }}</p>
-        </div>
-      </div>
+        <p class="st-desc"><span class="st-sr">{{ !empty($m['live']) ? $t('متاح الآن. ','Open now. ') : $t('قريبًا. ','Coming soon. ') }}</span>{{ $t($m['dar'], $m['den']) }}</p>
+      </li>
       @endforeach
+    </ul>
+    <p class="st-hint" aria-hidden="true"><x-icon name="arrow-right" :size="16"/>{{ $t('اسحب لترى الباقي','Swipe to see the rest') }}</p>
+
+    <div class="st-foot bkf-reveal">
+      @if(config('leads.browse_only'))<a href="{{ route('leads.join') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg" data-join-cta>{{ $t('سجّل اهتمامك','Register your interest') }}<x-icon name="arrow-right" :size="19"/></a>@else<a href="{{ route('company.register') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg">{{ $t('ابدأ الآن','Get started') }}<x-icon name="arrow-right" :size="19"/></a>@endif
+      <p>{{ $t('مجاني لفترة محدودة، ومن ينضمّ الآن يحصل على الوحدات القادمة أولًا.','Free for a limited time. Join now and get the upcoming modules first.') }}</p>
     </div>
   </div>
 </section>
@@ -773,7 +834,7 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
       @endforeach
     </div>
     <div class="biz-why-cta bkf-reveal">
-      <a href="{{ route('company.register') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg">{{ $t('ابدأ معنا اليوم مجانًا','Start with us today — free') }}<x-icon name="arrow-right" :size="19"/></a>
+      @if(config('leads.browse_only'))<a href="{{ route('leads.join') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg" data-join-cta>{{ $t('سجّل اهتمامك','Register your interest') }}<x-icon name="arrow-right" :size="19"/></a>@else<a href="{{ route('company.register') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg">{{ $t('ابدأ معنا اليوم مجانًا','Start with us today — free') }}<x-icon name="arrow-right" :size="19"/></a>@endif
     </div>
   </div>
 </section>
@@ -843,8 +904,12 @@ html[dir="rtl"] .biz-slot{ --sx:-18px; }
           <span class="amt">{{ $t('مجانًا','Free') }}</span>
           <span class="per">{{ $t('الآن · بدون بطاقة','right now · no card') }}</span>
         </div>
-        <div class="biz-offer-cta">
-          <a href="{{ route('company.register') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg">{{ $t('ابدأ مجانًا الآن','Start free now') }}<x-icon name="arrow-right" :size="19"/></a>
+        <div class="biz-offer-cta" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+          @if(config('leads.browse_only'))<a href="{{ route('leads.join') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg" data-join-cta>{{ $t('سجّل اهتمامك','Register your interest') }}<x-icon name="arrow-right" :size="19"/></a>@else<a href="{{ route('company.register') }}" class="bkf-btn bkf-btn-primary bkf-btn-lg">{{ $t('ابدأ مجانًا الآن','Start free now') }}<x-icon name="arrow-right" :size="19"/></a>@endif
+          @unless(config('leads.browse_only'))<a href="{{ route('leads.join') }}" class="bkf-btn bkf-btn-soft bkf-btn-lg" data-join-cta="offer">{{ $t('مهتم بـ GlowRez؟ سجّل اهتمامك','Interested in GlowRez? Register your interest') }}</a>@endunless
+          @if($waLead = \App\Support\LeadContact::whatsappUrl())
+            <a href="{{ $waLead }}" target="_blank" rel="noopener" class="bkf-btn bkf-btn-ghost bkf-btn-lg" data-wa="business">{{ $t('تحدّث معنا على واتساب','Talk to us on WhatsApp') }}</a>
+          @endif
         </div>
         <ul class="biz-offer-fine">
           <li><span class="ck"><x-icon name="check" :size="13"/></span>{{ $t('صفحة حجز ورمز QR','Booking page & QR') }}</li>

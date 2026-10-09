@@ -15,6 +15,17 @@ class FrontController extends Controller
      */
     public function home(Request $request)
     {
+        // Pre-launch gateway (opt-in via LEADS_GATEWAY_ON_ROOT): first-time visitors pick
+        // customer / business / interested; "customer" sets a cookie and falls through here.
+        if (config('leads.gateway_on_root')) {
+            if ($request->query('enter') === 'customer') {
+                return redirect()->route('front.index')->withCookie(cookie('gr_entry', 'customer', 60 * 24 * 365));
+            }
+            if (! $request->hasCookie('gr_entry')) {
+                return app(\App\Http\Controllers\LeadPageController::class)->welcome($request, true);
+            }
+        }
+
         $isAr = app()->getLocale() === 'ar';
 
         $categories = Category::withCount(['companies' => fn($q) => $q->where('status', 'active')])->having('companies_count', '>', 0)->orderBy('sort_order')->get();
@@ -192,17 +203,28 @@ class FrontController extends Controller
         return $cards;
     }
 
-    /** City autocomplete list — real governorate rows, else the Syrian governorate fallback. */
+    /**
+     * City picker list — only governorates that actually have a public (marketplace, active)
+     * branch, each with its venue count: [['name' => ..., 'count' => ...], ...].
+     */
     private function cityList(bool $isAr)
     {
-        $cities = \App\Models\Governorate::orderBy('sort_order')->get()
-            ->map(fn ($g) => $g->localizedName())->filter()->values();
-        if ($cities->isEmpty()) {
-            $cities = collect($isAr
-                ? ['دمشق','ريف دمشق','حلب','حمص','حماة','اللاذقية','طرطوس','درعا','السويداء','القنيطرة','دير الزور','الرقة','الحسكة','إدلب']
-                : ['Damascus','Rif Dimashq','Aleppo','Homs','Hama','Latakia','Tartus','Daraa','As-Suwayda','Quneitra','Deir ez-Zor','Raqqa','Al-Hasakah','Idlib']);
+        $counts = \App\Models\Branch::query()
+            ->marketplace()
+            ->whereHas('company', fn ($q) => $q->where('status', 'active'))
+            ->whereNotNull('governorate_id')
+            ->selectRaw('governorate_id, COUNT(*) as venues')
+            ->groupBy('governorate_id')
+            ->pluck('venues', 'governorate_id');
+
+        if ($counts->isEmpty()) {
+            return collect();
         }
-        return $cities;
+
+        return \App\Models\Governorate::whereIn('id', $counts->keys())->orderBy('sort_order')->get()
+            ->map(fn ($g) => ['name' => $g->localizedName(), 'count' => (int) $counts[$g->id]])
+            ->filter(fn ($c) => $c['name'] !== '')
+            ->values();
     }
 
     /** Public: /venues explore + results page. */

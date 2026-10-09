@@ -62,23 +62,58 @@
           <input type="text" name="search" id="bkf-q" placeholder="{{ $t('صالون، سبا، خدمة…', 'Salon, spa, service…') }}" autocomplete="off" aria-label="{{ $t('ابحث عن خدمة أو مكان', 'Search service or venue') }}">
         </div>
         <span class="bkf-hsearch-div"></span>
-        <div class="bkf-hsearch-field">
+        {{-- venue type: custom listbox (value goes to the hidden input) --}}
+        <div class="bkf-hsearch-field bkf-dd" data-dd>
           <x-icon name="grid" :size="18"/>
-          <select name="category" id="bkf-cat" aria-label="{{ $t('نوع المكان', 'Venue type') }}">
-            <option value="">{{ $t('كل الأنواع', 'All types') }}</option>
+          <input type="hidden" name="category" id="bkf-cat" value="">
+          <button type="button" class="bkf-dd-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="{{ $t('نوع المكان', 'Venue type') }}">
+            <span class="bkf-dd-val" data-dd-val>{{ $t('كل الأنواع', 'All types') }}</span>
+            <x-icon name="chevron-down" :size="16"/>
+          </button>
+          <div class="bkf-dd-menu" role="listbox" tabindex="-1">
+            <button type="button" role="option" class="bkf-dd-opt is-sel" aria-selected="true" data-value="">
+              <span class="bkf-dd-ic is-all"><x-icon name="grid" :size="16"/></span>
+              <span class="bkf-dd-n">{{ $t('كل الأنواع', 'All types') }}</span>
+              <x-icon name="check" :size="16" class="bkf-dd-ck"/>
+            </button>
             @foreach($categories as $cat)
-              <option value="{{ $cat->slug }}">{{ $isAr ? $cat->name_ar : $cat->name_en }}</option>
+              @php $ddImg = $cat->image ? asset('storage/'.ltrim($cat->image, '/')) : null; $ddName = $isAr ? $cat->name_ar : $cat->name_en; @endphp
+              <button type="button" role="option" class="bkf-dd-opt" aria-selected="false" data-value="{{ $cat->slug }}">
+                <span class="bkf-dd-ic">@if($ddImg)<img src="{{ $ddImg }}" alt="" loading="lazy">@else<b style="background:{{ ['#4a6a34','#b4502f','#7a4585','#1f7378','#b07a1c','#b04062','#3f52a3','#7a6244'][abs(crc32($cat->slug)) % 8] }}">{{ mb_substr($ddName, 0, 1) }}</b>@endif</span>
+                <span class="bkf-dd-n">{{ $ddName }}</span>
+                <span class="bkf-dd-c">{{ $cat->companies_count }}</span>
+                <x-icon name="check" :size="16" class="bkf-dd-ck"/>
+              </button>
             @endforeach
-          </select>
+          </div>
         </div>
+        @if($cities->isNotEmpty())
         <span class="bkf-hsearch-div"></span>
-        <div class="bkf-hsearch-field">
+        {{-- city: only governorates that have live venues --}}
+        <div class="bkf-hsearch-field bkf-dd" data-dd>
           <x-icon name="map-pin" :size="18"/>
-          <input type="text" name="city" id="bkf-city" list="bkf-cities" placeholder="{{ $t('أين؟ المدينة', 'Where? City') }}" autocomplete="off" aria-label="{{ $t('اختر المدينة', 'Choose city') }}">
-          <datalist id="bkf-cities">
-            @foreach($cities as $city)<option value="{{ $city }}"></option>@endforeach
-          </datalist>
+          <input type="hidden" name="city" id="bkf-city" value="">
+          <button type="button" class="bkf-dd-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="{{ $t('اختر المدينة', 'Choose city') }}">
+            <span class="bkf-dd-val" data-dd-val>{{ $t('كل المدن', 'All cities') }}</span>
+            <x-icon name="chevron-down" :size="16"/>
+          </button>
+          <div class="bkf-dd-menu" role="listbox" tabindex="-1">
+            <button type="button" role="option" class="bkf-dd-opt is-sel" aria-selected="true" data-value="">
+              <span class="bkf-dd-ic is-all"><x-icon name="map-pin" :size="16"/></span>
+              <span class="bkf-dd-n">{{ $t('كل المدن', 'All cities') }}</span>
+              <x-icon name="check" :size="16" class="bkf-dd-ck"/>
+            </button>
+            @foreach($cities as $city)
+              <button type="button" role="option" class="bkf-dd-opt" aria-selected="false" data-value="{{ $city['name'] }}">
+                <span class="bkf-dd-ic is-city"><x-icon name="map-pin" :size="16"/></span>
+                <span class="bkf-dd-n">{{ $city['name'] }}</span>
+                <span class="bkf-dd-c">{{ $city['count'] }}</span>
+                <x-icon name="check" :size="16" class="bkf-dd-ck"/>
+              </button>
+            @endforeach
+          </div>
         </div>
+        @endif
         <button type="submit" class="bkf-btn bkf-btn-primary bkf-hsearch-go" aria-label="{{ $t('ابحث', 'Search') }}">
           <x-icon name="search" :size="18"/><span>{{ $t('اكتشف', 'Discover') }}</span>
         </button>
@@ -126,3 +161,54 @@
 
 
 <script>window.BK_HERO_SLIDES = @json($heroSlidesJs);</script>
+<script>
+/* hero custom dropdowns: click / keyboard (↑ ↓ Enter Esc Home End) / outside-click close */
+(function () {
+  var dds = [].slice.call(document.querySelectorAll('[data-dd]'));
+  if (!dds.length) return;
+  function close(dd) { dd.classList.remove('is-open'); dd.querySelector('.bkf-dd-btn').setAttribute('aria-expanded', 'false'); }
+  function closeAll(except) { dds.forEach(function (d) { if (d !== except) close(d); }); }
+  dds.forEach(function (dd) {
+    var btn = dd.querySelector('.bkf-dd-btn'), menu = dd.querySelector('.bkf-dd-menu'),
+        input = dd.querySelector('input[type=hidden]'), val = dd.querySelector('[data-dd-val]'),
+        opts = [].slice.call(dd.querySelectorAll('.bkf-dd-opt'));
+    function open() {
+      closeAll(dd);
+      dd.classList.remove('is-up');
+      dd.classList.add('is-open');
+      btn.setAttribute('aria-expanded', 'true');
+      // not enough room below inside the hero → open upward
+      var hero = dd.closest('.bkf-hero') || document.body, hb = hero.getBoundingClientRect(), bb = btn.getBoundingClientRect();
+      var need = Math.min(menu.scrollHeight, 320) + 24;
+      if (hb.bottom - bb.bottom < need && bb.top - hb.top > hb.bottom - bb.bottom) dd.classList.add('is-up');
+      var sel = menu.querySelector('.is-sel'); if (sel) { menu.scrollTop = Math.max(0, sel.offsetTop - 60); }
+    }
+    function pick(opt) {
+      opts.forEach(function (o) { var on = o === opt; o.classList.toggle('is-sel', on); o.setAttribute('aria-selected', on); });
+      input.value = opt.dataset.value;
+      val.textContent = opt.querySelector('.bkf-dd-n').textContent;
+      close(dd); btn.focus();
+    }
+    btn.addEventListener('click', function () { dd.classList.contains('is-open') ? close(dd) : open(); });
+    opts.forEach(function (o) { o.addEventListener('click', function () { pick(o); }); });
+    function move(step) {
+      var i = opts.indexOf(document.activeElement);
+      if (i < 0) i = opts.findIndex(function (o) { return o.classList.contains('is-sel'); });
+      i = Math.max(0, Math.min(opts.length - 1, i + step));
+      opts[i].focus();
+    }
+    dd.addEventListener('keydown', function (e) {
+      var isOpen = dd.classList.contains('is-open');
+      if (e.key === 'Escape' && isOpen) { e.preventDefault(); close(dd); btn.focus(); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault(); if (!isOpen) open();
+        move(e.key === 'ArrowDown' ? 1 : -1);
+      }
+      else if (isOpen && e.key === 'Home') { e.preventDefault(); opts[0].focus(); }
+      else if (isOpen && e.key === 'End') { e.preventDefault(); opts[opts.length - 1].focus(); }
+      else if (e.key === 'Tab') close(dd);
+    });
+  });
+  document.addEventListener('click', function (e) { if (!e.target.closest('[data-dd]')) closeAll(); });
+})();
+</script>

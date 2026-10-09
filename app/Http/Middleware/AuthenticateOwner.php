@@ -12,7 +12,10 @@ class AuthenticateOwner
     public function handle(Request $request, Closure $next): Response
     {
         if (! Auth::guard('owner')->check()) {
-            return redirect()->route('owner.login');
+            // guest() remembers the requested URL (GET only) so LoginController's
+            // redirect()->intended() lands people on the page they came for — e.g. the
+            // "Open lead" button in the new-lead email.
+            return redirect()->guest(route('owner.login'));
         }
 
         // Disabled accounts are logged straight out (covers a mid-session

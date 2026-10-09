@@ -1,8 +1,6 @@
 @php
     $isAr = app()->getLocale() === 'ar';
     $t = fn($ar, $en) => $isAr ? $ar : $en;
-    // hero look (initial; the on-page switcher can flip it): a = immersive photo · b = light + photo tiles · c = olive poster
-    $heroVariant = in_array(request()->query('hero'), ['a', 'b', 'c'], true) ? request()->query('hero') : 'a';
 
     // category slug → x-icon name
     $catIcon = function ($slug) {
@@ -35,12 +33,12 @@
 <x-front.layout
     variant="customer"
     :mapFab="false"
-    :bodyClass="$heroVariant === 'b' ? '' : 'bkf-has-hero'"
+    bodyClass="bkf-has-hero"
     :title="$t('GlowRez | اكتشف واحجز في أفضل مراكز الجمال والعناية قربك', 'GlowRez, Discover & Book Top Beauty & Wellness Venues Near You')"
     :keywords="$t('حجز صالون, حجز مركز تجميل, حجز حلاقة, سبا, أظافر, عيادات تجميل, مواعيد الجمال, خريطة الأماكن, سوريا, دمشق', 'salon booking, beauty appointment, barber booking, spa, nails, beauty clinics, wellness map, Syria, Damascus')"
     :description="$t('اكتشف واحجز في أفضل أماكن الجمال والعناية قربك: شعر، سبا، تجميل، حلاقة، أظافر وعيادات. استكشف على الخريطة، قارن التقييمات والأسعار، واحجز فورًا من هاتفك عبر GlowRez.', 'Discover and book the best beauty & wellness venues near you, explore them on a live map, compare ratings and prices, and book instantly from your phone with GlowRez.')">
 
-@include('front.partials.hero-hub')
+@include('front.partials.hero-a')
 
 {{-- ══════════════ 2 · VALUE BAR (qualitative — no counts pre-launch) ══════════════ --}}
 @php
@@ -240,8 +238,10 @@
   .bkf-hero-immersive.align-center .bkf-hero-scrim{background:linear-gradient(180deg,rgba(12,16,7,.62) 0%,rgba(12,16,7,.1) 24%,rgba(12,16,7,.5) 50%,rgba(12,16,7,.92) 100%)}
   .bkf-hero-immersive .bkf-hero-eyebrow,.bkf-hero-immersive .bkf-hero-lead,.bkf-hero-immersive .bkf-hero-chips,
   .bkf-hero-immersive .bkf-hero-proof,.bkf-hero-immersive .bkf-hero-dots{display:none}
-  .bkf-hero-immersive .bkf-hero-i-text{max-width:none;align-items:stretch}
-  html[lang="ar"] .bkf-hero-immersive .bkf-hero-title{font-size:clamp(1.75rem,7.4vw,2.2rem);line-height:1.3;margin-bottom:16px;text-align:start}
+  /* html[dir] prefix: must outrank the RTL `align-items:flex-end` rule, otherwise .hq grows to its content width and can't scroll */
+  .bkf-hero-immersive .bkf-hero-i-text,html[dir="rtl"] .bkf-hero-immersive .bkf-hero-i-text{max-width:none;align-items:stretch}
+  .bkf-hero-immersive .bkf-hero-title{margin-bottom:18px}
+  html[lang="ar"] .bkf-hero-immersive .bkf-hero-title{font-size:clamp(1.75rem,7.4vw,2.2rem);line-height:1.3;margin-bottom:18px;text-align:start}
   /* one field + one round button */
   .bkf-hero-immersive .bkf-hsearch{flex-direction:row;align-items:center;gap:0;margin-top:0;padding:6px 6px 6px 8px;padding-inline:16px 6px;border-radius:var(--bk-r-pill);
     background:rgba(255,255,255,.96);border-color:transparent;box-shadow:0 18px 36px -14px rgba(0,0,0,.65)}

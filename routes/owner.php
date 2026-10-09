@@ -74,6 +74,21 @@ Route::prefix('owner')->name('owner.')->group(function () {
                 ->name('team.reset-password');
         });
 
+        // ── Pre-launch leads (CRM): businesses that registered interest on /join ──
+        Route::prefix('leads')->name('leads.')
+            ->controller(\App\Http\Controllers\Owner\LeadController::class)
+            ->group(function () {
+                Route::middleware('owner.can:leads.view')->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::get('export', 'export')->name('export');
+                    Route::get('{lead}', 'show')->whereNumber('lead')->name('show');
+                });
+                Route::middleware('owner.can:leads.manage')->group(function () {
+                    Route::patch('{lead}/status', 'updateStatus')->whereNumber('lead')->name('status');
+                    Route::post('{lead}/notes', 'storeNote')->whereNumber('lead')->name('notes.store');
+                });
+            });
+
         // ── Field sales (team reporting + review queue) ──
         Route::prefix('field-sales')->name('field-sales.')
             ->controller(\App\Http\Controllers\Owner\FieldSalesController::class)

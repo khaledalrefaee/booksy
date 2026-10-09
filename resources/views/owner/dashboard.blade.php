@@ -9,6 +9,12 @@
     catch (\Throwable $e) { $bkOwnerPendingAppts = 0; }
     try { $bkOwnerPendingCompanies = (int) \App\Models\Company::where('status', 'pending')->count(); }
     catch (\Throwable $e) { $bkOwnerPendingCompanies = 0; }
+    try { $bkOwnerPendingPhotos = \Illuminate\Support\Facades\Gate::allows('owner-can', 'photos.review')
+            ? (int) \App\Models\BranchImage::where('status', 'pending')->count() : 0; }
+    catch (\Throwable $e) { $bkOwnerPendingPhotos = 0; }
+    try { $bkOwnerNewLeads = \Illuminate\Support\Facades\Gate::allows('owner-can', 'leads.view')
+            ? (int) \App\Models\Lead::where('status', 'new')->count() : 0; }
+    catch (\Throwable $e) { $bkOwnerNewLeads = 0; }
 @endphp
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}"
       dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}"
@@ -27,6 +33,8 @@
      emails, salaries & financial data — mask all rendered text in Clarity
      recordings. Heatmaps & click analytics still work; UI is unaffected. --}}
 <body data-clarity-mask="true">
+	{{-- Restore the folded sidebar before first paint so the layout never jumps (desktop only) --}}
+	<script>try{if(localStorage.getItem('bkOwnerFold')==='1'&&matchMedia('(min-width:992px)').matches)document.body.classList.add('sidebar-folded')}catch(e){}</script>
 	<div class="main-wrapper">
 
 		<!-- partial:partials/_sidebar.html -->
@@ -39,13 +47,17 @@
       @include('owner.partials.navbar')
 			<!-- partial -->
 
+        <span id="bkMain" tabindex="-1"></span>
         @yield('content')
 
 			<!-- partial:partials/_footer.html -->
       @include('owner.partials.footer')
 			<!-- partial -->
-		
+
 		</div>
+
+		{{-- Phone tab bar --}}
+		@include('owner.partials.bottom-nav')
 	</div>
 
 	<!-- core:js -->
