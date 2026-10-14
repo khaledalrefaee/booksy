@@ -12,7 +12,7 @@
     $isAr = app()->getLocale() === 'ar';
 @endphp
 
-<div class="page-content bk-dash">
+<div class="page-content dx">
 
 {{-- ════ SUBSCRIPTION EXPIRY BANNER ════ --}}
 @php
@@ -198,595 +198,729 @@
 </script>
 @endif
 
-{{-- ════ HERO HEADER ════ --}}
-<div class="bk-hero bk-a1">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-        <div>
-            <h2 class="bk-hero-title"><span>{{ __('Dashboard') }}</span></h2>
-            <p class="bk-hero-sub">
-                <i data-feather="briefcase" style="width:13px;height:13px;display:inline;margin-right:5px;"></i>
-                {{ $company->localizedName() }}
-            </p>
-        </div>
-        <div class="bk-hero-actions">
-            <a href="{{ route('front.show', $company) }}" target="_blank"
-               class="bk-navbar-action bk-navbar-action-ghost d-flex align-items-center gap-2">
-                <i data-feather="external-link" style="width:14px;height:14px;"></i>
-                {{ __('Public page') }}
-            </a>
-        </div>
-    </div>
-</div>
+@push('company-styles')
+<link rel="stylesheet" href="{{ asset('backend/assets/css/booksy-dashboard.css') }}?v={{ @filemtime(public_path('backend/assets/css/booksy-dashboard.css')) ?: '1' }}">
+@endpush
 
 @include('company.partials.flash')
 
-{{-- ════ STAT CARDS — horizontal ════ --}}
-<div class="row g-3 mb-4" data-live-block="stats">
+@php
+    // ── view-model helpers (presentation only; every number comes from the service) ──
+    $ins      = $insights;
+    $k        = $ins['kpi'];
+    $cu       = $ins['customers'];
+    $td       = $ins['today'];
+    $hl       = $ins['health'];
+    $sym      = $ins['currency']['symbol'];
+    $money    = fn ($v) => number_format((float) $v, ((float) $v == floor((float) $v)) ? 0 : 2);
+    $hour     = (int) now(config('app.timezone'))->format('G');
+    $greeting = $hour < 12 ? __('Good morning') : ($hour < 17 ? __('Good afternoon') : __('Good evening'));
+    $todayPct = $td['total'] > 0 ? round($td['done'] / $td['total'], 3) : 0;
 
-    <div class="col-12 col-sm-6 col-lg-3 bk-a1">
-        <div class="bk-stat" data-accent="gold">
-            <div class="bk-stat-left">
-                <div class="bk-stat-icon bk-icon-gold">
-                    <i class="feather icon-calendar bk-ic"></i>
-                </div>
-                <div class="bk-stat-info">
-                    <div class="bk-stat-label">{{ __('Total Bookings') }}</div>
-                    <div class="bk-stat-sub">{{ $pendingAppt }} {{ __('pending') }}</div>
-                </div>
+    // % change chip → [css class, feather icon, text]
+    $chip = function ($d) {
+        if ($d === null) return ['flat', 'star', __('New')];
+        if ($d > 0.05)   return ['up', 'trending-up', '+' . rtrim(rtrim(number_format($d, 1), '0'), '.') . '%'];
+        if ($d < -0.05)  return ['down', 'trending-down', '−' . rtrim(rtrim(number_format(abs($d), 1), '0'), '.') . '%'];
+        return ['flat', 'minus', '0%'];
+    };
+
+    // 14-day bar micro-chart; every bar carries its own label + value as a tooltip
+    $bars = function (array $vals, array $labels, string $unit) {
+        $n = max(1, count($vals));
+        $max = max(1, max($vals ?: [0]));
+        $svg = '<svg class="dx-bars" viewBox="0 0 140 46" preserveAspectRatio="none" role="img" aria-label="' . e(__('Last 14 days')) . '">';
+        foreach ($vals as $i => $v) {
+            $h = max(3, round(($v / $max) * 42));
+            $x = round($i * (140 / $n) + 1, 2);
+            $w = round((140 / $n) - 3.6, 2);
+            $svg .= '<rect x="' . $x . '" y="' . (46 - $h) . '" width="' . $w . '" height="' . $h . '" rx="2"><title>'
+                . e(($labels[$i] ?? '') . ' — ' . number_format((float) $v, ((float) $v == floor((float) $v)) ? 0 : 2) . ($unit ? ' ' . $unit : ''))
+                . '</title></rect>';
+        }
+        return $svg . '</svg>';
+    };
+    $pctOf = fn ($part, $whole) => $whole > 0 ? round($part / $whole * 100) : 0;
+
+    // ── quick actions ──
+    $firstBranch = ($branchContext ?? null) ?: $company->branches->first();
+
+    $publicUrl = $company->publicUrl($branchContext ?? null);
+    $candidates = [];
+    $candidates[] = ['url' => route('company.appointments.index', ['status' => 'pending']), 'icon' => 'bell',
+        'label' => __('Pending requests'),
+        'hint'  => $pendingAppt > 0 ? __(':count waiting for you', ['count' => $pendingAppt]) : __('Nothing waiting'),
+        'badge' => $pendingAppt];
+    if ($firstBranch) {
+        $candidates[] = ['url' => route('company.branches.services.create', $firstBranch), 'icon' => 'scissors',
+            'label' => __('Add service'), 'hint' => __(':count services live', ['count' => $servicesCount])];
+        $candidates[] = ['url' => route('company.branches.employees.create', $firstBranch), 'icon' => 'user-plus',
+            'label' => __('Add employee'), 'hint' => __(':count active', ['count' => $ins['team']['active']])];
+    }
+    $candidates[] = ['url' => route('company.customers.index'), 'icon' => 'users',
+        'label' => __('Customers'), 'hint' => __(':count customers', ['count' => number_format($cu['total'])])];
+    if ($company->hasFeature('finance')) {
+        $candidates[] = ['url' => route('company.invoices.index'), 'icon' => 'file-text',
+            'label' => __('Invoices'), 'hint' => __('Billing & payments')];
+    }
+    if ($company->hasFeature('reports')) {
+        $candidates[] = ['url' => route('company.reports.profit-loss'), 'icon' => 'bar-chart-2',
+            'label' => __('Reports'), 'hint' => __('Profit & performance')];
+    }
+    $candidates[] = ['url' => route('company.marketing.offers'), 'icon' => 'percent',
+        'label' => __('Offers'), 'hint' => __('Discounts & campaigns')];
+    $candidates[] = ['url' => route('company.service-categories.index'), 'icon' => 'tag',
+        'label' => __('Categories'), 'hint' => __('Organise your menu')];
+    $candidates[] = ['url' => route('company.branches.create'), 'icon' => 'map-pin',
+        'label' => __('New branch'), 'hint' => __('Open another location')];
+    $dock = array_slice($candidates, 0, 6);
+
+    // ── needs attention ──
+    $attn = [];
+    if ($ins['attention']['pending'] > 0) {
+        $attn[] = ['icon' => 'bell', 'tone' => '', 'n' => $ins['attention']['pending'], 'label' => __('Booking requests'),
+            'hint' => __('Waiting for your confirmation'), 'url' => route('company.appointments.index', ['status' => 'pending'])];
+    }
+    if ($ins['attention']['awaiting'] > 0) {
+        $attn[] = ['icon' => 'credit-card', 'tone' => 'gold', 'n' => $ins['attention']['awaiting'], 'label' => __('Awaiting payment'),
+            'hint' => __('Service done, payment not collected'), 'url' => route('company.appointments.index', ['status' => 'awaiting_payment'])];
+    }
+    if ($waitlistWaiting > 0 && $company->hasFeature('waitlist')) {
+        $attn[] = ['icon' => 'list', 'tone' => 'info', 'n' => $waitlistWaiting, 'label' => __('On the waitlist'),
+            'hint' => __('Customers hoping for a slot'), 'url' => route('company.waitlist.index')];
+    }
+    if (($ins['finance']['debts_overdue'] ?? 0) > 0) {
+        $attn[] = ['icon' => 'alert-triangle', 'tone' => 'danger', 'n' => $ins['finance']['debts_overdue'], 'label' => __('Overdue debts'),
+            'hint' => __('Past their due date'), 'url' => route('company.debts.index')];
+    }
+    if (($ins['inventory']['low_stock'] ?? 0) > 0) {
+        $attn[] = ['icon' => 'package', 'tone' => 'danger', 'n' => $ins['inventory']['low_stock'], 'label' => __('Low stock'),
+            'hint' => __('Products at or below their threshold'), 'url' => route('company.inventory.index')];
+    }
+
+    // ── outcome ledger ──
+    $outcomes = [
+        ['k' => 'completed', 'label' => __('Completed'),         'n' => $hl['completed'], 'var' => '--bk-success'],
+        ['k' => 'active',    'label' => __('Confirmed / in service'), 'n' => $hl['active'],    'var' => '--bk-info'],
+        ['k' => 'pending',   'label' => __('Pending'),           'n' => $hl['pending'],   'var' => '--bk-warning'],
+        ['k' => 'awaiting',  'label' => __('Awaiting payment'),  'n' => $hl['awaiting'],  'var' => '--bk-gold'],
+        ['k' => 'cancelled', 'label' => __('Cancelled'),         'n' => $hl['cancelled'], 'var' => '--bk-danger'],
+        ['k' => 'no_show',   'label' => __('No-show'),           'n' => $hl['no_show'],   'var' => '--bk-text-muted'],
+    ];
+    $channelIcons = ['instagram' => 'instagram', 'facebook' => 'facebook', 'whatsapp' => 'message-circle', 'glowrez' => 'globe', 'reception' => 'monitor', 'other' => 'compass'];
+    $channelVars  = ['instagram' => '--bk-purple', 'facebook' => '--bk-info', 'whatsapp' => '--bk-success', 'glowrez' => '--bk-accent', 'reception' => '--bk-gold', 'other' => '--bk-border-strong'];
+    $srcTotal     = max(1, collect($ins['sources'])->sum('count'));
+    $hasBranches  = count($ins['branches']) > 0;
+    $hm           = $ins['heatmap'];
+@endphp
+
+{{-- ════ MASTHEAD ════ --}}
+<section class="dx-hero dx-rise" style="--i:0" aria-label="{{ __('Today') }}">
+    <div class="dx-hero-top">
+        <div class="dx-hero-copy">
+            <h1 class="dx-hero-title">{{ $greeting }}{{ $isAr ? '،' : ',' }} <em>{{ $company->localizedName() }}</em></h1>
+            <p class="dx-hero-line">
+                @if($td['total'] > 0)
+                    {{ __('You have :count appointments today — :left still ahead.', ['count' => $td['total'], 'left' => $td['left']]) }}
+                    @if($td['next'])
+                        <a href="{{ $td['next']['url'] }}">{{ __('Next up: :time with :name', ['time' => $td['next']['time'], 'name' => $td['next']['customer'] ?: '—']) }}</a>
+                    @endif
+                @else
+                    {{ __('No appointments today yet — a good moment to set things up or share your page.') }}
+                @endif
+            </p>
+        </div>
+        <div class="dx-hero-side">
+            <span class="dx-date"><i data-feather="calendar"></i>{{ now(config('app.timezone'))->translatedFormat('l j F Y') }}</span>
+            <div class="dx-hero-actions">
+                <a href="{{ route('company.appointments.index') }}" class="dx-btn dx-btn--gold"><i data-feather="plus"></i>{{ __('New booking') }}</a>
+                <a href="{{ $publicUrl }}" target="_blank" rel="noopener" class="dx-btn dx-btn--ghost"><i data-feather="external-link"></i>{{ __('Public page') }}</a>
             </div>
-            <div class="bk-stat-num bk-counter" data-target="{{ $totalAppt }}">{{ number_format($totalAppt) }}</div>
-            <div class="bk-stat-bar"><div class="bk-stat-bar-fill" style="width:100%;"></div></div>
         </div>
     </div>
 
-    <div class="col-12 col-sm-6 col-lg-3 bk-a2">
-        <div class="bk-stat" data-accent="orange">
-            <div class="bk-stat-left">
-                <div class="bk-stat-icon bk-icon-orange">
-                    <i class="feather icon-clock bk-ic"></i>
-                </div>
-                <div class="bk-stat-info">
-                    <div class="bk-stat-label">{{ __('Pending') }}</div>
-                    <div class="bk-stat-sub">{{ __('awaiting action') }}</div>
-                </div>
-            </div>
-            <div class="bk-stat-num bk-counter" data-target="{{ $pendingAppt }}"
-                 style="{{ $pendingAppt > 0 ? 'animation:bk-pulse 2s ease infinite;' : '' }}">
-                {{ number_format($pendingAppt) }}
-            </div>
-            <div class="bk-stat-bar"><div class="bk-stat-bar-fill" style="width:{{ $totalAppt>0?round($pendingAppt/$totalAppt*100):0 }}%;"></div></div>
+    <div class="dx-today">
+        <div class="dx-today-i">
+            <div class="dx-today-k"><i data-feather="calendar"></i>{{ __('Today') }}</div>
+            <div class="dx-today-v dx-count" data-to="{{ $td['total'] }}">{{ number_format($td['total']) }}</div>
         </div>
-    </div>
-
-    <div class="col-12 col-sm-6 col-lg-3 bk-a3">
-        <div class="bk-stat" data-accent="green">
-            <div class="bk-stat-left">
-                <div class="bk-stat-icon bk-icon-green">
-                    <i class="feather icon-check-circle bk-ic"></i>
-                </div>
-                <div class="bk-stat-info">
-                    <div class="bk-stat-label">{{ __('Confirmed') }}</div>
-                    <div class="bk-stat-sub">{{ $completedAppt }} {{ __('completed') }}</div>
-                </div>
-            </div>
-            <div class="bk-stat-num bk-counter" data-target="{{ $confirmedAppt }}">{{ number_format($confirmedAppt) }}</div>
-            <div class="bk-stat-bar"><div class="bk-stat-bar-fill" style="width:{{ $totalAppt>0?round($confirmedAppt/$totalAppt*100):0 }}%;"></div></div>
+        <div class="dx-today-i">
+            <div class="dx-today-k"><i data-feather="check-circle"></i>{{ __('Completed') }}</div>
+            <div class="dx-today-v"><span class="dx-count" data-to="{{ $td['done'] }}">{{ number_format($td['done']) }}</span><small>/ {{ number_format($td['total']) }}</small></div>
         </div>
-    </div>
-
-    <div class="col-12 col-sm-6 col-lg-3 bk-a4">
-        <div class="bk-stat" data-accent="blue">
-            <div class="bk-stat-left">
-                <div class="bk-stat-icon bk-icon-blue">
-                    <i class="feather icon-map-pin bk-ic"></i>
-                </div>
-                <div class="bk-stat-info">
-                    <div class="bk-stat-label">{{ __('Branches') }}</div>
-                    <div class="bk-stat-sub">{{ $servicesCount }} {{ __('services') }}</div>
-                </div>
-            </div>
-            <div class="bk-stat-num bk-counter" data-target="{{ $branchesCount }}">{{ number_format($branchesCount) }}</div>
-            <div class="bk-stat-bar"><div class="bk-stat-bar-fill" style="width:{{ min($branchesCount*15,100) }}%;"></div></div>
+        <div class="dx-today-i">
+            <div class="dx-today-k"><i data-feather="clock"></i>{{ __('Still ahead') }}</div>
+            <div class="dx-today-v dx-count" data-to="{{ $td['left'] }}">{{ number_format($td['left']) }}</div>
         </div>
+        <div class="dx-today-i">
+            <div class="dx-today-k"><i data-feather="dollar-sign"></i>{{ __("Today's revenue") }}</div>
+            <div class="dx-today-v">{{ $money($td['revenue']) }}<small>{{ $sym }}</small></div>
+        </div>
+        <div class="dx-today-bar" style="--p:{{ $todayPct }}" aria-hidden="true"><span></span></div>
     </div>
+</section>
 
-</div>
+{{-- ════ BUSINESS PULSE — the month in four columns ════ --}}
+<section class="dx-panel dx-pulse dx-rise" style="--i:1" aria-label="{{ __('This month') }}">
+
+    @php [$rc, $ri, $rt] = $chip($k['revenue_delta']); @endphp
+    <article class="dx-k" data-live-block="stats">
+        <div class="dx-k-h"><span class="dx-k-ic dx-k-ic--gold"><i data-feather="dollar-sign"></i></span>{{ __('Revenue this month') }}</div>
+        <div class="dx-k-v"><span class="dx-count" data-to="{{ $k['revenue'] }}" data-dec="{{ $k['revenue'] == floor($k['revenue']) ? 0 : 2 }}">{{ $money($k['revenue']) }}</span><small>{{ $sym }}</small></div>
+        <span class="dx-delta {{ $rc }}"><i data-feather="{{ $ri }}"></i><bdi dir="ltr">{{ $rt }}</bdi> <span style="font-weight:600;opacity:.85">{{ __('vs same days last month') }}</span></span>
+        <div class="dx-k-note">{{ __('Still expected this month') }}: <b>{{ $money($k['revenue_expected']) }} {{ $sym }}</b> · {{ __('Avg. ticket') }}: <b>{{ $money($k['avg_ticket']) }} {{ $sym }}</b></div>
+        {!! $bars($ins['series']['spark']['revenue'], $ins['series']['spark']['labels'], $sym) !!}
+    </article>
+
+    @php [$bc, $bi, $bt] = $chip($k['bookings_delta']); @endphp
+    <article class="dx-k">
+        <div class="dx-k-h"><span class="dx-k-ic"><i data-feather="calendar"></i></span>{{ __('Bookings this month') }}</div>
+        <div class="dx-k-v"><span class="dx-count" data-to="{{ $k['bookings'] }}">{{ number_format($k['bookings']) }}</span></div>
+        <span class="dx-delta {{ $bc }}"><i data-feather="{{ $bi }}"></i><bdi dir="ltr">{{ $bt }}</bdi></span>
+        <div class="dx-k-note">{{ __('Last month so far') }}: <b>{{ number_format($k['bookings_prev']) }}</b></div>
+        {!! $bars($ins['series']['spark']['bookings'], $ins['series']['spark']['labels'], '') !!}
+    </article>
+
+    @php [$cc, $ci, $ct] = $chip($cu['new_prev'] > 0 ? (($cu['new_month'] - $cu['new_prev']) / $cu['new_prev'] * 100) : ($cu['new_month'] > 0 ? null : 0)); @endphp
+    <article class="dx-k">
+        <div class="dx-k-h"><span class="dx-k-ic"><i data-feather="users"></i></span>{{ __('Customers') }}</div>
+        <div class="dx-k-v"><span class="dx-count" data-to="{{ $cu['total'] }}">{{ number_format($cu['total']) }}</span></div>
+        <span class="dx-delta {{ $cc }}"><i data-feather="{{ $ci }}"></i>{{ number_format($cu['new_month']) }} {{ __('new this month') }}</span>
+        <div class="dx-k-note">{{ __(':pct% came back for a second visit', ['pct' => rtrim(rtrim(number_format($cu['repeat_rate'], 1), '0'), '.')]) }}</div>
+        <div class="dx-meter" role="img" aria-label="{{ __('Returning vs one-time customers') }}">
+            <span class="dx-m-ok" style="flex:{{ max(1, $cu['returning']) }}"></span>
+            <span class="dx-m-open" style="flex:{{ max(1, $cu['total'] - $cu['returning']) }}"></span>
+        </div>
+        <div class="dx-key">
+            <span><i class="dx-m-ok"></i>{{ __('Returning') }} <b>{{ number_format($cu['returning']) }}</b></span>
+            <span><i class="dx-m-open"></i>{{ __('One-time') }} <b>{{ number_format(max(0, $cu['total'] - $cu['returning'])) }}</b></span>
+        </div>
+    </article>
+
+    <article class="dx-k">
+        <div class="dx-k-h"><span class="dx-k-ic"><i data-feather="check-circle"></i></span>{{ __('Completion rate') }}</div>
+        <div class="dx-k-v"><span class="dx-count" data-to="{{ $hl['completion_rate'] }}" data-dec="{{ $hl['completion_rate'] == floor($hl['completion_rate']) ? 0 : 1 }}">{{ rtrim(rtrim(number_format($hl['completion_rate'], 1), '0'), '.') }}</span><small>%</small></div>
+        <div class="dx-k-note">{{ __('Of visits that were closed in the last :days days', ['days' => $hl['days']]) }}</div>
+        <div class="dx-meter" role="img" aria-label="{{ __('Completed, cancelled and no-show share') }}">
+            <span class="dx-m-ok" style="flex:{{ max(0.0001, $hl['completed']) }}"></span>
+            <span class="dx-m-lost" style="flex:{{ max(0.0001, $hl['cancelled']) }}"></span>
+            <span class="dx-m-no" style="flex:{{ max(0.0001, $hl['no_show']) }}"></span>
+        </div>
+        <div class="dx-key">
+            <span><i class="dx-m-ok"></i>{{ __('Completed') }} <b>{{ number_format($hl['completed']) }}</b></span>
+            <span><i class="dx-m-lost"></i>{{ __('Cancelled') }} <b>{{ $hl['cancel_rate'] + 0 }}%</b></span>
+            <span><i class="dx-m-no"></i>{{ __('No-show') }} <b>{{ $hl['no_show_rate'] + 0 }}%</b></span>
+        </div>
+    </article>
+</section>
 
 {{-- ════ QUICK ACTIONS ════ --}}
-<div class="card shadow-sm mb-4 bk-a2">
-    <div class="card-body py-3">
-        <div class="bk-sh mb-3">
-            <span class="bk-sh-title">{{ __('Quick Actions') }}</span>
-        </div>
-        <div class="bk-qa-grid">
-            <a href="{{ route('company.appointments.index') }}" class="bk-qa">
-                <div class="bk-qa-ic"><i class="feather icon-plus-circle bk-ic-qa"></i></div>
-                <span class="bk-qa-lbl">{{ __('New booking') }}</span>
-            </a>
-            @if($company->branches->first())
-            <a href="{{ route('company.branches.employees.index', $company->branches->first()) }}" class="bk-qa">
-                <div class="bk-qa-ic"><i class="feather icon-user-plus bk-ic-qa"></i></div>
-                <span class="bk-qa-lbl">{{ __('Add employee') }}</span>
-            </a>
-            <a href="{{ route('company.branches.services.create', $company->branches->first()) }}" class="bk-qa">
-                <div class="bk-qa-ic"><i class="feather icon-scissors bk-ic-qa"></i></div>
-                <span class="bk-qa-lbl">{{ __('Add service') }}</span>
-            </a>
-            @endif
-            <a href="{{ route('company.branches.create') }}" class="bk-qa">
-                <div class="bk-qa-ic"><i class="feather icon-map-pin bk-ic-qa"></i></div>
-                <span class="bk-qa-lbl">{{ __('New branch') }}</span>
-            </a>
-            <a href="{{ route('company.appointments.index', ['status'=>'pending']) }}" class="bk-qa">
-                <div class="bk-qa-ic" style="position:relative;">
-                    <i class="feather icon-bell bk-ic-qa"></i>
-                    @if($pendingAppt > 0)<span class="bk-qa-dot"></span>@endif
-                </div>
-                <span class="bk-qa-lbl">
-                    {{ __('Pending') }}@if($pendingAppt > 0) ({{ $pendingAppt }})@endif
-                </span>
-            </a>
-            <a href="{{ route('company.service-categories.index') }}" class="bk-qa">
-                <div class="bk-qa-ic"><i class="feather icon-tag bk-ic-qa"></i></div>
-                <span class="bk-qa-lbl">{{ __('Categories') }}</span>
-            </a>
-        </div>
+<section class="dx-rise" style="--i:2" aria-labelledby="dxDockT">
+    <div class="dx-ph" style="margin-bottom:14px">
+        <h2 class="dx-pt" id="dxDockT">{{ __('Quick Actions') }}</h2>
     </div>
-</div>
+    <div class="dx-dock-grid">
+        <a href="{{ route('company.appointments.index') }}" class="dx-act dx-act--lead">
+            <span class="dx-act-ic"><i data-feather="plus"></i></span>
+            <span class="dx-act-t">
+                <span class="dx-act-l">{{ __('New booking') }}</span>
+                <span class="dx-act-h">{{ __('Open the calendar and add a booking for a walk-in or a phone call.') }}</span>
+            </span>
+            <span class="dx-act-go"><i data-feather="arrow-up-right" class="dx-flip"></i></span>
+        </a>
+        @foreach($dock as $a)
+        <a href="{{ $a['url'] }}" class="dx-act">
+            <span class="dx-act-ic"><i data-feather="{{ $a['icon'] }}"></i>@if(($a['badge'] ?? 0) > 0)<span class="dx-badge">{{ $a['badge'] > 99 ? '99+' : $a['badge'] }}</span>@endif</span>
+            <span class="dx-act-t">
+                <span class="dx-act-l">{{ $a['label'] }}</span>
+                <span class="dx-act-h">{{ $a['hint'] }}</span>
+            </span>
+            <span class="dx-act-go"><i data-feather="arrow-up-right" class="dx-flip"></i></span>
+        </a>
+        @endforeach
+    </div>
+</section>
 
-{{-- ════ CHARTS ════ --}}
-<div class="row g-4">
-
-    {{-- Activity Chart (large) + filter --}}
-    <div class="col-lg-8 bk-a3">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <div class="bk-sh flex-wrap gap-2">
-                    <span class="bk-sh-title">{{ __('Booking Activity') }}</span>
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        {{-- Month picker (visible only on month tab) --}}
-                        <select id="bk-month-picker" class="form-select form-select-sm"
-                                style="display:none;width:auto;font-size:.78rem;padding:.25rem .6rem;">
-                            @foreach($monthOptions as $opt)
-                                <option value="{{ $opt['value'] }}">{{ $opt['label'] }}</option>
-                            @endforeach
-                        </select>
-                        {{-- Filter tabs --}}
-                        <div class="bk-filter-tabs" id="bk-chart-filter">
-                            <button class="bk-filter-tab" data-range="today">{{ __('Today') }}</button>
-                            <button class="bk-filter-tab" data-range="week">{{ __('Week') }}</button>
-                            <button class="bk-filter-tab active" data-range="month">{{ __('Month') }}</button>
-                            <button class="bk-filter-tab" data-range="year">{{ __('Year') }}</button>
-                        </div>
-                    </div>
+{{-- ════ PERFORMANCE + ATTENTION ════ --}}
+<div class="dx-main">
+    <section class="dx-panel dx-rise" style="--i:3" aria-labelledby="dxPerfT">
+        <div class="dx-ph">
+            <div>
+                <h2 class="dx-pt" id="dxPerfT">{{ __('Performance') }}</h2>
+                <p class="dx-ps" id="dxPerfSub">{{ __('Bookings and realised revenue') }}</p>
+            </div>
+            <div class="dx-chart-bar">
+                <select id="dxMonth" class="dx-select" aria-label="{{ __('Month') }}">
+                    @foreach($monthOptions as $opt)
+                        <option value="{{ $opt['value'] }}">{{ $opt['label'] }}</option>
+                    @endforeach
+                </select>
+                <div class="dx-seg" id="dxRange" role="group" aria-label="{{ __('Range') }}">
+                    <button type="button" data-range="today">{{ __('Today') }}</button>
+                    <button type="button" data-range="week">{{ __('Week') }}</button>
+                    <button type="button" data-range="month" class="is-on">{{ __('Month') }}</button>
+                    <button type="button" data-range="year">{{ __('Year') }}</button>
                 </div>
-                <div id="bk-activity-chart" style="min-height:280px;"></div>
             </div>
         </div>
-    </div>
+        <div class="dx-legend" id="dxLegend">
+            <button type="button" data-series="0" aria-pressed="true" style="--c:var(--bk-accent-fill)"><i></i>{{ __('Bookings') }} <b id="dxSumB">0</b></button>
+            <button type="button" data-series="1" aria-pressed="true" style="--c:var(--bk-gold)"><i></i>{{ __('Revenue') }} <b id="dxSumR">0</b></button>
+        </div>
+        <div id="dxChart" class="dx-chart"></div>
+    </section>
 
-    {{-- Pie / Donut --}}
-    <div class="col-lg-4 bk-a4">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <div class="bk-sh">
-                    <span class="bk-sh-title">{{ __('By Status') }}</span>
-                </div>
-                <div id="storageChart"></div>
-                <div class="row g-2 mt-2">
-                    <div class="col-6">
-                        <div class="rounded-3 p-2 text-center"
-                             style="background:color-mix(in srgb,var(--bk-warning) 8%,transparent);border:1px solid color-mix(in srgb,var(--bk-warning) 18%,transparent);">
-                            <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;color:var(--bk-warning);letter-spacing:1px;">{{ __('Pending') }}</div>
-                            <div style="font-size:1.4rem;font-weight:900;color:var(--bk-warning);font-family:'Poppins',sans-serif;font-variant-numeric:tabular-nums;">{{ $pendingAppt }}</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="rounded-3 p-2 text-center"
-                             style="background:color-mix(in srgb,var(--bk-success) 8%,transparent);border:1px solid color-mix(in srgb,var(--bk-success) 18%,transparent);">
-                            <div style="font-size:.62rem;font-weight:700;text-transform:uppercase;color:var(--bk-success);letter-spacing:1px;">{{ __('Waitlist') }}</div>
-                            <div style="font-size:1.4rem;font-weight:900;color:var(--bk-success);font-family:'Poppins',sans-serif;font-variant-numeric:tabular-nums;">{{ $waitlistWaiting }}</div>
-                        </div>
-                    </div>
-                </div>
-                <a href="{{ route('company.appointments.index') }}"
-                   class="btn btn-primary w-100 rounded-pill mt-3 fw-bold">
-                    {{ __('Manage Appointments') }}
+    <section class="dx-panel dx-attn dx-rise" style="--i:4" aria-labelledby="dxAttnT">
+        <div class="dx-ph">
+            <div>
+                <h2 class="dx-pt" id="dxAttnT">{{ __('Needs your attention') }}</h2>
+                <p class="dx-ps">{{ count($attn) ? __('The things that move money or keep customers waiting.') : __('Nothing is waiting on you right now.') }}</p>
+            </div>
+        </div>
+        @if(count($attn))
+        <ul class="dx-list">
+            @foreach($attn as $a)
+            <li>
+                <a href="{{ $a['url'] }}" class="dx-item">
+                    <span class="dx-item-ic {{ $a['tone'] }}"><i data-feather="{{ $a['icon'] }}"></i></span>
+                    <span class="dx-item-t"><span class="dx-item-l">{{ $a['label'] }}</span><span class="dx-item-h">{{ $a['hint'] }}</span></span>
+                    <span class="dx-item-n">{{ number_format($a['n']) }}</span>
+                    <i data-feather="chevron-right" class="dx-item-c dx-flip"></i>
                 </a>
-            </div>
+            </li>
+            @endforeach
+        </ul>
+        @else
+        <div class="dx-clear">
+            <div class="dx-clear-ic"><i data-feather="check"></i></div>
+            <b>{{ __('All caught up') }}</b>
+            {{ __('New requests and payments will show up here.') }}
         </div>
-    </div>
-
+        @endif
+    </section>
 </div>
 
-{{-- ════ RECENT APPOINTMENTS ════ --}}
-<div class="row g-4 mt-0" data-live-block="recent">
-    <div class="col-12 bk-a5">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <div class="bk-sh">
-                    <span class="bk-sh-title">{{ __('Recent Appointments') }}</span>
-                    <a href="{{ route('company.appointments.index') }}" class="bk-sh-link">
-                        {{ __('View all') }} <i data-feather="arrow-right" style="width:12px;height:12px;"></i>
-                    </a>
+{{-- ════ DEMAND SHAPE + OUTCOMES ════ --}}
+<div class="dx-two">
+    <section class="dx-panel dx-rise" style="--i:5" aria-labelledby="dxHmT">
+        <div class="dx-ph">
+            <div>
+                <h2 class="dx-pt" id="dxHmT">{{ __('When you are busiest') }}</h2>
+                <p class="dx-ps">{{ __('Bookings by weekday and hour, last :days days', ['days' => $hl['days']]) }}</p>
+            </div>
+        </div>
+        @if($hm['max'] > 0)
+        <div class="dx-hm-wrap">
+            <div class="dx-hm" style="--n:{{ count($hm['hours']) }}" role="img"
+                 aria-label="{{ __('Busiest slot: :day at :hour', ['day' => $hm['peak']['day'], 'hour' => $hm['peak']['hour']]) }}">
+                <div class="dx-hm-row">
+                    <span></span>
+                    @foreach($hm['hours'] as $h)<span class="dx-hm-h">{{ $loop->index % 2 === 0 ? sprintf('%02d', $h) : '' }}</span>@endforeach
                 </div>
-
-                @if($recentAppointments->count())
-                {{-- Color bar --}}
-                @php
-                    $byStatus = $recentAppointments->countBy('status');
-                    $scColors = request()->cookie('company_theme', 'dark') === 'light'
-                        ? ['pending'=>'#f4a642','confirmed'=>'#2bcf7e','upcoming'=>'#2bcf7e','completed'=>'#3dbbd4','cancelled'=>'rgba(255,255,255,.08)','rejected'=>'rgba(255,255,255,.08)','no_show'=>'rgba(255,255,255,.08)']
-                        : ['pending'=>'#D4AA5E','confirmed'=>'#8FB27A','upcoming'=>'#8FB27A','completed'=>'#8EA8C8','cancelled'=>'rgba(255,255,255,.08)','rejected'=>'rgba(255,255,255,.08)','no_show'=>'rgba(255,255,255,.08)'];
-                @endphp
-                <div class="bk-color-bar">
-                    @foreach($byStatus as $st => $cnt)
-                    <span style="flex:{{ $cnt }};background:{{ $scColors[$st] ?? '#888' }};"></span>
+                @php $peakDone = false; @endphp
+                @foreach($hm['days'] as $day)
+                <div class="dx-hm-row">
+                    <span class="dx-hm-d">{{ $day['label'] }}</span>
+                    @foreach($day['cells'] as $ci2 => $cnt)
+                        @php
+                            $isPeak = ! $peakDone && $cnt === $hm['max'];
+                            if ($isPeak) { $peakDone = true; }
+                        @endphp
+                        <span class="dx-hm-c {{ $isPeak ? 'is-peak' : '' }}"
+                              style="--l:{{ $cnt > 0 ? round(sqrt($cnt / $hm['max']), 3) : 0 }}"
+                              title="{{ $day['label'] }} {{ sprintf('%02d:00', $hm['hours'][$ci2]) }} — {{ number_format($cnt) }} {{ __('bookings') }}"></span>
                     @endforeach
                 </div>
-
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>{{ __('Customer') }}</th>
-                                <th>{{ __('Service') }}</th>
-                                <th>{{ __('Date & Time') }}</th>
-                                <th>{{ __('Status') }}</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($recentAppointments as $i => $row)
-                            @php
-                                $initial = strtoupper(substr($row->customer?->name ?? 'C', 0, 1));
-                                $ic = $row->status->color();
-                            @endphp
-                            <tr class="bk-table-row" onclick="location.href='{{ route('company.appointments.show', $row) }}'">
-                                <td class="text-muted tx-12 fw-semibold">{{ $i + 1 }}</td>
-                                <td onclick="event.stopPropagation()">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div style="width:32px;height:32px;border-radius:50%;background:{{ $ic }}22;color:{{ $ic }};display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;flex-shrink:0;">{{ $initial }}</div>
-                                        <div>
-                                            <div class="fw-semibold tx-13">{{ $row->customer?->name ?? '—' }}</div>
-                                            @if($row->customer?->phone)
-                                            @php $phone = preg_replace('/\D/', '', $row->customer->phone); @endphp
-                                            <div class="d-flex align-items-center gap-1 mt-1">
-                                                <span class="text-muted" style="font-size:.7rem;">{{ $row->customer->phone }}</span>
-                                                <a href="tel:{{ $row->customer->phone }}"
-                                                   style="color:#2bcf7e;line-height:1;" title="{{ __('Call') }}">
-                                                    <i data-feather="phone" style="width:11px;height:11px;"></i>
-                                                </a>
-                                                <a href="https://wa.me/{{ $phone }}" target="_blank"
-                                                   style="color:#25d366;line-height:1;" title="WhatsApp">
-                                                    <svg style="width:11px;height:11px;fill:currentColor;" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                                                </a>
-                                            </div>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="tx-13 text-muted">
-                                    <div>{{ $row->service?->localizedName() ?? '—' }}</div>
-                                    @if($row->branch)<small class="opacity-50">{{ $row->branch->localizedName() }}</small>@endif
-                                </td>
-                                <td class="text-muted tx-12 text-nowrap">
-                                    <div>{{ $row->start_time?->format('d/m/Y') }} <span class="opacity-50">{{ $row->start_time?->format('H:i') }}</span></div>
-                                    <small class="bk-reltime opacity-75" data-ts="{{ $row->start_time?->format('Y-m-d\TH:i:s') }}" style="font-size:.68rem;"></small>
-                                </td>
-                                <td><x-appointment-status :status="$row->status" class="bk-badge" /></td>
-                                <td>
-                                    <a href="{{ route('company.appointments.show', $row) }}"
-                                       class="btn btn-sm btn-outline-secondary rounded-pill px-3 tx-11"
-                                       onclick="event.stopPropagation()">
-                                        {{ __('View') }}
-                                    </a>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                @else
-                <div class="bk-empty">
-                    <div class="bk-empty-ic"><i data-feather="calendar" style="width:26px;height:26px;"></i></div>
-                    <p>{{ __('No appointments yet.') }}</p>
-                    <a href="{{ route('company.appointments.index') }}" class="btn btn-primary rounded-pill px-4">
-                        {{ __('Create first booking') }}
-                    </a>
-                </div>
-                @endif
+                @endforeach
             </div>
         </div>
-    </div>
+        <div class="dx-hm-foot">
+            <span>{{ __('Peak') }}: <b>{{ $hm['peak']['day'] }} · {{ $hm['peak']['hour'] }}</b> ({{ number_format($hm['peak']['count']) }} {{ __('bookings') }})</span>
+            <span class="dx-scale">{{ __('Quiet') }}<i></i>{{ __('Busy') }}</span>
+        </div>
+        @else
+        <div class="dx-empty"><div class="dx-empty-ic"><i data-feather="clock"></i></div><p>{{ __('Your busiest hours will appear once you have a few weeks of bookings.') }}</p></div>
+        @endif
+    </section>
+
+    <section class="dx-panel dx-rise" style="--i:6" aria-labelledby="dxOutT">
+        <div class="dx-ph">
+            <div>
+                <h2 class="dx-pt" id="dxOutT">{{ __('How bookings end up') }}</h2>
+                <p class="dx-ps">{{ __('Last :days days', ['days' => $hl['days']]) }}</p>
+            </div>
+        </div>
+        <div class="dx-donut">
+            <div id="dxDonut" style="width:100%"></div>
+            <div class="dx-donut-c"><b>{{ number_format($hl['total']) }}</b><span>{{ __('Total') }}</span></div>
+        </div>
+        <ul class="dx-ledger">
+            @foreach($outcomes as $o)
+            <li><i style="background:var({{ $o['var'] }})"></i>{{ $o['label'] }}<span class="n">{{ number_format($o['n']) }}</span><span class="p">{{ $pctOf($o['n'], $hl['total']) }}%</span></li>
+            @endforeach
+        </ul>
+    </section>
 </div>
+
+{{-- ════ LEADERBOARDS ════ --}}
+<div class="dx-lb {{ $hasBranches ? 'dx-lb--4' : '' }}">
+    @php
+        $board = function (array $rows, string $empty) use ($money, $sym) {
+            $max = max(1, collect($rows)->max('count') ?: 1);
+            $out = '';
+            if (! $rows) return '<div class="dx-empty" style="padding:24px 8px"><p style="margin:0">' . e($empty) . '</p></div>';
+            $out .= '<ol class="dx-rank">';
+            foreach ($rows as $i => $r) {
+                $out .= '<li><span class="dx-rank-n">' . ($i + 1) . '</span><span class="dx-rank-name" title="' . e($r['name']) . '">' . e($r['name']) . '</span>'
+                    . '<span class="dx-rank-v">' . number_format($r['count']) . '<small>' . $money($r['revenue']) . ' ' . e($sym) . '</small></span>'
+                    . '<span class="dx-rank-bar"><span style="--w:' . round($r['count'] / $max * 100) . '%"></span></span></li>';
+            }
+            return $out . '</ol>';
+        };
+    @endphp
+
+    <section class="dx-panel dx-rise" style="--i:7" aria-labelledby="dxSvcT">
+        <div class="dx-ph"><div><h2 class="dx-pt" id="dxSvcT">{{ __('Top services') }}</h2><p class="dx-ps">{{ __('By bookings · last :days days', ['days' => $hl['days']]) }}</p></div></div>
+        {!! $board($ins['services'], __('No services booked yet.')) !!}
+    </section>
+
+    <section class="dx-panel dx-rise" style="--i:8" aria-labelledby="dxTeamT">
+        <div class="dx-ph"><div><h2 class="dx-pt" id="dxTeamT">{{ __('Team leaders') }}</h2><p class="dx-ps">{{ __('By bookings · last :days days', ['days' => $hl['days']]) }}</p></div></div>
+        {!! $board($ins['staff'], __('No bookings assigned to staff yet.')) !!}
+    </section>
+
+    @if($hasBranches)
+    <section class="dx-panel dx-rise" style="--i:9" aria-labelledby="dxBrT">
+        <div class="dx-ph"><div><h2 class="dx-pt" id="dxBrT">{{ __('Branches compared') }}</h2><p class="dx-ps">{{ __('By bookings · last :days days', ['days' => $hl['days']]) }}</p></div></div>
+        {!! $board($ins['branches'], '') !!}
+    </section>
+    @endif
+
+    <section class="dx-panel dx-rise" style="--i:10" aria-labelledby="dxChT">
+        <div class="dx-ph"><div><h2 class="dx-pt" id="dxChT">{{ __('Where bookings come from') }}</h2><p class="dx-ps">{{ __('Booking channels · last :days days', ['days' => $hl['days']]) }}</p></div></div>
+        @if(count($ins['sources']))
+        <div class="dx-stack" role="img" aria-label="{{ __('Booking channels') }}">
+            @foreach($ins['sources'] as $s)
+                <span style="--w:{{ max(1, round($s['count'] / $srcTotal * 100)) }}%;--c:var({{ $channelVars[$s['key']] ?? '--bk-border-strong' }})"></span>
+            @endforeach
+        </div>
+        <ul class="dx-ledger dx-ledger--lg">
+            @foreach($ins['sources'] as $s)
+            <li><span class="ic"><i data-feather="{{ $channelIcons[$s['key']] ?? 'compass' }}"></i></span>{{ $s['label'] }}<span class="n">{{ number_format($s['count']) }}</span><span class="p">{{ $pctOf($s['count'], $srcTotal) }}%</span></li>
+            @endforeach
+        </ul>
+        <a href="{{ route('company.marketing.booking-sources') }}" class="dx-link" style="margin-top:12px">{{ __('Track your channels') }}<i data-feather="chevron-right" class="dx-flip"></i></a>
+        @else
+        <div class="dx-empty" style="padding:24px 8px"><p style="margin:0">{{ __('No bookings yet.') }}</p></div>
+        @endif
+    </section>
+</div>
+
+{{-- ════ BUSINESS AT A GLANCE ════ --}}
+<section class="dx-panel dx-rise" style="--i:11" aria-labelledby="dxSnapT">
+    <div class="dx-ph"><div><h2 class="dx-pt" id="dxSnapT">{{ __('Your business at a glance') }}</h2></div></div>
+    <div class="dx-snap-grid">
+        <a class="dx-snap-i" href="{{ route('company.branches.index') }}">
+            <span class="dx-snap-ic"><i data-feather="map-pin"></i></span>
+            <span><span class="dx-snap-v">{{ number_format($branchesCount) }}</span><span class="dx-snap-l">{{ __('Branches') }}</span></span>
+        </a>
+        <a class="dx-snap-i" href="{{ $firstBranch ? route('company.branches.services.index', $firstBranch) : route('company.branches.index') }}">
+            <span class="dx-snap-ic"><i data-feather="scissors"></i></span>
+            <span><span class="dx-snap-v">{{ number_format($servicesCount) }}</span><span class="dx-snap-l">{{ __('Services') }}</span></span>
+        </a>
+        <a class="dx-snap-i" href="{{ route('company.staff.index') }}">
+            <span class="dx-snap-ic"><i data-feather="briefcase"></i></span>
+            <span><span class="dx-snap-v">{{ number_format($ins['team']['active']) }}</span><span class="dx-snap-l">{{ __('Active staff') }}</span></span>
+        </a>
+        <a class="dx-snap-i" href="{{ route('company.customers.index') }}">
+            <span class="dx-snap-ic"><i data-feather="users"></i></span>
+            <span><span class="dx-snap-v">{{ number_format($cu['total']) }}</span><span class="dx-snap-l">{{ __('Customers') }}</span></span>
+        </a>
+        <div class="dx-snap-i">
+            <span class="dx-snap-ic gold"><i data-feather="star"></i></span>
+            <span>
+                <span class="dx-snap-v">@if($ins['reviews']['count'] > 0){{ number_format($ins['reviews']['avg'], 1) }}<small>/ 5</small>@else—@endif</span>
+                <span class="dx-snap-l">{{ $ins['reviews']['count'] > 0 ? __(':count reviews', ['count' => number_format($ins['reviews']['count'])]) : __('No reviews yet') }}</span>
+            </span>
+        </div>
+        <div class="dx-snap-i">
+            <span class="dx-snap-ic gold"><i data-feather="award"></i></span>
+            <span><span class="dx-snap-v">{{ $money($k['avg_ticket']) }}<small>{{ $sym }}</small></span><span class="dx-snap-l">{{ __('Avg. ticket this month') }}</span></span>
+        </div>
+        @if($company->hasFeature('waitlist'))
+        <a class="dx-snap-i" href="{{ route('company.waitlist.index') }}">
+            <span class="dx-snap-ic info"><i data-feather="list"></i></span>
+            <span><span class="dx-snap-v">{{ number_format($waitlistWaiting) }}</span><span class="dx-snap-l">{{ __('On the waitlist') }}</span></span>
+        </a>
+        @endif
+        @if($ins['finance'] !== null)
+        <a class="dx-snap-i" href="{{ route('company.debts.index') }}">
+            <span class="dx-snap-ic warn"><i data-feather="credit-card"></i></span>
+            <span><span class="dx-snap-v">{{ $money($ins['finance']['debts_owed']) }}<small>{{ $sym }}</small></span><span class="dx-snap-l">{{ __('Owed by customers') }} · {{ number_format($ins['finance']['debts_count']) }}</span></span>
+        </a>
+        @endif
+        @if($ins['inventory'] !== null)
+        <a class="dx-snap-i" href="{{ route('company.inventory.index') }}">
+            <span class="dx-snap-ic warn"><i data-feather="package"></i></span>
+            <span><span class="dx-snap-v">{{ number_format($ins['inventory']['low_stock']) }}</span><span class="dx-snap-l">{{ __('Low-stock products') }}</span></span>
+        </a>
+        @endif
+    </div>
+</section>
+
+{{-- ════ AGENDA ════ --}}
+<section class="dx-panel dx-rise" style="--i:12" data-live-block="recent" aria-labelledby="dxAgT">
+    <div class="dx-ph">
+        <div><h2 class="dx-pt" id="dxAgT">{{ __('Recent Appointments') }}</h2><p class="dx-ps">{{ __('What is coming up next, then the latest visits') }}</p></div>
+        <a href="{{ route('company.appointments.index') }}" class="dx-link">{{ __('View all') }}<i data-feather="chevron-right" class="dx-flip"></i></a>
+    </div>
+
+    @if($recentAppointments->count())
+    <ul class="dx-agenda">
+        @foreach($recentAppointments as $row)
+        @php
+            $ic      = $row->status->color();
+            $initial = mb_strtoupper(mb_substr($row->customer?->name ?? 'C', 0, 1));
+            $phone   = $row->customer?->phone ? preg_replace('/\D/', '', $row->customer->phone) : null;
+        @endphp
+        <li>
+            <div class="dx-row">
+                <a class="dx-row-link" href="{{ route('company.appointments.show', $row) }}" aria-label="{{ ($row->customer?->name ?? '—') . ' — ' . $row->start_time?->format('d/m H:i') }}"></a>
+                <div class="dx-time">{{ $row->start_time?->format('H:i') }}<small>{{ $row->start_time?->translatedFormat('D j M') }} · <span class="bk-reltime" data-ts="{{ $row->start_time?->format('Y-m-d\TH:i:s') }}"></span></small></div>
+                <div class="dx-who">
+                    <span class="dx-av" style="--c:{{ $ic }}">{{ $initial }}</span>
+                    <span class="dx-who-t">
+                        <span class="dx-who-n">{{ $row->customer?->name ?? '—' }}</span>
+                        @if($phone)
+                        <span class="dx-who-p">
+                            <span dir="ltr">{{ $row->customer->phone }}</span>
+                            <a href="tel:{{ $row->customer->phone }}" title="{{ __('Call') }}" aria-label="{{ __('Call') }}"><i data-feather="phone"></i></a>
+                            <a href="https://wa.me/{{ $phone }}" target="_blank" rel="noopener" title="WhatsApp" aria-label="WhatsApp"><i data-feather="message-circle"></i></a>
+                        </span>
+                        @endif
+                    </span>
+                </div>
+                <div class="dx-svc">
+                    <b>{{ $row->service?->localizedName() ?? '—' }}</b>
+                    @if($row->branch)<span>{{ $row->branch->localizedName() }}</span>@endif
+                </div>
+                <div class="dx-st"><x-appointment-status :status="$row->status" class="bk-badge" /></div>
+                <i data-feather="chevron-right" class="dx-row-go dx-flip"></i>
+            </div>
+        </li>
+        @endforeach
+    </ul>
+    @else
+    <div class="dx-empty">
+        <div class="dx-empty-ic"><i data-feather="calendar"></i></div>
+        <p>{{ __('No appointments yet.') }}</p>
+        <a href="{{ route('company.appointments.index') }}" class="dx-btn dx-btn--gold" style="background:var(--bk-accent-fill);color:var(--bk-accent-ink)!important">{{ __('Create first booking') }}</a>
+    </div>
+    @endif
+</section>
+
+<p class="dx-foot">{{ __('Figures refresh every few minutes.') }}</p>
 
 </div>{{-- .page-content --}}
 
 @push('company-after-template')
 @php
-    $booksyPayload = [
-        'theme'       => request()->cookie('company_theme','dark'),
-        'rtl'         => $isAr,
-        'charts'      => $chartData,
-        'monthChartUrl' => route('company.dashboard.chart.month'),
-        'labels' => [
-            'appointments' => __('Appointments'),
-            'revenue'      => __('Revenue'),
-            'count'        => __('Count'),
-            'total'        => __('Total'),
-            'noData'       => __('No data yet.'),
-            'currency'     => config('app.currency','SAR'),
+    $dxPayload = [
+        'theme'         => request()->cookie('company_theme', 'dark'),
+        'rtl'           => $isAr,
+        'series'        => ['today' => $ins['series']['today'], 'week' => $ins['series']['week'], 'month' => $ins['series']['month'], 'year' => $ins['series']['year']],
+        'monthUrl'      => route('company.dashboard.chart.month'),
+        'currency'      => $sym,
+        'outcomes'      => collect($outcomes)->map(fn ($o) => ['label' => $o['label'], 'n' => $o['n'], 'var' => $o['var']])->values(),
+        'labels'        => [
+            'bookings' => __('Bookings'),
+            'revenue'  => __('Revenue'),
+            'noData'   => __('No data yet.'),
+            'sub'      => [
+                'today' => __('Today, hour by hour'),
+                'week'  => __('Last 7 days'),
+                'month' => __('Day by day'),
+                'year'  => __('Last 12 months'),
+            ],
         ],
     ];
 @endphp
-<script>window.booksyDashboard = @json($booksyPayload);</script>
+<script>window.dxDashboard = @json($dxPayload);</script>
 <script src="{{ asset('backend/assets/vendors/apexcharts/apexcharts.min.js') }}"></script>
 <script>
-(function(){
+(function () {
 'use strict';
-var p = window.booksyDashboard || {};
-var isDark = p.theme !== 'light';
-var isRtl  = p.rtl === true;
-var charts  = p.charts || {};
-var labels  = p.labels || {};
+var P = window.dxDashboard || {};
+var L = P.labels || {};
+var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+var root = getComputedStyle(document.documentElement);
+function tok(n, fb) { return (root.getPropertyValue(n) || '').trim() || fb; }
+var isDark = P.theme !== 'light';
+var C = {
+    text: tok('--bk-text-soft', '#888'), muted: tok('--bk-text-muted', '#888'),
+    grid: tok('--bk-border', 'rgba(0,0,0,.08)'), accent: tok('--bk-accent-fill', '#4B5D34'),
+    gold: tok('--bk-gold', '#C7A15A'), surface: tok('--bk-surface', '#fff')
+};
+var nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+function compact(v) {
+    var a = Math.abs(v);
+    if (a >= 1e6) return (v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M';
+    if (a >= 1e3) return (v / 1e3).toFixed(a >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'K';
+    return String(Math.round(v));
+}
+function sum(a) { var s = 0; for (var i = 0; i < a.length; i++) s += (+a[i] || 0); return s; }
 
-/* Brand accent for charts — gold highlight on olive surfaces (matches front identity) */
-var gold = '{{ request()->cookie('company_theme','dark') === 'light' ? '#C7A15A' : '#C9A96A' }}';
-var olive = '{{ request()->cookie('company_theme','dark') === 'light' ? '#4B5D34' : '#A9B48C' }}';
-var c = isDark
-    ? {text:'#C5C8BD', grid:'rgba(255,255,255,.05)', card:'#191D14', muted:'#92978B'}
-    : {text:'#4B4E42', grid:'rgba(0,0,0,.07)',       card:'#FFFFFF', muted:'#7B7C6D'};
-/* Status palette — restrained in dark so status reads without shouting */
-var statusClr = isDark
-    ? {pending:'#D4AA5E', confirmed:'#8FB27A', completed:'#8EA8C8'}
-    : {pending:'#f4a642', confirmed:'#2bcf7e', completed:'#3dbbd4'};
+/* ── count-up (the page's one scripted moment, with the CSS rise) ── */
+function countUp() {
+    document.querySelectorAll('.dx-count[data-to]').forEach(function (el) {
+        var to = parseFloat(el.dataset.to) || 0, dec = parseInt(el.dataset.dec || '0', 10);
+        if (!to || reduce) return;
+        var t0 = null, dur = 1300;
+        function fmt(v) { return v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
+        function step(ts) {
+            if (t0 === null) t0 = ts;
+            var p = Math.min((ts - t0) / dur, 1), e = 1 - Math.pow(2, -10 * p);
+            el.textContent = fmt(to * (p >= 1 ? 1 : e));
+            if (p < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+        // never leave a figure stranded mid-count if frames are throttled
+        setTimeout(function () { el.textContent = fmt(to); }, dur + 400);
+    });
+    var bar = document.querySelector('.dx-today-bar');
+    if (bar) setTimeout(function () { bar.classList.add('is-in'); }, 120);
+}
+countUp();
 
-/* ── Counter animation ── */
-function runCounters(){
-    document.querySelectorAll('.bk-counter[data-target]').forEach(function(el){
-        var to = parseInt(el.dataset.target)||0;
-        if(!to) return;
-        var cur = 0, step = to/(1400/16);
-        var t = setInterval(function(){
-            cur = Math.min(cur+step, to);
-            el.textContent = Math.floor(cur).toLocaleString();
-            if(cur>=to) clearInterval(t);
-        }, 16);
+/* ── performance chart ── */
+var chart = null, range = 'month', current = P.series.month, hidden = [false, false];
+var picker = document.getElementById('dxMonth');
+var sumB = document.getElementById('dxSumB'), sumR = document.getElementById('dxSumR'), sub = document.getElementById('dxPerfSub');
+
+function paintSums(s) {
+    if (sumB) sumB.textContent = nf.format(sum(s.bookings));
+    if (sumR) sumR.textContent = nf.format(sum(s.revenue)) + ' ' + (P.currency || '');
+    if (sub && L.sub) sub.textContent = L.sub[range] || '';
+}
+function options(s) {
+    var peak = Math.max.apply(null, s.bookings.concat([0]));
+    var peakR = Math.max.apply(null, s.revenue.concat([0]));
+    var ticks = Math.min(s.labels.length, { today: 8, week: 7, month: 10, year: 12 }[range] || 10);
+    return {
+        chart: { type: 'line', height: 330, background: 'transparent', toolbar: { show: false }, zoom: { enabled: false },
+                 fontFamily: 'inherit', foreColor: C.muted, animations: { enabled: !reduce, speed: 650, easing: 'easeout' } },
+        series: [{ name: L.bookings, type: 'column', data: s.bookings }, { name: L.revenue, type: 'area', data: s.revenue }],
+        colors: [C.accent, C.gold],
+        stroke: { width: [0, 2.6], curve: 'smooth' },
+        fill: { type: ['solid', 'gradient'], opacity: [0.92, 1],
+                gradient: { shadeIntensity: 1, opacityFrom: 0.34, opacityTo: 0.02, stops: [0, 95, 100] } },
+        plotOptions: { bar: { columnWidth: '54%', borderRadius: 6, borderRadiusApplication: 'end' } },
+        dataLabels: { enabled: false },
+        markers: { size: 0, strokeWidth: 2, strokeColors: C.surface, hover: { size: 6 } },
+        xaxis: { categories: s.labels, tickAmount: ticks, axisBorder: { show: false }, axisTicks: { show: false },
+                 tooltip: { enabled: false }, labels: { hideOverlappingLabels: true, rotate: 0, style: { fontSize: '11px', colors: C.muted } },
+                 crosshairs: { show: true, stroke: { color: C.gold, width: 1, dashArray: 3 } } },
+        yaxis: [
+            { seriesName: L.bookings, min: 0, max: peak > 0 ? undefined : 4, forceNiceScale: true, tickAmount: 4,
+              labels: { formatter: function (v) { return isFinite(v) ? Math.round(v) : 0; }, style: { colors: C.muted, fontSize: '11px' } } },
+            { seriesName: L.revenue, opposite: true, min: 0, max: peakR > 0 ? undefined : 4, forceNiceScale: true, tickAmount: 4,
+              labels: { formatter: function (v) { return isFinite(v) ? compact(v) : 0; }, style: { colors: C.muted, fontSize: '11px' } } }
+        ],
+        grid: { borderColor: C.grid, strokeDashArray: 4, xaxis: { lines: { show: false } }, padding: { left: 6, right: 6 } },
+        legend: { show: false },
+        noData: { text: L.noData, style: { color: C.muted } },
+        tooltip: { shared: true, intersect: false, theme: isDark ? 'dark' : 'light',
+                   y: [{ formatter: function (v) { return nf.format(v || 0); } },
+                       { formatter: function (v) { return nf.format(v || 0) + ' ' + (P.currency || ''); } }] },
+        theme: { mode: isDark ? 'dark' : 'light' }
+    };
+}
+function applyHidden() {
+    if (!chart) return;
+    ['bookings', 'revenue'].forEach(function (k, i) {
+        var name = L[k];
+        if (hidden[i]) chart.hideSeries(name); else chart.showSeries(name);
     });
 }
-setTimeout(runCounters, 250);
-
-/* ── Progress bars ── */
-document.querySelectorAll('.bk-stat-bar-fill').forEach(function(el){
-    var w = el.style.width; el.style.width='0';
-    setTimeout(function(){ el.style.width=w; }, 400);
-});
-
-/* ── Activity chart (filterable bar) ── */
-var activityChart = null;
-var monthPicker   = document.getElementById('bk-month-picker');
-var monthChartUrl = p.monthChartUrl || '';
-
-function getSeriesForRange(range, overrideData){
-    if (overrideData) {
-        return { labels: overrideData.labels || [], data: overrideData.total || [], name: labels.appointments || 'Appointments' };
-    }
-    var key = { today:'today', week:'week', month:'month', year:'year' }[range] || 'month';
-    var d = charts[key] || charts.month || charts.daily || {};
-    return { labels: d.labels || [], data: d.total || [], name: labels.appointments || 'Appointments' };
-}
-
-function applyChartSeries(s, range){
-    var node = document.getElementById('bk-activity-chart');
+function draw(s) {
+    current = s; paintSums(s);
+    var node = document.getElementById('dxChart');
     if (!node || typeof ApexCharts === 'undefined') return;
-
-    var needsRotate  = range === 'today' || range === 'week';
-    var rotate       = needsRotate ? (isRtl ? 30 : -30) : 0;
-    var fontSize     = '10px';
-    // Limit visible x-axis labels to avoid crowding
-    var maxTicks     = { today: 12, week: 7, month: 10, year: 12 }[range] || 10;
-    var tickAmount   = Math.min(s.labels.length, maxTicks);
-
-    var xaxisOpts = {
-        categories      : s.labels,
-        tickAmount      : tickAmount,
-        labels          : {
-            rotate              : rotate,
-            rotateAlways        : needsRotate,
-            hideOverlappingLabels: true,
-            style               : { fontSize: fontSize, colors: c.muted }
-        },
-        axisBorder: { color: c.grid },
-        axisTicks : { color: c.grid }
-    };
-
-    // Guard the y-axis for all-zero data: an empty series otherwise makes
-    // ApexCharts compute an "Infinity" max on first paint.
-    var peak = 0;
-    for (var i = 0; i < s.data.length; i++) { var n = +s.data[i] || 0; if (n > peak) peak = n; }
-    var yaxisOpts = {
-        min: 0,
-        max: peak > 0 ? undefined : 4,
-        forceNiceScale: peak > 0,
-        labels: { formatter: function(v){ return isFinite(v) ? Math.round(v) : 0; }, style:{ colors:c.muted } }
-    };
-
-    if (activityChart) {
-        activityChart.updateOptions({
-            series : [{ name: s.name, data: s.data }],
-            xaxis  : xaxisOpts,
-            yaxis  : yaxisOpts,
-            noData : { text: labels.noData || 'No data yet.' }
-        }, true, true);
-        return;
-    }
-
-    activityChart = new ApexCharts(node, {
-        chart:{ type:'bar', height:280, background:'transparent', toolbar:{show:false}, fontFamily:"'Roboto',sans-serif", foreColor:c.text, animations:{enabled:true,easing:'easeinout',speed:500} },
-        plotOptions:{ bar:{ columnWidth:'60%', borderRadius:3 } },
-        dataLabels:{ enabled:false },
-        colors:[gold],
-        series:[{ name: s.name, data: s.data }],
-        xaxis: xaxisOpts,
-        yaxis: yaxisOpts,
-        grid :{ borderColor:c.grid, xaxis:{ lines:{show:false} } },
-        noData:{ text: labels.noData || 'No data yet.', style:{color:c.muted} },
-        tooltip:{ theme: isDark?'dark':'light' },
-        theme  :{ mode: isDark?'dark':'light' },
-    });
-    activityChart.render();
+    if (!chart) { chart = new ApexCharts(node, options(s)); chart.render().then(applyHidden); return; }
+    var o = options(s);
+    chart.updateOptions({ series: o.series, xaxis: o.xaxis, yaxis: o.yaxis }, false, true).then(applyHidden);
 }
-
-function renderActivityChart(range, overrideData){
-    range = range || 'month';
-    applyChartSeries(getSeriesForRange(range, overrideData), range);
+function loadMonth(ym) {
+    var p = (ym || '').split('-');
+    if (p.length < 2 || !P.monthUrl) return;
+    fetch(P.monthUrl + '?year=' + p[0] + '&month=' + parseInt(p[1], 10), { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { draw(d); })
+        .catch(function () {});
 }
-
-function loadMonthChart(yearMonth){
-    if (!monthChartUrl) return;
-    var parts = (yearMonth || '').split('-');
-    var year  = parts[0] || '';
-    var month = parts[1] || '';
-    if (!year || !month) return;
-
-    fetch(monthChartUrl + '?year=' + year + '&month=' + month, { headers:{ 'X-Requested-With':'XMLHttpRequest' } })
-        .then(function(r){ return r.json(); })
-        .then(function(data){ renderActivityChart('month', data); })
-        .catch(function(){});
-}
-
-/* ── Month picker ── */
-if (monthPicker) {
-    monthPicker.addEventListener('change', function(){ loadMonthChart(this.value); });
-}
-
-/* ── Filter tabs ── */
-document.querySelectorAll('#bk-chart-filter .bk-filter-tab').forEach(function(btn){
-    btn.addEventListener('click', function(){
-        document.querySelectorAll('#bk-chart-filter .bk-filter-tab').forEach(function(b){ b.classList.remove('active'); });
-        this.classList.add('active');
-        var range = this.dataset.range;
-
-        // Show/hide month picker
-        if (monthPicker) monthPicker.style.display = (range === 'month') ? '' : 'none';
-
-        if (range === 'month') {
-            loadMonthChart(monthPicker ? monthPicker.value : '');
-        } else {
-            renderActivityChart(range);
-        }
+if (picker) picker.addEventListener('change', function () { loadMonth(this.value); });
+document.querySelectorAll('#dxRange button').forEach(function (b) {
+    b.addEventListener('click', function () {
+        document.querySelectorAll('#dxRange button').forEach(function (x) { x.classList.remove('is-on'); x.removeAttribute('aria-pressed'); });
+        this.classList.add('is-on'); this.setAttribute('aria-pressed', 'true');
+        range = this.dataset.range;
+        if (picker) picker.style.display = range === 'month' ? '' : 'none';
+        if (range === 'month') { picker && picker.value && picker.selectedIndex === 0 ? draw(P.series.month) : loadMonth(picker ? picker.value : ''); }
+        else draw(P.series[range]);
     });
 });
+document.querySelectorAll('#dxLegend button').forEach(function (b) {
+    b.addEventListener('click', function () {
+        var i = parseInt(this.dataset.series, 10);
+        hidden[i] = !hidden[i];
+        this.setAttribute('aria-pressed', hidden[i] ? 'false' : 'true');
+        applyHidden();
+    });
+});
+draw(P.series.month);
 
-/* ── Donut (status) ── */
-function renderDonut(){
-    var node = document.getElementById('storageChart');
-    if(!node || typeof ApexCharts === 'undefined') return;
-    var st = charts.by_status || {};
-    var pending   = st.pending   || 0;
-    var confirmed = (st.confirmed || 0) + (st.upcoming || 0);
-    var completed = st.completed || 0;
-    var other     = (st.cancelled || 0) + (st.rejected || 0) + (st.no_show || 0);
-    var realTotal = pending + confirmed + completed + other;
-
-    /* If truly empty show a neutral placeholder */
-    var isEmpty   = realTotal === 0;
-    var series    = isEmpty ? [1] : [pending, confirmed, completed, other];
-    var clrs      = isEmpty
-        ? [isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)']
-        : [statusClr.pending, statusClr.confirmed, statusClr.completed, isDark ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.08)'];
-    var lbls      = isEmpty ? ['—'] : ['Pending','Confirmed','Completed','Other'];
-
+/* ── outcomes donut ── */
+(function () {
+    var node = document.getElementById('dxDonut');
+    if (!node || typeof ApexCharts === 'undefined') return;
+    var rows = (P.outcomes || []).filter(function (o) { return o.n > 0; });
+    var empty = rows.length === 0;
+    var series = empty ? [1] : rows.map(function (o) { return o.n; });
+    var colors = empty ? [C.grid] : rows.map(function (o) { return tok(o.var, '#888'); });
     new ApexCharts(node, {
-        chart:{
-            type:'donut', height:200,
-            background:'transparent', toolbar:{show:false}
-        },
-        series  : series,
-        labels  : lbls,
-        colors  : clrs,
-        legend  : { show:false },
-        plotOptions:{ pie:{ donut:{
-            size:'68%',
-            labels:{
-                show: !isEmpty,
-                total:{
-                    show     : true,
-                    label    : 'Total',
-                    color    : c.muted,
-                    fontSize : '11px',
-                    formatter: function(){ return isEmpty ? '0' : String(realTotal); }
-                },
-                value:{
-                    color    : isDark ? '#F4F4EF' : '#333',
-                    fontSize : '18px',
-                    fontWeight: 700,
-                    formatter: function(v){ return String(parseInt(v)||0); }
-                }
-            }
-        }}},
-        dataLabels:{ enabled:false },
-        stroke    :{ width:0 },
-        theme     :{ mode: isDark?'dark':'light' },
-        tooltip   :{ theme: isDark?'dark':'light',
-                     y:{ formatter:function(v){ return isEmpty?'0':String(v); } } },
+        chart: { type: 'donut', height: 220, background: 'transparent', fontFamily: 'inherit', animations: { enabled: !reduce, speed: 700 } },
+        series: series, labels: empty ? ['—'] : rows.map(function (o) { return o.label; }), colors: colors,
+        legend: { show: false }, dataLabels: { enabled: false },
+        stroke: { width: 3, colors: [C.surface] },
+        plotOptions: { pie: { expandOnClick: false, donut: { size: '72%', labels: { show: false } } } },
+        states: { hover: { filter: { type: 'none' } }, active: { filter: { type: 'none' } } },
+        tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: function (v) { return empty ? '0' : nf.format(v); } } }
     }).render();
-}
+})();
 
-// Show month picker on initial load (month tab is active by default)
-if (monthPicker) monthPicker.style.display = '';
-loadMonthChart(monthPicker ? monthPicker.value : '');
-renderDonut();
+/* ── icons + relative time ── */
+function icons() { if (window.feather) feather.replace(); }
+icons(); setTimeout(icons, 60);
 
-/* Re-run feather after charts render (icons inside cards need a second pass) */
-setTimeout(function(){
-    if(typeof feather !== 'undefined') feather.replace();
-}, 50);
-
-/* ── Relative time (real-time) ── */
-(function(){
-    var ar = p.rtl === true;
-
-    function relTime(ts){
-        // ts is a local datetime string like "2025-06-15T20:00:00"
-        // new Date(str) without timezone treats it as local time
-        var apptMs = new Date(ts).getTime();
-        var nowMs  = Date.now();
-        var diffSec = Math.round((nowMs - apptMs) / 1000); // positive = past
-        var diff = diffSec;
-        var abs  = Math.abs(diff);
-        var past = diff >= 0;
-
-        var val, unit;
-        if      (abs < 60)       { val = abs;                unit = ar ? ['ثانية','ثوانٍ','دقيقة'] : ['second','seconds','minute']; val = Math.max(val,1); unit = val===1?(ar?'ثانية':'second'):(ar?'ثوانٍ':'seconds'); }
-        else if (abs < 3600)     { val = Math.round(abs/60);  unit = val===1?(ar?'دقيقة':'minute'):(ar?'دقائق':'minutes'); }
-        else if (abs < 86400)    { val = Math.round(abs/3600); unit = val===1?(ar?'ساعة':'hour'):(ar?'ساعات':'hours'); }
-        else if (abs < 2592000)  { val = Math.round(abs/86400); unit = val===1?(ar?'يوم':'day'):(ar?'أيام':'days'); }
-        else if (abs < 31536000) { val = Math.round(abs/2592000); unit = val===1?(ar?'شهر':'month'):(ar?'أشهر':'months'); }
-        else                     { val = Math.round(abs/31536000); unit = val===1?(ar?'سنة':'year'):(ar?'سنوات':'years'); }
-
-        if(ar){
-            return past
-                ? 'مضى ' + val + ' ' + unit
-                : 'باقي ' + val + ' ' + unit;
-        } else {
-            return past
-                ? val + ' ' + unit + ' ago'
-                : 'in ' + val + ' ' + unit;
-        }
+(function () {
+    var ar = P.rtl === true;
+    function unit(v, one, two, few, many) {
+        if (!ar) return v === 1 ? one : many;
+        if (v === 1) return one;
+        if (v === 2) return two;
+        return (v >= 3 && v <= 10) ? few : one;
     }
-
-    function updateAll(){
-        document.querySelectorAll('.bk-reltime[data-ts]').forEach(function(el){
-            var ts = el.dataset.ts;
-            if(ts) el.textContent = relTime(ts);
-        });
+    function rel(ts) {
+        var diff = Math.round((Date.now() - new Date(ts).getTime()) / 1000), abs = Math.abs(diff), past = diff >= 0, v, u;
+        if (abs < 3600)         { v = Math.max(1, Math.round(abs / 60));      u = unit(v, ar ? 'دقيقة' : 'min', 'دقيقتان', 'دقائق', 'min'); }
+        else if (abs < 86400)   { v = Math.round(abs / 3600);                 u = unit(v, ar ? 'ساعة' : 'hour', 'ساعتان', 'ساعات', 'hours'); }
+        else if (abs < 2592000) { v = Math.round(abs / 86400);                u = unit(v, ar ? 'يوم' : 'day', 'يومان', 'أيام', 'days'); }
+        else                    { v = Math.round(abs / 2592000);              u = unit(v, ar ? 'شهر' : 'month', 'شهران', 'أشهر', 'months'); }
+        if (ar) { return (past ? 'منذ ' : 'بعد ') + (v === 2 ? u : v + ' ' + u); }
+        return past ? v + ' ' + u + ' ago' : 'in ' + v + ' ' + u;
     }
-
-    updateAll();
-    setInterval(updateAll, 30000);
+    function all() { document.querySelectorAll('.bk-reltime[data-ts]').forEach(function (el) { if (el.dataset.ts) el.textContent = rel(el.dataset.ts); }); }
+    all(); setInterval(all, 30000);
 })();
 
 })();

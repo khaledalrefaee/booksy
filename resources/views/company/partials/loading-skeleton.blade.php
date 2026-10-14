@@ -48,7 +48,7 @@
     document.addEventListener('click', function (e) {
         var a = e.target.closest && e.target.closest('a[href]');
         if (!a) return;
-        if (a.target === '_blank' || a.hasAttribute('download')) return;
+        if (a.target === '_blank' || a.hasAttribute('download') || a.hasAttribute('data-bk-add-trigger')) return;
         if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
         var href = a.getAttribute('href') || '';
         if (href === '' || href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;

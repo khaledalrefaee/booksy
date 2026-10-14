@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Support\Auditor;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -80,6 +81,49 @@ class InvoiceController extends Controller
         $invoice->load(['branch', 'items', 'appointment', 'payments']);
 
         return view('company.invoices.show', compact('invoice'));
+    }
+
+    /**
+     * Ajax: the invoice as plain data, so the appointment drawer can show it in
+     * place after checkout instead of navigating away from the calendar.
+     */
+    public function data(Invoice $invoice): JsonResponse
+    {
+        abort_unless($invoice->company_id === $this->company()->id, 403);
+
+        $invoice->load(['branch', 'items', 'company']);
+        $fmt   = fn ($n) => number_format((float) $n, 2);
+        $issue = $invoice->issued_at ?? $invoice->created_at;
+
+        return response()->json([
+            'ok'          => true,
+            'number'      => $invoice->invoice_number,
+            'status'      => $invoice->status,
+            'statusLabel' => __(ucfirst($invoice->status)),
+            'issued'      => $issue->translatedFormat('j F Y'),
+            'issuedTime'  => $issue->format('H:i'),
+            'paidAt'      => $invoice->paid_at?->translatedFormat('j F Y · H:i'),
+            'company'     => $invoice->company?->localizedName(),
+            'branch'      => $invoice->branch?->localizedName(),
+            'customer'    => $invoice->customer_name,
+            'phone'       => $invoice->customer_phone,
+            'currency'    => $invoice->currency,
+            'items'       => $invoice->items->map(fn ($i) => [
+                'name'     => $i->description,
+                'employee' => $i->employee_name,
+                'total'    => $fmt($i->total),
+            ])->values(),
+            'subtotal'    => $fmt($invoice->subtotal),
+            'discount'    => (float) $invoice->discount_amount > 0 ? $fmt($invoice->discount_amount) : null,
+            'vatRate'     => (float) $invoice->vat_rate > 0 ? rtrim(rtrim((string) $invoice->vat_rate, '0'), '.') : null,
+            'vat'         => (float) $invoice->vat_rate > 0 ? $fmt($invoice->vat_amount) : null,
+            'total'       => $fmt($invoice->total),
+            'amountPaid'  => $fmt($invoice->amount_paid),
+            'method'      => $invoice->payment_method,
+            'notes'       => $invoice->notes,
+            'showUrl'     => route('company.invoices.show', $invoice),
+            'printUrl'    => route('company.invoices.print', $invoice),
+        ]);
     }
 
     public function print(Invoice $invoice): View

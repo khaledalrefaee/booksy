@@ -463,7 +463,9 @@ class FrontController extends Controller
 
         // Deliver to the platform inbox. A mail-transport failure must never turn
         // a valid submission into an error for the visitor — we log and move on.
-        $inbox = config('mail.contact_to') ?: config('mail.from.address');
+        // Owner → Settings → Support → internal email wins; then the mail config.
+        $inbox = app(\App\Services\Platform\PlatformSettings::class)->string('support.internal_email')
+            ?: config('mail.contact_to') ?: config('mail.from.address');
 
         try {
             \Illuminate\Support\Facades\Mail::to($inbox)->send(

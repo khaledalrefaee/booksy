@@ -74,6 +74,19 @@
         ],
     ];
 
+    // Platform settings (Owner → Settings): real logo, public contact and official profiles in the
+    // Organization schema. Only what is set AND allowed to be public is added.
+    $psFooter  = $ps->footer();
+    $psOfficial = $ps->officialContact();
+    $psLinks   = $ps->publicLinks();
+    $psOrg = array_filter([
+        'logo'      => $ps->logoUrl(),
+        'email'     => $psOfficial['email'],
+        'telephone' => $psOfficial['phone'],
+        'sameAs'    => array_values(array_filter(array_map(fn ($l) => str_starts_with($l['url'], 'http') ? $l['url'] : null, $psLinks))) ?: null,
+    ]);
+    $siteSchema['@graph'][0] = $psOrg + $siteSchema['@graph'][0];
+
     // Nav links per variant
     if ($variant === 'business') {
         $links = [
@@ -235,12 +248,16 @@
         <a href="{{ route('front.index') }}" class="bkf-brand bkf-brand-lg" aria-label="GlowRez">
           <x-front.logo variant="full"/>
         </a>
-        <p class="bkf-footer-tag">{{ $isAr ? 'منصّة حجز وإدارة أماكن الجمال والعناية — احجز موعدك في ثوانٍ، وأدر عملك باحتراف.' : 'The booking & management platform for beauty & wellness venues — book in seconds, run your business like a pro.' }}</p>
+        <p class="bkf-footer-tag">{{ $psFooter['tagline'] ?: ($isAr ? 'منصّة حجز وإدارة أماكن الجمال والعناية — احجز موعدك في ثوانٍ، وأدر عملك باحتراف.' : 'The booking & management platform for beauty & wellness venues — book in seconds, run your business like a pro.') }}</p>
+        @if($psLinks || $psOfficial['email'] || $psOfficial['phone'])
         <div class="bkf-footer-social">
-          <a href="#" aria-label="Instagram" class="bkf-footer-soc"><x-icon name="globe" :size="18"/></a>
-          <a href="#" aria-label="Facebook" class="bkf-footer-soc"><x-icon name="message" :size="18"/></a>
-          <a href="#" aria-label="Phone" class="bkf-footer-soc"><x-icon name="phone" :size="18"/></a>
+          @foreach($psLinks as $l)
+            <a href="{{ $l['url'] }}" target="_blank" rel="noopener noreferrer me" aria-label="{{ $l['label'] }}" title="{{ $l['label'] }}" class="bkf-footer-soc">{!! \App\Support\Platform\PlatformIcons::svg($l['icon'], 18) !!}</a>
+          @endforeach
+          @if($psOfficial['email'])<a href="{{ $psOfficial['email_href'] }}" aria-label="{{ $isAr ? 'البريد الإلكتروني' : 'Email' }}" title="{{ $psOfficial['email'] }}" class="bkf-footer-soc">{!! \App\Support\Platform\PlatformIcons::svg('mail', 18) !!}</a>@endif
+          @if($psOfficial['phone'])<a href="{{ $psOfficial['phone_href'] }}" aria-label="{{ $isAr ? 'الهاتف' : 'Phone' }}" title="{{ $psOfficial['phone'] }}" class="bkf-footer-soc">{!! \App\Support\Platform\PlatformIcons::svg('phone', 18) !!}</a>@endif
         </div>
+        @endif
       </div>
       <div class="bkf-footer-col">
         <h4>{{ $isAr ? 'للعملاء' : 'For customers' }}</h4>
@@ -262,21 +279,26 @@
       <div class="bkf-footer-col">
         <h4>{{ $isAr ? 'الشركة' : 'Company' }}</h4>
         <a href="{{ route('front.about') }}">{{ $isAr ? 'من نحن' : 'About' }}</a>
-        <a href="{{ route('front.contact') }}">{{ $isAr ? 'تواصل معنا' : 'Contact' }}</a>
+        @if($psFooter['contact_on'])
+          <a href="{{ route('front.contact') }}">{{ $psFooter['contact_cta'] ?: ($isAr ? 'تواصل معنا' : 'Contact') }}</a>
+        @endif
         @unless(config('leads.browse_only'))
           <a href="{{ route('company.login') }}">{{ $isAr ? 'دخول الشركات' : 'Business login' }}</a>
         @endunless
       </div>
     </div>
     <div class="bkf-footer-bar">
-      <span>{{ $isAr
+      <span>{{ $psFooter['copyright'] ?: ($isAr
         ? 'جميع الحقوق محفوظة © '.date('Y').' لشركة GlowRez'
-        : '© '.date('Y').' GlowRez. All rights reserved.' }}</span>
+        : '© '.date('Y').' GlowRez. All rights reserved.') }}@if($psFooter['version']) <span class="bkf-footer-ver" dir="ltr">v{{ $psFooter['version'] }}</span>@endif</span>
       <div class="bkf-footer-bar-links">
-        <a href="{{ route('front.privacy') }}">{{ $isAr ? 'الخصوصية' : 'Privacy' }}</a>
-        <a href="{{ route('front.terms') }}">{{ $isAr ? 'الشروط' : 'Terms' }}</a>
+        <a href="{{ $psFooter['privacy_url'] ?: route('front.privacy') }}">{{ $isAr ? 'الخصوصية' : 'Privacy' }}</a>
+        <a href="{{ $psFooter['terms_url'] ?: route('front.terms') }}">{{ $isAr ? 'الشروط' : 'Terms' }}</a>
       </div>
     </div>
+    @if($psFooter['legal'])
+      <p class="bkf-footer-legal">{{ $psFooter['legal'] }}</p>
+    @endif
   </div>
 </footer>
 

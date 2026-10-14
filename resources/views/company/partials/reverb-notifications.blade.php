@@ -579,8 +579,8 @@
 
     /* ────────────────────────────────────
        Live refresh in place. Normally pushed over the WebSocket; if the
-       socket is down it falls back to polling a tiny "did anything change?"
-       endpoint every 30s (never while the tab is hidden). A new online booking is announced (ding +
+       socket is down it falls back to one "did anything change?" check each
+       time the tab regains focus (no timer). A new online booking is announced (ding +
        toast + bell); any change refreshes the open calendar / lists and the
        blocks marked data-live-block, all in place — no page reload.
        Works wherever Reverb is not reachable (e.g. production).
@@ -642,8 +642,11 @@
                 .then(function () { busy = false; });
         }
 
-        setInterval(tick, 30000);   // fallback only; the socket does the real work
+        /* No timer. The page never refreshes itself on a clock: the socket pushes
+           changes, and when it is unreachable a single catch-up check runs the
+           moment the user comes back to the tab or the network returns. */
         document.addEventListener('visibilitychange', function () { if (!document.hidden) tick(); });
+        window.addEventListener('online', tick);
         tick();
     })();
 

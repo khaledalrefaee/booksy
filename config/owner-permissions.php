@@ -54,6 +54,7 @@ return [
             'field-visits.review',
             'leads.view',
             'leads.manage',
+            'platform.settings.manage',
         ],
 
         'sales_manager' => [
@@ -189,6 +190,8 @@ return [
             'permissions' => [
                 'audit-log.view'  => 'Read the audit log',
                 'locations.manage' => 'Manage countries / areas',
+                'platform.settings.manage'    => 'Edit platform settings (contact, links, releases)',
+                'platform.maintenance.manage' => 'Switch maintenance / paused mode on or off',
             ],
         ],
     ],

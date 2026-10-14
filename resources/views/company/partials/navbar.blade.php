@@ -309,7 +309,7 @@
                         </li>
                         <li><hr class="dropdown-divider my-1"></li>
                         <li>
-                            <a href="{{ $authCompany ? route('front.show', $authCompany) : '#' }}" target="_blank"
+                            <a href="{{ $authCompany ? $authCompany->publicUrl($branchContext ?? null) : '#' }}" target="_blank"
                                class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2">
                                 <i class="icon-sm feather icon-external-link"></i> {{ __('Public page') }}
                             </a>

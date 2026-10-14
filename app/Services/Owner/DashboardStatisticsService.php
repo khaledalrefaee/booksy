@@ -81,6 +81,7 @@ final class DashboardStatisticsService
         }
         $when = $when ? Carbon::parse($when) : now();
         $keys[] = "dash.company.{$companyId}.monthchart.{$when->year}.{$when->month}";
+        array_push($keys, ...\App\Services\Company\DashboardInsightsService::cacheKeys($companyId, $when));
 
         foreach ($keys as $key) {
             Cache::forget($key);

@@ -196,7 +196,9 @@ var calendar = new FullCalendar.Calendar(calEl, {
     // A bounded height gives the grid its own internal scroll instead of growing
     // the whole page to fit every event (height:'auto' made a huge DOM the
     // browser had to lay out and repaint on every scroll).
-    height:       '78vh',
+    /* phones: fill what is left under the page chrome (dynamic viewport, so the
+       URL bar collapsing never leaves a gap) instead of a fixed share of it */
+    height:       window.matchMedia('(max-width: 768px)').matches ? 'calc(100dvh - 300px)' : '78vh',
     firstDay:     _firstDay(),
     nowIndicator: true,
     // "Now" and "today" are the branch's clock, not the device's.
@@ -206,7 +208,8 @@ var calendar = new FullCalendar.Calendar(calEl, {
     // High-volume days otherwise stack into an unreadable wall of overlapping
     // blocks and choke rendering. Cap side-by-side stacking in the time-grid;
     // the rest collapse into a "+N more" popover instead of piling up.
-    eventMaxStack:    4,
+    /* a phone fits two readable columns, not four slivers */
+    eventMaxStack:    window.matchMedia('(max-width: 768px)').matches ? 2 : 4,
     slotEventOverlap: false,
     scrollTime:   _scrollTime(),
     slotMinTime:  '00:00:00',
@@ -604,7 +607,7 @@ function renderListRows() {
                     /* Time + relative */
                     + '<td class="c-time" style="font-size:.8rem;white-space:nowrap;">'
                     +   '<div style="font-weight:700;">' + dt + '</div>'
-                    +   (endDt ? '<div style="color:var(--cal-text-muted);font-size:.72rem;">← ' + endDt + '</div>' : '')
+                    +   (endDt ? '<div class="bk-lrow-end" style="color:var(--cal-text-muted);font-size:.72rem;">' + (IS_RTL ? 'حتى ' : 'until ') + endDt + '</div>' : '')
                     +   '<div class="bk-rel-badge ' + rel.cls + '">'
                     +     (rel.isNow ? '<span class="bk-rel-dot"></span>' : '')
                     +     rel.text
@@ -624,10 +627,11 @@ function renderListRows() {
 }
 
 /* Fetch one page from the server with the current filters/search/sort. */
-function listReload(page) {
+function listReload(page, quiet) {
     listPage = page || 1;
     var tbody = document.getElementById('list-tbody');
-    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5" style="color:var(--cal-text-muted);"><div class="spinner-border spinner-border-sm me-2"></div>' + BK.t.loading + '</td></tr>';
+    /* quiet = live refresh: swap the rows in place, no spinner, same page */
+    if (!quiet) tbody.innerHTML ='<tr><td colspan="9" class="text-center py-5" style="color:var(--cal-text-muted);"><div class="spinner-border spinner-border-sm me-2"></div>' + BK.t.loading + '</td></tr>';
 
     var p = new URLSearchParams();
     _setBranchParam(p);
@@ -649,7 +653,7 @@ function listReload(page) {
             renderListPager();
         })
         .catch(function (err) {
-            if (bkAborted(err)) return;
+            if (bkAborted(err) || quiet) return;
             tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4" style="color:#ef4444;">⚠ ' + BK.t.error_loading_data + ': ' + err.message + '</td></tr>';
         });
 }
@@ -982,9 +986,9 @@ function sfTeamAllows(id) {
 }
 
 /* ── Dispatcher ── */
-function loadStaffView() {
+function loadStaffView(quiet) {
     document.getElementById('sf-view-label').textContent = VIEW_LABELS[sfView];
-    if (sfView === 'day')   return loadDayView();
+    if (sfView === 'day')   return loadDayView(quiet);
     if (sfView === 'month') return loadMonthView();
     return loadRangeView(sfView === 'week' ? 7 : 3);
 }
@@ -1434,22 +1438,23 @@ document.addEventListener('click', function(e){
     if (!e.target.closest('.sf-popwrap')) sfCloseAllPops();
 });
 
-function loadDayView() {
+function loadDayView(quiet) {
     document.getElementById('sf-title').textContent = sfIsToday(sfDate)
         ? (IS_RTL ? 'اليوم' : 'Today')
         : sfFmtTitle(sfDate);
     document.getElementById('sf-subtitle').textContent = sfFmtTitle(sfDate);
     var grid = document.getElementById('sf-grid');
-    grid.innerHTML = '<div class="text-center py-5 w-100" style="color:var(--cal-text-muted);"><div class="spinner-border spinner-border-sm"></div></div>';
+    /* quiet = live refresh: keep the grid, its scroll position and any open drawer */
+    if (!quiet) grid.innerHTML = '<div class="text-center py-5 w-100" style="color:var(--cal-text-muted);"><div class="spinner-border spinner-border-sm"></div></div>';
 
     var p = new URLSearchParams({ date: sfDateStr(sfDate) });
     if (activeBranch) p.set('branch_id', activeBranch);
 
     bkFetch('staffGrid', STAFF_URL + '?' + p)
         .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-        .then(function(data) { renderStaffGrid(data); })
+        .then(function(data) { renderStaffGrid(data, !!quiet); })
         .catch(function(err) {
-            if (bkAborted(err)) return;
+            if (bkAborted(err) || quiet) return;
             grid.innerHTML = '<div class="text-center py-5 w-100" style="color:#ef4444;">⚠ ' + err.message + '</div>';
         });
 }
@@ -1526,11 +1531,12 @@ function renderStaffGrid(data, keepScroll) {
     html += '<div style="height:' + HDR_H + 'px;border-bottom:1px solid var(--cal-border);"></div>';
     for (var h = HOUR_S_LOCAL; h < HOUR_E_LOCAL; h++) {
         if (isMobile) {
-            /* Fresha mobile: 24h labels on every quarter (or :00/:30 when zoomed out) */
+            /* Phones: :00 and :30 labels; the :15/:45 labels only appear once the
+               grid is zoomed in far enough (Q >= 32) for them to breathe */
             var hh24  = String(h).padStart(2, '0');
             var qLbls = ['00','15','30','45'];
             for (var qi = 0; qi < 4; qi++) {
-                var showLbl = qi === 0 || qi === 2 || Q >= 16;
+                var showLbl = qi === 0 || qi === 2 || Q >= 32;
                 var bTop = qi === 0 ? '1px solid var(--cal-border)'
                          : qi === 2 ? '1px dashed var(--cal-border)'
                          : '1px solid var(--cal-border2)';
@@ -2387,6 +2393,7 @@ function qaOpen(ctx, opts) {
     document.getElementById('qa-client-collapsed').classList.remove('d-none');
     document.getElementById('qa-client-expanded').classList.add('d-none');
     qaRenderMeta();
+    qaLoadDay();
     document.getElementById('qa-svc-list').innerHTML =
         '<div class="qa-empty"><div class="spinner-border spinner-border-sm"></div><div class="mt-2">' + QA_TXT.loading + '</div></div>';
 
@@ -2479,11 +2486,108 @@ function qaRenderMeta() {
         ? '<b>' + _esc(qaCustomer.name) + '</b>'
         : QA_TXT.walkin;
     document.getElementById('qa-meta').innerHTML =
-        '<span>📅 ' + sfFmtTitle(sfDate) + '</span>'
-        + '<span>🕐 <b>' + _fmtMinutes(qaCtx.minutes) + '</b></span>'
-        + (qaCtx.empName ? '<span>👤 <b>' + _esc(qaCtx.empName) + '</b></span>' : '')
+        (qaCtx.empName ? '<span>' + (IS_RTL ? 'الموظف' : 'Staff') + ': <b>' + _esc(qaCtx.empName) + '</b></span>' : '')
         + '<span>' + QA_TXT.client + ': ' + custLabel + '</span>';
+    qaRenderWhen();
 }
+
+/* ── "When" card ──────────────────────────────────────────────────
+   Where the appointment will land, said plainly and editable: date + start
+   time. Opening the drawer from "+ Add" (no slot tapped) picks the next
+   quarter-hour; before this the choice was a tiny muted line nobody read. */
+var qaDayData = null;   /* day payload for the drawer's date when it differs from the staff view's */
+
+/* A date typo ("2000") must not become a real booking. The server enforces the
+   same window (AppointmentController::assertBookableStart); this just says so
+   before the round trip. Branch calendar day, not the device's. */
+var QA_BACKFILL_DAYS = 30, QA_AHEAD_DAYS = 366;
+function qaDateBounds() {
+    var n = _branchNow(); n.setHours(0, 0, 0, 0);
+    var lo = new Date(n); lo.setDate(lo.getDate() - QA_BACKFILL_DAYS);
+    var hi = new Date(n); hi.setDate(hi.getDate() + QA_AHEAD_DAYS);
+    return { min: sfDateStr(lo), max: sfDateStr(hi) };
+}
+function qaDateOk(str) {
+    var b = qaDateBounds();
+    return /^\d{4}-\d{2}-\d{2}$/.test(str || '') && str >= b.min && str <= b.max;
+}
+function qaDateMsg() {
+    return IS_RTL
+        ? 'اختر تاريخاً ضمن آخر ' + QA_BACKFILL_DAYS + ' يوماً أو خلال السنة القادمة'
+        : 'Pick a date within the last ' + QA_BACKFILL_DAYS + ' days or the next year';
+}
+function qaWhenError(msg) {
+    var el = document.getElementById('qa-when-err');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.classList.toggle('d-none', !msg);
+    document.getElementById('qa-when').classList.toggle('has-err', !!msg);
+}
+
+function qaRenderWhen() {
+    if (!qaCtx) return;
+    var dEl = document.getElementById('qa-when-date');
+    var tEl = document.getElementById('qa-when-time');
+    if (!dEl || !tEl) return;
+    var bnd = qaDateBounds();
+    dEl.min = bnd.min; dEl.max = bnd.max;
+    dEl.value = qaCtx.dateStr;
+    qaWhenError(qaDateOk(qaCtx.dateStr) ? '' : qaDateMsg());
+
+    var step = _intervalMin(), opts = '', hit = false;
+    for (var m = 0; m < 1440; m += step) {
+        if (m === qaCtx.minutes) hit = true;
+        opts += '<option value="' + m + '">' + _fmtMinutes(m) + '</option>';
+    }
+    /* a slot tapped off the interval grid must still show exactly */
+    if (!hit) opts += '<option value="' + qaCtx.minutes + '">' + _fmtMinutes(qaCtx.minutes) + '</option>';
+    tEl.innerHTML = opts;
+    tEl.value = String(qaCtx.minutes);
+
+    var d = new Date(qaCtx.dateStr + 'T00:00:00');
+    var sub = isNaN(d) ? '' : sfFmtTitle(d).replace('،', IS_RTL ? '،' : ',');
+    if (qaCtx.empName) sub += ' · ' + qaCtx.empName;
+    document.getElementById('qa-when-sub').textContent = sub;
+}
+
+function qaLoadDay() {
+    qaDayData = null;
+    if (!qaCtx || qaCtx.dateStr === sfDateStr(sfDate)) return;
+    var want = qaCtx.dateStr;
+    var p = new URLSearchParams({ date: want });
+    if (qaCtx.branchId) p.set('branch_id', qaCtx.branchId);
+    fetch(STAFF_URL + '?' + p, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+            if (!data || !qaCtx || qaCtx.dateStr !== want) return;
+            qaDayData = data;
+            qaRenderCart();
+        })
+        .catch(function () {});
+}
+
+document.getElementById('qa-when-date').addEventListener('change', function () {
+    if (!qaCtx) return;
+    /* typed or cleared out-of-range → keep the last good date and say why */
+    if (!qaDateOk(this.value)) {
+        var bad = this.value;
+        this.value = qaCtx.dateStr;
+        qaWhenError(bad ? qaDateMsg() : '');
+        if (bad) bkToast(qaDateMsg(), 'error');
+        return;
+    }
+    qaWhenError('');
+    qaCtx.dateStr = this.value;
+    qaRenderWhen();
+    qaLoadDay();
+    qaRenderCart();
+});
+document.getElementById('qa-when-time').addEventListener('change', function () {
+    if (!qaCtx) return;
+    qaCtx.minutes = parseInt(this.value, 10) || 0;
+    qaRenderWhen();
+    qaRenderCart();
+});
 
 /* ── Services ── */
 
@@ -2783,7 +2887,8 @@ document.getElementById('qa-cart-list').addEventListener('click', function(e){
    AVAILABILITY (working hours + existing appointments)
 ════════════════════════════════ */
 function qaClosedSlots(empId) {
-    var staff = (sfDayData && sfDayData.staff) || [];
+    var day   = qaDayData || sfDayData;
+    var staff = (day && day.staff) || [];
     /* the selected employee's own schedule; walk-in falls back to branch hours */
     var emp = staff.find(function(s){ return String(s.id) === String(empId || 0); });
     if (emp && emp.closedSlots) return emp.closedSlots;
@@ -2799,7 +2904,7 @@ function qaAvail(empId, fromMin, durMin) {
         if (qaOverlapsRange(fromMin, toMin, closed[i].from, closed[i].to)) return { ok: false, reason: 'closed' };
     }
     if (empId) {
-        var busy = ((sfDayData && sfDayData.appointments) || []).some(function(a){
+        var busy = (((qaDayData || sfDayData) && (qaDayData || sfDayData).appointments) || []).some(function(a){
             if (String(a.employeeId == null ? 0 : a.employeeId) !== String(empId)) return false;
             /* only statuses that still hold the slot can make it look busy */
             if (LIVE_STATUSES.indexOf(a.status) < 0) return false;
@@ -3064,6 +3169,7 @@ function qaResolveWaitlistBooked() {
 document.getElementById('qa-save').addEventListener('click', function(){
     if (qaBooking || !qaCtx) return;
     if (!qaGuests.every(function(g){ return g.cart.length; })) { bkToast(QA_TXT.needSvc, 'error'); return; }
+    if (!qaDateOk(qaCtx.dateStr)) { qaWhenError(qaDateMsg()); bkToast(qaDateMsg(), 'error'); return; }
     if (qaIsGroup()) { qaSaveGroup(this); return; }
 
     qaBooking = true;
@@ -3410,16 +3516,62 @@ function apRender() {
 }
 
 /* ── STEP: main details ── */
+/* ── Status picker ──────────────────────────────────────────────
+   A real listbox instead of the browser's native select: current status first,
+   then only the moves the state machine permits. While a change is saving the
+   trigger turns into a spinner + "Updating…" so the tap is never ignored. */
+var apStLoading = null;   /* status being saved, or null */
+var AP_ST_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+var AP_ST_CARET = '<svg class="ap-st-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
+
+function apStatusPicker(s) {
+    var moves   = _nextMoves(s.status);
+    var showing = apStLoading || s.status;
+    var col     = apStatusColor(showing);
+    var label   = apStLoading
+        ? (IS_RTL ? 'جارٍ التحديث…' : 'Updating…')
+        : (STATUS_LABELS[s.status] || s.status);
+    var canOpen = moves.length > 0 && !apStLoading;
+
+    var lead = apStLoading
+        ? '<span class="ap-st-spin" aria-hidden="true"></span>'
+        : '<span class="ap-st-dot" aria-hidden="true"></span>';
+
+    var items = [s.status].concat(moves).map(function (st) {
+        var cur = st === s.status;
+        return '<button type="button" role="option" class="ap-st-item' + (cur ? ' is-current' : '') + '"'
+            + ' data-st="' + _esc(st) + '" aria-selected="' + (cur ? 'true' : 'false') + '"'
+            + ' style="--st:' + apStatusColor(st) + ';">'
+            + '<span class="ap-st-dot" aria-hidden="true"></span>'
+            + '<span class="ap-st-name">' + _esc(STATUS_LABELS[st] || st) + '</span>'
+            + (cur ? '<span class="ap-st-tick">' + AP_ST_CHECK + '</span>' : '')
+            + '</button>';
+    }).join('');
+
+    return '<div class="ap-st' + (apStLoading ? ' is-loading' : '') + '" id="ap-st" style="--st:' + col + ';">'
+        + '<button type="button" class="ap-st-btn" id="ap-st-btn"'
+        +   (canOpen ? ' aria-haspopup="listbox" aria-expanded="false" aria-controls="ap-st-menu"' : ' disabled')
+        +   ' aria-label="' + _esc((IS_RTL ? 'الحالة: ' : 'Status: ') + label) + '">'
+        +   lead + '<span class="ap-st-label">' + _esc(label) + '</span>' + (canOpen ? AP_ST_CARET : '')
+        + '</button>'
+        + (canOpen ? '<div class="ap-st-menu d-none" id="ap-st-menu" role="listbox">' + items + '</div>' : '')
+        + '</div>';
+}
+function apStatusMenu(open) {
+    var menu = document.getElementById('ap-st-menu'), btn = document.getElementById('ap-st-btn');
+    if (!menu || !btn) return;
+    menu.classList.toggle('d-none', !open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.getElementById('ap-st').classList.toggle('is-open', open);
+    if (open) { var cur = menu.querySelector('.is-current') || menu.querySelector('.ap-st-item'); if (cur) cur.focus({ preventScroll: true }); }
+}
+
 function apRenderMain() {
     var s = apData;
     /* Money can still be taken as long as the appointment has not settled. */
     var canPay = !STATUS_DEFS[s.status] || !STATUS_DEFS[s.status].terminal;
 
-    /* Current status first, then only the moves the state machine permits. */
-    var stOpts = [s.status].concat(_nextMoves(s.status));
-    var optsHtml = stOpts.map(function(st){
-        return '<option value="' + st + '"' + (st === s.status ? ' selected' : '') + '>' + _esc(STATUS_LABELS[st] || st) + '</option>';
-    }).join('');
+    var stHtml = apStatusPicker(s);
 
     var svcHtml = s.services.map(function(sv){
         return '<div class="qa-cart-row" style="border-inline-start-color:' + apStatusColor(s.status) + ';">'
@@ -3436,7 +3588,7 @@ function apRenderMain() {
 
     apBody.innerHTML =
         '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;padding-inline-end:46px;">'
-        + '<select class="ap-status" id="ap-status" style="background-color:' + apStatusColor(s.status) + ';">' + optsHtml + '</select>'
+        + stHtml
         + payChip
         + '<div class="ap-when">' + _esc(s.dateIso || '') + ' · <span style="direction:ltr;display:inline-block;">' + (s.startLabel || '') + ' – ' + (s.endLabel || '') + '</span></div>'
         + '</div>'
@@ -3725,16 +3877,108 @@ function apRenderSuccess(resp) {
         + '<div class="amount">' + apMoney(apCartTotal()) + '</div>'
         + '<div class="sub">' + _esc(apData.customer.name) + ' · ' + (apPay === 'cash' ? AP_TXT.cash : AP_TXT.card) + '</div>'
         + '<div class="btns">'
-        + (resp.invoiceUrl ? '<a class="ap-btn-ghost" href="' + resp.invoiceUrl + '">' + AP_TXT.viewInvoice + '</a>' : '')
-        + (resp.printUrl   ? '<a class="ap-btn-ghost" href="' + resp.printUrl + '" target="_blank" rel="noopener">🖨 ' + AP_TXT.printInvoice + '</a>' : '')
+        + (resp.dataUrl
+            ? '<button type="button" class="ap-btn-ghost" data-ap="show-invoice" data-url="' + _esc(resp.dataUrl) + '">' + AP_TXT.viewInvoice + '</button>'
+            : (resp.invoiceUrl ? '<a class="ap-btn-ghost" href="' + resp.invoiceUrl + '">' + AP_TXT.viewInvoice + '</a>' : ''))
+        + (resp.printUrl   ? '<a class="ap-btn-ghost" href="' + resp.printUrl + '" target="_blank" rel="noopener">' + AP_ICON_PRINT + AP_TXT.printInvoice + '</a>' : '')
         + '<button class="ap-btn-primary" data-ap="close-success">' + AP_TXT.closeWord + '</button>'
         + '</div></div>';
+    apSuccessResp = resp;
+}
+
+/* ── Invoice, in place ──────────────────────────────────────────
+   After checkout the receipt is one tap away inside this same drawer, so the
+   calendar (and where you were on it) never goes anywhere. */
+var apSuccessResp = null;
+var AP_ICON_PRINT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-inline-end:6px;vertical-align:-2px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
+var AP_ICON_BACK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="' + (IS_RTL ? '9 18 15 12 9 6' : '15 18 9 12 15 6') + '"/></svg>';
+var AP_ICON_OPEN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-inline-start:6px;vertical-align:-2px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+
+function apShowInvoice(url, btn) {
+    if (btn) { btn.disabled = true; btn.classList.add('is-busy'); }
+    apBody.innerHTML = '<div class="ap-inv-load" role="status" aria-live="polite"><div class="ap-inv-skel s1"></div><div class="ap-inv-skel s2"></div><div class="ap-inv-skel s3"></div><div class="ap-inv-skel s4"></div></div>';
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, credentials: 'same-origin' })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (inv) { apRenderInvoice(inv); })
+        .catch(function () {
+            apBody.innerHTML = '<div class="qa-empty" style="margin:auto;text-align:center;">'
+                + '<div style="margin-bottom:12px;">' + (IS_RTL ? 'تعذّر تحميل الفاتورة' : 'Could not load the invoice') + '</div>'
+                + '<div style="display:flex;gap:8px;justify-content:center;">'
+                + '<button type="button" class="ap-btn-ghost" data-ap="show-invoice" data-url="' + _esc(url) + '">' + (IS_RTL ? 'إعادة المحاولة' : 'Retry') + '</button>'
+                + '<button type="button" class="ap-btn-ghost" data-ap="back-success">' + (IS_RTL ? 'رجوع' : 'Back') + '</button>'
+                + '</div></div>';
+        });
+}
+
+function apRenderInvoice(inv) {
+    var cur = _esc(inv.currency || '');
+    var money = function (n) { return '<span class="num">' + _esc(n) + '</span> <span class="cur">' + cur + '</span>'; };
+    var T = IS_RTL
+        ? { back: 'رجوع', invoice: 'فاتورة', billed: 'الفاتورة إلى', service: 'الخدمة', sub: 'المجموع الفرعي', disc: 'الخصم', vat: 'الضريبة', total: 'الإجمالي',
+            paid: 'المدفوع', method: 'طريقة الدفع', cash: 'نقداً', card: 'بطاقة', print: 'طباعة', full: 'الصفحة الكاملة', close: 'إغلاق', notes: 'ملاحظات', on: 'بتاريخ' }
+        : { back: 'Back', invoice: 'Invoice', billed: 'Billed to', service: 'Service', sub: 'Subtotal', disc: 'Discount', vat: 'VAT', total: 'Total',
+            paid: 'Paid', method: 'Payment method', cash: 'Cash', card: 'Card', print: 'Print', full: 'Full page', close: 'Close', notes: 'Notes', on: 'on' };
+
+    var items = (inv.items || []).map(function (it) {
+        return '<div class="ap-inv-row">'
+            + '<div class="ap-inv-desc"><b>' + _esc(it.name) + '</b>'
+            + (it.employee ? '<small>' + _esc(it.employee) + '</small>' : '') + '</div>'
+            + '<div class="ap-inv-amt">' + money(it.total) + '</div></div>';
+    }).join('');
+
+    var rows = '<div class="ap-inv-line"><span>' + T.sub + '</span><span>' + money(inv.subtotal) + '</span></div>'
+        + (inv.discount ? '<div class="ap-inv-line is-disc"><span>' + T.disc + '</span><span>− ' + money(inv.discount) + '</span></div>' : '')
+        + (inv.vat ? '<div class="ap-inv-line"><span>' + T.vat + ' (' + _esc(inv.vatRate) + '%)</span><span>' + money(inv.vat) + '</span></div>' : '');
+
+    var methodTxt = inv.method === 'cash' ? T.cash : (inv.method === 'card' ? T.card : (inv.method || ''));
+    var st = inv.status || 'issued';
+
+    apBody.innerHTML =
+        '<div class="ap-inv">'
+        + '<div class="ap-inv-top">'
+        +   '<button type="button" class="ap-inv-back" data-ap="back-success" aria-label="' + T.back + '">' + AP_ICON_BACK + '<span>' + T.back + '</span></button>'
+        + '</div>'
+        + '<div class="ap-scroll ap-inv-scroll">'
+        +   '<div class="ap-inv-sheet">'
+        +     '<div class="ap-inv-head">'
+        +       '<div><div class="ap-inv-co">' + _esc(inv.company || '') + '</div>'
+        +       (inv.branch ? '<div class="ap-inv-br">' + _esc(inv.branch) + '</div>' : '') + '</div>'
+        +       '<span class="ap-inv-badge st-' + _esc(st) + '">' + _esc(inv.statusLabel || st) + '</span>'
+        +     '</div>'
+        +     '<div class="ap-inv-meta">'
+        +       '<div><small>' + T.invoice + '</small><b class="ltr">' + _esc(inv.number) + '</b></div>'
+        +       '<div><small>' + T.on + '</small><b>' + _esc(inv.issued) + '</b></div>'
+        +       '<div class="ap-inv-who"><small>' + T.billed + '</small><b>' + _esc(inv.customer || '—') + '</b>'
+        +         (inv.phone ? '<span class="ltr">' + _esc(inv.phone) + '</span>' : '') + '</div>'
+        +     '</div>'
+        +     '<div class="ap-inv-items">' + items + '</div>'
+        +     '<div class="ap-inv-sum">' + rows
+        +       '<div class="ap-inv-total"><span>' + T.total + '</span><span>' + money(inv.total) + '</span></div>'
+        +     '</div>'
+        +     ((methodTxt || inv.paidAt)
+                ? '<div class="ap-inv-paid"><span class="ap-inv-paid-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>'
+                  + '<div><b>' + T.paid + ' ' + money(inv.amountPaid) + '</b>'
+                  + '<small>' + _esc([methodTxt, inv.paidAt].filter(Boolean).join(' · ')) + '</small></div></div>'
+                : '')
+        +     (inv.notes ? '<div class="ap-inv-notes"><small>' + T.notes + '</small><p>' + _esc(inv.notes) + '</p></div>' : '')
+        +   '</div>'
+        + '</div>'
+        + '<div class="qa-footer ap-inv-foot">'
+        +   '<a class="ap-btn-ghost" href="' + _esc(inv.showUrl) + '">' + T.full + AP_ICON_OPEN + '</a>'
+        +   '<div style="display:flex;gap:8px;">'
+        +     '<a class="ap-btn-ghost" href="' + _esc(inv.printUrl) + '" target="_blank" rel="noopener">' + AP_ICON_PRINT + T.print + '</a>'
+        +     '<button type="button" class="ap-btn-primary" data-ap="close-success">' + T.close + '</button>'
+        +   '</div>'
+        + '</div>'
+        + '</div>';
 }
 
 /* ── change status from the pill ── */
 function apChangeStatus(st) {
     if (apBusy || !apData || st === apData.status) return;
     apBusy = true;
+    apStLoading = st;
+    apRender();
     var body = new URLSearchParams({ _method: 'PATCH', _token: CSRF, status: st });
     fetch(STATUS_ROUTE_BASE.replace('__ID__', apData.id), {
         method: 'POST',
@@ -3744,6 +3988,7 @@ function apChangeStatus(st) {
     .then(function(r){ return r.json(); })
     .then(function(json){
         if (!json.ok) throw new Error('fail');
+        apStLoading = null;
         apData.status = json.status;
         bkToast(AP_TXT.stUpdated, 'warning');
         sfUpdateCache(apData.id, { status: json.status, color: apStatusColor(json.status) });
@@ -3752,7 +3997,7 @@ function apChangeStatus(st) {
         calRefetch();
         apRender();
     })
-    .catch(function(){ bkToast(QA_TXT.bookFail, 'error'); apRender(); })
+    .catch(function(){ apStLoading = null; bkToast(QA_TXT.bookFail, 'error'); apRender(); })
     .finally(function(){ apBusy = false; });
 }
 
@@ -3767,6 +4012,8 @@ apBody.addEventListener('click', function(e){
         if (act === 'back-tip')  { apStep = 'tip';  apRender(); }
         if (act === 'submit')    apSubmit();
         if (act === 'close-success') apClose();
+        if (act === 'show-invoice')  apShowInvoice(t.dataset.url, t);
+        if (act === 'back-success')  { if (apSuccessResp) apRenderSuccess(apSuccessResp); else apClose(); }
         return;
     }
     if ((t = e.target.closest('.ap-tip-box'))) {
@@ -3839,9 +4086,37 @@ apBody.addEventListener('click', function(e){
         apRender();
     }
 });
-apBody.addEventListener('change', function(e){
-    if (e.target.id === 'ap-status') apChangeStatus(e.target.value);
+/* status picker: open/close, pick, arrow keys, Escape closes the menu before the drawer */
+apBody.addEventListener('click', function (e) {
+    var item = e.target.closest('.ap-st-item');
+    if (item) { apStatusMenu(false); apChangeStatus(item.dataset.st); return; }
+    if (e.target.closest('#ap-st-btn')) {
+        var menu = document.getElementById('ap-st-menu');
+        if (menu) apStatusMenu(menu.classList.contains('d-none'));
+    }
 });
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('#ap-st')) apStatusMenu(false);
+});
+apBody.addEventListener('keydown', function (e) {
+    var menu = document.getElementById('ap-st-menu');
+    if (!menu || menu.classList.contains('d-none')) return;
+    var items = Array.prototype.slice.call(menu.querySelectorAll('.ap-st-item'));
+    var i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); items[Math.min(items.length - 1, i + 1)].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); items[Math.max(0, i - 1)].focus(); }
+    else if (e.key === 'Home') { e.preventDefault(); items[0].focus(); }
+    else if (e.key === 'End') { e.preventDefault(); items[items.length - 1].focus(); }
+});
+document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var menu = document.getElementById('ap-st-menu');
+    if (menu && !menu.classList.contains('d-none')) {
+        e.stopImmediatePropagation();
+        apStatusMenu(false);
+        var b = document.getElementById('ap-st-btn'); if (b) b.focus();
+    }
+}, true);
 apBody.addEventListener('input', function(e){
     if (e.target.id === 'ap-tip-input') apTip = parseFloat(e.target.value) || 0;
     if (e.target.id === 'ap-cash-in') {
@@ -4247,8 +4522,8 @@ window.switchView = switchView;
 /* Let the add-menu features (block time / waitlist) refresh whichever views exist */
 window.bkRefreshViews = function () {
     calRefetch();
-    if (!document.getElementById('view-staff').classList.contains('d-none')) loadStaffView();
-    if (!document.getElementById('view-list').classList.contains('d-none')) loadListView();
+    if (!document.getElementById('view-staff').classList.contains('d-none')) loadStaffView(true);
+    if (!document.getElementById('view-list').classList.contains('d-none')) listReload(listPage, true);
 };
 
 /* ════════════════════════════════
@@ -4364,19 +4639,8 @@ function _fmtMinutes(totalMin) {
     return h12 + (m ? ':' + String(m).padStart(2,'0') : '') + ' ' + ap;
 }
 
-/* Auto-refresh the "in 20 min" style labels.
-   Registered through bkInterval so bkTeardown can stop it; it also stands down
-   while the tab is hidden, where re-rendering rows nobody is looking at only
-   burns battery. */
-bkInterval(function() {
-    if (document.hidden) return;
-    if (!document.getElementById('view-list').classList.contains('d-none') && listLoaded) {
-        renderListRows();
-    }
-}, 30000);
-
-/* Coming back to a backgrounded tab should show fresh labels immediately
-   rather than up to 30s of stale ones. */
+/* The "in 20 min" style labels are re-rendered when the user comes back to the
+   tab — never on a clock, so the list does not shift under their finger. */
 document.addEventListener('visibilitychange', function () {
     if (document.hidden) return;
     if (!document.getElementById('view-list').classList.contains('d-none') && listLoaded) {

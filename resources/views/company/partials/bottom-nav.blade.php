@@ -17,16 +17,6 @@
         <i data-feather="home"></i>
         <span>{{ __('Main') }}</span>
     </a>
-    @feature('leaves')
-    <a href="{{ route('company.team-calendar') }}"
-       class="bk-bn-item {{ request()->routeIs('company.team-calendar') ? 'active' : '' }}">
-        <i data-feather="calendar"></i>
-        <span>{{ __('Calendar') }}</span>
-    </a>
-    @endfeature
-    <a href="{{ route('company.appointments.index') }}" class="bk-bn-fab" aria-label="{{ __('New booking') }}">
-        <i data-feather="plus"></i>
-    </a>
     <a href="{{ route('company.appointments.index') }}"
        class="bk-bn-item {{ request()->routeIs('company.appointments.*') ? 'active' : '' }}">
         <span class="bk-bn-ic">
@@ -34,6 +24,17 @@
             @if($bnPending > 0)<span class="bk-bn-badge">{{ $bnPending > 9 ? '9+' : $bnPending }}</span>@endif
         </span>
         <span>{{ __('Appointments') }}</span>
+    </a>
+    {{-- Centre action. On the appointments page this opens that page's add sheet
+         instead of reloading it (data-bk-add-trigger is read by appointments/panels.js) --}}
+    <a href="{{ route('company.appointments.index', request()->routeIs('company.appointments.index') ? [] : ['add' => 1]) }}" class="bk-bn-fab" aria-label="{{ __('New booking') }}"
+       @if(request()->routeIs('company.appointments.index')) data-bk-add-trigger aria-haspopup="menu" @endif>
+        <i data-feather="plus"></i>
+    </a>
+    <a href="{{ route('company.customers.index') }}"
+       class="bk-bn-item {{ request()->routeIs('company.customers.*') ? 'active' : '' }}">
+        <i data-feather="users"></i>
+        <span>{{ __('Customers') }}</span>
     </a>
     {{-- .sidebar-toggler: reuses the template's own handler to open the drawer --}}
     <a href="#" class="bk-bn-item sidebar-toggler">

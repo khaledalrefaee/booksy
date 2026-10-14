@@ -1,6 +1,13 @@
 @php
     $isAr    = app()->getLocale() === 'ar';
     $success = session('success');
+
+    // Owner → Settings → Support: customer-facing channels, hours and greeting.
+    $psChannels = $ps->supportChannels();
+    $psHours    = $ps->supportHoursLabel();
+    $psMessage  = $ps->localized('support.default_message');
+    // Until an owner enters a support email, keep the address this page always showed.
+    $legacyMail = $ps->bool('visibility.show_support_links') && ! $ps->string('support.email');
 @endphp
 <x-front.layout :title="($isAr ? 'تواصل معنا' : 'Contact Us') . ' | GlowRez'" :mapFab="false"
     :description="$isAr ? 'تواصل مع فريق GlowRez — استفسارات، دعم فني، أو شراكة أعمال. نحن هنا لمساعدتك.' : 'Get in touch with the GlowRez team — questions, support, or business partnership. We are here to help.'">
@@ -99,14 +106,24 @@
       {{-- Info --}}
       <div class="bkf-reveal">
         <div class="bkf-ct-info">
+          @foreach($psChannels as $ch)
+            <a href="{{ $ch['href'] }}" class="bkf-ct-item" @if($ch['external']) target="_blank" rel="noopener noreferrer" @endif>
+              <span class="bkf-ct-ic">{!! \App\Support\Platform\PlatformIcons::svg($ch['icon'], 20) !!}</span>
+              <div><h4>{{ $ch['label'] }}</h4><p dir="auto">{{ $ch['value'] }}</p></div>
+            </a>
+          @endforeach
+          @if($legacyMail)
           <a href="mailto:info@glowrez.com" class="bkf-ct-item">
             <span class="bkf-ct-ic"><x-icon name="message" :size="20"/></span>
             <div><h4>{{ $isAr ? 'البريد' : 'Email' }}</h4><p>info@glowrez.com</p></div>
           </a>
+          @endif
+          @unless(isset($psChannels['help_center']))
           <a href="{{ route('front.help') }}" class="bkf-ct-item">
             <span class="bkf-ct-ic"><x-icon name="sparkles" :size="20"/></span>
             <div><h4>{{ $isAr ? 'مركز المساعدة' : 'Help center' }}</h4><p>{{ $isAr ? 'إجابات فورية للأسئلة الشائعة' : 'Instant answers to common questions' }}</p></div>
           </a>
+          @endunless
           <a href="{{ route('front.business') }}" class="bkf-ct-item">
             <span class="bkf-ct-ic"><x-icon name="building" :size="20"/></span>
             <div><h4>{{ $isAr ? 'لأصحاب الأعمال' : 'For business' }}</h4><p>{{ $isAr ? 'سجّل نشاطك على المنصّة' : 'List your venue on the platform' }}</p></div>
@@ -115,8 +132,9 @@
         <div class="bkf-ct-note">
           <span class="bkf-ct-ic"><x-icon name="zap" :size="20"/></span>
           <div>
-            <b>{{ $isAr ? 'رد سريع' : 'Fast response' }}</b>
-            <small>{{ $isAr ? 'نرد عادةً خلال أقل من 24 ساعة.' : 'We usually reply within 24 hours.' }}</small>
+            <b>{{ $psMessage ? ($isAr ? 'خدمة العملاء' : 'Customer service') : ($isAr ? 'رد سريع' : 'Fast response') }}</b>
+            <small>{{ $psMessage ?: ($isAr ? 'نرد عادةً خلال أقل من 24 ساعة.' : 'We usually reply within 24 hours.') }}</small>
+            @if($psHours)<small class="d-block" style="margin-top:4px" dir="auto">{{ $psHours }}</small>@endif
           </div>
         </div>
       </div>

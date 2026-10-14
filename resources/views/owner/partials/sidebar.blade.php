@@ -92,6 +92,10 @@
             $row('owner.service-categories.index', __('Service categories'), 'tag',    'owner.service-categories.*'),
             $row('owner.locations.index',          __('Locations'),          'map',    'owner.locations.*'),
         ]],
+        // Platform-wide settings: a top-level item (no group header), always visible to those who may edit them.
+        ['key' => 'settings', 'title' => null, 'open' => true, 'items' => [
+            $row('owner.settings.index', __('Settings'), 'settings', 'owner.settings.*', 'platform.settings.manage'),
+        ]],
     ];
 
     // Resolve permissions, active state and per-group totals once.

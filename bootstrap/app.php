@@ -59,6 +59,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             SetLocale::class,
+            \App\Http\Middleware\PlatformMaintenance::class,
+        ]);
+        // Same switch for the mobile API (JSON 503 envelope instead of an HTML page).
+        $middleware->api(append: [
+            \App\Http\Middleware\PlatformMaintenance::class,
         ]);
         $middleware->alias([
             'owner.auth'       => AuthenticateOwner::class,

@@ -222,7 +222,7 @@
                 <a href="{{ route('company.profile.show') }}" class="bk-nl {{ request()->routeIs('company.profile.*') ? 'active' : '' }}">
                     <i data-feather="settings"></i><span>{{ __('Settings') }}</span>
                 </a>
-                <a href="{{ $authCompany ? route('front.show', $authCompany) : '#' }}" target="_blank" class="bk-nl bk-nl-muted">
+                <a href="{{ $authCompany ? $authCompany->publicUrl($ctx) : '#' }}" target="_blank" class="bk-nl bk-nl-muted">
                     <i data-feather="external-link"></i><span>{{ __('View public page') }}</span>
                 </a>
             </div>

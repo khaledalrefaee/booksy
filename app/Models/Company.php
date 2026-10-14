@@ -145,6 +145,30 @@ class Company extends Authenticatable
     }
 
     /**
+     * The business's live public page: the marketplace page of one of its branches
+     * (/branch/{slug}), never the private-booking link. Prefers $prefer (e.g. the
+     * branch in the dashboard context) when it is itself publicly reachable, then
+     * the first active public branch; falls back to the company page.
+     */
+    public function publicUrl(?Branch $prefer = null): string
+    {
+        $isPublic = fn (?Branch $b) => $b
+            && $b->company_id === $this->id
+            && $b->status === 'active'
+            && $b->booking_mode !== 'private'
+            && filled($b->slug);
+
+        $branch = $isPublic($prefer)
+            ? $prefer
+            : $this->branches()->where('status', 'active')->where('booking_mode', '!=', 'private')
+                ->whereNotNull('slug')->orderBy('sort_order')->orderBy('id')->first();
+
+        return $branch
+            ? route('front.branch', $branch)
+            : route('front.show', $this);
+    }
+
+    /**
      * The timezone used to anchor this company's day boundaries (reports,
      * the Daily Business Summary, scheduled sends).
      *

@@ -94,6 +94,12 @@ class AppointmentController extends Controller
 
         abort_unless($company->branches()->where('id', $data['branch_id'])->exists(), 403);
 
+        foreach ($data['persons'] as $person) {
+            foreach ($person['services'] as $svcData) {
+                $this->assertBookableStart(Carbon::parse($svcData['start_time']), (int) $data['branch_id'], 'persons');
+            }
+        }
+
         $groupId   = count($data['persons']) > 1 ? Appointment::newGroupId() : null;
         $allocator = app(\App\Services\ResourceAllocator::class);
 
@@ -556,17 +562,52 @@ class AppointmentController extends Controller
 
         $invoice = $appointment->invoice()->first();
 
+        /* The sale just closed, so the invoice must say so. Without this it was
+           created "issued" with nothing paid — it showed as unpaid, with the full
+           amount still due, for money already in the till. */
+        if ($invoice
+            && (float) $invoice->total > 0
+            && (float) $invoice->amount_paid <= 0
+            && ! in_array($invoice->status, ['paid', 'void', 'refunded'], true)) {
+            try {
+                $invoice->recordPayment((float) $invoice->total, $method, __('Checkout'), $operator);
+                $invoice->refresh();
+            } catch (Throwable $e) { report($e); }
+        }
+
         return response()->json([
             'ok'         => true,
             'invoiceId'  => $invoice?->id,
             'invoiceUrl' => $invoice ? route('company.invoices.show', $invoice->id) : null,
             'printUrl'   => $invoice ? route('company.invoices.print', $invoice->id) : null,
+            'dataUrl'    => $invoice ? route('company.invoices.data', $invoice->id) : null,
         ]);
     }
 
     /**
      * Ajax: quick-book an appointment from the calendar drawer (Fresha-style).
      */
+    /** How far back a booking may be recorded (walk-ins entered late) and how far ahead one may be made. */
+    private const BACKFILL_DAYS   = 30;
+    private const BOOK_AHEAD_DAYS = 366;
+
+    /**
+     * A typo like "2000" or "2062" must never become a real appointment.
+     * Measured on the branch's own calendar day, not the server's.
+     */
+    private function assertBookableStart(Carbon $start, int $branchId, string $field = 'start_time'): void
+    {
+        $branch = $this->company()->branches()->find($branchId);
+        $today  = $branch ? $branch->localToday() : now()->startOfDay();
+
+        if ($start->lt($today->copy()->subDays(self::BACKFILL_DAYS))
+            || $start->gt($today->copy()->addDays(self::BOOK_AHEAD_DAYS)->endOfDay())) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                $field => __('Pick a date within the last :past days or the next year.', ['past' => self::BACKFILL_DAYS]),
+            ]);
+        }
+    }
+
     public function quickStore(Request $request): JsonResponse
     {
         /* replay-safe: an offline retry with the same key returns the first result */
@@ -608,6 +649,7 @@ class AppointmentController extends Controller
         abort_if($services->isEmpty(), 422);
 
         $start = Carbon::parse($data['start_time']);
+        $this->assertBookableStart($start, (int) $data['branch_id']);
 
         // Resolve customer: by id, or create from name/phone, or walk-in (null)
         $customer = null;
@@ -790,6 +832,7 @@ class AppointmentController extends Controller
 
         $branchId = (int) $data['branch_id'];
         $start    = Carbon::parse($data['start_time']);
+        $this->assertBookableStart($start, $branchId);
         $groupId  = count($data['guests']) > 1 ? Appointment::newGroupId() : null;
 
         /* every service must belong to this branch — never trust posted ids */
@@ -1050,6 +1093,7 @@ class AppointmentController extends Controller
         $oldEmployeeId = $appointment->employee_id;
         $oldStart      = $appointment->start_time->copy();
         $newStart      = Carbon::parse($data['start_time']);
+        $this->assertBookableStart($newStart, (int) $appointment->branch_id);
         $deltaMinutes  = (int) round($oldStart->diffInMinutes($newStart, false));
         $duration      = isset($data['duration']) ? (int) $data['duration'] : null;
 

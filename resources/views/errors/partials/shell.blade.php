@@ -7,6 +7,7 @@
       $icon      (string)      key: 'compass' | 'lock' | 'alert' | 'clock' | 'gauge' | 'tools'
       $showRetry (bool)        optional — swaps "Go back" for "Try again" (reload)
       $title,$desc (string)    optional — override the centralized copy
+      $extraUrl,$extraLabel    optional — a secondary link (e.g. the platform status page)
 --}}
 @php
     // --- Locale ------------------------------------------------------------
@@ -268,6 +269,11 @@
                 {{ $isAr ? 'الصفحة الرئيسية' : 'Go home' }}
             </a>
         </div>
+        @if(!empty($extraUrl))
+            <p style="margin:18px 0 0;font-size:.85rem;">
+                <a href="{{ $extraUrl }}" target="_blank" rel="noopener noreferrer" style="color:var(--olive);font-weight:600;text-decoration:underline;text-underline-offset:3px;">{{ $extraLabel ?? $extraUrl }}</a>
+            </p>
+        @endif
     </main>
     @if($isFront)
     {{-- Keep the logo artwork in sync with the localStorage-resolved theme. --}}

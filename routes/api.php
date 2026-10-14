@@ -28,6 +28,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('api.locale')->group(function () {
 
+    // ── Platform info (public): identity, support channels, social links, status, releases ──
+    // Read-only and safe to call without a token; also stays open during maintenance.
+    Route::get('platform/config', [\App\Http\Controllers\Api\PlatformController::class, 'config'])
+        ->middleware('throttle:60,1')->name('api.platform.config');
+
     // ── Customer authentication (phone + one-time code) ───────────────────────
     Route::prefix('customer')->name('api.customer.')->group(function () {
         // Public — start the sign-in flow.

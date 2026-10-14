@@ -61,25 +61,49 @@ if (fltBtn && fltBar) {
     fltBar.addEventListener('input', markFilters);
 }
 
-/* ════ Add menu ════ */
-var addBtn  = document.getElementById('bk-add-btn');
-var addMenu = document.getElementById('bk-add-menu');
+/* ════ Add menu ════
+   Desktop: a popover under the button. Phones: a bottom sheet over a scrim (CSS),
+   opened from here or from the tab bar's centre "+" — on this page that button
+   is the add action, not a link back to the same page. */
+var addBtn   = document.getElementById('bk-add-btn');
+var addMenu  = document.getElementById('bk-add-menu');
+var addScrim = document.getElementById('bk-add-scrim');
+function setAddMenu(open) {
+    addMenu.classList.toggle('d-none', !open);
+    if (addScrim) addScrim.classList.toggle('d-none', !open);
+    addBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) { var first = addMenu.querySelector('button'); if (first && window.matchMedia('(max-width: 768px)').matches) first.focus({ preventScroll: true }); }
+}
 addBtn.addEventListener('click', function (e) {
     e.stopPropagation();
-    var open = !addMenu.classList.contains('d-none');
-    addMenu.classList.toggle('d-none', open);
-    addBtn.setAttribute('aria-expanded', open ? 'false' : 'true');
+    setAddMenu(addMenu.classList.contains('d-none'));
 });
 document.addEventListener('click', function (e) {
-    if (!e.target.closest('.bk-add-wrap')) {
-        addMenu.classList.add('d-none');
-        addBtn.setAttribute('aria-expanded', 'false');
-    }
+    if (!e.target.closest('.bk-add-wrap')) setAddMenu(false);
 });
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !addMenu.classList.contains('d-none')) { setAddMenu(false); addBtn.focus(); }
+});
+if (addScrim) addScrim.addEventListener('click', function () { setAddMenu(false); });
+var tabFab = document.querySelector('.bk-bottom-nav [data-bk-add-trigger]');
+if (tabFab) tabFab.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    setAddMenu(addMenu.classList.contains('d-none'));
+});
+/* arrived from the tab bar's "+" on another page: open the sheet straight away */
+if (/[?&]add=1(&|$)/.test(location.search)) {
+    setAddMenu(true);
+    if (window.history && history.replaceState) {
+        var u = new URL(location.href);
+        u.searchParams.delete('add');
+        history.replaceState(null, '', u.pathname + (u.search || '') + u.hash);
+    }
+}
 addMenu.addEventListener('click', function (e) {
     var item = e.target.closest('[data-bk-add]');
     if (!item) return;
-    addMenu.classList.add('d-none');
+    setAddMenu(false);
     if (item.dataset.bkAdd === 'block')    openBlockModal();
     if (item.dataset.bkAdd === 'waitlist') openWaitlist(true);
     if (item.dataset.bkAdd === 'booking' || item.dataset.bkAdd === 'group') {

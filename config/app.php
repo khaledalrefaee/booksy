@@ -80,6 +80,13 @@ return [
 
     'locale' => env('APP_LOCALE', 'ar'),
 
+    /*
+    | Identifier of the code actually deployed (git SHA / tag), set by the deploy
+    | pipeline via APP_RELEASE. Shown read-only in Owner → Settings → Releases so
+    | the version RECORDED there can be compared with what is really running.
+    */
+    'release' => env('APP_RELEASE'),
+
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Company;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Services\Company\DashboardInsightsService;
 use App\Services\OnboardingService;
 use App\Services\Owner\DashboardStatisticsService;
 use Illuminate\Http\JsonResponse;
@@ -15,6 +16,7 @@ class DashboardController extends Controller
 {
     public function __construct(
         private readonly DashboardStatisticsService $dashboardStatistics,
+        private readonly DashboardInsightsService $insights,
     ) {}
 
     public function index(): View
@@ -27,7 +29,7 @@ class DashboardController extends Controller
         \App\Services\CompanySetupService::ensureHeadOffice($company);
 
         $stats = $this->dashboardStatistics->forCompany($company);
-        $chartData = $this->dashboardStatistics->chartDataForCompany($company);
+        $insights = $this->insights->forCompany($company);
 
         $now = now(config('app.timezone'));
 
@@ -66,7 +68,7 @@ class DashboardController extends Controller
 
         $onboarding = OnboardingService::summary($company);
 
-        return view('company.index', compact('stats', 'recentAppointments', 'chartData', 'company', 'monthOptions', 'onboarding'));
+        return view('company.index', compact('stats', 'insights', 'recentAppointments', 'company', 'monthOptions', 'onboarding'));
     }
 
     public function monthChart(Request $request): JsonResponse
@@ -80,7 +82,7 @@ class DashboardController extends Controller
         $month = max(1, min(12, $month));
         $year  = max(2000, min(2100, $year));
 
-        $data = $this->dashboardStatistics->monthChartForCompany($company, $year, $month);
+        $data = $this->insights->monthSeries($company, $year, $month);
 
         return response()->json($data);
     }

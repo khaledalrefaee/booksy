@@ -75,7 +75,8 @@
                     {{ $isRtl ? 'جديد' : 'Add' }}
                     <svg class="bk-add-caret" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
-                <div class="bk-add-menu d-none" id="bk-add-menu" role="menu">
+                <div class="bk-add-scrim d-none" id="bk-add-scrim" aria-hidden="true"></div>
+                <div class="bk-add-menu d-none" id="bk-add-menu" role="menu" aria-label="{{ $isRtl ? 'إضافة' : 'Add' }}">
                     <button type="button" data-bk-add="booking" role="menuitem">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="12" y1="10" x2="12" y2="16"/><line x1="9" y1="13" x2="15" y2="13"/></svg>
                         <div>
@@ -391,13 +392,13 @@
 
             {{-- Staff nav — GlowRez style ── --}}
             <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 10px;border-bottom:1px solid var(--cal-border);background:var(--cal-toolbar-bg);flex-wrap:wrap;gap:8px;">
-                <div class="sf-popwrap" style="display:flex;align-items:center;gap:8px;">
-                    <button id="sf-prev" style="background:var(--cal-surface2);border:1px solid var(--cal-border);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--cal-text);font-size:1.05rem;transition:background .12s;">‹</button>
+                <div class="sf-popwrap sf-datenav" style="display:flex;align-items:center;gap:8px;">
+                    <button id="sf-prev" type="button" class="sf-nav-btn" aria-label="{{ $isRtl ? 'السابق' : 'Previous' }}">‹</button>
                     <div id="sf-title-wrap" style="text-align:center;min-width:160px;">
                         <div id="sf-title" style="font-size:.96rem;font-weight:800;color:var(--cal-text);line-height:1.25;"></div>
                         <div id="sf-subtitle" style="font-size:.68rem;color:var(--cal-text-muted);font-weight:600;margin-top:1px;"></div>
                     </div>
-                    <button id="sf-next" style="background:var(--cal-surface2);border:1px solid var(--cal-border);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--cal-text);font-size:1.05rem;transition:background .12s;">›</button>
+                    <button id="sf-next" type="button" class="sf-nav-btn" aria-label="{{ $isRtl ? 'التالي' : 'Next' }}">›</button>
                     {{-- Date picker popover --}}
                     <div id="sf-datepick" class="sf-pop sf-pop-start d-none"></div>
                 </div>
@@ -425,10 +426,10 @@
                         </button>
                         <div id="sf-view-menu" class="sf-pop sf-pop-end d-none" style="min-width:150px;"></div>
                     </div>
-                    <button id="sf-settings-btn" class="sf-tool-btn" title="{{ $isRtl ? 'إعدادات التقويم' : 'Calendar settings' }}">
+                    <button id="sf-settings-btn" type="button" class="sf-tool-btn" title="{{ $isRtl ? 'إعدادات التقويم' : 'Calendar settings' }}" aria-label="{{ $isRtl ? 'إعدادات التقويم' : 'Calendar settings' }}">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </button>
-                    <button id="sf-today" style="background:linear-gradient(135deg,#f97316,#ef4444);border:none;border-radius:18px;padding:6px 18px;font-size:.76rem;font-weight:800;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(249,115,22,.4);">
+                    <button id="sf-today" type="button" class="sf-today-btn">
                         {{ $isRtl ? 'اليوم' : 'Today' }}
                     </button>
                 </div>
@@ -570,6 +571,20 @@
 
     {{-- Client panel --}}
     <div class="qa-panel qa-client">
+        {{-- When: where this appointment will land, editable --}}
+        <div class="qa-when" id="qa-when" role="group" aria-label="{{ $isRtl ? 'موعد الحجز' : 'Appointment time' }}">
+            <label class="qa-when-f">
+                <span class="qa-when-l">{{ $isRtl ? 'التاريخ' : 'Date' }}</span>
+                <input type="date" id="qa-when-date">
+            </label>
+            <label class="qa-when-f">
+                <span class="qa-when-l">{{ $isRtl ? 'وقت البدء' : 'Start time' }}</span>
+                <select id="qa-when-time"></select>
+            </label>
+            <div class="qa-when-sub" id="qa-when-sub"></div>
+            <div class="qa-when-err d-none" id="qa-when-err" role="alert"></div>
+        </div>
+
         {{-- Guest switcher — only appears once a second guest is added --}}
         <div id="qa-guests" class="d-none">
             <div class="qa-guests-title">

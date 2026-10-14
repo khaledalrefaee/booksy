@@ -178,6 +178,17 @@ Route::prefix('owner')->name('owner.')->group(function () {
             ->only(['store', 'update', 'destroy'])
             ->middleware('owner.can:plans.manage');
 
+        // ── Platform settings (contact, links, releases, public footer, maintenance) ──
+        // Maintenance switches inside the "system" tab need platform.maintenance.manage
+        // on top of this gate (checked in UpdatePlatformSettingsRequest).
+        Route::middleware('owner.can:platform.settings.manage')->prefix('settings')->name('settings.')
+            ->controller(\App\Http\Controllers\Owner\PlatformSettingsController::class)
+            ->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::put('links', 'updateLinks')->name('links');
+                Route::put('{tab}', 'update')->where('tab', 'general|support|releases|visibility|system')->name('update');
+            });
+
         // Audit log (append-only, read-only)
         Route::get('audit-log', [\App\Http\Controllers\Owner\AuditLogController::class, 'index'])
             ->middleware('owner.can:audit-log.view')

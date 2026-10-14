@@ -24,6 +24,9 @@ class AppServiceProvider extends ServiceProvider
         // Branch-scoped permission engine — single source of truth for effective
         // permissions. Singleton so the slug→level/id map is resolved once per request.
         $this->app->singleton(\App\Support\Access\PermissionResolver::class);
+
+        // Platform settings (Owner → Settings): one cached snapshot per request.
+        $this->app->singleton(\App\Services\Platform\PlatformSettings::class);
     }
 
     /**
@@ -73,6 +76,14 @@ class AppServiceProvider extends ServiceProvider
                 'igUrl' => \App\Support\LeadContact::instagramUrl(),
             ]);
         });
+
+        // Public pages that print platform-managed content (footer, contact, help)
+        // receive the settings service as $ps. Named $ps (not $platform) because
+        // several views already loop over a `$platform` variable.
+        \Illuminate\Support\Facades\View::composer(
+            ['components.front.layout', 'front.contact', 'front.help', 'errors.503'],
+            fn ($view) => $view->with('ps', $this->app->make(\App\Services\Platform\PlatformSettings::class)),
+        );
 
         // Pre-launch lead form: a person fills it once or twice, a script fills it
         // thousands of times. Cap per IP over 10 minutes AND per day.
