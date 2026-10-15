@@ -1,5 +1,6 @@
 @php
     $isAr = app()->getLocale() === 'ar';
+    $psCh = $ps->supportChannels();
     // Bilingual FAQ — grouped. q/a per locale.
     $groups = [
         [
@@ -166,7 +167,6 @@ html{ scroll-behavior:smooth; }
           <h3>{{ $isAr ? 'لم تجد ما تبحث عنه؟' : 'Didn’t find what you need?' }}</h3>
           <p>{{ $isAr ? 'فريقنا سعيد بمساعدتك في أي وقت.' : 'Our team is happy to help you anytime.' }}</p>
         </div>
-        @php $psCh = $ps->supportChannels(); @endphp
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           @foreach(array_intersect_key($psCh, ['whatsapp' => 1, 'email' => 1]) as $ch)
             <a href="{{ $ch['href'] }}" class="bkf-btn bkf-btn-ghost" @if($ch['external']) target="_blank" rel="noopener noreferrer" @endif>{!! \App\Support\Platform\PlatformIcons::svg($ch['icon'], 18) !!}{{ $ch['label'] }}</a>

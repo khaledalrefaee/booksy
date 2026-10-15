@@ -4,10 +4,12 @@
   for a full ~9-hour shift on a weak connection).
 
   Design goals:
-   • SECURE   — the session is kept alive only while the operator is actually
-                working. Genuine inactivity (default 60 min with no mouse/key/
-                touch) triggers a countdown warning and then a real logout, so an
-                unattended screen never stays signed in.
+   • SECURE   — the session is kept alive while the page stays open, but not
+                forever: after a long stretch with no mouse/key/touch (default
+                12 h — a full shift plus overnight margin) a countdown warning
+                and then a real logout fire, so a screen abandoned for a day never
+                stays signed in. (Previously 60 min, which signed people out of a
+                dashboard they had simply left open during a break.)
    • RESILIENT— a heartbeat keeps the session (and its CSRF token) fresh while the
                 user is active; if the network drops it retries quickly and shows
                 an honest "offline" pill so the operator knows not to trust an
@@ -19,14 +21,14 @@
 
   Params (all optional):
     $logoutUrl    — POST logout route; enables the idle auto-logout.
-    $idleMinutes  — minutes of no activity before logout (default 60).
+    $idleMinutes  — minutes of no activity before logout (default 720 = 12 h).
     $warnSeconds  — countdown shown before logging out (default 60).
 
   Requires: the `csrf.token` route and a <meta name="csrf-token"> in the head.
 --}}
 @php
     $kaLogout   = $logoutUrl   ?? null;
-    $kaIdleMin  = $idleMinutes ?? 60;
+    $kaIdleMin  = $idleMinutes ?? 720;
     $kaWarnSec  = $warnSeconds ?? 60;
     $kaLifetime = (int) config('session.lifetime', 120);
 @endphp
@@ -107,8 +109,9 @@
         logout:     @json($kaLogout),
         idleMs:     {{ (int) $kaIdleMin }} * 60000,
         warnMs:     {{ (int) $kaWarnSec }} * 1000,
-        // ~3 heartbeats per session lifetime, at least one a minute.
-        beatMs:     Math.max(60000, Math.floor({{ $kaLifetime }} * 60000 / 3)),
+        // ~3 heartbeats per session lifetime, but never more than 15 min apart
+        // (background tabs / sleeping laptops drift) and at least one a minute.
+        beatMs:     Math.min(15 * 60000, Math.max(60000, Math.floor({{ $kaLifetime }} * 60000 / 3))),
         retryMs:    20000
     };
 

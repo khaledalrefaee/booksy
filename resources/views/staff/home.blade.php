@@ -50,6 +50,7 @@
     </style>
 </head>
 <body>
+@include('partials.submit-guard')
     <div class="sh-card">
         <div class="sh-top">
             <div class="sh-avatar">{{ strtoupper(mb_substr($employee->localizedName() ?: '?',0,1)) }}</div>

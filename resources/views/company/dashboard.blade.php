@@ -28,6 +28,7 @@
      financial figures — mask all rendered text in Clarity recordings. Heatmaps &
      click analytics still work; UI is unaffected. --}}
 <body data-clarity-mask="true">
+@include('partials.submit-guard')
     @include('company.partials.loading-skeleton')
     @include('company.partials.impersonation-banner')
     <div class="main-wrapper">

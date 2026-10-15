@@ -24,6 +24,7 @@
     @endif
 </head>
 <body>
+@include('partials.submit-guard')
 <div class="main-wrapper">
     <div class="page-wrapper full-page">
         <div class="page-content d-flex align-items-center justify-content-center">

@@ -63,6 +63,7 @@
     </style>
 </head>
 <body>
+@include('partials.submit-guard')
     <div class="card">
         <img class="logo" src="{{ asset('images/glowrez-logo-light_1.webp') }}" alt="GlowRez">
         <h1>{{ $isAr ? 'إلغاء الموعد؟' : 'Cancel your appointment?' }}</h1>

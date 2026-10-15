@@ -346,6 +346,7 @@
             if (!form || form.nodeName !== 'FORM' || !form.hasAttribute('data-confirm')) return;
             if (form._gtOK) return;               // already approved → let it through
             e.preventDefault();
+            var sub = e.submitter;
             var ask = (window.bkConfirm ? window.bkConfirm : function(o){
                 return Promise.resolve({ isConfirmed: window.confirm(o.text || '') });
             });
@@ -356,7 +357,7 @@
                 confirmText: form.getAttribute('data-confirm-yes') || undefined,
                 confirmColor:form.getAttribute('data-confirm-color') || undefined
             }).then(function(r){
-                if (r && r.isConfirmed){ form._gtOK = true; form.submit(); }  // form.submit() skips this listener
+                if (r && r.isConfirmed){ form._gtOK = true; if (window.bkBusy) window.bkBusy.lock(form, sub); form.submit(); }  // form.submit() skips this listener
             });
         }, false);
     }
@@ -419,7 +420,15 @@
   this engine and must NOT fire session toasts themselves, otherwise messages
   would appear twice (layout include + page include).
 --}}
-@if (session('success') || session('error') || session('warning') || session('info') || $errors->any())
+@php
+    // Pages that already render a field's error inline (@error) pass
+    // ['inlineErrorKeys' => ['field']] so that error isn't toasted a second time.
+    $toastErrors = collect($errors->toArray())
+        ->except($inlineErrorKeys ?? [])
+        ->flatten()
+        ->all();
+@endphp
+@if (session('success') || session('error') || session('warning') || session('info') || count($toastErrors))
 <script>
 (function () {
     // Fire-once guard: each render gets a unique NONCE. If the browser re-serves
@@ -441,11 +450,9 @@
         @if (session('warning')) window.GlowToast.warning(@json(session('warning'))); @endif
         @if (session('info'))    window.GlowToast.info(@json(session('info')));       @endif
         @if (session('error'))   window.GlowToast.error(@json(session('error')));     @endif
-        @if ($errors->any())
-            @foreach ($errors->all() as $error)
-                window.GlowToast.error(@json($error));
-            @endforeach
-        @endif
+        @foreach ($toastErrors as $error)
+            window.GlowToast.error(@json($error));
+        @endforeach
     }
     if (window.GlowToast) fire();
     else document.addEventListener('DOMContentLoaded', fire);

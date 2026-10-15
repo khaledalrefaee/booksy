@@ -21,6 +21,7 @@
     @stack('head')
 </head>
 <body>
+@include('partials.submit-guard')
 <div class="ga-shell">
 
     {{-- ═════════ Brand stage ═════════ --}}

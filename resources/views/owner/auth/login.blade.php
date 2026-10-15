@@ -260,6 +260,7 @@
     </style>
 </head>
 <body>
+@include('partials.submit-guard')
 <div class="ol-shell">
 
     {{-- ═════════ Brand stage ═════════ --}}

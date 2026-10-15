@@ -189,23 +189,44 @@ class ReportController extends Controller
             ->whereNotNull('employee_id');
         if ($branchId) $query->where('branch_id', $branchId);
 
-        $employees = $query
+        $stats = $query
             ->select('employee_id')
             ->selectRaw('COUNT(*) as appt_count, SUM(total_price) as revenue')
             ->groupBy('employee_id')
-            ->orderByDesc('revenue')
             ->get()
-            ->map(function ($r) {
-                $emp = \App\Models\Employee::find($r->employee_id);
+            ->keyBy('employee_id');
+
+        // The roster drives the report (not the bookings), so staff with no
+        // completed bookings this period still appear with zeros. Inactive staff
+        // only show when they actually worked in the period.
+        $statIds = $stats->keys()->all();
+        $roster = \App\Models\Employee::where('company_id', $company->id)
+            ->where(fn ($q) => $q->where('is_active', true)->orWhereIn('id', $statIds))
+            ->when($branchId, fn ($q) => $q->where(function ($b) use ($branchId, $statIds) {
+                $b->where('branch_id', $branchId)
+                  ->orWhere('all_branches', true)
+                  ->orWhereHas('branches', fn ($x) => $x->where('branches.id', $branchId))
+                  ->orWhereIn('id', $statIds);
+            }))
+            ->with('branch')
+            ->get();
+
+        $employees = $roster
+            ->map(function ($emp) use ($stats) {
+                $r = $stats->get($emp->id);
+                $count = (int) ($r->appt_count ?? 0);
+                $revenue = round((float) ($r->revenue ?? 0), 2);
                 return [
                     'employee' => $emp,
-                    'name' => $emp?->localizedName() ?? '—',
-                    'branch' => $emp?->branch?->localizedName() ?? '—',
-                    'appointments' => $r->appt_count,
-                    'revenue' => round((float) $r->revenue, 2),
-                    'avg' => $r->appt_count > 0 ? round((float) $r->revenue / $r->appt_count, 2) : 0,
+                    'name' => $emp->localizedName() ?: '—',
+                    'branch' => $emp->branch?->localizedName() ?? '—',
+                    'appointments' => $count,
+                    'revenue' => $revenue,
+                    'avg' => $count > 0 ? round($revenue / $count, 2) : 0,
                 ];
-            });
+            })
+            ->sortBy([['revenue', 'desc'], ['appointments', 'desc'], ['name', 'asc']])
+            ->values();
 
         return view('company.reports.employee-performance', compact(
             'employees', 'branches', 'branchId', 'month', 'year'

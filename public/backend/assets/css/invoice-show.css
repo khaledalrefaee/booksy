@@ -81,7 +81,7 @@
 .inv-figures .is-paid b { color: var(--bk-success); }
 .inv-figures .is-due.has-due b { color: var(--bk-warning); font-size: 1.25rem; }
 .inv-progress { height: 8px; margin-top: 14px; border-radius: 999px; background: var(--bk-surface-2); overflow: hidden; }
-.inv-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--bk-accent-fill), var(--bk-gold)); transition: width .5s cubic-bezier(.22,1,.36,1); }
+.inv-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--bk-accent-fill), var(--bk-gold)); }
 .inv-cur { padding: 2px 10px; border-radius: 999px; background: var(--bk-surface-2); font-size: .72rem; font-weight: 800; letter-spacing: .06em; color: var(--bk-text-soft); }
 
 .inv-payform { margin-top: 18px; padding-top: 18px; border-top: 1px dashed var(--bk-border-strong); display: flex; flex-direction: column; gap: 8px; }
@@ -185,7 +185,7 @@ select.inv-input option { background: var(--bk-surface); color: var(--bk-text); 
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .inv-progress span, .inv-adv summary svg, .inv-btn { transition: none; }
+    .inv-adv summary svg, .inv-btn { transition: none; }
     .inv-spin { animation-duration: 1.6s; }
 }
 @media print { .inv-head-actions, .inv-banner-cta, .inv-pay, .inv-side { display: none !important; } }

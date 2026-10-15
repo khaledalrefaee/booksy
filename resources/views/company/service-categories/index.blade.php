@@ -6,7 +6,8 @@
         <h4 class="mb-0">{{ __('Service categories') }}</h4>
     </div>
 
-    @include('company.partials.flash')
+    {{-- name_en error is shown under the field; keep it out of the toast --}}
+    @include('company.partials.flash', ['inlineErrorKeys' => ['name_en']])
 
     <div class="row">
         <div class="col-md-5 col-xl-4 grid-margin">

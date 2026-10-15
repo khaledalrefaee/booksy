@@ -34,7 +34,7 @@
                             <td style="min-width:180px;">
                                 <div class="fw-semibold">{{ $emp['name'] }}</div>
                                 <div class="rp-bar-track" style="margin-inline-start:0;max-width:220px;">
-                                    <div class="rp-bar-fill" style="width:{{ max(2, round($emp['revenue'] / $maxRev * 100)) }}%"></div>
+                                    <div class="rp-bar-fill" style="width:{{ $emp['revenue'] > 0 ? max(2, round($emp['revenue'] / $maxRev * 100)) : 0 }}%"></div>
                                 </div>
                             </td>
                             <td class="rp-muted">{{ $emp['branch'] }}</td>

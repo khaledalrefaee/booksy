@@ -128,6 +128,7 @@
     @stack('head')
 </head>
 <body>
+@include('partials.submit-guard')
     <header class="ev-top">
         <a href="{{ route('employee.home') }}" class="ev-brand" aria-label="GlowRez">
             <img src="{{ asset('images/glowrez-logo-light_1.webp') }}" alt="GlowRez" class="ev-logo">

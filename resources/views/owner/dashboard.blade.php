@@ -33,6 +33,7 @@
      emails, salaries & financial data — mask all rendered text in Clarity
      recordings. Heatmaps & click analytics still work; UI is unaffected. --}}
 <body data-clarity-mask="true">
+@include('partials.submit-guard')
 	{{-- Restore the folded sidebar before first paint so the layout never jumps (desktop only) --}}
 	<script>try{if(localStorage.getItem('bkOwnerFold')==='1'&&matchMedia('(min-width:992px)').matches)document.body.classList.add('sidebar-folded')}catch(e){}</script>
 	<div class="main-wrapper">

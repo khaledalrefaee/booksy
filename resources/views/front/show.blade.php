@@ -411,6 +411,7 @@ footer.booksy-footer .copy{font-size:.76rem;color:rgba(255,255,255,.2);text-alig
 </style>
 </head>
 <body>
+@include('partials.submit-guard')
 <div class="body">
 
 {{-- ════ NAVBAR ════ --}}

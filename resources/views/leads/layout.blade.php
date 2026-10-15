@@ -48,6 +48,7 @@
 @stack('head')
 </head>
 <body class="gl @yield('body-class')">
+@include('partials.submit-guard')
 @include('leads.partials.stage')
 
 <a class="gl-skip" href="#main">{{ $t('تخطَّ إلى المحتوى', 'Skip to content') }}</a>

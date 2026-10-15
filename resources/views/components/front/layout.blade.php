@@ -181,6 +181,7 @@
 {{ $styles ?? '' }}
 </head>
 <body class="bkf {{ $bodyClass }}">
+@include('partials.submit-guard')
 
 {{-- ══════════════  NAV  ══════════════ --}}
 <nav class="bkf-nav" data-bkf-nav>

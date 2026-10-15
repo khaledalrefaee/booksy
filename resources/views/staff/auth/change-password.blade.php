@@ -49,6 +49,7 @@
     </style>
 </head>
 <body>
+@include('partials.submit-guard')
     <div class="sp-card">
         <div class="sp-logo">Glow<span>Rez</span></div>
         <div class="sp-badge"><i data-feather="lock"></i></div>
