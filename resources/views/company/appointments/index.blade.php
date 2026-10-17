@@ -68,6 +68,15 @@
                 <span class="bk-wl-count" id="bk-wl-count">0</span>
             </button>
 
+            {{-- Incoming requests — online bookings still waiting for the salon's reply.
+                 Hidden until there is at least one, so a quiet day shows nothing. --}}
+            <button type="button" class="bk-req-chip d-none" id="bk-req-chip" aria-haspopup="dialog"
+                    aria-label="{{ $isRtl ? 'طلبات حجز بانتظار ردّك' : 'Booking requests waiting for your reply' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <span class="bk-req-txt">{{ $isRtl ? 'طلبات جديدة' : 'New requests' }}</span>
+                <span class="bk-req-count" id="bk-req-count">0</span>
+            </button>
+
             {{-- Unified "+" add menu (booking / group / waitlist / block) --}}
             <div class="bk-add-wrap">
                 <button type="button" class="bk-new-appt-btn" id="bk-add-btn" aria-expanded="false" aria-haspopup="menu">
@@ -183,6 +192,46 @@
             </div>
         </div>
     </div>
+
+    {{-- ══ Requests inbox drawer (online bookings awaiting a reply) ══ --}}
+    <div class="bk-drawer-ov d-none" id="bk-req-ov"></div>
+    <aside class="bk-drawer" id="bk-req-drawer" aria-hidden="true" aria-label="{{ $isRtl ? 'طلبات الحجز' : 'Booking requests' }}">
+        <div class="bk-drawer-head">
+            <div class="bk-ov-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                {{ $isRtl ? 'طلبات بانتظار ردّك' : 'Waiting for your reply' }}
+                <span class="bk-wl-count" id="bk-req-count2">0</span>
+            </div>
+            <button type="button" class="bk-ov-x" id="bk-req-close" aria-label="{{ __('Close') }}">✕</button>
+        </div>
+        <div class="bk-drawer-body">
+            <p class="fu-req-hint">{{ $isRtl ? 'احجز لهم أو اعتذر — الزبون ينتظر ردّك. القبول يُثبّت الموعد ويُبلغ الزبون.' : 'Accept to lock the slot and notify the customer, or decline with a reason.' }}</p>
+            <div class="fu-req-list" id="bk-req-list"></div>
+        </div>
+    </aside>
+
+    {{-- ══ Decline sheet — reason is required by the state machine ══ --}}
+    <div class="bk-ov d-none" id="bk-decline-ov">
+        <div class="bk-ov-card fu-decline" role="dialog" aria-modal="true" aria-labelledby="fu-decline-title">
+            <div class="bk-ov-head">
+                <div class="bk-ov-title" id="fu-decline-title">{{ $isRtl ? 'سبب الإلغاء' : 'Reason' }}</div>
+                <button type="button" class="bk-ov-x" id="fu-decline-x" aria-label="{{ __('Close') }}">✕</button>
+            </div>
+            <div class="bk-ov-body">
+                <div class="fu-reasons" id="fu-reasons" role="radiogroup" aria-labelledby="fu-decline-title"></div>
+                <label class="bk-ov-field" id="fu-reason-other-wrap" hidden>
+                    <span>{{ $isRtl ? 'اكتب السبب' : 'Write the reason' }}</span>
+                    <input type="text" id="fu-reason-other" maxlength="200">
+                </label>
+                <div class="bk-ov-err d-none" id="fu-decline-err" role="alert"></div>
+                <button type="button" class="bk-ov-submit fu-danger" id="fu-decline-go">{{ $isRtl ? 'تأكيد الإلغاء' : 'Confirm' }}</button>
+                <p class="fu-decline-note">{{ $isRtl ? 'يُبلَّغ الزبون بالإلغاء ويتحرر الموعد في التقويم.' : 'The customer is notified and the slot is freed.' }}</p>
+            </div>
+        </div>
+    </div>
+
+    {{-- Post-booking card: the next step right after saving --}}
+    <div class="fu-booked d-none" id="fu-booked" role="status" aria-live="polite"></div>
 
     {{-- ══ Waitlist drawer ══ --}}
     <div class="bk-drawer-ov d-none" id="bk-wl-ov"></div>
@@ -566,8 +615,20 @@
 
 {{-- ── Quick add drawer (Fresha "new appointment") ── --}}
 <div id="qa-overlay" class="d-none"></div>
-<div id="qa-drawer">
+<div id="qa-drawer" @if($branches->count() < 2) class="qa-single-branch" @endif>
     <button id="qa-close" title="{{ $isRtl ? 'إغلاق' : 'Close' }}">✕</button>
+
+    {{-- Phones: booking is two short steps (who/when → services) instead of one
+         cramped screen. Hidden on desktop, where both panels sit side by side. --}}
+    <div class="qa-stepper" id="qa-stepper" role="tablist" aria-label="{{ $isRtl ? 'خطوات الحجز' : 'Booking steps' }}">
+        <button type="button" class="qa-step is-on" data-qa-step="1" role="tab" aria-selected="true">
+            <span class="n">1</span><span class="t">{{ $isRtl ? 'العميل والوقت' : 'Client & time' }}</span>
+        </button>
+        <span class="qa-step-line" aria-hidden="true"></span>
+        <button type="button" class="qa-step" data-qa-step="2" role="tab" aria-selected="false">
+            <span class="n">2</span><span class="t">{{ $isRtl ? 'الخدمات' : 'Services' }}</span>
+        </button>
+    </div>
 
     {{-- Client panel --}}
     <div class="qa-panel qa-client">
@@ -624,13 +685,25 @@
                 {{ $isRtl ? 'نفس الخدمات' : 'Same again' }}
             </button>
         </div>
+
+        {{-- Phones only: continue to step 2 --}}
+        <div class="qa-step-foot">
+            <button type="button" class="qa-next-btn" id="qa-to-services">
+                {{ $isRtl ? 'التالي: اختيار الخدمات' : 'Next: choose services' }}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" class="qa-next-arrow"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+        </div>
     </div>
 
     {{-- Service panel --}}
     <div class="qa-panel qa-service">
+        {{-- Phones only: who/when recap (tap to edit) + guest switcher for parties --}}
+        <button type="button" class="qa-strip" id="qa-strip" data-qa-step="1" aria-label="{{ $isRtl ? 'تعديل العميل والوقت' : 'Edit client and time' }}"></button>
+        <div class="qa-strip-guests d-none" id="qa-strip-guests" role="tablist"></div>
+
         <div class="qa-title">{{ $isRtl ? 'تحديد خدمة' : 'Select service' }}</div>
         {{-- Branch selector --}}
-        <div class="qa-search" style="margin-bottom:10px;">
+        <div class="qa-search" id="qa-branch-wrap" style="margin-bottom:10px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             <select id="qa-branch">
                 @foreach ($branches as $b)
@@ -760,6 +833,7 @@
         'waitlistIndex'                => route('company.waitlist.index'),
         'waitlistStore'                => route('company.waitlist.store'),
         'waitlistResolve'              => route('company.waitlist.resolve', '__ID__'),
+        'appointmentsRequests'         => route('company.appointments.requests'),
     ];
 
     $bkStrings = [
@@ -893,7 +967,62 @@
         'wl_empty_hint'      => $isRtl ? 'أضف زبوناً من الأعلى حين يطلب موعداً وليس هناك شاغر.' : 'Add someone above when they want a slot and nothing is free.',
     ];
 
+    // Follow-up flow copy (next-step bar, requests inbox, decline sheet, booked card)
+    $bkFollowUp = [
+        'accept'        => $isRtl ? 'قبول الحجز' : 'Accept booking',
+        'decline'       => $isRtl ? 'رفض' : 'Decline',
+        'cancelAppt'    => $isRtl ? 'إلغاء الموعد' : 'Cancel appointment',
+        'markNoShow'    => $isRtl ? 'لم يحضر' : 'No-show',
+        'arrived'       => $isRtl ? 'وصل الزبون' : 'Customer arrived',
+        'start'         => $isRtl ? 'بدء الخدمة' : 'Start service',
+        'finish'        => $isRtl ? 'إنهاء الخدمة' : 'Finish service',
+        'pause'         => $isRtl ? 'إيقاف مؤقت' : 'Pause',
+        'resume'        => $isRtl ? 'استئناف' : 'Resume',
+        'lateArrival'   => $isRtl ? 'وصل متأخراً' : 'Arrived late',
+        'collect'       => $isRtl ? 'المحاسبة' : 'Checkout',
+        'call'          => $isRtl ? 'اتصال' : 'Call',
+        'whatsapp'      => $isRtl ? 'واتساب' : 'WhatsApp',
+        'more'          => $isRtl ? 'خيارات أخرى' : 'More',
+        'leadPending'   => $isRtl ? 'حجز جديد بانتظار ردّك' : 'New booking waiting for your reply',
+        'leadPendingSub'=> $isRtl ? 'اقبله ليُثبَّت الموعد ويصل الزبون إشعار.' : 'Accept to lock the slot and notify the customer.',
+        'leadConfirmed' => $isRtl ? 'الموعد مؤكد' : 'Booking confirmed',
+        'leadConfirmedSub' => $isRtl ? 'عند وصول الزبون سجّل وصوله.' : 'Mark the customer as arrived when they walk in.',
+        'leadArrived'   => $isRtl ? 'الزبون في الصالون' : 'Customer is here',
+        'leadArrivedSub'=> $isRtl ? 'ابدأ الخدمة حين يجلس مع الموظف.' : 'Start the service when they sit down.',
+        'leadProgress'  => $isRtl ? 'الخدمة جارية' : 'Service in progress',
+        'leadProgressSub'=> $isRtl ? 'أنهِ الخدمة ثم حاسب الزبون.' : 'Finish the service, then take payment.',
+        'leadPaused'    => $isRtl ? 'الخدمة متوقفة مؤقتاً' : 'Service paused',
+        'leadAwaiting'  => $isRtl ? 'بانتظار الدفع' : 'Waiting for payment',
+        'leadAwaitingSub'=> $isRtl ? 'الخدمة انتهت — حاسب الزبون لإغلاق الموعد.' : 'The service is done — take payment to close it.',
+        'leadNoShow'    => $isRtl ? 'سُجّل أنه لم يحضر' : 'Marked as no-show',
+        'leadNoShowSub' => $isRtl ? 'إن وصل متأخراً يمكنك إعادة فتح الموعد.' : 'If they turn up late you can reopen it.',
+        'leadDone'      => $isRtl ? 'اكتمل الموعد' : 'Appointment completed',
+        'leadCancelled' => $isRtl ? 'الموعد ملغى' : 'Appointment cancelled',
+        'viaSource'     => $isRtl ? 'عبر :s' : 'via :s',
+        'ago'           => $isRtl ? 'منذ :t' : ':t ago',
+        'moved'         => $isRtl ? 'تم تحديث الموعد' : 'Appointment updated',
+        'accepted'      => $isRtl ? 'تم قبول الحجز وإبلاغ الزبون' : 'Booking accepted',
+        'declined'      => $isRtl ? 'تم إلغاء الحجز' : 'Booking cancelled',
+        'failed'        => $isRtl ? 'تعذّر تنفيذ الإجراء' : 'Could not complete that',
+        'reasonPick'    => $isRtl ? 'اختر سبباً أو اكتبه' : 'Pick or write a reason',
+        'reasons'       => $isRtl
+            ? ['الوقت غير متاح', 'الموظف غير متاح', 'الصالون مغلق ذلك اليوم', 'الزبون طلب الإلغاء', 'سبب آخر']
+            : ['Time is not available', 'Staff not available', 'Closed that day', 'Customer asked to cancel', 'Other reason'],
+        'reqEmpty'      => $isRtl ? 'لا طلبات بانتظار ردّك' : 'No requests waiting',
+        'reqEmptySub'   => $isRtl ? 'الحجوزات الجديدة من GlowRez تظهر هنا فور وصولها.' : 'New online bookings appear here as soon as they arrive.',
+        'reqOverdue'    => $isRtl ? 'مرّ وقته' : 'Time has passed',
+        'reqMore'       => $isRtl ? 'عرض كل المواعيد المعلّقة في القائمة' : 'See all pending in the list',
+        'bookedTitle'   => $isRtl ? 'تم حجز الموعد' : 'Appointment booked',
+        'bookedView'    => $isRtl ? 'عرض' : 'View',
+        'bookedAnother' => $isRtl ? 'موعد آخر' : 'Book another',
+        'bookedWaMsg'   => $isRtl ? 'مرحباً :name، تم حجز موعدك :when. نراك قريباً!' : 'Hi :name, your appointment is booked for :when. See you soon!',
+        'summaryWalkin' => $isRtl ? 'دخول بدون موعد مسبق' : 'Walk-in',
+        'edit'          => $isRtl ? 'تعديل' : 'Edit',
+        'stepNext'      => $isRtl ? 'التالي' : 'Next',
+    ];
+
     $bk = [
+        'fu'           => $bkFollowUp,
         'isRtl'        => $isRtl,
         'fcLocale'     => $fcLocale,
         'firstBranch'  => $branches->first()->id ?? '',
@@ -922,4 +1051,5 @@
 
 <script src="{{ asset('backend/assets/js/appointments/appointments.js') }}?v={{ @filemtime($bkJsDir.'/appointments.js') ?: '1' }}"></script>
 <script src="{{ asset('backend/assets/js/appointments/panels.js') }}?v={{ @filemtime($bkJsDir.'/panels.js') ?: '1' }}"></script>
+<script src="{{ asset('backend/assets/js/appointments/followup.js') }}?v={{ @filemtime($bkJsDir.'/followup.js') ?: '1' }}"></script>
 @endpush

@@ -28,7 +28,7 @@
 
     /* Brand + core keywords always present (helps Arabic brand search: غلوريز / غلو ريز),
        merged ahead of any page-specific keywords passed in. */
-    $brandKeywords = 'GlowRez, غلوريز, غلو ريز, Glow Rez, قلوريز';
+    $brandKeywords = 'GlowRez, غلوريز, غلو ريز, Glow Rez';
     $baseKeywords  = $isAr
         ? $brandKeywords.', حجز صالون, حجز مركز تجميل, حجز حلاقة, مواعيد الجمال, سبا, أظافر, عيادات تجميل, سوريا, دمشق'
         : $brandKeywords.', salon booking, beauty appointment, barber booking, spa, nails, beauty clinics, wellness, Syria, Damascus';
@@ -51,7 +51,7 @@
                 '@type'         => 'Organization',
                 '@id'           => url('/').'#organization',
                 'name'          => 'GlowRez',
-                'alternateName' => ['غلوريز', 'غلو ريز', 'Glow Rez', 'قلوريز'],
+                'alternateName' => ['غلوريز', 'غلو ريز', 'Glow Rez'],
                 'url'           => url('/'),
                 'logo'          => asset('images/glowrez-logo-light_1.webp'),
                 'image'         => asset('images/og-cover.jpg'),

@@ -2392,6 +2392,17 @@ function qaOpen(ctx, opts) {
     document.getElementById('qa-client-search').value = '';
     document.getElementById('qa-client-collapsed').classList.remove('d-none');
     document.getElementById('qa-client-expanded').classList.add('d-none');
+
+    /* Phones: land on step 1 with the client list already open (no extra tap).
+       A waiting-list hand-off or a resumed draft already knows the client/services,
+       so those go straight to step 2. */
+    var qaKnown = !!(opts && opts.prefill && (opts.prefill.customer || opts.prefill.serviceIds))
+        || qaGuests.some(function (g) { return g.cart.length; });
+    qaSetStep(qaKnown && qaIsPhone() ? 2 : 1);
+    if (qaIsPhone()) {
+        document.getElementById('qa-client-collapsed').classList.add('d-none');
+        document.getElementById('qa-client-expanded').classList.remove('d-none');
+    }
     qaRenderMeta();
     qaLoadDay();
     document.getElementById('qa-svc-list').innerHTML =
@@ -2548,7 +2559,68 @@ function qaRenderWhen() {
     var sub = isNaN(d) ? '' : sfFmtTitle(d).replace('،', IS_RTL ? '،' : ',');
     if (qaCtx.empName) sub += ' · ' + qaCtx.empName;
     document.getElementById('qa-when-sub').textContent = sub;
+    qaRenderStrip();
 }
+
+/* ── Phones: two-step booking (1 who/when → 2 services) ───────────────────
+   On a phone the client list and the service list used to share one screen, so
+   each got a sliver. CSS shows one panel per step (≤768px); on desktop the
+   classes are inert and both panels stay side by side. */
+var qaStep = 1;
+function qaIsPhone() { return window.matchMedia('(max-width: 768px)').matches; }
+
+function qaSetStep(n) {
+    qaStep = n;
+    qaDrawer.classList.toggle('qa-step-1', n === 1);
+    qaDrawer.classList.toggle('qa-step-2', n === 2);
+    [].forEach.call(document.querySelectorAll('#qa-stepper .qa-step'), function (b) {
+        var k = parseInt(b.dataset.qaStep, 10), on = k === n;
+        b.classList.toggle('is-on', on);
+        b.classList.toggle('is-done', k < n);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    var pane = document.querySelector(n === 1 ? '.qa-client' : '.qa-service');
+    if (pane) pane.scrollTop = 0;
+    qaRenderStrip();
+}
+
+/* Picking a client is the whole point of step 1 — move on by itself (phones only) */
+function qaAutoAdvance() {
+    if (!qaIsPhone() || qaStep !== 1) return;
+    setTimeout(function () { if (qaStep === 1) qaSetStep(2); }, 220);
+}
+
+/* Step 2's recap: who/when (tap to edit) and, for a party, a guest switcher */
+function qaRenderStrip() {
+    var strip = document.getElementById('qa-strip');
+    if (!strip || !qaCtx) return;
+    var d    = new Date(qaCtx.dateStr + 'T00:00:00');
+    var when = (isNaN(d) ? '' : sfFmtTitle(d)) + ' · ' + _fmtMinutes(qaCtx.minutes);
+    if (qaCtx.empName) when += ' · ' + qaCtx.empName;
+    var name = qaCustomer ? qaCustomer.name : QA_TXT.walkin;
+    strip.innerHTML =
+        '<span class="qa-strip-av">' + _esc(qaCustomer ? _initials(qaCustomer.name) : '•') + '</span>'
+        + '<span class="qa-strip-t"><b>' + _esc(name) + '</b><small>' + _esc(when) + '</small></span>'
+        + '<span class="qa-strip-edit">' + _esc((BK.fu && BK.fu.edit) || '') + '</span>';
+
+    var gw = document.getElementById('qa-strip-guests');
+    if (!gw) return;
+    var party = qaTrayOpen();
+    gw.classList.toggle('d-none', !party);
+    if (!party) { gw.innerHTML = ''; return; }
+    gw.innerHTML = qaGuests.map(function (g, i) {
+        return '<button type="button" class="qa-gchip' + (i === qaActiveGuest ? ' is-on' : '') + (g.cart.length ? ' has' : '') + '" role="tab"'
+            + ' aria-selected="' + (i === qaActiveGuest) + '" data-gi="' + i + '">'
+            + _esc(qaGuestName(g, i)) + (g.cart.length ? ' · ' + g.cart.length : '') + '</button>';
+    }).join('');
+}
+document.addEventListener('click', function (e) {
+    var s = e.target.closest('#qa-drawer [data-qa-step]');
+    if (s) { qaSetStep(parseInt(s.dataset.qaStep, 10)); return; }
+    var g = e.target.closest('#qa-strip-guests [data-gi]');
+    if (g) qaUseGuest(parseInt(g.dataset.gi, 10));
+    if (e.target.closest('#qa-to-services')) qaSetStep(2);
+});
 
 function qaLoadDay() {
     qaDayData = null;
@@ -2718,6 +2790,7 @@ function qaRenderGuests() {
     var cnt = document.getElementById('qa-guests-count');
     if (cnt) cnt.textContent = QA_TXT.guestsN.replace(':n', qaGuests.length);
 
+    qaRenderStrip();   /* step 2's guest chips mirror this list */
     if (!qaTrayOpen()) { list.innerHTML = ''; return; }
 
     /* the base booking is guest 1 and can't be removed on its own — only
@@ -3204,6 +3277,8 @@ document.getElementById('qa-save').addEventListener('click', function(){
         t:        qaCartTotals(),
         empId:    (qaCart[0] && qaCart[0].empId) || qaCtx.empId || 0,
         custName: qaCustomer ? qaCustomer.name : QA_TXT.walkin,
+        custPhone: qaCustomer ? (qaCustomer.phone || '') : '',
+        whenLabel: sfFmtTitle(new Date(qaCtx.dateStr + 'T00:00:00')) + ' · ' + _fmtMinutes(qaCtx.minutes),
         svcNames: qaCart.map(function(s){ return s.name; }).join(' + '),
         empName:  qaCtx.empName || QA_TXT.walkin,
         dateStr:  qaCtx.dateStr,
@@ -3222,6 +3297,13 @@ document.getElementById('qa-save').addEventListener('click', function(){
         qaDraftDiscard();
         qaResolveWaitlistBooked();
         bkToast(BK.t.appointment_booked_successfully, 'success');
+
+        /* the next step, right here: message the customer / open the booking */
+        bkSafe(function () {
+            if (window.bkFollowUp && json && json.id) {
+                window.bkFollowUp.booked({ id: json.id, name: snap.custName, phone: snap.custPhone, when: snap.whenLabel });
+            }
+        });
 
         /* optimistic: drop the new appointment onto the grid, no reload.
            Isolated, so a painting bug can't stop the calendar refresh below. */
@@ -3366,7 +3448,7 @@ function qaRenderClients() {
 
     qaClients.forEach(function(c){
         var sel = qaCustomer && qaCustomer.id && String(qaCustomer.id) === String(c.id);
-        html += '<div class="qa-cli-row' + (sel ? ' selected' : '') + '" data-id="' + c.id + '" data-name="' + _esc(c.name) + '">'
+        html += '<div class="qa-cli-row' + (sel ? ' selected' : '') + '" data-id="' + c.id + '" data-name="' + _esc(c.name) + '" data-phone="' + _esc(c.phone || '') + '">'
             +   '<div class="qa-cli-av">' + _esc(_initials(c.name)) + '</div>'
             +   '<div><div class="qa-cli-name">' + _esc(c.name) + '</div>'
             +   (c.phone ? '<div class="qa-cli-sub">' + _esc(c.phone) + '</div>' : '')
@@ -3389,6 +3471,7 @@ document.getElementById('qa-client-list').addEventListener('click', function(e){
         qaSetCustomer({ name: nm, phone: ph, isNew: true });
         qaRenderMeta();
         qaRenderClients();
+        qaAutoAdvance();
         return;
     }
     if (e.target.closest('.qa-newc')) return; /* clicks inside form inputs */
@@ -3398,14 +3481,16 @@ document.getElementById('qa-client-list').addEventListener('click', function(e){
         qaSetCustomer(null);
         qaRenderMeta();
         qaRenderClients();
+        qaAutoAdvance();
         return;
     }
     /* existing customer */
     var row = e.target.closest('.qa-cli-row[data-id]');
     if (row) {
-        qaSetCustomer({ id: row.dataset.id, name: row.dataset.name });
+        qaSetCustomer({ id: row.dataset.id, name: row.dataset.name, phone: row.dataset.phone || '' });
         qaRenderMeta();
         qaRenderClients();
+        qaAutoAdvance();
     }
 });
 
@@ -3599,6 +3684,7 @@ function apRenderMain() {
         +   '</div>'
         +   (s.customer.url ? '<a href="' + s.customer.url + '">' + AP_TXT.profile + '</a>' : '')
         + '</div>'
+        + (window.bkFollowUp ? window.bkFollowUp.html(s) : '')
         + '<div class="ap-sec-title">' + AP_TXT.services + '</div>'
         + '<div class="ap-scroll">' + svcHtml + '</div>'
         + '<div class="qa-footer">'
@@ -3974,12 +4060,13 @@ function apRenderInvoice(inv) {
 }
 
 /* ── change status from the pill ── */
-function apChangeStatus(st) {
+function apChangeStatus(st, reason) {
     if (apBusy || !apData || st === apData.status) return;
     apBusy = true;
     apStLoading = st;
     apRender();
     var body = new URLSearchParams({ _method: 'PATCH', _token: CSRF, status: st });
+    if (reason) body.set('reason', reason);
     fetch(STATUS_ROUTE_BASE.replace('__ID__', apData.id), {
         method: 'POST',
         headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
@@ -3990,7 +4077,10 @@ function apChangeStatus(st) {
         if (!json.ok) throw new Error('fail');
         apStLoading = null;
         apData.status = json.status;
+        /* the legal moves for the NEW status — the next-step bar and the picker both read them */
+        if (json.allowed) ALLOWED_MOVES[json.status] = json.allowed;
         bkToast(AP_TXT.stUpdated, 'warning');
+        if (window.bkFollowUp) window.bkFollowUp.refresh();
         sfUpdateCache(apData.id, { status: json.status, color: apStatusColor(json.status) });
         if (sfDayData && sfView === 'day') renderStaffGrid(sfDayData, true);
         listLoaded = false;
@@ -4007,6 +4097,12 @@ apBody.addEventListener('click', function(e){
     if ((t = e.target.closest('[data-ap]'))) {
         var act = t.dataset.ap;
         if (act === 'checkout')  { apStep = 'tip';  apRender(); }
+        /* follow-up bar: one-tap next step, decline-with-reason, straight to payment */
+        if (act === 'fu-move')     apChangeStatus(t.dataset.to);
+        if (act === 'fu-checkout') { apStep = 'tip'; apRender(); }
+        if (act === 'fu-decline' && window.bkFollowUp) {
+            window.bkFollowUp.decline(function (reason) { apChangeStatus('cancelled_by_salon', reason); });
+        }
         if (act === 'back-main') { apStep = 'main'; apRender(); }
         if (act === 'to-cart')   { apStep = 'cart'; apRender(); }
         if (act === 'back-tip')  { apStep = 'tip';  apRender(); }

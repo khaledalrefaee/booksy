@@ -470,7 +470,7 @@ class CashController extends Controller
         $session = CashDrawerSession::create([
             'company_id'      => $this->company()->id,
             'branch_id'       => $branch->id,
-            'opened_by'       => Auth::guard('company')->id(),
+            'opened_by'       => null, // company owner is not an employees row (FK)
             'opened_by_name'  => $this->operatorName(),
             'opening_balance' => $data['balances'][0]['opening_amount'],
             'currency'        => $data['balances'][0]['currency'],
@@ -529,7 +529,7 @@ class CashController extends Controller
             'closing_balance'  => $firstBal?->closing_amount,
             'expected_balance' => $firstBal?->expected_amount,
             'variance'         => $firstBal?->variance,
-            'closed_by'        => Auth::guard('company')->id(),
+            'closed_by'        => null, // company owner is not an employees row (FK)
             'closed_by_name'   => $this->operatorName(),
             'status'           => 'closed',
             'closed_at'        => now(),
@@ -575,7 +575,7 @@ class CashController extends Controller
             'status'           => 'reconciled',
             'reconcile_reason' => $data['reconcile_reason'],
             'reconcile_notes'  => $data['reconcile_notes'] ?? null,
-            'reconciled_by'      => Auth::guard('company')->id(),
+            'reconciled_by'      => null, // company owner is not an employees row (FK)
             'reconciled_by_name' => $this->operatorName(),
             'reconciled_at'    => now(),
         ]);
@@ -655,7 +655,7 @@ class CashController extends Controller
         $session->update([
             'status'      => 'voided',
             'voided_at'   => now(),
-            'voided_by'      => Auth::guard('company')->id(),
+            'voided_by'      => null, // company owner is not an employees row (FK)
             'voided_by_name' => $this->operatorName(),
             'void_reason'    => $data['void_reason'],
         ]);

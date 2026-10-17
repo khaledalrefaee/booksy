@@ -121,7 +121,12 @@ class EmployeeLeaveController extends Controller
             ->mapWithKeys(fn (Employee $emp) => [$emp->id => $emp->annualLeaveRemaining()]);
 
         $branches      = $company->branches()->orderBy('sort_order')->get();
-        $employeeList  = $company->employees()->where('is_active', true)->orderBy('name_en')->get(['id', 'name_en', 'name_ar']);
+        // Employee dropdowns (filter + "Add leave" picker) follow the selected branch
+        $employeeList  = $company->employees()
+            ->where('is_active', true)
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->orderBy('name_en')
+            ->get(['id', 'name_en', 'name_ar']);
 
         return view('company.employee-leaves.index', compact(
             'leaves', 'balances', 'counts', 'branches', 'employeeList',
@@ -199,7 +204,10 @@ class EmployeeLeaveController extends Controller
 
         $deductionAmount = (float) ($data['deduction_amount'] ?? 0);
 
-        $employee->leaves()->create([
+        // The business owner is the approver — a leave they record is approved straight away.
+        $remainingBefore = $employee->annualLeaveRemaining();
+
+        $leave = $employee->leaves()->create([
             'company_id' => $this->company()->id,
             'start_date' => $data['start_date'],
             'end_date'   => $isHourly ? $data['start_date'] : $data['end_date'],
@@ -208,16 +216,41 @@ class EmployeeLeaveController extends Controller
             'start_hour' => $isHourly ? substr($data['start_hour'], 0, 5) : null,
             'end_hour'   => $isHourly ? substr($data['end_hour'], 0, 5) : null,
             'reason'     => $data['reason'] ?? null,
-            'status'     => 'pending',
+            'status'     => 'approved',
             'deduction_amount'   => $deductionAmount > 0 ? $deductionAmount : null,
             'deduction_currency' => $deductionAmount > 0
                 ? ($data['deduction_currency'] ?? config('booksy.default_currency', 'SYP'))
                 : null,
         ]);
 
-        return redirect()
+        $this->syncLeaveDeduction($leave);
+
+        $exceedsBalance = $leave->type === 'annual'
+            && ! $leave->is_hourly
+            && $leave->daysCount() > $remainingBefore;
+
+        // Employee decision notice — must never break the save itself
+        try {
+            $remainingAfter = $leave->type === 'annual' && ! $leave->is_hourly
+                ? $remainingBefore - $leave->daysCount()
+                : null;
+            app(\App\Services\WhatsappService::class)->sendLeaveDecision($leave->fresh('employee'), $remainingAfter);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Leave decision WhatsApp failed: {$e->getMessage()}");
+        }
+
+        $redirect = redirect()
             ->route('company.employee-leaves.index')
-            ->with('success', __('Leave request submitted.'));
+            ->with('success', __('Leave approved and recorded.'));
+
+        if ($exceedsBalance) {
+            $redirect->with('warning', __(':name has exceeded their annual leave balance (:remaining days remaining before this leave).', [
+                'name'      => $employee->localizedName(),
+                'remaining' => max(0, $remainingBefore),
+            ]));
+        }
+
+        return $redirect;
     }
 
     /**

@@ -271,6 +271,12 @@ class AppointmentController extends Controller
             // Labels in the branch clock style (Branch Settings → time format).
             'startLabel'    => $appointment->start_time ? $appointment->branch?->formatTime($appointment->start_time) : null,
             'endLabel'      => $appointment->end_time ? $appointment->branch?->formatTime($appointment->end_time) : null,
+            // Where it came from + how long ago: drives the "needs your reply" banner
+            // for online (GlowRez / social-link) bookings in the follow-up bar.
+            'source'        => ($src = $appointment->bookingSourceEnum())
+                ? ['key' => $src->value, 'label' => $src->label()]
+                : null,
+            'createdMin'    => $appointment->created_at ? (int) $appointment->created_at->diffInMinutes(now()) : null,
             'customer'      => [
                 'id'    => $appointment->customer_id,
                 'name'  => $appointment->customer?->name ?? $appointment->customer_name ?? __('Walk-in'),
@@ -1824,6 +1830,64 @@ class AppointmentController extends Controller
             'max_id' => $maxId,
             'new'    => $new,
         ]);
+    }
+
+    /**
+     * GET — the "needs your reply" inbox: bookings that arrived (online, from
+     * GlowRez or a tracking link) and are still Pending. Oldest slot first, so the
+     * most urgent sits on top. `total` is the real count; `items` is capped.
+     */
+    public function requests(Request $request): JsonResponse
+    {
+        $company   = $this->company();
+        $branchIds = $this->branchFilterIds($request, $company);
+
+        $base = Appointment::query()
+            ->where('company_id', $company->id)
+            ->where('status', AppointmentStatus::Pending->value)
+            ->whereNotNull('start_time')
+            ->when($branchIds, fn ($q) => $q->whereIn('branch_id', $branchIds));
+
+        $total = (clone $base)->count();
+
+        $items = $base
+            ->with([
+                'customer:id,name,phone',
+                'service:id,name_en,name_ar,currency',
+                'employee:id,name_en,name_ar',
+                'branch',
+                'appointmentServices.service:id,name_en,name_ar',
+            ])
+            // Still-to-come slots first (soonest on top), stale ones after
+            ->orderByRaw('start_time < ? ASC', [now()->toDateTimeString()])
+            ->orderBy('start_time')
+            ->limit(30)
+            ->get()
+            ->map(function (Appointment $a) {
+                $names = $a->appointmentServices->map(fn ($s) => $s->service?->localizedName())->filter()->values();
+                if ($names->isEmpty() && $a->service) {
+                    $names = collect([$a->service->localizedName()]);
+                }
+
+                return [
+                    'id'         => $a->id,
+                    'customer'   => $a->displayName(),
+                    'phone'      => $a->customer?->phone ?? $a->customer_phone,
+                    'services'   => $names->all(),
+                    'employee'   => $a->employee?->localizedName(),
+                    'branch'     => $a->branch?->localizedName(),
+                    'dateIso'    => $a->start_time->format('Y-m-d'),
+                    'dateLabel'  => $a->start_time->translatedFormat('D j M'),
+                    'startLabel' => $a->branch?->formatTime($a->start_time) ?? $a->start_time->format('H:i'),
+                    'total'      => (float) $a->total_price,
+                    'currency'   => $a->service?->currency ?? config('booksy.default_currency', 'SYP'),
+                    'source'     => $a->bookingSourceEnum()?->label(),
+                    'createdMin' => $a->created_at ? (int) $a->created_at->diffInMinutes(now()) : null,
+                    'overdue'    => $a->start_time->isPast(),
+                ];
+            })->values();
+
+        return response()->json(['ok' => true, 'total' => $total, 'items' => $items]);
     }
 
     /**

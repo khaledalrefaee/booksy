@@ -22,6 +22,7 @@
     ];
 
     $faqs = [
+        ['q_ar'=>'ما هو GlowRez؟','q_en'=>'What is GlowRez?','a_ar'=>'منصّة لاكتشاف أماكن الجمال والعناية في سوريا وحجز مواعيدها من هاتفك: صالونات، مراكز تجميل، سبا، حلاقة وعيادات. اسمها بالعربية «غلوريز»، ويُكتب أيضًا «غلو ريز».','a_en'=>'GlowRez (غلوريز in Arabic) is a platform to discover beauty & wellness venues in Syria and book appointments from your phone: salons, beauty centres, spas, barbers and clinics.'],
         ['q_ar'=>'هل استخدام GlowRez مجاني للعملاء؟','q_en'=>'Is GlowRez free for customers?','a_ar'=>'نعم تمامًا. البحث عن الأماكن والاطلاع على الأسعار والتقييمات والحجز كلها مجانية بالكامل.','a_en'=>'Completely. Searching, viewing prices and reviews, and booking are all free.'],
         ['q_ar'=>'هل أحتاج حسابًا لأحجز؟','q_en'=>'Do I need an account to book?','a_ar'=>'تستطيع التصفّح بلا حساب. وعند تأكيد الحجز نتحقق من رقمك برمز سريع عبر الرسائل، بلا كلمات مرور.','a_en'=>'Browse without one. At booking we verify your number with a quick code, no passwords.'],
         ['q_ar'=>'كيف أجد الأقرب إليّ؟','q_en'=>'How do I find places near me?','a_ar'=>'اضغط «فعّل موقعي» على الخريطة أو في قسم «الأقرب إليك»، فنحسب المسافة ونرتّب النتائج من الأقرب.','a_en'=>'Tap “Use my location” on the map or in the “Near you” section, we sort results by distance from you.'],
@@ -34,9 +35,9 @@
     variant="customer"
     :mapFab="false"
     bodyClass="bkf-has-hero"
-    :title="$t('GlowRez | اكتشف واحجز في أفضل مراكز الجمال والعناية قربك', 'GlowRez, Discover & Book Top Beauty & Wellness Venues Near You')"
+    :title="$t('GlowRez (غلوريز) | اكتشف واحجز في أفضل مراكز الجمال والعناية قربك', 'GlowRez, Discover & Book Top Beauty & Wellness Venues Near You')"
     :keywords="$t('حجز صالون, حجز مركز تجميل, حجز حلاقة, سبا, أظافر, عيادات تجميل, مواعيد الجمال, خريطة الأماكن, سوريا, دمشق', 'salon booking, beauty appointment, barber booking, spa, nails, beauty clinics, wellness map, Syria, Damascus')"
-    :description="$t('اكتشف واحجز في أفضل أماكن الجمال والعناية قربك: شعر، سبا، تجميل، حلاقة، أظافر وعيادات. استكشف على الخريطة، قارن التقييمات والأسعار، واحجز فورًا من هاتفك عبر GlowRez.', 'Discover and book the best beauty & wellness venues near you, explore them on a live map, compare ratings and prices, and book instantly from your phone with GlowRez.')">
+    :description="$t('GlowRez (غلوريز): اكتشف واحجز في أفضل أماكن الجمال والعناية قربك: شعر، سبا، تجميل، حلاقة، أظافر وعيادات. استكشف على الخريطة، قارن التقييمات والأسعار، واحجز فورًا من هاتفك.', 'Discover and book the best beauty & wellness venues near you, explore them on a live map, compare ratings and prices, and book instantly from your phone with GlowRez.')">
 
 @include('front.partials.hero-a')
 
